@@ -1,3 +1,43 @@
+# Framer hero sequence — current version
+
+Use **src/framer/AdmiralHeroSequence.tsx** for the new AVIF hero. This is one complete paste-ready Code Component, including the three native-layer Code Overrides. The video component below remains available as a separate fallback.
+
+## Install in Framer
+
+1. Create a new **Code Component** named **AdmiralHeroSequence.tsx** under Assets > Code. Replace the entire file with `src/framer/AdmiralHeroSequence.tsx`. Use the generated file, not the `.source.tsx` template. Save.
+2. Insert **Hero Sequence** from Assets. Replace the old video instance; do not run both players in the same hero.
+3. Use one normal **Relative** hero Frame, height **100vh** (or a stable viewport height), with the sequence filling it. Put your native Framer content above it. Remove the previous extra-tall sticky spacer. With **Hold hero** on, the code holds the page only while this short journey is active. It does not fix the body or change the scrollbar width.
+4. Create three separate native wrapper Frames: opening logo/location text, building headline/body, and the CTA button. Keep them inside that same hero Frame, as siblings above the sequence. Use content-sized wrappers where possible so transparent layers do not cover the Skip control. Put the CTA beside the building wrapper, not inside it, to avoid applying both fades to the button.
+5. On each wrapper, open **Code Overrides**, select **AdmiralHeroSequence**, and apply **OpeningContent**, **BuildingContent**, or **ArrivalCTA** respectively. These names are exported from the same file as the player; do not duplicate the code into a second file, because the overrides and player must share their progress channel.
+6. Keep fonts, copy, layout, responsive styling, button links and hover effects in Framer. Remove Appear/Scroll Transform effects from the three outer wrappers: their opacity and vertical movement belong to the sequence overrides. Child styling and button interactions remain native.
+7. Preview the page to test synchronization. **Editor view: Opening / Arrival** only selects the background still while editing. Framer does not execute Code Overrides on the editing canvas; the synchronized text reveals run in Preview and on the published site.
+8. Leave **GitHub assets** enabled for the supplied 63 AVIF files. Updating the GitHub code does not replace a pasted Framer code file automatically: paste the updated file, save, then publish in Framer.
+
+## Default visitor experience
+
+The opening panorama appears immediately. A deliberate downward scroll starts a guided flight with a nominal 2.5-second duration. Additional downward input boosts speed up to 1.8x; the boost decays over 0.22 seconds. Releasing the wheel or finger still completes the journey. An intentional upward gesture reverses it smoothly, including mid-flight. Near the start and finish the camera eases gently; it crosses the middle faster. There are no inter-frame crossfades or extra blur.
+
+Opening content fades out over the first 20% of the actual displayed sequence. Building content enters at 68% and is fully visible at 88%. The CTA enters at 86% and is fully visible at arrival. These are adjustable controls in the hero's property panel. Hidden wrappers are inert, so invisible buttons cannot receive clicks or keyboard focus.
+
+The page releases after the actual final frame is drawn. A brief, bounded guard consumes the tail of the gesture already in progress; fresh scrolling continues down the page. Scrolling back to the top of the hero and then upward reverses the sequence. Window scroll position is not used as the animation playhead, so text follows the camera even while it coasts or waits for a frame.
+
+Escape, Tab navigation, Skip, a failed frame, a hidden tab or a timeout releases the hold. Nested scrollable menus, input fields and pinch zoom retain native behavior. Manual scrollbar/anchor navigation remains native when no hold is active. A reduced-motion preference displays the arrival still and CTA without pinning or bulk frame loading. **Hold hero** can be disabled if the surrounding layout should manage scrolling.
+
+## Loading and memory
+
+The supplied export is 63 frames at 1920 x 1010, totaling approximately 3.09 MB. The initial still is high priority. Background loading starts after the poster, with up to four downloads and two decodes at once. Save-data/2G connections wait for interaction before bulk loading. The loader retains compressed files, keeps a bounded decoded window including both endpoints, and releases evicted bitmap resources. It draws only when the frame or canvas size changes, with consistent cover cropping throughout.
+
+Desktop defaults to 14 decoded frames at 1920 width. Phone-sized viewports use at most 10 decoded frames at 1280 width. The phone setting reduces decoded memory, not downloaded file size; a separately composed mobile export can be supplied later. The fallback HTML image decoder may retain full-resolution frames if bitmap resizing is unavailable. On failure the last valid image remains visible and navigation is released. There is no full-screen loader.
+
+## Sequence development and verification
+
+Edit `src/core/hero-sequence.ts` and `src/framer/AdmiralHeroSequence.source.tsx`, then run `node scripts/build.mjs`. This builds the standalone Framer file and the framework-independent browser module. Run `node --test tests/*.test.mjs` for the asset, SDK typing and server-render checks. Run `node tests/sequence-browser-check.mjs` for browser interactions. Existing external-module environment settings described below also apply.
+
+The automated fixture uses the real images, React 18 Strict Mode, and native-layer stand-ins with the Framer SDK checked separately. It covers coasting, acceleration, mid-flight and return-to-hero reverse, synchronized overlays, native CTA links, scroll release, nested scrolling, Escape, reduced motion, delayed/failed frames, touch emulation, bounded cache and cleanup. It is a component test fixture, not a website design. Actual Framer Preview and real iPhone/Safari performance still need verification after installation.
+
+---
+
+
 # Framer hero video component
 
 The deliverable is **src/framer/AdmiralHeroVideo.tsx**: the full animation component in one file. It includes no logo, headline, navigation, sales copy, or website layout.
