@@ -7,6 +7,7 @@ export interface HeroMetrics {
 export interface HeroOptions {
   root: HTMLElement; video: HTMLVideoElement; startImage: HTMLImageElement; endImage: HTMLImageElement;
   videoUrl: string; endUrl: string; threshold?: number; warmupDelay?: number; preload?: boolean;
+  autoplay?: boolean; loop?: boolean; muted?: boolean;
   respectReducedMotion?: boolean; onState?: (state: HeroState) => void; onMetrics?: (metrics: HeroMetrics) => void;
 }
 /** One-way, scroll-triggered playback. No scroll interception and no seek-on-scroll. */
@@ -146,7 +147,7 @@ export function createHeroPlayer(options: HeroOptions) {
     setState("idle");
   }
   function onScroll() {
-    if (disposed || triggered || reduced() || scrollRAF) return;
+    if (disposed || triggered || reduced() || scrollRAF || options.autoplay === false) return;
     scrollRAF = requestAnimationFrame(() => {
       scrollRAF = 0;
       const y = Math.max(0, window.scrollY), delta = y - lastY; lastY = y;
@@ -165,7 +166,8 @@ export function createHeroPlayer(options: HeroOptions) {
       later(() => { if (visible && !document.hidden && !reduced()) warm(); }, options.warmupDelay ?? 650);
     }
   }
-  video.muted = true; video.defaultMuted = true; video.playsInline = true; video.loop = false;
+  video.muted = options.muted !== false; video.defaultMuted = options.muted !== false;
+  video.playsInline = true; video.loop = options.loop === true;
   video.setAttribute("playsinline", ""); video.setAttribute("webkit-playsinline", "");
   video.preload = "none";
   root.dataset.videoVisible = "false"; root.dataset.endVisible = "false";
