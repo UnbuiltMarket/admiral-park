@@ -145,6 +145,9 @@ export function createHeroSequence(options) {
     const { root, canvas, poster, urls } = options;
     const last = urls.length - 1;
     const duration = sequenceClamp(options.duration ?? 2.5, .6, 10);
+    // Endpoint stills dissolve into their adjacent sequence frames in fixed real time.
+    const edgeFade = last >= 3 ? .5 : 0;
+    const flightEnd = edgeFade + duration, totalDuration = flightEnd + edgeFade;
     const maxSpeed = sequenceClamp(options.maxSpeed ?? 1.8, 1, 3);
     const momentum = sequenceClamp(options.momentum ?? .22, .08, .6);
     const threshold = sequenceClamp(options.triggerDistance ?? 28, 8, 150);
@@ -153,6 +156,8 @@ export function createHeroSequence(options) {
     const abort = new AbortController(), signal = abort.signal;
     const context = canvas.getContext("2d", { alpha: false });
     let disposed = false, state = "opening", displayed = 0, clock = 0;
+    let displayedProgress = 0;
+    let rendered = { index: 0, next: 0, mix: 0 };
     let direction = 1, velocity = 0, boost = 0, held = false, playing = false;
     let active = false, raf = 0, previousTime = 0, waitingSince = 0;
     let holdY = 0, holdX = 0, holdTimer;
@@ -163,14 +168,16 @@ export function createHeroSequence(options) {
     const width = sequenceClamp(options.decodeWidth ?? 1920, 640, 1920);
     const frames = createSequenceFrames(urls, width, sequenceClamp(options.cacheFrames ?? 14, 8, 24), wake);
     function snapshot() {
-        return { state, progress: displayed / Math.max(1, last), frame: displayed, direction, held, ...frames.counts() };
+        return { state, progress: displayedProgress, frame: displayed, direction, held, ...frames.counts() };
     }
     function publish() {
         if (disposed)
             return;
         root.dataset.sequenceState = state;
         root.dataset.frame = String(displayed);
-        root.dataset.progress = String(displayed / Math.max(1, last));
+        root.dataset.progress = String(displayedProgress);
+        root.dataset.crossfade = rendered.index !== rendered.next ? (rendered.index === 0 ? "opening" : "arrival") : "";
+        root.dataset.crossfadeMix = String(rendered.mix);
         root.dataset.scrollHeld = String(held);
         root.dataset.decoded = String(frames.counts().decoded);
         options.onUpdate?.(snapshot());
@@ -203,11 +210,11 @@ export function createHeroSequence(options) {
         holdY = scrollY;
         holdTimer = setTimeout(() => fail("timeout"), options.timeoutMs ?? 12000);
     }
-    function draw(index, force = false) {
-        const bitmap = frames.get(index);
-        if (!context || !bitmap)
+    function draw(index, force = false, nextIndex = index, mix = 0) {
+        const bitmap = frames.get(index), next = frames.get(nextIndex);
+        if (!context || !bitmap || !next)
             return false;
-        if (index === displayed && !force && canvas.style.opacity === "1")
+        if (index === rendered.index && nextIndex === rendered.next && mix === rendered.mix && !force && canvas.style.opacity === "1")
             return true;
         const box = root.getBoundingClientRect();
         if (box.width <= 0 || box.height <= 0)
@@ -225,14 +232,44 @@ export function createHeroSequence(options) {
         if (canvas.height !== ch)
             canvas.height = ch;
         // Fill before drawing: a small alpha channel in exported files cannot accumulate trails.
+        context.globalAlpha = 1;
         context.fillStyle = "#101820";
         context.fillRect(0, 0, cw, ch);
-        context.drawImage(bitmap.image, (bitmap.width - sw) * sequenceClamp((options.focalX ?? 50) / 100), (bitmap.height - sh) * sequenceClamp((options.focalY ?? 50) / 100), sw, sh, 0, 0, cw, ch);
-        displayed = index;
+        function paint(frame) {
+            let w = frame.width, h = frame.height;
+            if (w / h > boxRatio)
+                w = h * boxRatio;
+            else
+                h = w / boxRatio;
+            context.drawImage(frame.image, (frame.width - w) * sequenceClamp((options.focalX ?? 50) / 100), (frame.height - h) * sequenceClamp((options.focalY ?? 50) / 100), w, h, 0, 0, cw, ch);
+        }
+        // Keep the lower image opaque to prevent a dark dip during the dissolve.
+        paint(bitmap);
+        if (nextIndex !== index) {
+            context.globalAlpha = mix;
+            paint(next);
+            context.globalAlpha = 1;
+        }
+        rendered = { index, next: nextIndex, mix };
+        displayed = mix === 1 ? nextIndex : index;
+        displayedProgress = (index + (nextIndex - index) * mix) / Math.max(1, last);
         canvas.style.opacity = "1";
         poster.style.opacity = "0";
         publish();
         return true;
+    }
+    function redraw() { return draw(rendered.index, true, rendered.next, rendered.mix); }
+    function frameAt(time) {
+        if (time <= 0)
+            return { index: 0, next: 0, mix: 0 };
+        if (time >= totalDuration)
+            return { index: last, next: last, mix: 0 };
+        if (edgeFade && time < edgeFade)
+            return { index: 0, next: 1, mix: sequenceEase(time / edgeFade) };
+        if (edgeFade && time > flightEnd)
+            return { index: last - 1, next: last, mix: sequenceEase((time - flightEnd) / edgeFade) };
+        const index = (edgeFade ? 1 : 0) + Math.round(sequenceEase(sequenceClamp((time - edgeFade) / duration)) * (edgeFade ? last - 2 : last));
+        return { index, next: index, mix: 0 };
     }
     function warm(explicit = false) {
         if (disposed || motion.matches)
@@ -285,35 +322,48 @@ export function createHeroSequence(options) {
             return;
         }
         if (!playing) {
-            if (active)
-                draw(displayed);
+            if (active && canvas.style.opacity !== "1")
+                redraw();
             return;
         }
-        const dt = Math.min(.05, previousTime ? (now - previousTime) / 1000 : 1 / 60);
+        const elapsed = previousTime ? (now - previousTime) / 1000 : 1 / 60;
+        const dt = Math.min(.05, elapsed);
         previousTime = now;
         boost *= Math.exp(-dt / momentum);
         const wantedVelocity = direction * (1 + boost);
         velocity += (wantedVelocity - velocity) * (1 - Math.exp(-dt / .10));
-        const proposed = sequenceClamp(clock + velocity * dt / duration);
-        const index = Math.round(sequenceEase(proposed) * last);
-        frames.request(index, direction, true);
-        if (frames.failed(index)) {
+        let proposed;
+        if (edgeFade && (clock < edgeFade || (clock === edgeFade && direction < 0))) {
+            velocity = direction;
+            proposed = sequenceClamp(clock + direction * elapsed, 0, edgeFade);
+        }
+        else if (edgeFade && (clock > flightEnd || (clock === flightEnd && direction > 0))) {
+            velocity = direction;
+            proposed = sequenceClamp(clock + direction * elapsed, flightEnd, totalDuration);
+        }
+        else
+            proposed = sequenceClamp(clock + velocity * dt, edgeFade, flightEnd);
+        const frame = frameAt(proposed);
+        frames.request(frame.index, direction, true);
+        if (frames.failed(frame.index) || frames.failed(frame.next)) {
             fail("frame-error");
             return;
         }
-        if (draw(index)) {
+        if (draw(frame.index, false, frame.next, frame.mix)) {
             clock = proposed;
             waitingSince = 0;
             if (state !== "moving") {
                 state = "moving";
                 publish();
             }
-            if ((direction > 0 && clock >= 1 && displayed === last) || (direction < 0 && clock <= 0 && displayed === 0)) {
+            if ((direction > 0 && clock >= totalDuration && displayed === last) || (direction < 0 && clock <= 0 && displayed === 0)) {
                 finish();
                 return;
             }
         }
         else {
+            if (canvas.style.opacity !== "1")
+                draw(displayed);
             if (!waitingSince)
                 waitingSince = now;
             if (now - waitingSince > 7000) {
@@ -334,7 +384,7 @@ export function createHeroSequence(options) {
             return;
         bypass = false;
         direction = nextDirection > 0 ? 1 : -1;
-        if ((direction > 0 && clock >= 1 && displayed === last) || (direction < 0 && clock <= 0 && displayed === 0))
+        if ((direction > 0 && clock >= totalDuration && displayed === last) || (direction < 0 && clock <= 0 && displayed === 0))
             return;
         active = true;
         playing = true;
@@ -363,7 +413,7 @@ export function createHeroSequence(options) {
     }
     function skip() {
         direction = 1;
-        clock = 1;
+        clock = totalDuration;
         active = true;
         playing = true;
         previousTime = 0;
@@ -401,7 +451,7 @@ export function createHeroSequence(options) {
             lastIntentAt = now;
             return;
         }
-        if (!playing && (!atHero() || (clock === 0 && sign < 0) || (clock === 1 && sign > 0)))
+        if (!playing && (!atHero() || (clock === 0 && sign < 0) || (clock === totalDuration && sign > 0)))
             return;
         if (!event.cancelable)
             return;
@@ -484,13 +534,14 @@ export function createHeroSequence(options) {
             publish();
         }
         else {
-            clock = displayed / Math.max(1, last);
+            if (displayed === last)
+                clock = totalDuration;
             state = displayed === last ? "arrival" : "opening";
             publish();
         }
     }
     const resize = new ResizeObserver(() => { if (active && !disposed)
-        draw(displayed, true); });
+        redraw(); });
     resize.observe(root);
     const intersection = new IntersectionObserver(entries => {
         if (entries[0]?.isIntersecting) {

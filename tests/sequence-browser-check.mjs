@@ -26,6 +26,7 @@ async function fixture(options={}){
    const index=Number(decodeURIComponent(url.pathname).match(/sequence(\d+)/)?.[1]);requests.push(index);
    if(options.delayLast&&index===64)await sleep(options.delayLast);
    if(options.failFrame===index)return route.fulfill({status:503,body:'Test failure'});
+   if(options.solidFrames)return route.fulfill({contentType:'image/svg+xml',body:`<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1010"><rect width="1920" height="1010" fill="${index===0?'red':index===63?'lime':index===64?'yellow':'blue'}"/></svg>`});
    return route.fulfill({contentType:'image/avif',headers:{'Cache-Control':'public,max-age=3600'},body:assets[index]});
   }
   return route.fulfill({contentType:'text/html',body:'<html><head><meta name="viewport" content="width=device-width, initial-scale=1"><style>body{margin:0;background:#eee;color:white;font:18px Arial}#hero{height:100svh;position:relative}.copy{position:absolute;left:6%;top:20%;max-width:650px}.cta{position:absolute;left:6%;top:65%}.cta a{display:inline-block;background:#fff;color:#152a31;padding:18px;border-radius:4px}#after{height:160vh;padding:50px;color:#152a31}#nested{position:absolute;right:0;top:0;height:100px;width:100px;overflow:auto;z-index:5}</style></head><body><div id="mount"></div><section id="after">Content after the hero</section></body></html>'});
@@ -47,7 +48,7 @@ async function fixture(options={}){
     React.createElement(CTA,{id:'cta',className:'cta'},React.createElement('a',{href:'#after',onClick:()=>window.ctaClicked=true},'View apartments')),
     React.createElement('div',{id:'nested'},React.createElement('div',{style:{height:400}},'Nested scroll test')))));
   window.renderHero();window.samples=[];
-  window.sampleTimer=setInterval(()=>{const e=document.querySelector('[data-admiral-sequence]');if(e)window.samples.push({time:performance.now(),frame:Number(e.dataset.frame),state:e.dataset.sequenceState,decoded:Number(e.dataset.decoded),held:e.dataset.scrollHeld});},16);
+  window.sampleTimer=setInterval(()=>{const e=document.querySelector('[data-admiral-sequence]');if(e)window.samples.push({time:performance.now(),frame:Number(e.dataset.frame),state:e.dataset.sequenceState,decoded:Number(e.dataset.decoded),held:e.dataset.scrollHeld,edge:e.dataset.crossfade,mix:Number(e.dataset.crossfadeMix),ctaInert:document.querySelector('#cta')?.inert});},16);
  },{code,props:options.props||{},staticMode:!!options.staticMode});
  await page.waitForFunction(()=>document.querySelector('.admiral-hero-sequence img')?.naturalWidth>0);
  await page.mouse.move(400,550);
@@ -102,6 +103,41 @@ try{
   assert.ok(boosted<baseline*.92,`Boost ${boosted}ms should beat baseline ${baseline}ms`);
   results.push({baselineMs:baseline,boostedMs:boosted});await f.close();
  });
+ await pass('half-second endpoint dissolves blend pixels and finish before releasing the CTA',async()=>{
+  const f=await fixture({solidFrames:true,props:{duration:.6}}),{page}=f;
+  await page.waitForTimeout(250);await page.mouse.wheel(0,100);
+  await page.waitForFunction(()=>{const e=document.querySelector('[data-admiral-sequence]');return e.dataset.crossfade==='opening'&&Number(e.dataset.crossfadeMix)>.25;});
+  const pixel=await page.locator('[data-admiral-sequence]').evaluate(e=>({mix:Number(e.dataset.crossfadeMix),rgba:[...e.querySelector('canvas').getContext('2d').getImageData(10,10,1,1).data]}));
+  assert.ok(pixel.mix>.25&&pixel.mix<.9);
+  assert.ok(Math.abs(pixel.rgba[0]-255*(1-pixel.mix))<=2&&pixel.rgba[1]===0&&Math.abs(pixel.rgba[2]-255*pixel.mix)<=2&&pixel.rgba[3]===255,'Dissolve must blend two opaque frames without a black dip');
+  await page.mouse.wheel(0,2000);await waitState(page,'arrival');
+  const forward=await page.evaluate(()=>window.samples);
+  await page.waitForTimeout(180);await page.evaluate(()=>window.samples=[]);
+  await page.mouse.wheel(0,-100);await waitState(page,'moving');await waitState(page,'opening');
+  const reverse=await page.evaluate(()=>window.samples);
+  for(const [name,samples] of [['forward',forward],['reverse',reverse]])for(const edge of ['opening','arrival']){
+   const fade=samples.filter(s=>s.edge===edge);assert.ok(fade.length>15,`${name} ${edge} has visible intermediate blends`);
+   const ms=fade.at(-1).time-fade[0].time;
+   assert.ok(ms>=430&&ms<=620,`${name} ${edge} took ${ms}ms despite scroll acceleration`);
+   assert.ok(fade.every(s=>s.held==='true'&&s.ctaInert),`${name} ${edge} keeps the page held and CTA inert`);
+  }
+  assert.equal(await page.locator('[data-admiral-sequence]').getAttribute('data-frame'),'0');await f.close();
+ });
+ await pass('endpoint dissolve can reverse and pause without snapping on resize',async()=>{
+  const f=await fixture({props:{duration:.6}}),{page}=f;
+  await page.mouse.wheel(0,100);
+  await page.waitForFunction(()=>{const e=document.querySelector('[data-admiral-sequence]');return e.dataset.crossfade==='opening'&&Number(e.dataset.crossfadeMix)>.3;});
+  await page.mouse.wheel(0,-100);await waitState(page,'opening');
+  assert.equal(await page.locator('[data-admiral-sequence]').getAttribute('data-frame'),'0');
+  await page.mouse.wheel(0,100);
+  await page.waitForFunction(()=>{const e=document.querySelector('[data-admiral-sequence]');return e.dataset.crossfade==='arrival'&&Number(e.dataset.crossfadeMix)>.2;});
+  await page.keyboard.press('Escape');await waitState(page,'paused');
+  const before=Number(await page.locator('[data-admiral-sequence]').getAttribute('data-crossfade-mix'));
+  await page.setViewportSize({width:1100,height:750});await page.waitForTimeout(120);
+  assert.equal(Number(await page.locator('[data-admiral-sequence]').getAttribute('data-crossfade-mix')),before);
+  await page.getByRole('button',{name:'Continue animation',exact:true}).click();await waitState(page,'arrival');
+  assert.equal(await page.locator('#cta').evaluate(e=>e.inert),false);await f.close();
+ });
  await pass('Escape releases navigation and nested scroll is respected',async()=>{
   const f=await fixture(),{page}=f;
   await page.mouse.move(1150,50);await page.mouse.wheel(0,70);await page.waitForTimeout(150);
@@ -122,7 +158,7 @@ try{
   const f=await fixture({failFrame:1,props:{preload:false}}),{page}=f;
   await page.mouse.wheel(0,90);await waitState(page,'error');
   assert.equal(await page.locator('[data-admiral-sequence]').getAttribute('data-scroll-held'),'false');
-  assert.equal(await page.locator('canvas').evaluate(e=>e.style.opacity),'1');
+  assert.ok(await page.locator('[data-admiral-sequence]').evaluate(e=>e.querySelector('canvas').style.opacity==='1'||(e.querySelector('img').naturalWidth>0&&e.querySelector('img').style.opacity!=='0')));
   await page.mouse.wheel(0,350);await page.waitForTimeout(150);assert.ok(await page.evaluate(()=>scrollY)>100);await f.close();
  });
  await pass('late final frame keeps CTA hidden until the actual arrival image',async()=>{

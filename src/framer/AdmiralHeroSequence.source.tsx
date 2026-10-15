@@ -158,11 +158,12 @@ function createSequenceOverlay(Component: React.ComponentType<any>, kind: "openi
                 const ramp = (from: number, to: number) => sequenceEase(sequenceClamp((progress * 100 - from) / Math.max(1, to - from)))
                 const opacity = kind === "opening" ? 1 - ramp(0, t.openingOut) :
                     kind === "building" ? ramp(t.buildingIn, t.buildingFull) : ramp(t.ctaIn, 100)
+                const interactive = opacity >= .98 && (kind !== "cta" || channel.snapshot.state === "arrival" || channel.snapshot.state === "reduced")
                 element!.style.opacity = String(opacity)
                 element!.style.translate = `0px ${kind === "opening" ? -(1 - opacity) * t.rise * .6 : (1 - opacity) * t.rise}px`
                 element!.style.visibility = opacity < .001 ? "hidden" : original.visibility
-                element!.style.pointerEvents = opacity < .98 ? "none" : original.pointerEvents
-                element!.inert = opacity < .98 ? true : original.inert
+                element!.style.pointerEvents = interactive ? original.pointerEvents : "none"
+                element!.inert = interactive ? original.inert : true
                 if (opacity < .01) element!.setAttribute("aria-hidden", "true")
                 else if (original.hidden === null) element!.removeAttribute("aria-hidden")
                 else element!.setAttribute("aria-hidden", original.hidden)
