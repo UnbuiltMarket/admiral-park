@@ -11,7 +11,7 @@ Use **src/framer/AdmiralHeroSequence.tsx** for the new AVIF hero. This is one co
 5. On each wrapper, open **Code Overrides**, select **AdmiralHeroSequence**, and apply **OpeningContent**, **BuildingContent**, or **ArrivalCTA** respectively. These names are exported from the same file as the player; do not duplicate the code into a second file, because the overrides and player must share their progress channel.
 6. Keep fonts, copy, layout, responsive styling, button links and hover effects in Framer. Remove Appear/Scroll Transform effects from the three outer wrappers: their opacity and vertical movement belong to the sequence overrides. Child styling and button interactions remain native.
 7. Preview the page to test synchronization. **Editor view: Opening / Arrival** only selects the background still while editing. Framer does not execute Code Overrides on the editing canvas; the synchronized text reveals run in Preview and on the published site.
-8. Leave **GitHub assets** enabled for the supplied 63 AVIF files. Updating the GitHub code does not replace a pasted Framer code file automatically: paste the updated file, save, then publish in Framer.
+8. Leave **GitHub assets** enabled for the supplied 65 AVIF files, named `raw sequence00.avif` through `raw sequence64.avif`. Frame 00 is the sharper opening still; frame 64 is the sharper arrival still. Updating the GitHub code does not replace a pasted Framer code file automatically: paste the updated file, save, then publish in Framer. The previous `copy.avif` URLs remain published for compatibility with older pasted components.
 
 ## Default visitor experience
 
@@ -25,7 +25,7 @@ Escape, Tab navigation, Skip, a failed frame, a hidden tab or a timeout releases
 
 ## Loading and memory
 
-The supplied export is 63 frames at 1920 x 1010, totaling approximately 3.09 MB. The initial still is high priority. Background loading starts after the poster, with up to four downloads and two decodes at once. Save-data/2G connections wait for interaction before bulk loading. The loader retains compressed files, keeps a bounded decoded window including both endpoints, and releases evicted bitmap resources. It draws only when the frame or canvas size changes, with consistent cover cropping throughout.
+The supplied export is 65 frames at 1920 x 1010, totaling approximately 3.53 MB. The sharper opening and arrival stills add about 430 kB combined and are used directly as the sequence endpoints. The initial still is high priority. Background loading starts after the poster, with up to four downloads and two decodes at once. Save-data/2G connections wait for interaction before bulk loading. The loader retains compressed files, keeps a bounded decoded window including both endpoints, and releases evicted bitmap resources. It draws only when the frame or canvas size changes, with consistent cover cropping throughout.
 
 Desktop defaults to 14 decoded frames at 1920 width. Phone-sized viewports use at most 10 decoded frames at 1280 width. The phone setting reduces decoded memory, not downloaded file size; a separately composed mobile export can be supplied later. The fallback HTML image decoder may retain full-resolution frames if bitmap resizing is unavailable. On failure the last valid image remains visible and navigation is released. There is no full-screen loader.
 

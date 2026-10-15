@@ -9,10 +9,10 @@ const root=new URL('../',import.meta.url);
 const source=await readFile(new URL('src/framer/AdmiralHeroSequence.tsx',root),'utf8');
 test('corrected sequence includes every expected numbered frame',async()=>{
  const folder=new URL('assets/images/AVIF 30_1920x1010 DESKTOP HERO SEQUENCE/',root);
- const files=(await readdir(folder)).filter(n=>/^raw sequence\d{2} copy\.avif$/.test(n));
- assert.equal(files.length,63);
- for(let i=0;i<63;i++){
-  const name=`raw sequence${String(i).padStart(2,'0')} copy.avif`;
+ const files=(await readdir(folder)).filter(n=>/^raw sequence\d{2}\.avif$/.test(n));
+ assert.equal(files.length,65);
+ for(let i=0;i<65;i++){
+  const name=`raw sequence${String(i).padStart(2,'0')}.avif`;
   assert.ok(files.includes(name));
   const data=await readFile(new URL(encodeURIComponent(name),folder));
   assert.equal(data.toString('ascii',4,8),'ftyp',name);
@@ -41,6 +41,6 @@ test('standalone sequence registers and server-renders without browser globals',
  assert.deepEqual(Object.keys(module.exports).sort(),['ArrivalCTA','BuildingContent','OpeningContent','default']);
  assert.equal(registered,module.exports.default);
  const html=requireDev('react-dom/server').renderToStaticMarkup(requireDev('react').createElement(module.exports.default));
- assert.match(html,/AVIF%2030_1920x1010/);assert.match(html,/raw%20sequence00%20copy.avif/);
+ assert.match(html,/AVIF%2030_1920x1010/);assert.match(html,/raw%20sequence00\.avif/);
  assert.doesNotMatch(html,/<h1|<nav|<video/);
 });

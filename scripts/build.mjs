@@ -7,7 +7,7 @@ for(const [coreName,componentName] of [["hero-player","AdmiralHeroVideo"],["hero
   let wrapper=await readFile(new URL(`src/framer/${componentName}.source.tsx`,root),"utf8");
   if(componentName==="AdmiralHeroSequence"){
     const hash=createHash("sha256");
-    for(let i=0;i<63;i++)hash.update(await readFile(new URL("assets/images/AVIF 30_1920x1010 DESKTOP HERO SEQUENCE/"+encodeURIComponent(`raw sequence${String(i).padStart(2,"0")} copy.avif`),root)));
+    for(let i=0;i<65;i++)hash.update(await readFile(new URL("assets/images/AVIF 30_1920x1010 DESKTOP HERO SEQUENCE/"+encodeURIComponent(`raw sequence${String(i).padStart(2,"0")}.avif`),root)));
     wrapper=wrapper.replace("__SEQUENCE_VERSION__",hash.digest("hex").slice(0,12));
   }
   const single="// Generated standalone Framer Code Component. Paste this entire file into Framer.\n"+

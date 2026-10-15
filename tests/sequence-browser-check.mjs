@@ -12,7 +12,7 @@ const source=await readFile(new URL('src/framer/AdmiralHeroSequence.tsx',root),'
 const code=ts.transpileModule(source,{compilerOptions:{target:ts.ScriptTarget.ES2020,module:ts.ModuleKind.CommonJS,jsx:ts.JsxEmit.React}}).outputText;
 const react=await readFile(path.join(path.dirname(requireDev.resolve('react/package.json')),'umd/react.development.js'),'utf8');
 const dom=await readFile(path.join(path.dirname(requireDev.resolve('react-dom/package.json')),'umd/react-dom.development.js'),'utf8');
-const assets=await Promise.all(Array.from({length:63},(_,i)=>readFile(new URL('assets/images/AVIF 30_1920x1010 DESKTOP HERO SEQUENCE/'+encodeURIComponent(`raw sequence${String(i).padStart(2,'0')} copy.avif`),root))));
+const assets=await Promise.all(Array.from({length:65},(_,i)=>readFile(new URL('assets/images/AVIF 30_1920x1010 DESKTOP HERO SEQUENCE/'+encodeURIComponent(`raw sequence${String(i).padStart(2,'0')}.avif`),root))));
 const browser=await chromium.launch({headless:true,channel:process.env.PLAYWRIGHT_CHANNEL||'chrome'});
 const results=[];
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
@@ -24,7 +24,7 @@ async function fixture(options={}){
   const url=new URL(route.request().url());
   if(url.pathname.startsWith('/frames/')){
    const index=Number(decodeURIComponent(url.pathname).match(/sequence(\d+)/)?.[1]);requests.push(index);
-   if(options.delayLast&&index===62)await sleep(options.delayLast);
+   if(options.delayLast&&index===64)await sleep(options.delayLast);
    if(options.failFrame===index)return route.fulfill({status:503,body:'Test failure'});
    return route.fulfill({contentType:'image/avif',headers:{'Cache-Control':'public,max-age=3600'},body:assets[index]});
   }
@@ -38,7 +38,7 @@ async function fixture(options={}){
   window.Hero=module.exports.default;
   const Frame=React.forwardRef((props,ref)=>React.createElement('div',{...props,ref}));
   const Intro=module.exports.OpeningContent(Frame),Building=module.exports.BuildingContent(Frame),CTA=module.exports.ArrivalCTA(Frame);
-  window.props={useGitHubAssets:false,baseUrl:'http://sequence.test/frames',filename:'raw sequence{index} copy.avif',...props};
+  window.props={useGitHubAssets:false,baseUrl:'http://sequence.test/frames',filename:'raw sequence{index}.avif',...props};
   window.root=ReactDOM.createRoot(document.querySelector('#mount'));
   window.renderHero=()=>window.root.render(React.createElement(React.StrictMode,null,
    React.createElement('section',{id:'hero'},React.createElement(window.Hero,window.props),
@@ -60,6 +60,7 @@ try{
  await pass('forward, coasting, overlay synchronization, release and reverse',async()=>{
   const f=await fixture(),{page}=f;
   assert.equal(await state(page),'opening');
+  assert.match(await page.locator('img').getAttribute('src'),/raw%20sequence00\.avif/);
   assert.equal(await page.locator('#intro').evaluate(e=>getComputedStyle(e).opacity),'1');
   assert.equal(await page.locator('#cta').evaluate(e=>e.inert),true);
   await page.screenshot({path:fileURLToPath(new URL('opening.png',out))});
@@ -69,6 +70,7 @@ try{
   await page.waitForTimeout(250);
   assert.ok(Number(await page.locator('[data-admiral-sequence]').getAttribute('data-frame'))>Number(middle),'Continues without another scroll');
   await waitState(page,'arrival');
+  assert.equal(await page.locator('[data-admiral-sequence]').getAttribute('data-frame'),'64');
   assert.equal(await page.evaluate(()=>scrollY),0);
   assert.equal(await page.locator('#cta').evaluate(e=>e.inert),false);
   assert.equal(await page.locator('#building').evaluate(e=>getComputedStyle(e).opacity),'1');
@@ -82,6 +84,7 @@ try{
   await page.mouse.wheel(0,-1200);await page.waitForTimeout(150);
   assert.equal(await page.evaluate(()=>scrollY),0);
   await page.mouse.wheel(0,-100);await waitState(page,'moving');await waitState(page,'opening');
+  assert.equal(await page.locator('[data-admiral-sequence]').getAttribute('data-frame'),'0');
   assert.equal(await page.locator('#cta').evaluate(e=>e.inert),true);
   assert.equal(await page.locator('#intro').evaluate(e=>getComputedStyle(e).opacity),'1');
   await writeFile(new URL('forward-reverse.json',out),JSON.stringify(samples,null,2));await f.close();
@@ -110,9 +113,9 @@ try{
  });
  await pass('reduced motion uses endpoints only and never holds scrolling',async()=>{
   const f=await fixture({context:{reducedMotion:'reduce'}}),{page}=f;
-  await page.waitForFunction(()=>Number(document.querySelector('[data-admiral-sequence]').dataset.frame)===62);
+  await page.waitForFunction(()=>Number(document.querySelector('[data-admiral-sequence]').dataset.frame)===64);
   assert.equal(await state(page),'reduced');assert.equal(await page.locator('#cta').evaluate(e=>e.inert),false);
-  await page.waitForTimeout(250);assert.deepEqual([...new Set(f.requests)].sort((a,b)=>a-b),[0,62]);
+  await page.waitForTimeout(250);assert.deepEqual([...new Set(f.requests)].sort((a,b)=>a-b),[0,64]);
   await page.mouse.wheel(0,350);await page.waitForTimeout(150);assert.ok(await page.evaluate(()=>scrollY)>100);await f.close();
  });
  await pass('failed frame preserves a visible image and releases the page',async()=>{
@@ -154,7 +157,7 @@ try{
   const f=await fixture({staticMode:true,props:{editorView:'arrival'}}),{page}=f;
   assert.equal(await page.locator('#cta').evaluate(e=>getComputedStyle(e).opacity),'1');
   assert.equal(await page.locator('#intro').evaluate(e=>getComputedStyle(e).opacity),'0');
-  assert.deepEqual([...new Set(f.requests)],[62]);await f.close();
+  assert.deepEqual([...new Set(f.requests)],[64]);await f.close();
  });
  await pass('native CTA links and click handlers are preserved',async()=>{
   const f=await fixture({props:{duration:.6}}),{page}=f;
@@ -170,6 +173,7 @@ try{
   const failures=[];page.on('response',r=>{if(r.url().includes('raw.githubusercontent.com')&&r.status()>=400)failures.push(r.status());});
   await page.waitForTimeout(1500);await page.mouse.wheel(0,100);
   await waitState(page,'arrival',30000);
+  assert.equal(await page.locator('[data-admiral-sequence]').getAttribute('data-frame'),'64');
   assert.equal(await page.locator('#cta').evaluate(e=>e.inert),false);assert.deepEqual(failures,[]);
   await f.close();
  });
