@@ -416,7 +416,7 @@ function createHeroPlayer(options: HeroOptions) {
   let posterReadyMs: number | null = null, firstFrameMs: number | null = null;
   let stalls = 0, stallMs = 0, visible = isVisible();
   const reduced = () => respectMotion && mediaQuery.matches;
-  const fadeDuration = () => reduced() ? 0 : Math.max(0, options.transitionMs ?? 1000);
+  const fadeDuration = () => reduced() ? 0 : Math.max(0, options.transitionMs ?? 300);
   function isVisible() {
     const rect = root.getBoundingClientRect();
     return rect.bottom > Math.min(100, innerHeight * .15) && rect.top < innerHeight * .85;
@@ -560,7 +560,7 @@ function createHeroPlayer(options: HeroOptions) {
         if (disposed || task.signal.aborted) return;
         introDone = true; startImage.style.opacity = "0";
       }
-      // Playback starts only AFTER the incoming one-second fade has finished.
+      // Playback starts only AFTER the incoming 0.3-second fade has finished.
       setState("loading");
       await video.play();
     } catch (error) {

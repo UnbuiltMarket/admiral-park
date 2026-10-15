@@ -10,14 +10,14 @@ The deliverable is **src/framer/AdmiralHeroVideo.tsx**: the full animation compo
 5. Adjust **Focal X/Y**, **Object Fit**, optional **Darken**, **Play controls**, **Scroll trigger**, and button colors. Autoplay means start on downward scroll. Keep Loop off to hold the final frame.
 6. Test in Framer Preview/published mode. The editing canvas renders the opening still.
 
-The opening image appears on page load. A downward page scroll (default threshold: 18 pixels) starts a one-second crossfade to the paused first video frame. Playback starts only after that fade finishes. The film plays once in time, independently of subsequent scroll movement. On video end, the stopped final video frame crossfades to the final image over one second, then holds. Each dissolve keeps the lower layer opaque until the incoming layer is fully visible, avoiding a dark flash.
+The opening image appears on page load. A downward page scroll (default threshold: 18 pixels) starts a 0.3-second crossfade to the paused first video frame. Playback starts only after that fade finishes. The film plays once in time, independently of subsequent scroll movement. On video end, the stopped final video frame crossfades to the final image over 0.3 seconds, then holds. Each dissolve keeps the lower layer opaque until the incoming layer is fully visible, avoiding a dark flash.
 It does not replay on upward scroll. The optional control supports pause, resume and replay.
 The component does not pin the page or intercept scrolling. Configure any sticky section in Framer.
 The trigger listens to the page's window scroll; a separately scrolling nested container is not supported.
 
 ## Loading and fallbacks
 The opening image loads eagerly. Video warming begins 650 ms after that image loads.
-The opening still remains until the paused video frame is ready; the one-second incoming fade then begins. Slow loading does not fade into an empty player. Pause/resume works during both fades as well as playback.
+The opening still remains until the paused video frame is ready; the 0.3-second incoming fade then begins. Slow loading does not fade into an empty player. Pause/resume works during both fades as well as playback.
 Reduced-motion visitors use manual play with instant transitions. Data-saving and 2G connections skip speculative video loading.
 If the final image fails, the last video frame stays visible. Video failure preserves the opening image.
 The player pauses while offscreen or in a hidden tab and resumes unless manually paused.
@@ -43,12 +43,12 @@ The browser test results and screenshots are written under ignored tmp/.
 
 ## Verification and limits
 Desktop Chrome and a phone-sized Chrome viewport passed scroll/play/end, pause/replay, reduced-motion, slow-response, blocked-playback and failed-media checks.
-This is not a real phone or live Framer verification. The standalone JSX component was type-checked against React 18 and the Framer SDK, server-rendered without browser globals, and tested in React Strict Mode. The user confirmed that the component appears in the actual Framer Assets picker. The updated sequence is browser-tested; final layout and scroll behavior should be checked in the Framer project.
-A V02 cold-cache simulation at 4 Mbps / 120 ms latency, scrolling two seconds after the opening image loaded, completed with zero buffering stalls and zero dropped frames across 63 frames. This single desktop simulation does not guarantee results on every connection or phone. The updated React browser check also loaded both V02 images and the V02 video from the real public GitHub URLs and verified both one-second fades.
+These automated regression tests use local browser fixtures rather than real phone hardware. The published Framer draft was inspected separately as described below; deploying the updated timing still requires replacing the code in Framer and republishing. The standalone JSX component was type-checked against React 18 and the Framer SDK, server-rendered without browser globals, and tested in React Strict Mode. The user confirmed that the component appears in the actual Framer Assets picker. The updated sequence is browser-tested; final layout and scroll behavior should be checked in the Framer project.
+Before shortening the fades from one second, a V02 cold-cache simulation at 4 Mbps / 120 ms latency, scrolling two seconds after the opening image loaded, completed with zero buffering stalls and zero dropped frames across 63 frames. This single desktop simulation does not guarantee results on every connection or phone. The updated React browser check also loaded both V02 images and the V02 video from the real public GitHub URLs and verified the transition sequence. The current browser check verifies both 300 ms fades and pause/resume during them.
 The local desktop run had no buffering stalls. Results vary with device, cache and network.
 
 ## Assets
-Default: V02, 1,956,984 bytes (1.96 MB / 1.87 MiB), about 49% smaller than the previous 3.82 MB export. It runs for 2.625 seconds at 1920 × 1010, 24 fps, H.264 without audio, with fast-start metadata. The two V02 stills are also 1920 × 1010 and total 305,142 bytes. With both one-second fades, the sequence lasts about 4.63 seconds once the video is ready.
+Default: V02, 1,956,984 bytes (1.96 MB / 1.87 MiB), about 49% smaller than the previous 3.82 MB export. It runs for 2.625 seconds at 1920 × 1010, 24 fps, H.264 without audio, with fast-start metadata. The two V02 stills are also 1920 × 1010 and total 550,560 bytes. With both 0.3-second fades, the sequence lasts about 3.23 seconds once the video is ready.
 Previous comparison videos remain available: 3.82 MB, 5.05 MB and 10.15 MB, each about 5.04 seconds. The original 1920 × 1013 stills are preserved. Exact visual matches should come from the final graded timeline.
 Original exports and supplied stills are preserved. assets/images contains copies for the component test.
 GitHub mode uses public raw.githubusercontent.com URLs under main. For a fixed release or larger deployments, use public, versioned media URLs on your chosen host. Verify MP4 byte-range support; never place private GitHub credentials in component code.
@@ -59,3 +59,6 @@ The supplied file already had a default export. The replacement uses literal JSX
 Run node tests/framer-component-check.mjs for React 18 playback regression checks (requires Playwright). On a cloud-synced drive that rejects node_modules installation, install the same package.json dependencies on a local disk and set HERO_DEV_MODULES to that node_modules directory before building or testing.
 
 Official Framer guidance: https://www.framer.com/developers/components-introduction and https://www.framer.com/developers/property-controls
+
+## Final-frame alignment
+Inspection of the published homepage draft on 15 October 2026 confirmed that the video and both V02 stills use the same 1920 × 1010 source dimensions, CSS bounds, cover fit and centered position, with no scale transform. The final video frame and the sharper supplied final still have slightly different subject geometry, so their dissolve can look like a small zoom or shift. A 300 ms fade shortens the visible mismatch; it does not align the source images. A still exported from the exact final video frame matches its framing, while keeping the sharper render requires matching the video endpoint to that render.
