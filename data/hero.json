@@ -3,12 +3,23 @@
   "id": "admiral-park-hero",
   "status": "browser-review",
   "playbackMode": "downscroll-play-once",
-  "defaultVariant": "vbr6",
-  "startFrame": "assets/images/hero-start.webp",
-  "endFrame": "assets/images/hero-end.webp",
+  "defaultVariant": "v02",
+  "startFrame": "assets/images/START frame_web_V02.webp",
+  "endFrame": "assets/images/END frame_web_V02.webp",
   "frameWidth": 1920,
-  "frameHeight": 1013,
+  "frameHeight": 1010,
   "variants": [
+    {
+      "id": "v02",
+      "label": "V02 · 2.63 s · 1.96 MB",
+      "path": "assets/videos/admiral-park-hero-1920-quality VBR 6 _V02.mp4",
+      "bytes": 1956984,
+      "width": 1920,
+      "height": 1010,
+      "frameRate": 24,
+      "durationSecondsApprox": 2.625,
+      "hasAudio": false
+    },
     {
       "id": "vbr6",
       "label": "6 Mbps · 3.82 MB",

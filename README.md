@@ -4,7 +4,7 @@ The deliverable is **src/framer/AdmiralHeroVideo.tsx**: the full animation compo
 
 ## Use in Framer
 1. In Framer, open Assets > Code > Create Code File and choose a new Code Component. Name it AdmiralHeroVideo.tsx. Replace the entire file with src/framer/AdmiralHeroVideo.tsx from this repository. Do not paste the .source.tsx template, the core helper, or a Markdown code fence.
-2. Save the file, then find **Hero Video** under Assets > Code and drag it onto the canvas. Leave **GitHub assets** enabled: the opening image, 6 Mbps video and final image load from the public UnbuiltMarket/admiral-park repository automatically, including on existing instances with old saved file choices.
+2. Save the file, then find **Hero Video** under Assets > Code and drag it onto the canvas. Leave **GitHub assets** enabled: the V02 opening image, faster V02 video and V02 final image load from the public UnbuiltMarket/admiral-park repository automatically, including on existing instances with old saved file choices.
 3. To use other assets, turn **GitHub assets** off and choose **Video**, optional **Mobile Video**, **First Frame** and **Last Frame** with the file controls.
 4. Set the component's size in Framer. Layer your own logo, text, buttons, and navigation above it.
 5. Adjust **Focal X/Y**, **Object Fit**, optional **Darken**, **Play controls**, **Scroll trigger**, and button colors. Autoplay means start on downward scroll. Keep Loop off to hold the final frame.
@@ -44,13 +44,12 @@ The browser test results and screenshots are written under ignored tmp/.
 ## Verification and limits
 Desktop Chrome and a phone-sized Chrome viewport passed scroll/play/end, pause/replay, reduced-motion, slow-response, blocked-playback and failed-media checks.
 This is not a real phone or live Framer verification. The standalone JSX component was type-checked against React 18 and the Framer SDK, server-rendered without browser globals, and tested in React Strict Mode. The user confirmed that the component appears in the actual Framer Assets picker. The updated sequence is browser-tested; final layout and scroll behavior should be checked in the Framer project.
-A cold-cache simulation at 4 Mbps / 120 ms latency, scrolling two seconds after the poster loaded, exposed about 1.4 seconds of buffering across five stalls with the 6 Mbps export. A smaller mobile/slower-connection export is still useful; the player cannot guarantee uninterrupted playback when delivery falls behind.
+A V02 cold-cache simulation at 4 Mbps / 120 ms latency, scrolling two seconds after the opening image loaded, completed with zero buffering stalls and zero dropped frames across 63 frames. This single desktop simulation does not guarantee results on every connection or phone. The updated React browser check also loaded both V02 images and the V02 video from the real public GitHub URLs and verified both one-second fades.
 The local desktop run had no buffering stalls. Results vary with device, cache and network.
 
 ## Assets
-Default: the 3.82 MB / 6 Mbps export. Comparison exports: 5.05 MB and 10.15 MB.
-All are 1920 × 1010, 24 fps, about 5.04 seconds, H.264 without audio. All have fast-start metadata.
-The supplied stills are 1920 × 1013. They share crop settings but are not pixel-identical to the video; exact matches should come from the final graded timeline.
+Default: V02, 1,956,984 bytes (1.96 MB / 1.87 MiB), about 49% smaller than the previous 3.82 MB export. It runs for 2.625 seconds at 1920 × 1010, 24 fps, H.264 without audio, with fast-start metadata. The two V02 stills are also 1920 × 1010 and total 305,142 bytes. With both one-second fades, the sequence lasts about 4.63 seconds once the video is ready.
+Previous comparison videos remain available: 3.82 MB, 5.05 MB and 10.15 MB, each about 5.04 seconds. The original 1920 × 1013 stills are preserved. Exact visual matches should come from the final graded timeline.
 Original exports and supplied stills are preserved. assets/images contains copies for the component test.
 GitHub mode uses public raw.githubusercontent.com URLs under main. For a fixed release or larger deployments, use public, versioned media URLs on your chosen host. Verify MP4 byte-range support; never place private GitHub credentials in component code.
 

@@ -3,13 +3,13 @@ import * as React from "react"
 import { addPropertyControls, ControlType, useIsStaticRenderer } from "framer"
 
 type ImageValue = { src?: string; srcSet?: string; alt?: string } | string | null
-const DEFAULT_VIDEO_URL = "https://raw.githubusercontent.com/UnbuiltMarket/admiral-park/main/assets/videos/admiral-park-hero-1920-quality%20VBR%206.mp4"
+const DEFAULT_VIDEO_URL = "https://raw.githubusercontent.com/UnbuiltMarket/admiral-park/main/assets/videos/admiral-park-hero-1920-quality%20VBR%206%20_V02.mp4"
 const DEFAULT_FIRST_FRAME = {
-    src: "https://raw.githubusercontent.com/UnbuiltMarket/admiral-park/main/assets/images/hero-start.webp",
+    src: "https://raw.githubusercontent.com/UnbuiltMarket/admiral-park/main/assets/images/START%20frame_web_V02.webp",
     alt: "First frame",
 }
 const DEFAULT_LAST_FRAME = {
-    src: "https://raw.githubusercontent.com/UnbuiltMarket/admiral-park/main/assets/images/hero-end.webp",
+    src: "https://raw.githubusercontent.com/UnbuiltMarket/admiral-park/main/assets/images/END%20frame_web_V02.webp",
     alt: "Last frame",
 }
 const HERO_CSS = ".admiral-hero-video .ap-video,.admiral-hero-video .ap-last{opacity:0}.admiral-hero-video button:focus-visible{outline:2px solid white;outline-offset:4px}"
@@ -189,7 +189,7 @@ export default function AdmiralHeroVideo(props: AdmiralHeroVideoProps): React.JS
                 srcSet={firstImage?.srcSet || undefined}
                 alt=""
                 width={1920}
-                height={1013}
+                height={1010}
                 loading="eager"
                 decoding="async"
                 style={mediaStyle}
@@ -212,7 +212,7 @@ export default function AdmiralHeroVideo(props: AdmiralHeroVideoProps): React.JS
                 srcSet={lastImage?.srcSet || undefined}
                 alt=""
                 width={1920}
-                height={1013}
+                height={1010}
                 decoding="async"
                 style={mediaStyle}
             />

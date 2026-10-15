@@ -15,8 +15,8 @@ const page=await context.newPage();
 const errors=[];page.on("pageerror",e=>errors.push(e.message));
 await page.route("http://hero.test/**",async route=>{
  const url=new URL(route.request().url());
- const paths={"/first.webp":"assets/images/hero-start.webp","/last.webp":"assets/images/hero-end.webp",
- "/hero.mp4":"assets/videos/admiral-park-hero-1920-quality VBR 6.mp4","/hero2.mp4":"assets/videos/admiral-park-hero-1920-quality VBR 6.mp4"};
+ const paths={"/first.webp":"assets/images/START frame_web_V02.webp","/last.webp":"assets/images/END frame_web_V02.webp",
+ "/hero.mp4":"assets/videos/admiral-park-hero-1920-quality VBR 6 _V02.mp4","/hero2.mp4":"assets/videos/admiral-park-hero-1920-quality VBR 6 _V02.mp4"};
  if(paths[url.pathname])return route.fulfill({status:200,contentType:url.pathname.endsWith(".mp4")?"video/mp4":"image/webp",
   body:await readFile(new URL("../"+paths[url.pathname],import.meta.url))});
  await route.fulfill({contentType:"text/html",body:'<html><body style="margin:0;height:200vh"><div id="mount" style="height:100vh;position:sticky;top:0"></div></body></html>'});
@@ -111,8 +111,8 @@ try{
  await page.waitForFunction(()=>{const image=document.querySelector(".admiral-hero-video img");return image.src.includes("raw.githubusercontent.com")&&image.complete&&image.naturalWidth>0;},{},{timeout:30000});
  await page.mouse.wheel(0,100);
  await page.waitForFunction(()=>document.querySelector(".admiral-hero-video").dataset.state==="ended",{},{timeout:30000});
- assert.equal(await page.locator("video").evaluate(v=>v.src),"https://raw.githubusercontent.com/UnbuiltMarket/admiral-park/main/assets/videos/admiral-park-hero-1920-quality%20VBR%206.mp4");
- for(const name of ["hero-start.webp","hero-end.webp","VBR%206.mp4"])assert.ok(githubResponses.some(r=>r.url.endsWith(name)&&r.status>=200&&r.status<300),name+" must load from the real public repository");
+ assert.equal(await page.locator("video").evaluate(v=>v.src),"https://raw.githubusercontent.com/UnbuiltMarket/admiral-park/main/assets/videos/admiral-park-hero-1920-quality%20VBR%206%20_V02.mp4");
+ for(const name of ["START%20frame_web_V02.webp","END%20frame_web_V02.webp","VBR%206%20_V02.mp4"])assert.ok(githubResponses.some(r=>r.url.endsWith(name)&&r.status>=200&&r.status<300),name+" must load from the real public repository");
  console.log("PASS Public GitHub images and video load and play with saved custom files overridden");
  assert.deepEqual(errors,[]);
 }finally{await context.close();await browser.close();}

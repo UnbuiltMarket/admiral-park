@@ -62,7 +62,7 @@ test("default export registers the pasted controls and renders without browser g
  for(const name of ["useGitHubAssets","autoplay","loop","muted","objectFit","showControls","overlay","focalX","focalY","triggerDistance","preloadVideo","backgroundColor","buttonTextColor","buttonBackgroundColor","buttonBorderColor"])assert.ok(controls[name],name);
  const html=server.renderToStaticMarkup(React.createElement(Component));
  assert.match(html,/class="admiral-hero-video"/);
- assert.match(html,/raw\.githubusercontent\.com\/UnbuiltMarket\/admiral-park\/main\/assets\/images\/hero-start\.webp/);
+ assert.match(html,/raw\.githubusercontent\.com\/UnbuiltMarket\/admiral-park\/main\/assets\/images\/START%20frame_web_V02\.webp/);
  assert.equal(controls.useGitHubAssets.defaultValue,true);
  assert.equal(controls.videoUrl.hidden({useGitHubAssets:true}),true);
  assert.equal(controls.videoUrl.hidden({useGitHubAssets:false}),false);

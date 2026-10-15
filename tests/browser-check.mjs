@@ -163,7 +163,7 @@ try {
   });
   await check("Failed final still leaves the video's final frame",async()=>{
     const {context,page}=await pageFor();
-    await page.route("**/hero-end.webp",route=>route.fulfill({status:404,body:"Missing test still"}));
+    await page.route("**/END%20frame_web_V02.webp",route=>route.fulfill({status:404,body:"Missing test still"}));
     await ready(page);
     await page.mouse.wheel(0,100);
     await state(page,"ended");
