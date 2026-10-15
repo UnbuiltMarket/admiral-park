@@ -4,22 +4,21 @@ The deliverable is **src/framer/AdmiralHeroVideo.tsx**: the full animation compo
 
 ## Use in Framer
 1. In Framer, open Assets > Code > Create Code File and choose a new Code Component. Name it AdmiralHeroVideo.tsx. Replace the entire file with src/framer/AdmiralHeroVideo.tsx from this repository. Do not paste the .source.tsx template, the core helper, or a Markdown code fence.
-2. Save the file, then find **Hero Video** under Assets > Code and drag it onto the canvas. Set **Video** and optional **Mobile Video** using the file controls. These controls preserve the supplied version of the component.
-3. Upload/select the **First frame** and **Last frame** images.
+2. Save the file, then find **Hero Video** under Assets > Code and drag it onto the canvas. Leave **GitHub assets** enabled: the opening image, 6 Mbps video and final image load from the public UnbuiltMarket/admiral-park repository automatically, including on existing instances with old saved file choices.
+3. To use other assets, turn **GitHub assets** off and choose **Video**, optional **Mobile Video**, **First Frame** and **Last Frame** with the file controls.
 4. Set the component's size in Framer. Layer your own logo, text, buttons, and navigation above it.
 5. Adjust **Focal X/Y**, **Object Fit**, optional **Darken**, **Play controls**, **Scroll trigger**, and button colors. Autoplay means start on downward scroll. Keep Loop off to hold the final frame.
 6. Test in Framer Preview/published mode. The editing canvas renders the opening still.
 
-A downward page scroll starts automatic playback. Default threshold: 18 pixels.
-The film plays once in time, independently of subsequent scroll movement, then holds the final image.
+The opening image appears on page load. A downward page scroll (default threshold: 18 pixels) starts a one-second crossfade to the paused first video frame. Playback starts only after that fade finishes. The film plays once in time, independently of subsequent scroll movement. On video end, the stopped final video frame crossfades to the final image over one second, then holds. Each dissolve keeps the lower layer opaque until the incoming layer is fully visible, avoiding a dark flash.
 It does not replay on upward scroll. The optional control supports pause, resume and replay.
 The component does not pin the page or intercept scrolling. Configure any sticky section in Framer.
 The trigger listens to the page's window scroll; a separately scrolling nested container is not supported.
 
 ## Loading and fallbacks
-The opening image has high loading priority. Video warming begins 650 ms after that image loads.
-The still remains until a video frame is ready; both transitions use a 180 ms fade.
-Reduced-motion visitors use manual play. Data-saving and 2G connections skip speculative video loading.
+The opening image loads eagerly. Video warming begins 650 ms after that image loads.
+The opening still remains until the paused video frame is ready; the one-second incoming fade then begins. Slow loading does not fade into an empty player. Pause/resume works during both fades as well as playback.
+Reduced-motion visitors use manual play with instant transitions. Data-saving and 2G connections skip speculative video loading.
 If the final image fails, the last video frame stays visible. Video failure preserves the opening image.
 The player pauses while offscreen or in a hidden tab and resumes unless manually paused.
 An optional mobile video URL selects one source on mount. The supplied horizontal video otherwise crops to fill the component.
@@ -44,7 +43,7 @@ The browser test results and screenshots are written under ignored tmp/.
 
 ## Verification and limits
 Desktop Chrome and a phone-sized Chrome viewport passed scroll/play/end, pause/replay, reduced-motion, slow-response, blocked-playback and failed-media checks.
-This is not a real phone or live Framer verification. The standalone JSX component was type-checked against React 18 and the Framer SDK, server-rendered without browser globals, and tested in React Strict Mode. Importing into the actual Framer Assets picker still needs confirmation in your project.
+This is not a real phone or live Framer verification. The standalone JSX component was type-checked against React 18 and the Framer SDK, server-rendered without browser globals, and tested in React Strict Mode. The user confirmed that the component appears in the actual Framer Assets picker. The updated sequence is browser-tested; final layout and scroll behavior should be checked in the Framer project.
 A cold-cache simulation at 4 Mbps / 120 ms latency, scrolling two seconds after the poster loaded, exposed about 1.4 seconds of buffering across five stalls with the 6 Mbps export. A smaller mobile/slower-connection export is still useful; the player cannot guarantee uninterrupted playback when delivery falls behind.
 The local desktop run had no buffering stalls. Results vary with device, cache and network.
 
@@ -53,7 +52,7 @@ Default: the 3.82 MB / 6 Mbps export. Comparison exports: 5.05 MB and 10.15 MB.
 All are 1920 × 1010, 24 fps, about 5.04 seconds, H.264 without audio. All have fast-start metadata.
 The supplied stills are 1920 × 1013. They share crop settings but are not pixel-identical to the video; exact matches should come from the final graded timeline.
 Original exports and supplied stills are preserved. assets/images contains copies for the component test.
-Use public, versioned media URLs on your chosen host. Verify MP4 byte-range support; never place private GitHub credentials in component code.
+GitHub mode uses public raw.githubusercontent.com URLs under main. For a fixed release or larger deployments, use public, versioned media URLs on your chosen host. Verify MP4 byte-range support; never place private GitHub credentials in component code.
 
 ## Component recognition fix
 The supplied file already had a default export. The replacement uses literal JSX, an explicit React.JSX.Element return type, layout annotations directly above the exported function, stable default props, and controls registered to that same function. Responsive-image objects and older image URL strings are supported. Image URLs, rather than object identities, drive the playback effect so property-panel rerenders do not restart the film.

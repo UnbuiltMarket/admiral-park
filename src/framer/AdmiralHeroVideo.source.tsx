@@ -2,17 +2,19 @@ import * as React from "react"
 import { addPropertyControls, ControlType, useIsStaticRenderer } from "framer"
 
 type ImageValue = { src?: string; srcSet?: string; alt?: string } | string | null
+const DEFAULT_VIDEO_URL = "https://raw.githubusercontent.com/UnbuiltMarket/admiral-park/main/assets/videos/admiral-park-hero-1920-quality%20VBR%206.mp4"
 const DEFAULT_FIRST_FRAME = {
-    src: "https://framerusercontent.com/images/2uTNEj5aTl2K3NJaEFWMbnrA.jpg",
+    src: "https://raw.githubusercontent.com/UnbuiltMarket/admiral-park/main/assets/images/hero-start.webp",
     alt: "First frame",
 }
 const DEFAULT_LAST_FRAME = {
-    src: "https://framerusercontent.com/images/f9RiWoNpmlCMqVRIHz8l8wYfeI.jpg",
+    src: "https://raw.githubusercontent.com/UnbuiltMarket/admiral-park/main/assets/images/hero-end.webp",
     alt: "Last frame",
 }
-const HERO_CSS = ".admiral-hero-video .ap-video,.admiral-hero-video .ap-last{opacity:0;transition:opacity 180ms linear}.admiral-hero-video[data-video-visible=true] .ap-video{opacity:1}.admiral-hero-video[data-end-visible=true] .ap-last{opacity:1}.admiral-hero-video button:focus-visible{outline:2px solid white;outline-offset:4px}@media(prefers-reduced-motion:reduce){.admiral-hero-video .ap-video,.admiral-hero-video .ap-last{transition:none}}"
+const HERO_CSS = ".admiral-hero-video .ap-video,.admiral-hero-video .ap-last{opacity:0}.admiral-hero-video button:focus-visible{outline:2px solid white;outline-offset:4px}"
 
 interface AdmiralHeroVideoProps {
+    useGitHubAssets: boolean
     videoUrl: string
     mobileVideoUrl: string
     startFrame?: ImageValue
@@ -41,7 +43,8 @@ interface AdmiralHeroVideoProps {
  */
 export default function AdmiralHeroVideo(props: AdmiralHeroVideoProps): React.JSX.Element {
     const {
-        videoUrl = "",
+        useGitHubAssets = true,
+        videoUrl = DEFAULT_VIDEO_URL,
         mobileVideoUrl = "",
         startFrame = DEFAULT_FIRST_FRAME,
         endFrame = DEFAULT_LAST_FRAME,
@@ -61,8 +64,12 @@ export default function AdmiralHeroVideo(props: AdmiralHeroVideoProps): React.JS
         buttonBorderColor = "rgba(255,255,255,.5)",
         style,
     } = props
-    const firstImage: { src?: string; srcSet?: string; alt?: string } | null | undefined = typeof startFrame === "string" ? { src: startFrame } : startFrame
-    const lastImage: { src?: string; srcSet?: string; alt?: string } | null | undefined = typeof endFrame === "string" ? { src: endFrame } : endFrame
+    const selectedFirst = useGitHubAssets ? DEFAULT_FIRST_FRAME : startFrame
+    const selectedLast = useGitHubAssets ? DEFAULT_LAST_FRAME : endFrame
+    const resolvedVideoUrl = useGitHubAssets ? DEFAULT_VIDEO_URL : videoUrl
+    const resolvedMobileVideoUrl = useGitHubAssets ? "" : mobileVideoUrl
+    const firstImage: { src?: string; srcSet?: string; alt?: string } | null | undefined = typeof selectedFirst === "string" ? { src: selectedFirst } : selectedFirst
+    const lastImage: { src?: string; srcSet?: string; alt?: string } | null | undefined = typeof selectedLast === "string" ? { src: selectedLast } : selectedLast
     const firstFrameSrc = firstImage?.src || ""
     const lastFrameSrc = lastImage?.src || ""
     const playbackSettings = React.useRef({ loop, muted })
@@ -87,9 +94,9 @@ export default function AdmiralHeroVideo(props: AdmiralHeroVideoProps): React.JS
         )
             return
         const chosenVideo =
-            mobileVideoUrl && window.matchMedia("(max-width: 767px)").matches
-                ? mobileVideoUrl
-                : videoUrl
+            resolvedMobileVideoUrl && window.matchMedia("(max-width: 767px)").matches
+                ? resolvedMobileVideoUrl
+                : resolvedVideoUrl
         const player = createHeroPlayer({
             root: rootRef.current,
             video: videoRef.current,
@@ -112,8 +119,8 @@ export default function AdmiralHeroVideo(props: AdmiralHeroVideoProps): React.JS
         }
     }, [
         staticRenderer,
-        videoUrl,
-        mobileVideoUrl,
+        resolvedVideoUrl,
+        resolvedMobileVideoUrl,
         firstFrameSrc,
         lastFrameSrc,
         triggerDistance,
@@ -139,7 +146,7 @@ export default function AdmiralHeroVideo(props: AdmiralHeroVideoProps): React.JS
         pointerEvents: "none",
     }
     const label =
-        state === "playing"
+        state === "playing" || state === "entering" || state === "exiting"
             ? "Pause"
             : state === "ended"
               ? "Replay"
@@ -155,7 +162,7 @@ export default function AdmiralHeroVideo(props: AdmiralHeroVideoProps): React.JS
     const activate = () => {
         const player = playerRef.current
         if (!player) return
-        if (state === "playing" || state === "loading") player.pause()
+        if (["playing", "loading", "entering", "exiting"].includes(state)) player.pause()
         else {
             if (state === "ended") player.reset()
             void player.play()
@@ -247,7 +254,8 @@ export default function AdmiralHeroVideo(props: AdmiralHeroVideoProps): React.JS
 
 AdmiralHeroVideo.displayName = "Hero Video"
 AdmiralHeroVideo.defaultProps = {
-    videoUrl: "",
+    useGitHubAssets: true,
+    videoUrl: DEFAULT_VIDEO_URL,
     mobileVideoUrl: "",
     startFrame: DEFAULT_FIRST_FRAME,
     endFrame: DEFAULT_LAST_FRAME,
@@ -268,18 +276,26 @@ AdmiralHeroVideo.defaultProps = {
 }
 
 addPropertyControls(AdmiralHeroVideo, {
+    useGitHubAssets: {
+        type: ControlType.Boolean,
+        title: "GitHub assets",
+        defaultValue: true,
+        description: "Use the video and stills from UnbuiltMarket/admiral-park. Turn off to choose custom files.",
+    },
     videoUrl: {
         type: ControlType.File,
         title: "Video",
         allowedFileTypes: ["mp4", "webm", "mov"],
+        hidden: (props) => props.useGitHubAssets !== false,
     },
     mobileVideoUrl: {
         type: ControlType.File,
         title: "Mobile Video",
         allowedFileTypes: ["mp4", "webm", "mov"],
+        hidden: (props) => props.useGitHubAssets !== false,
     },
-    startFrame: { type: ControlType.ResponsiveImage, title: "First Frame" },
-    endFrame: { type: ControlType.ResponsiveImage, title: "Last Frame" },
+    startFrame: { type: ControlType.ResponsiveImage, title: "First Frame", hidden: (props) => props.useGitHubAssets !== false },
+    endFrame: { type: ControlType.ResponsiveImage, title: "Last Frame", hidden: (props) => props.useGitHubAssets !== false },
     autoplay: {
         type: ControlType.Boolean,
         title: "Autoplay",

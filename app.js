@@ -18,7 +18,7 @@ function renderMetrics(m){
  $("metric-motion").textContent=m.reducedMotion?"Reduced · manual":"Standard";
 }
 function renderState(state){
- const labels={idle:"Play",loading:"Pause loading",playing:"Pause",paused:"Resume",ended:"Replay",blocked:"Tap to play",error:"Retry"};
+ const labels={idle:"Play",loading:"Pause loading",entering:"Pause",exiting:"Pause",playing:"Pause",paused:"Resume",ended:"Replay",blocked:"Tap to play",error:"Retry"};
  $("film-toggle").textContent=labels[state];$("film-toggle").setAttribute("aria-label",labels[state]+" the film");
  $("film-message").textContent=state==="blocked"?"Tap Play to start the film.":state==="error"?"The film could not load. The still remains visible.":"";
 }
@@ -30,7 +30,7 @@ function mount(id){
  window.heroReview={getMetrics:()=>player.getMetrics(),getVariant:()=>activeVariant.id};
 }
 $("film-toggle").addEventListener("click",()=>{
- if(!player)return;if(["playing","loading"].includes(player.getState()))player.pause();
+ if(!player)return;if(["playing","loading","entering","exiting"].includes(player.getState()))player.pause();
  else{if(player.getState()==="ended")player.reset();void player.play();}
 });
 $("reset-film").addEventListener("click",()=>player?.reset());

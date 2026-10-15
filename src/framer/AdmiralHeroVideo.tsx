@@ -3,17 +3,19 @@ import * as React from "react"
 import { addPropertyControls, ControlType, useIsStaticRenderer } from "framer"
 
 type ImageValue = { src?: string; srcSet?: string; alt?: string } | string | null
+const DEFAULT_VIDEO_URL = "https://raw.githubusercontent.com/UnbuiltMarket/admiral-park/main/assets/videos/admiral-park-hero-1920-quality%20VBR%206.mp4"
 const DEFAULT_FIRST_FRAME = {
-    src: "https://framerusercontent.com/images/2uTNEj5aTl2K3NJaEFWMbnrA.jpg",
+    src: "https://raw.githubusercontent.com/UnbuiltMarket/admiral-park/main/assets/images/hero-start.webp",
     alt: "First frame",
 }
 const DEFAULT_LAST_FRAME = {
-    src: "https://framerusercontent.com/images/f9RiWoNpmlCMqVRIHz8l8wYfeI.jpg",
+    src: "https://raw.githubusercontent.com/UnbuiltMarket/admiral-park/main/assets/images/hero-end.webp",
     alt: "Last frame",
 }
-const HERO_CSS = ".admiral-hero-video .ap-video,.admiral-hero-video .ap-last{opacity:0;transition:opacity 180ms linear}.admiral-hero-video[data-video-visible=true] .ap-video{opacity:1}.admiral-hero-video[data-end-visible=true] .ap-last{opacity:1}.admiral-hero-video button:focus-visible{outline:2px solid white;outline-offset:4px}@media(prefers-reduced-motion:reduce){.admiral-hero-video .ap-video,.admiral-hero-video .ap-last{transition:none}}"
+const HERO_CSS = ".admiral-hero-video .ap-video,.admiral-hero-video .ap-last{opacity:0}.admiral-hero-video button:focus-visible{outline:2px solid white;outline-offset:4px}"
 
 interface AdmiralHeroVideoProps {
+    useGitHubAssets: boolean
     videoUrl: string
     mobileVideoUrl: string
     startFrame?: ImageValue
@@ -42,7 +44,8 @@ interface AdmiralHeroVideoProps {
  */
 export default function AdmiralHeroVideo(props: AdmiralHeroVideoProps): React.JSX.Element {
     const {
-        videoUrl = "",
+        useGitHubAssets = true,
+        videoUrl = DEFAULT_VIDEO_URL,
         mobileVideoUrl = "",
         startFrame = DEFAULT_FIRST_FRAME,
         endFrame = DEFAULT_LAST_FRAME,
@@ -62,8 +65,12 @@ export default function AdmiralHeroVideo(props: AdmiralHeroVideoProps): React.JS
         buttonBorderColor = "rgba(255,255,255,.5)",
         style,
     } = props
-    const firstImage: { src?: string; srcSet?: string; alt?: string } | null | undefined = typeof startFrame === "string" ? { src: startFrame } : startFrame
-    const lastImage: { src?: string; srcSet?: string; alt?: string } | null | undefined = typeof endFrame === "string" ? { src: endFrame } : endFrame
+    const selectedFirst = useGitHubAssets ? DEFAULT_FIRST_FRAME : startFrame
+    const selectedLast = useGitHubAssets ? DEFAULT_LAST_FRAME : endFrame
+    const resolvedVideoUrl = useGitHubAssets ? DEFAULT_VIDEO_URL : videoUrl
+    const resolvedMobileVideoUrl = useGitHubAssets ? "" : mobileVideoUrl
+    const firstImage: { src?: string; srcSet?: string; alt?: string } | null | undefined = typeof selectedFirst === "string" ? { src: selectedFirst } : selectedFirst
+    const lastImage: { src?: string; srcSet?: string; alt?: string } | null | undefined = typeof selectedLast === "string" ? { src: selectedLast } : selectedLast
     const firstFrameSrc = firstImage?.src || ""
     const lastFrameSrc = lastImage?.src || ""
     const playbackSettings = React.useRef({ loop, muted })
@@ -88,9 +95,9 @@ export default function AdmiralHeroVideo(props: AdmiralHeroVideoProps): React.JS
         )
             return
         const chosenVideo =
-            mobileVideoUrl && window.matchMedia("(max-width: 767px)").matches
-                ? mobileVideoUrl
-                : videoUrl
+            resolvedMobileVideoUrl && window.matchMedia("(max-width: 767px)").matches
+                ? resolvedMobileVideoUrl
+                : resolvedVideoUrl
         const player = createHeroPlayer({
             root: rootRef.current,
             video: videoRef.current,
@@ -113,8 +120,8 @@ export default function AdmiralHeroVideo(props: AdmiralHeroVideoProps): React.JS
         }
     }, [
         staticRenderer,
-        videoUrl,
-        mobileVideoUrl,
+        resolvedVideoUrl,
+        resolvedMobileVideoUrl,
         firstFrameSrc,
         lastFrameSrc,
         triggerDistance,
@@ -140,7 +147,7 @@ export default function AdmiralHeroVideo(props: AdmiralHeroVideoProps): React.JS
         pointerEvents: "none",
     }
     const label =
-        state === "playing"
+        state === "playing" || state === "entering" || state === "exiting"
             ? "Pause"
             : state === "ended"
               ? "Replay"
@@ -156,7 +163,7 @@ export default function AdmiralHeroVideo(props: AdmiralHeroVideoProps): React.JS
     const activate = () => {
         const player = playerRef.current
         if (!player) return
-        if (state === "playing" || state === "loading") player.pause()
+        if (["playing", "loading", "entering", "exiting"].includes(state)) player.pause()
         else {
             if (state === "ended") player.reset()
             void player.play()
@@ -248,7 +255,8 @@ export default function AdmiralHeroVideo(props: AdmiralHeroVideoProps): React.JS
 
 AdmiralHeroVideo.displayName = "Hero Video"
 AdmiralHeroVideo.defaultProps = {
-    videoUrl: "",
+    useGitHubAssets: true,
+    videoUrl: DEFAULT_VIDEO_URL,
     mobileVideoUrl: "",
     startFrame: DEFAULT_FIRST_FRAME,
     endFrame: DEFAULT_LAST_FRAME,
@@ -269,18 +277,26 @@ AdmiralHeroVideo.defaultProps = {
 }
 
 addPropertyControls(AdmiralHeroVideo, {
+    useGitHubAssets: {
+        type: ControlType.Boolean,
+        title: "GitHub assets",
+        defaultValue: true,
+        description: "Use the video and stills from UnbuiltMarket/admiral-park. Turn off to choose custom files.",
+    },
     videoUrl: {
         type: ControlType.File,
         title: "Video",
         allowedFileTypes: ["mp4", "webm", "mov"],
+        hidden: (props) => props.useGitHubAssets !== false,
     },
     mobileVideoUrl: {
         type: ControlType.File,
         title: "Mobile Video",
         allowedFileTypes: ["mp4", "webm", "mov"],
+        hidden: (props) => props.useGitHubAssets !== false,
     },
-    startFrame: { type: ControlType.ResponsiveImage, title: "First Frame" },
-    endFrame: { type: ControlType.ResponsiveImage, title: "Last Frame" },
+    startFrame: { type: ControlType.ResponsiveImage, title: "First Frame", hidden: (props) => props.useGitHubAssets !== false },
+    endFrame: { type: ControlType.ResponsiveImage, title: "Last Frame", hidden: (props) => props.useGitHubAssets !== false },
     autoplay: {
         type: ControlType.Boolean,
         title: "Autoplay",
@@ -368,7 +384,7 @@ addPropertyControls(AdmiralHeroVideo, {
     },
 })
 
-type HeroState = "idle" | "loading" | "playing" | "paused" | "ended" | "blocked" | "error";
+type HeroState = "idle" | "loading" | "entering" | "playing" | "paused" | "exiting" | "ended" | "blocked" | "error";
 interface HeroMetrics {
   state: HeroState; posterReadyMs: number | null; firstFrameMs: number | null;
   currentTime: number; duration: number; droppedFrames: number; totalFrames: number;
@@ -377,10 +393,10 @@ interface HeroMetrics {
 interface HeroOptions {
   root: HTMLElement; video: HTMLVideoElement; startImage: HTMLImageElement; endImage: HTMLImageElement;
   videoUrl: string; endUrl: string; threshold?: number; warmupDelay?: number; preload?: boolean;
-  autoplay?: boolean; loop?: boolean; muted?: boolean;
+  autoplay?: boolean; loop?: boolean; muted?: boolean; transitionMs?: number;
   respectReducedMotion?: boolean; onState?: (state: HeroState) => void; onMetrics?: (metrics: HeroMetrics) => void;
 }
-/** One-way, scroll-triggered playback. No scroll interception and no seek-on-scroll. */
+/** Scroll once: paused first video frame fades in, playback runs, then the last still fades in. */
 function createHeroPlayer(options: HeroOptions) {
   const {root, video, startImage, endImage} = options;
   const controller = new AbortController();
@@ -392,13 +408,15 @@ function createHeroPlayer(options: HeroOptions) {
   const saveData = !!connection?.saveData;
   const timers = new Set<ReturnType<typeof setTimeout>>();
   let disposed = false, state: HeroState = "idle", loaded = false, triggered = false;
-  let revealed = false, endReady = false, userPaused = false, visibilityPaused = false, playPending = false;
+  let introDone = false, endReady = false, playbackEnded = false, endShown = false;
+  let userPaused = false, visibilityPaused = false, playPending = false;
   let lastY = Math.max(0, window.scrollY), downwardTravel = 0, scrollRAF = 0;
-  let videoCallback = 0, generation = 0, triggerAt: number | null = null, stallAt: number | null = null;
+  let run: AbortController | null = null;
+  let triggerAt: number | null = null, stallAt: number | null = null;
   let posterReadyMs: number | null = null, firstFrameMs: number | null = null;
-  let stalls = 0, stallMs = 0;
-  let visible = isVisible();
+  let stalls = 0, stallMs = 0, visible = isVisible();
   const reduced = () => respectMotion && mediaQuery.matches;
+  const fadeDuration = () => reduced() ? 0 : Math.max(0, options.transitionMs ?? 1000);
   function isVisible() {
     const rect = root.getBoundingClientRect();
     return rect.bottom > Math.min(100, innerHeight * .15) && rect.top < innerHeight * .85;
@@ -429,92 +447,154 @@ function createHeroPlayer(options: HeroOptions) {
   function endStall() {
     if (stallAt !== null) { stallMs += performance.now() - stallAt; stallAt = null; }
   }
-  function showEnd() {
-    if (endReady && state === "ended") root.dataset.endVisible = "true";
+  function cancelRun() {
+    const previous = run; run = null; playPending = false;
+    previous?.abort();
+  }
+  function restoreStart() {
+    startImage.style.opacity = "1"; video.style.opacity = "0"; endImage.style.opacity = "0";
+    root.dataset.videoVisible = "false"; root.dataset.endVisible = "false";
+    introDone = false; endShown = false;
   }
   function prepareEnd() {
     if (!options.endUrl) return;
     const expected = new URL(options.endUrl, document.baseURI).href;
     if (endImage.src !== expected) { endReady = false; endImage.src = options.endUrl; }
-    if (endImage.complete && endImage.naturalWidth) { endReady = true; showEnd(); }
+    if (endImage.complete && endImage.naturalWidth) endReady = true;
   }
   function warm() {
     if (disposed) return;
     prepareEnd();
     if (loaded || !options.videoUrl) return;
-    loaded = true;
-    video.preload = "auto";
-    video.src = options.videoUrl;
-    video.load();
+    loaded = true; video.preload = "auto"; video.src = options.videoUrl; video.load();
   }
-  function cancelFrame() {
-    if (videoCallback && video.cancelVideoFrameCallback) video.cancelVideoFrameCallback(videoCallback);
-    videoCallback = 0;
+  function waitForFirstFrame(taskSignal: AbortSignal): Promise<void> {
+    return new Promise((resolve, reject) => {
+      let timeout: ReturnType<typeof setTimeout> | undefined;
+      const events = ["loadeddata", "canplay", "seeked", "progress"];
+      function cleanup() {
+        if (timeout) clearTimeout(timeout);
+        for (const event of events) video.removeEventListener(event, check);
+        video.removeEventListener("error", failed);
+        taskSignal.removeEventListener("abort", aborted);
+      }
+      function check() {
+        if (taskSignal.aborted) return aborted();
+        // HAVE_CURRENT_DATA is a decoded frame at the current position. Do not play to obtain it.
+        if (video.readyState >= 2 && !video.seeking) { cleanup(); resolve(); }
+      }
+      function failed() { cleanup(); reject(new Error("The video frame could not load.")); }
+      function aborted() { cleanup(); reject(new DOMException("Cancelled", "AbortError")); }
+      for (const event of events) video.addEventListener(event, check);
+      video.addEventListener("error", failed);
+      taskSignal.addEventListener("abort", aborted, {once: true});
+      timeout = setTimeout(failed, 20000);
+      if (video.error) failed(); else check();
+    });
   }
-  function reveal() {
-    if (disposed || revealed || !triggered || video.readyState < 2 || state === "idle") return;
-    revealed = true;
-    root.dataset.videoVisible = "true";
-    firstFrameMs = triggerAt === null ? null : performance.now() - triggerAt;
-    report();
+  function fadeIn(element: HTMLElement, taskSignal: AbortSignal): Promise<void> {
+    return new Promise((resolve, reject) => {
+      if (taskSignal.aborted) { reject(new DOMException("Cancelled", "AbortError")); return; }
+      const from = Math.max(0, Math.min(1, Number(getComputedStyle(element).opacity)));
+      const duration = fadeDuration() * (1 - from);
+      if (duration <= 0 || !element.animate) { element.style.opacity = "1"; resolve(); return; }
+      const animation = element.animate([{opacity: from}, {opacity: 1}], {
+        duration, easing: "ease-in-out", fill: "both"
+      });
+      function aborted() {
+        // Freeze a paused crossfade. Resume only animates its remaining opacity.
+        element.style.opacity = getComputedStyle(element).opacity;
+        animation.cancel();
+      }
+      taskSignal.addEventListener("abort", aborted, {once: true});
+      animation.finished.then(() => {
+        taskSignal.removeEventListener("abort", aborted);
+        if (taskSignal.aborted) { reject(new DOMException("Cancelled", "AbortError")); return; }
+        element.style.opacity = "1"; animation.cancel(); resolve();
+      }, error => {
+        taskSignal.removeEventListener("abort", aborted); reject(error);
+      });
+    });
   }
-  function observeFirstFrame() {
-    cancelFrame();
-    if (revealed) return;
-    if (video.requestVideoFrameCallback) {
-      videoCallback = video.requestVideoFrameCallback(() => { videoCallback = 0; reveal(); });
+  async function finishEnd() {
+    if (disposed || playPending || endShown || !playbackEnded) return;
+    if (!endReady) { setState("ended"); return; } // Retain the video's last frame if the image is unavailable.
+    visible = isVisible();
+    if (!visible || document.hidden || userPaused) { visibilityPaused = !userPaused; setState("paused"); return; }
+    const task = new AbortController(); run = task; playPending = true;
+    root.dataset.endVisible = "true"; setState("exiting");
+    try {
+      await fadeIn(endImage, task.signal);
+      if (disposed || task.signal.aborted) return;
+      // The lower layer stays opaque during the dissolve to avoid a dark dip.
+      video.style.opacity = "0"; startImage.style.opacity = "0";
+      root.dataset.videoVisible = "false"; endShown = true; setState("ended");
+    } catch (error) {
+      if (!disposed && !task.signal.aborted) {
+        endImage.style.opacity = "0"; root.dataset.endVisible = "false"; setState("ended");
+      }
+    } finally {
+      if (run === task) { run = null; playPending = false; }
     }
-    // Fallback only after playback has begun; never hide the poster on metadata alone.
-    later(() => { if (state === "playing" && !video.paused) reveal(); }, 250);
   }
   async function play(explicit = false) {
-    if (disposed || playPending || state === "ended" || (reduced() && !explicit)) return;
-    if (!options.videoUrl) { setState("error"); return; }
+    if (disposed || playPending || endShown || (reduced() && !explicit)) return;
     triggered = true; userPaused = false; visibilityPaused = false;
+    if (playbackEnded) { await finishEnd(); return; }
+    if (!options.videoUrl) { setState("error"); return; }
     if (triggerAt === null) triggerAt = performance.now();
-    if (state === "error") { loaded = false; }
-    warm();
+    if (state === "error") { loaded = false; restoreStart(); }
+    warm(); visible = isVisible();
     if (!visible || document.hidden) { visibilityPaused = true; setState("paused"); return; }
-    playPending = true;
-    const token = generation;
+    const task = new AbortController(); run = task; playPending = true;
     setState("loading");
     try {
+      if (!introDone) {
+        video.pause();
+        await waitForFirstFrame(task.signal);
+        if (disposed || task.signal.aborted) return;
+        root.dataset.videoVisible = "true";
+        if (firstFrameMs === null) firstFrameMs = performance.now() - (triggerAt ?? performance.now());
+        setState("entering");
+        await fadeIn(video, task.signal);
+        if (disposed || task.signal.aborted) return;
+        introDone = true; startImage.style.opacity = "0";
+      }
+      // Playback starts only AFTER the incoming one-second fade has finished.
+      setState("loading");
       await video.play();
-      if (disposed || token !== generation) return;
     } catch (error) {
-      if (disposed || token !== generation || visibilityPaused || userPaused) return;
+      if (disposed || task.signal.aborted || visibilityPaused || userPaused) return;
       const name = error instanceof Error ? error.name : "";
       if (name === "AbortError") return;
+      video.pause(); restoreStart(); endStall();
       setState(name === "NotAllowedError" ? "blocked" : "error");
     } finally {
-      if (token === generation) playPending = false;
+      if (run === task) { run = null; playPending = false; }
     }
   }
   function pause() {
     if (!triggered || state === "ended") return;
-    userPaused = true; visibilityPaused = false; generation++; playPending = false;
+    userPaused = true; visibilityPaused = false; cancelRun();
     video.pause(); endStall(); setState("paused");
   }
   function visibilityChanged() {
     visible = isVisible();
     if (document.hidden || !visible) {
       if (triggered && !userPaused && state !== "ended" && state !== "error" && state !== "blocked") {
-        visibilityPaused = true; generation++; playPending = false;
-        video.pause(); endStall(); setState("paused");
+        visibilityPaused = true; cancelRun(); video.pause(); endStall(); setState("paused");
       }
     } else if (visibilityPaused && !userPaused) {
       visibilityPaused = false; void play(true);
     }
   }
   function reset() {
-    generation++; playPending = false; triggered = false; revealed = false;
+    cancelRun(); video.pause(); triggered = false; playbackEnded = false;
     userPaused = false; visibilityPaused = false; triggerAt = null; firstFrameMs = null;
-    stalls = 0; stallMs = 0; stallAt = null; cancelFrame();
-    video.pause(); if (loaded && video.readyState > 0) video.currentTime = 0;
-    root.dataset.videoVisible = "false"; root.dataset.endVisible = "false";
-    lastY = Math.max(0, window.scrollY); downwardTravel = 0;
-    root.style.setProperty("--film-progress", "0");
-    setState("idle");
+    stalls = 0; stallMs = 0; stallAt = null;
+    if (loaded && video.readyState > 0) video.currentTime = 0;
+    restoreStart(); lastY = Math.max(0, window.scrollY); downwardTravel = 0;
+    root.style.setProperty("--film-progress", "0"); setState("idle");
   }
   function onScroll() {
     if (disposed || triggered || reduced() || scrollRAF || options.autoplay === false) return;
@@ -530,27 +610,33 @@ function createHeroPlayer(options: HeroOptions) {
   }
   function posterLoaded() {
     if (posterReadyMs !== null) return;
-    posterReadyMs = performance.now() - mountedAt;
-    report();
+    posterReadyMs = performance.now() - mountedAt; report();
     if (options.preload !== false && !reduced() && !saveData && !/^(slow-)?2g$/.test(connection?.effectiveType ?? "")) {
       later(() => { if (visible && !document.hidden && !reduced()) warm(); }, options.warmupDelay ?? 650);
     }
   }
   video.muted = options.muted !== false; video.defaultMuted = options.muted !== false;
   video.playsInline = true; video.loop = options.loop === true;
-  video.setAttribute("playsinline", ""); video.setAttribute("webkit-playsinline", "");
-  video.preload = "none";
-  root.dataset.videoVisible = "false"; root.dataset.endVisible = "false";
+  video.setAttribute("playsinline", ""); video.setAttribute("webkit-playsinline", ""); video.preload = "none";
+  restoreStart();
   startImage.addEventListener("load", posterLoaded, {signal});
   startImage.addEventListener("error", () => { root.dataset.posterError = "true"; report(); }, {signal});
-  endImage.addEventListener("load", () => { endReady = endImage.naturalWidth > 0; showEnd(); report(); }, {signal});
-  endImage.addEventListener("error", () => { endReady = false; root.dataset.endVisible = "false"; }, {signal});
+  endImage.addEventListener("load", () => {
+    endReady = endImage.naturalWidth > 0;
+    if (playbackEnded && !userPaused) void finishEnd();
+    report();
+  }, {signal});
+  endImage.addEventListener("error", () => {
+    if (playbackEnded) cancelRun();
+    endReady = false; endImage.style.opacity = "0"; root.dataset.endVisible = "false";
+    if (playbackEnded) { video.style.opacity = "1"; root.dataset.videoVisible = "true"; setState("ended"); }
+  }, {signal});
   video.addEventListener("playing", () => {
-    if (!triggered) return;
-    endStall(); setState("playing"); observeFirstFrame();
+    if (!triggered || !introDone) return;
+    endStall(); setState("playing");
   }, {signal});
   video.addEventListener("waiting", () => {
-    if (triggered && revealed && !video.paused && stallAt === null) {
+    if (triggered && introDone && !video.paused && stallAt === null) {
       stalls++; stallAt = performance.now(); setState("loading");
     }
   }, {signal});
@@ -560,9 +646,11 @@ function createHeroPlayer(options: HeroOptions) {
     report();
   }, {signal});
   video.addEventListener("ended", () => {
-    endStall(); root.style.setProperty("--film-progress", "1"); setState("ended"); showEnd();
+    endStall(); playbackEnded = true; root.style.setProperty("--film-progress", "1"); void finishEnd();
   }, {signal});
-  video.addEventListener("error", () => { if (triggered) { endStall(); setState("error"); } }, {signal});
+  video.addEventListener("error", () => {
+    if (triggered) { cancelRun(); video.pause(); endStall(); restoreStart(); setState("error"); }
+  }, {signal});
   window.addEventListener("scroll", onScroll, {passive: true, signal});
   window.addEventListener("resize", () => { lastY = Math.max(0, scrollY); downwardTravel = 0; visibilityChanged(); }, {passive: true, signal});
   document.addEventListener("visibilitychange", visibilityChanged, {signal});
@@ -571,14 +659,13 @@ function createHeroPlayer(options: HeroOptions) {
     report();
   }, {signal});
   const observer = new IntersectionObserver(visibilityChanged, {threshold: [0, .15, .5, 1]});
-  observer.observe(root);
-  setState("idle");
+  observer.observe(root); setState("idle");
   if (startImage.complete && startImage.naturalWidth) posterLoaded();
   return {
     play: () => play(true), pause, reset, getMetrics: metrics, getState: () => state,
     destroy() {
-      disposed = true; generation++; controller.abort(); observer.disconnect();
-      cancelFrame(); if (scrollRAF) cancelAnimationFrame(scrollRAF);
+      disposed = true; cancelRun(); controller.abort(); observer.disconnect();
+      if (scrollRAF) cancelAnimationFrame(scrollRAF);
       for (const timer of timers) clearTimeout(timer);
       video.pause(); video.removeAttribute("src"); video.load();
     }

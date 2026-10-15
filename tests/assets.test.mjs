@@ -59,9 +59,12 @@ test("default export registers the pasted controls and renders without browser g
  assert.equal(controls.startFrame.type,"ResponsiveImage");
  assert.equal(controls.endFrame.type,"ResponsiveImage");
  assert.equal(controls.videoUrl.type,"File");
- for(const name of ["autoplay","loop","muted","objectFit","showControls","overlay","focalX","focalY","triggerDistance","preloadVideo","backgroundColor","buttonTextColor","buttonBackgroundColor","buttonBorderColor"])assert.ok(controls[name],name);
+ for(const name of ["useGitHubAssets","autoplay","loop","muted","objectFit","showControls","overlay","focalX","focalY","triggerDistance","preloadVideo","backgroundColor","buttonTextColor","buttonBackgroundColor","buttonBorderColor"])assert.ok(controls[name],name);
  const html=server.renderToStaticMarkup(React.createElement(Component));
  assert.match(html,/class="admiral-hero-video"/);
- assert.match(html,/2uTNEj5aTl2K3NJaEFWMbnrA.jpg/);
+ assert.match(html,/raw\.githubusercontent\.com\/UnbuiltMarket\/admiral-park\/main\/assets\/images\/hero-start\.webp/);
+ assert.equal(controls.useGitHubAssets.defaultValue,true);
+ assert.equal(controls.videoUrl.hidden({useGitHubAssets:true}),true);
+ assert.equal(controls.videoUrl.hidden({useGitHubAssets:false}),false);
  assert.doesNotMatch(html,/<h1|<nav|<header/);
 });
