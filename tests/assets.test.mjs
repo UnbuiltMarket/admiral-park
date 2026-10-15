@@ -59,7 +59,7 @@ test("default export registers the pasted controls and renders without browser g
  assert.equal(controls.startFrame.type,"ResponsiveImage");
  assert.equal(controls.endFrame.type,"ResponsiveImage");
  assert.equal(controls.videoUrl.type,"File");
- for(const name of ["useGitHubAssets","autoplay","loop","muted","objectFit","showControls","overlay","focalX","focalY","triggerDistance","preloadVideo","backgroundColor","buttonTextColor","buttonBackgroundColor","buttonBorderColor"])assert.ok(controls[name],name);
+ for(const name of ["useGitHubAssets","holdScroll","autoplay","loop","muted","objectFit","showControls","overlay","focalX","focalY","triggerDistance","preloadVideo","backgroundColor","buttonTextColor","buttonBackgroundColor","buttonBorderColor"])assert.ok(controls[name],name);
  const html=server.renderToStaticMarkup(React.createElement(Component));
  assert.match(html,/class="admiral-hero-video"/);
  assert.match(html,/raw\.githubusercontent\.com\/UnbuiltMarket\/admiral-park\/main\/assets\/images\/START%20frame_web_V02\.webp/);

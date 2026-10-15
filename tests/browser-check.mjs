@@ -144,6 +144,7 @@ try {
     await ready(page);
     await page.mouse.wheel(0,100);
     await state(page,"playing");
+    await page.keyboard.press("Escape");
     await page.evaluate(()=>{const spacer=document.createElement("div");spacer.style.height="150vh";document.body.append(spacer);scrollTo(0,2200);});
     await state(page,"paused");
     assert.equal(await page.locator("#hero-video").evaluate(v=>v.paused),true);

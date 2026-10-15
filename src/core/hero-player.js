@@ -3,6 +3,7 @@
 export function createHeroPlayer(options) {
     const { root, video, startImage, endImage } = options;
     const controller = new AbortController();
+    let inputController = new AbortController();
     const { signal } = controller;
     const mountedAt = performance.now();
     const mediaQuery = matchMedia("(prefers-reduced-motion: reduce)");
@@ -11,10 +12,13 @@ export function createHeroPlayer(options) {
     const saveData = !!connection?.saveData;
     const timers = new Set();
     let disposed = false, state = "idle", loaded = false, triggered = false;
-    let introDone = false, endReady = false, playbackEnded = false, endShown = false;
+    let introDone = false, playbackEnded = false, endShown = false;
     let userPaused = false, visibilityPaused = false, playPending = false;
     let lastY = Math.max(0, window.scrollY), downwardTravel = 0, scrollRAF = 0;
     let run = null;
+    let scrollHeld = false, holdUsed = false, holdX = 0, holdY = 0;
+    let holdTimer;
+    let touchPoint = null;
     let triggerAt = null, stallAt = null;
     let posterReadyMs = null, firstFrameMs = null;
     let stalls = 0, stallMs = 0, visible = isVisible();
@@ -29,6 +33,115 @@ export function createHeroPlayer(options) {
             fn(); }, ms);
         timers.add(timer);
         return timer;
+    }
+    // Hold the current page position without fixing the body or changing scrollbar width.
+    function canHoldScroll() {
+        if (options.holdScroll === false || holdUsed || reduced() || video.loop || document.hidden)
+            return false;
+        const rect = root.getBoundingClientRect();
+        return rect.width > 0 && rect.top <= Math.max(20, innerHeight * .15) && rect.bottom >= innerHeight * .5;
+    }
+    function holdScroll() {
+        if (scrollHeld || !canHoldScroll())
+            return;
+        attachHoldInputs();
+        holdUsed = true;
+        scrollHeld = true;
+        holdX = window.scrollX;
+        holdY = window.scrollY;
+        root.dataset.scrollHeld = "true";
+        holdTimer = later(() => releaseScroll("timeout"), options.holdTimeoutMs ?? 15000);
+    }
+    function releaseScroll(reason) {
+        if (triggered || reason === "destroy") {
+            holdUsed = true;
+            inputController.abort();
+            touchPoint = null;
+        }
+        if (holdTimer) {
+            clearTimeout(holdTimer);
+            timers.delete(holdTimer);
+            holdTimer = undefined;
+        }
+        if (!scrollHeld)
+            return;
+        scrollHeld = false;
+        root.dataset.scrollHeld = "false";
+        root.dataset.scrollRelease = reason;
+        lastY = Math.max(0, window.scrollY);
+        downwardTravel = 0;
+        // Suppressed inputs are discarded. Never replay their distance or jump to the next section.
+    }
+    function keepScrollPosition() {
+        if (scrollHeld && (window.scrollY !== holdY || window.scrollX !== holdX))
+            window.scrollTo({ top: holdY, left: holdX, behavior: "instant" });
+    }
+    function nestedCanScroll(target, delta) {
+        let element = target instanceof Element ? target : null;
+        while (element && element !== document.body && element !== document.documentElement) {
+            const style = getComputedStyle(element);
+            if (/(auto|scroll)/.test(style.overflowY) && element.scrollHeight > element.clientHeight + 1 &&
+                (delta > 0 ? element.scrollTop + element.clientHeight < element.scrollHeight - 1 : element.scrollTop > 0))
+                return true;
+            element = element.parentElement;
+        }
+        return false;
+    }
+    function onScrollIntent(event, delta) {
+        if (!scrollHeld && (disposed || triggered || options.autoplay === false || !canHoldScroll()))
+            return;
+        if (event.defaultPrevented || nestedCanScroll(event.target, delta))
+            return;
+        if (scrollHeld) {
+            if (event.cancelable)
+                event.preventDefault();
+            return;
+        }
+        if (delta <= 0) {
+            downwardTravel = 0;
+            return;
+        }
+        if (!event.cancelable)
+            return; // The actual scroll listener provides a fallback.
+        event.preventDefault();
+        downwardTravel += delta;
+        if (downwardTravel >= (options.threshold ?? 18))
+            void play();
+    }
+    function onWheel(event) {
+        if (event.ctrlKey || event.metaKey || Math.abs(event.deltaX) > Math.abs(event.deltaY))
+            return;
+        const unit = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? innerHeight : 1;
+        onScrollIntent(event, event.deltaY * unit);
+    }
+    function onTouchStart(event) {
+        touchPoint = event.touches.length === 1 ? { x: event.touches[0].clientX, y: event.touches[0].clientY } : null;
+    }
+    function onTouchMove(event) {
+        if (!touchPoint || event.touches.length !== 1) {
+            touchPoint = null;
+            return;
+        }
+        const touch = event.touches[0], dx = touchPoint.x - touch.clientX, dy = touchPoint.y - touch.clientY;
+        touchPoint = { x: touch.clientX, y: touch.clientY };
+        if (Math.abs(dy) >= Math.abs(dx))
+            onScrollIntent(event, dy);
+    }
+    function onScrollKey(event) {
+        if (event.key === "Escape" && scrollHeld) {
+            releaseScroll("escape");
+            return;
+        }
+        if (event.ctrlKey || event.metaKey || event.altKey)
+            return;
+        const element = event.target instanceof Element ? event.target : null;
+        if (element?.closest('input,textarea,select,button,a,[contenteditable]:not([contenteditable="false"]),[role="slider"]'))
+            return;
+        const delta = event.key === "ArrowDown" ? 40 : event.key === "ArrowUp" ? -40 :
+            ["PageDown", "End"].includes(event.key) ? innerHeight : ["PageUp", "Home"].includes(event.key) ? -innerHeight :
+                event.key === " " ? (event.shiftKey ? -innerHeight : innerHeight) : 0;
+        if (delta)
+            onScrollIntent(event, delta);
     }
     function metrics() {
         const quality = video.getVideoPlaybackQuality?.();
@@ -50,6 +163,8 @@ export function createHeroPlayer(options) {
             return;
         state = next;
         root.dataset.state = next;
+        if (["ended", "error", "blocked", "paused"].includes(next))
+            releaseScroll(next);
         options.onState?.(next);
         report();
     }
@@ -78,12 +193,8 @@ export function createHeroPlayer(options) {
         if (!options.endUrl)
             return;
         const expected = new URL(options.endUrl, document.baseURI).href;
-        if (endImage.src !== expected) {
-            endReady = false;
+        if (endImage.src !== expected)
             endImage.src = options.endUrl;
-        }
-        if (endImage.complete && endImage.naturalWidth)
-            endReady = true;
     }
     function warm() {
         if (disposed)
@@ -130,6 +241,48 @@ export function createHeroPlayer(options) {
                 check();
         });
     }
+    function waitForEndFrame(taskSignal) {
+        return new Promise((resolve, reject) => {
+            let decoding = false, settled = false;
+            const timeout = setTimeout(failed, 8000);
+            function cleanup() {
+                clearTimeout(timeout);
+                endImage.removeEventListener("load", check);
+                endImage.removeEventListener("error", failed);
+                taskSignal.removeEventListener("abort", aborted);
+            }
+            function finish(error) {
+                if (settled)
+                    return;
+                settled = true;
+                cleanup();
+                if (error)
+                    reject(error);
+                else
+                    resolve();
+            }
+            function failed() { finish(new Error("The final still could not load.")); }
+            function aborted() { finish(new DOMException("Cancelled", "AbortError")); }
+            function check() {
+                if (taskSignal.aborted)
+                    return aborted();
+                if (!options.endUrl || (endImage.complete && !endImage.naturalWidth))
+                    return failed();
+                if (!endImage.complete || !endImage.naturalWidth || decoding)
+                    return;
+                decoding = true;
+                const decoded = endImage.decode ? endImage.decode() : Promise.resolve();
+                void decoded.then(() => { if (taskSignal.aborted)
+                    aborted();
+                else
+                    finish(); }, failed);
+            }
+            endImage.addEventListener("load", check);
+            endImage.addEventListener("error", failed);
+            taskSignal.addEventListener("abort", aborted, { once: true });
+            check();
+        });
+    }
     function fadeIn(element, taskSignal) {
         return new Promise((resolve, reject) => {
             if (taskSignal.aborted) {
@@ -170,10 +323,6 @@ export function createHeroPlayer(options) {
     async function finishEnd() {
         if (disposed || playPending || endShown || !playbackEnded)
             return;
-        if (!endReady) {
-            setState("ended");
-            return;
-        } // Retain the video's last frame if the image is unavailable.
         visible = isVisible();
         if (!visible || document.hidden || userPaused) {
             visibilityPaused = !userPaused;
@@ -183,9 +332,13 @@ export function createHeroPlayer(options) {
         const task = new AbortController();
         run = task;
         playPending = true;
-        root.dataset.endVisible = "true";
-        setState("exiting");
+        setState("loading");
         try {
+            await waitForEndFrame(task.signal);
+            if (disposed || task.signal.aborted)
+                return;
+            root.dataset.endVisible = "true";
+            setState("exiting");
             await fadeIn(endImage, task.signal);
             if (disposed || task.signal.aborted)
                 return;
@@ -237,6 +390,7 @@ export function createHeroPlayer(options) {
             setState("paused");
             return;
         }
+        holdScroll();
         const task = new AbortController();
         run = task;
         playPending = true;
@@ -306,6 +460,7 @@ export function createHeroPlayer(options) {
         }
     }
     function reset() {
+        releaseScroll("reset");
         cancelRun();
         video.pause();
         triggered = false;
@@ -326,6 +481,10 @@ export function createHeroPlayer(options) {
         setState("idle");
     }
     function onScroll() {
+        if (scrollHeld) {
+            keepScrollPosition();
+            return;
+        }
         if (disposed || triggered || reduced() || scrollRAF || options.autoplay === false)
             return;
         scrollRAF = requestAnimationFrame(() => {
@@ -367,7 +526,6 @@ export function createHeroPlayer(options) {
     startImage.addEventListener("load", posterLoaded, { signal });
     startImage.addEventListener("error", () => { root.dataset.posterError = "true"; report(); }, { signal });
     endImage.addEventListener("load", () => {
-        endReady = endImage.naturalWidth > 0;
         if (playbackEnded && !userPaused)
             void finishEnd();
         report();
@@ -375,7 +533,6 @@ export function createHeroPlayer(options) {
     endImage.addEventListener("error", () => {
         if (playbackEnded)
             cancelRun();
-        endReady = false;
         endImage.style.opacity = "0";
         root.dataset.endVisible = "false";
         if (playbackEnded) {
@@ -400,6 +557,8 @@ export function createHeroPlayer(options) {
     video.addEventListener("timeupdate", () => {
         if (Number.isFinite(video.duration) && video.duration > 0)
             root.style.setProperty("--film-progress", String(video.currentTime / video.duration));
+        if (video.loop)
+            releaseScroll("loop");
         report();
     }, { signal });
     video.addEventListener("ended", () => {
@@ -417,12 +576,34 @@ export function createHeroPlayer(options) {
             setState("error");
         }
     }, { signal });
+    root.dataset.scrollHeld = "false";
+    function attachHoldInputs() {
+        if (options.holdScroll === false || holdUsed || reduced())
+            return;
+        if (inputController.signal.aborted)
+            inputController = new AbortController();
+        const inputSignal = inputController.signal;
+        window.addEventListener("wheel", onWheel, { passive: false, capture: true, signal: inputSignal });
+        window.addEventListener("touchstart", onTouchStart, { passive: true, capture: true, signal: inputSignal });
+        window.addEventListener("touchmove", onTouchMove, { passive: false, capture: true, signal: inputSignal });
+        window.addEventListener("touchend", clearTouch, { passive: true, signal: inputSignal });
+        window.addEventListener("touchcancel", clearTouch, { passive: true, signal: inputSignal });
+        window.addEventListener("keydown", onScrollKey, { capture: true, signal: inputSignal });
+    }
+    function clearTouch() { touchPoint = null; }
+    attachHoldInputs();
     window.addEventListener("scroll", onScroll, { passive: true, signal });
+    window.addEventListener("pagehide", () => releaseScroll("pagehide"), { signal });
     window.addEventListener("resize", () => { lastY = Math.max(0, scrollY); downwardTravel = 0; visibilityChanged(); }, { passive: true, signal });
     document.addEventListener("visibilitychange", visibilityChanged, { signal });
     mediaQuery.addEventListener("change", () => {
-        if (reduced() && triggered && state !== "ended")
-            pause();
+        if (reduced()) {
+            inputController.abort();
+            if (triggered && state !== "ended")
+                pause();
+        }
+        else
+            attachHoldInputs();
         report();
     }, { signal });
     const observer = new IntersectionObserver(visibilityChanged, { threshold: [0, .15, .5, 1] });
@@ -433,6 +614,7 @@ export function createHeroPlayer(options) {
     return {
         play: () => play(true), pause, reset, getMetrics: metrics, getState: () => state,
         destroy() {
+            releaseScroll("destroy");
             disposed = true;
             cancelRun();
             controller.abort();

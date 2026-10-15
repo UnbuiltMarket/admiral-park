@@ -26,6 +26,7 @@ interface AdmiralHeroVideoProps {
     overlay: number
     focalX: number
     focalY: number
+    holdScroll: boolean
     triggerDistance: number
     preloadVideo: boolean
     showControls: boolean
@@ -55,6 +56,7 @@ export default function AdmiralHeroVideo(props: AdmiralHeroVideoProps): React.JS
         overlay = 0,
         focalX = 50,
         focalY = 50,
+        holdScroll = true,
         triggerDistance = 18,
         preloadVideo = true,
         showControls = true,
@@ -104,6 +106,7 @@ export default function AdmiralHeroVideo(props: AdmiralHeroVideoProps): React.JS
             endImage: lastRef.current,
             videoUrl: chosenVideo,
             endUrl: lastFrameSrc,
+            holdScroll,
             threshold: triggerDistance,
             preload: preloadVideo,
             autoplay,
@@ -123,6 +126,7 @@ export default function AdmiralHeroVideo(props: AdmiralHeroVideoProps): React.JS
         resolvedMobileVideoUrl,
         firstFrameSrc,
         lastFrameSrc,
+        holdScroll,
         triggerDistance,
         preloadVideo,
         autoplay,
@@ -266,6 +270,7 @@ AdmiralHeroVideo.defaultProps = {
     overlay: 0,
     focalX: 50,
     focalY: 50,
+    holdScroll: true,
     triggerDistance: 18,
     preloadVideo: true,
     showControls: true,
@@ -346,6 +351,12 @@ addPropertyControls(AdmiralHeroVideo, {
         max: 100,
         step: 1,
         defaultValue: 50,
+    },
+    holdScroll: {
+        type: ControlType.Boolean,
+        title: "Hold scroll",
+        defaultValue: true,
+        description: "Keep the page still until the final image finishes fading in. Use a 100vh hero in normal flow. Escape releases the hold.",
     },
     triggerDistance: {
         type: ControlType.Number,

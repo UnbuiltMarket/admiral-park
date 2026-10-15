@@ -7,19 +7,19 @@ The deliverable is **src/framer/AdmiralHeroVideo.tsx**: the full animation compo
 2. Save the file, then find **Hero Video** under Assets > Code and drag it onto the canvas. Leave **GitHub assets** enabled: the V02 opening image, faster V02 video and V02 final image load from the public UnbuiltMarket/admiral-park repository automatically, including on existing instances with old saved file choices.
 3. To use other assets, turn **GitHub assets** off and choose **Video**, optional **Mobile Video**, **First Frame** and **Last Frame** with the file controls.
 4. Set the component's size in Framer. Layer your own logo, text, buttons, and navigation above it.
-5. Adjust **Focal X/Y**, **Object Fit**, optional **Darken**, **Play controls**, **Scroll trigger**, and button colors. Autoplay means start on downward scroll. Keep Loop off to hold the final frame.
+5. Keep **Hold scroll** enabled and use a 100vh hero in normal page flow (Relative in Framer). Remove any extra-tall sticky spacer: the player holds the page for the actual media loading and playback time. Adjust **Focal X/Y**, **Object Fit**, optional **Darken**, **Play controls**, **Scroll trigger**, and button colors. Autoplay means start on downward scroll. Keep Loop off to hold the final frame.
 6. Test in Framer Preview/published mode. The editing canvas renders the opening still.
 
 The opening image appears on page load. A downward page scroll (default threshold: 18 pixels) starts a 0.3-second crossfade to the paused first video frame. Playback starts only after that fade finishes. The film plays once in time, independently of subsequent scroll movement. On video end, the stopped final video frame crossfades to the final image over 0.3 seconds, then holds. Each dissolve keeps the lower layer opaque until the incoming layer is fully visible, avoiding a dark flash.
 It does not replay on upward scroll. The optional control supports pause, resume and replay.
-The component does not pin the page or intercept scrolling. Configure any sticky section in Framer.
-The trigger listens to the page's window scroll; a separately scrolling nested container is not supported.
+With Hold scroll on (default), the initial downward wheel, swipe or scrolling key starts the film without moving past the hero. The page stays at that position until the final still is loaded, decoded and finished fading in. Further scrolling moves down the page normally without a jump or replay. An existing oversized sticky parent will still obey its Framer layout; remove that extra height to let the next section follow immediately. Turn Hold scroll off to restore unrestricted page scrolling.
+The hold targets the page window. Nested scrolling menus and inputs keep their normal controls. Reduced-motion visitors and looping videos do not hold the page. Escape, manual pause, playback failure, tab hiding or component removal releases the hold; a 15-second maximum prevents a stalled download from trapping navigation. Once released, the blocking input listeners are removed; resuming/replaying does not hold the page again until the component remounts.
 
 ## Loading and fallbacks
 The opening image loads eagerly. Video warming begins 650 ms after that image loads.
 The opening still remains until the paused video frame is ready; the 0.3-second incoming fade then begins. Slow loading does not fade into an empty player. Pause/resume works during both fades as well as playback.
 Reduced-motion visitors use manual play with instant transitions. Data-saving and 2G connections skip speculative video loading.
-If the final image fails, the last video frame stays visible. Video failure preserves the opening image.
+The final image may take up to eight additional seconds to load and decode after playback. If it fails or times out, the last video frame stays visible and the page releases. Video failure preserves the opening image.
 The player pauses while offscreen or in a hidden tab and resumes unless manually paused.
 An optional mobile video URL selects one source on mount. The supplied horizontal video otherwise crops to fill the component.
 Keep Play controls enabled for manual playback; browser-blocked playback always exposes a button.
@@ -62,3 +62,5 @@ Official Framer guidance: https://www.framer.com/developers/components-introduct
 
 ## Final-frame alignment
 Inspection of the published homepage draft on 15 October 2026 confirmed that the video and both V02 stills use the same 1920 × 1010 source dimensions, CSS bounds, cover fit and centered position, with no scale transform. The final video frame and the sharper supplied final still have slightly different subject geometry, so their dissolve can look like a small zoom or shift. A 300 ms fade shortens the visible mismatch; it does not align the source images. A still exported from the exact final video frame matches its framing, while keeping the sharper render requires matching the video endpoint to that render.
+
+Run node tests/scroll-hold-check.mjs for normal-flow wheel, keyboard, touch, delayed end-image, error, timeout and cleanup checks. Touch is tested in Chrome emulation; a real iPhone/Safari check is still useful.
