@@ -346,7 +346,7 @@ function createHeroSequence(options: SequenceOptions) {
     const last = urls.length - 1;
     const duration = sequenceClamp(options.duration ?? 2.5, .6, 10);
     // Endpoint stills dissolve into their adjacent sequence frames in fixed real time.
-    const edgeFade = last >= 3 ? .5 : 0;
+    const edgeFade = last >= 3 ? 2 : 0;
     const flightEnd = edgeFade + duration, totalDuration = flightEnd + edgeFade;
     const maxSpeed = sequenceClamp(options.maxSpeed ?? 1.8, 1, 3);
     const momentum = sequenceClamp(options.momentum ?? .22, .08, .6);
@@ -399,7 +399,7 @@ function createHeroSequence(options: SequenceOptions) {
         if (held || options.holdScroll === false || motion.matches || !atHero()) return;
         if (sequenceScrollOwner && sequenceScrollOwner !== root) return;
         sequenceScrollOwner = root; held = true; holdX = scrollX; holdY = scrollY;
-        holdTimer = setTimeout(() => fail("timeout"), options.timeoutMs ?? 12000);
+        holdTimer = setTimeout(() => fail("timeout"), options.timeoutMs ?? Math.max(12000, (totalDuration + 2) * 1000));
     }
     function draw(index: number, force = false, nextIndex = index, mix = 0) {
         const bitmap = frames.get(index), next = frames.get(nextIndex);

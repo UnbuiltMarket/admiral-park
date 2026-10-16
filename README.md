@@ -1,4 +1,8 @@
-# Automatic updates from GitHub — recommended installation
+# Current installation: paste the standalone component
+
+Use **src/framer/AdmiralHeroSequence.tsx** for immediate copy-and-paste updates in Framer. Keep the existing code file and component instance to retain the native controls and overrides. The normal build generates the standalone component only. The optional hosted loader below is not installed on the site and remains on its previous release.
+
+# Optional automatic updates from GitHub — inactive workflow
 
 Paste **src/framer/AdmiralHeroLoader.tsx** into your existing AdmiralHeroSequence code file in Framer once, save, and publish. Keep the same code file and existing component instance so your settings and the OpeningContent, BuildingContent and ArrivalCTA overrides stay connected. This permanent bridge checks the published runtime at `https://unbuiltmarket.github.io/admiral-park/hero-manifest.json` once per page visit. Compatible animation, asset and overlay changes then arrive after a GitHub Pages deployment, without another Framer paste or publish. An already-open page keeps its loaded release until a reload; deployment and caching can take a few minutes.
 
@@ -8,7 +12,7 @@ The manifest only selects runtime files on this repository's GitHub Pages host. 
 
 ## Release workflow
 
-Edit the existing sequence sources, run `node scripts/build.mjs`, and run the sequence and remote tests. The build writes a versioned runtime under `docs/releases/`, copies its versioned images under `docs/assets/`, and updates `docs/hero-manifest.json`. Commit the source changes and generated `docs` outputs, then push. GitHub Pages publishes **main /docs** automatically. No separate website is deployed; these files serve the Framer animation. Keep previous release and image folders so older bridges, cached manifests and rollbacks continue working.
+Only if returning to the hosted loader workflow, run `node scripts/build.mjs --remote` and run the sequence and remote tests. This opt-in build writes a versioned runtime under `docs/releases/`, copies its versioned images under `docs/assets/`, and updates `docs/hero-manifest.json`. Commit the source changes and generated `docs` outputs, then push. GitHub Pages publishes **main /docs** automatically. No separate website is deployed; these files serve the Framer animation. Keep previous release and image folders so older bridges, cached manifests and rollbacks continue working. The hosted release currently retains its old 0.5-second endpoint fades; update the remote timing expectation when publishing a new release.
 
 To roll back a runtime, restore the previous `docs/hero-manifest.json` in a new commit and push it. Keep its referenced JavaScript and images. No force push or Framer change is needed for compatible releases. The standalone component below remains available for a fully pasted installation.
 
@@ -33,7 +37,7 @@ Use **src/framer/AdmiralHeroSequence.tsx** for the new AVIF hero. This is one co
 
 ## Default visitor experience
 
-The opening panorama appears immediately. A deliberate downward scroll starts a 0.5-second crossfade from frame 00 to frame 01, followed by the guided flight through frames 01–63, and a 0.5-second crossfade from frame 63 to the sharper frame 64. The journey setting controls the middle flight (2.5 seconds by default), making the unboosted total approximately 3.5 seconds. Additional downward input boosts the middle flight up to 1.8x; the boost decays over 0.22 seconds. The two endpoint fades stay at 0.5 seconds regardless of scroll speed. Releasing the wheel or finger still completes the journey. An intentional upward gesture reverses it, including during either fade. Near the start and finish the camera eases gently; it crosses the middle faster. Middle frames have no crossfades or extra blur. Both fades work in reverse too, keeping the lower image opaque to avoid a dark flash.
+The opening panorama appears immediately. A deliberate downward scroll starts a 2-second crossfade from frame 00 to frame 01, followed by the guided flight through frames 01–63, and a 2-second crossfade from frame 63 to the sharper frame 64. The journey setting controls the middle flight (2.5 seconds by default), making the unboosted total approximately 6.5 seconds. Additional downward input boosts the middle flight up to 1.8x; the boost decays over 0.22 seconds. The two endpoint fades stay at 2 seconds regardless of scroll speed. Releasing the wheel or finger still completes the journey. An intentional upward gesture reverses it, including during either fade. Near the start and finish the camera eases gently; it crosses the middle faster. Middle frames have no crossfades or extra blur. Both fades work in reverse too, keeping the lower image opaque to avoid a dark flash.
 
 Opening content fades out over the first 20% of the actual displayed sequence. Building content enters at 68% and is fully visible at 88%. The CTA enters at 86% and is fully visible at arrival. These are adjustable controls in the hero's property panel. Hidden wrappers are inert, so invisible buttons cannot receive clicks or keyboard focus.
 
@@ -51,7 +55,7 @@ Desktop defaults to 14 decoded frames at 1920 width. Phone-sized viewports use a
 
 Edit `src/core/hero-sequence.ts` and `src/framer/AdmiralHeroSequence.source.tsx`, then run `node scripts/build.mjs`. This builds the standalone Framer file and the framework-independent browser module. Run `node --test tests/*.test.mjs` for the asset, SDK typing and server-render checks. Run `node tests/sequence-browser-check.mjs` for browser interactions. Existing external-module environment settings described below also apply.
 
-The automated fixture uses the real images, React 18 Strict Mode, and native-layer stand-ins with the Framer SDK checked separately. It covers coasting, acceleration, mid-flight and return-to-hero reverse, synchronized overlays, native CTA links, scroll release, nested scrolling, Escape, reduced motion, delayed/failed frames, touch emulation, bounded cache and cleanup. Solid-colour test frames also verify the actual blended pixels and 0.5-second fade timing in both directions; another check reverses a fade and verifies pause/resume across a resize. It is a component test fixture, not a website design. Actual Framer Preview and real iPhone/Safari performance still need verification after installation.
+The automated fixture uses the real images, React 18 Strict Mode, and native-layer stand-ins with the Framer SDK checked separately. It covers coasting, acceleration, mid-flight and return-to-hero reverse, synchronized overlays, native CTA links, scroll release, nested scrolling, Escape, reduced motion, delayed/failed frames, touch emulation, bounded cache and cleanup. Solid-colour test frames also verify the actual blended pixels and 2-second fade timing in both directions; another check reverses a fade and verifies pause/resume across a resize. It is a component test fixture, not a website design. Actual Framer Preview and real iPhone/Safari performance still need verification after installation.
 
 ---
 

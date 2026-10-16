@@ -119,12 +119,13 @@ try{
   const start=Date.now();await page.mouse.wheel(0,100);await waitState(page,'arrival');const baseline=Date.now()-start;
   await page.waitForTimeout(180);await page.mouse.wheel(0,-100);await waitState(page,'opening');
   await page.waitForTimeout(180);const fastStart=Date.now();await page.mouse.wheel(0,100);
+  await page.waitForFunction(()=>Number(document.querySelector('[data-admiral-sequence]').dataset.frame)>1);
   for(let i=0;i<15;i++){await page.waitForTimeout(50);await page.mouse.wheel(0,180);}
   await waitState(page,'arrival');const boosted=Date.now()-fastStart;
   assert.ok(boosted<baseline*.92,`Boost ${boosted}ms should beat baseline ${baseline}ms`);
   results.push({baselineMs:baseline,boostedMs:boosted});await f.close();
  });
- await pass('half-second endpoint dissolves blend pixels and finish before releasing the CTA',async()=>{
+ await pass('endpoint dissolves blend pixels for the full duration before releasing the CTA',async()=>{
   const f=await fixture({solidFrames:true,props:{duration:.6}}),{page}=f;
   await page.waitForTimeout(250);await page.mouse.wheel(0,100);
   await page.waitForFunction(()=>{const e=document.querySelector('[data-admiral-sequence]');return e.dataset.crossfade==='opening'&&Number(e.dataset.crossfadeMix)>.25;});
@@ -139,7 +140,9 @@ try{
   for(const [name,samples] of [['forward',forward],['reverse',reverse]])for(const edge of ['opening','arrival']){
    const fade=samples.filter(s=>s.edge===edge);assert.ok(fade.length>15,`${name} ${edge} has visible intermediate blends`);
    const ms=fade.at(-1).time-fade[0].time;
-   assert.ok(ms>=430&&ms<=620,`${name} ${edge} took ${ms}ms despite scroll acceleration`);
+   // The optional hosted release is frozen at its previous half-second setting.
+   const expectedMs=remoteMode?500:2000;
+   assert.ok(ms>=expectedMs-100&&ms<=expectedMs+150,`${name} ${edge} took ${ms}ms despite scroll acceleration`);
    assert.ok(fade.every(s=>s.held==='true'&&s.ctaInert),`${name} ${edge} keeps the page held and CTA inert`);
   }
   assert.equal(await page.locator('[data-admiral-sequence]').getAttribute('data-frame'),'0');await f.close();

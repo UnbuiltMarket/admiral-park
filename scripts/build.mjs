@@ -18,4 +18,4 @@ for(const [coreName,componentName] of [["hero-player","AdmiralHeroVideo"],["hero
   await writeFile(new URL(`src/framer/${componentName}.tsx`,root),single);
 }
 console.log("Built browser players and standalone Framer video/sequence components.");
-await buildRemote();
+if (process.argv.includes("--remote")) await buildRemote();
