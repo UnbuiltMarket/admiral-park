@@ -10,13 +10,14 @@ const {chromium}=require(process.env.PLAYWRIGHT_MODULE_PATH||'playwright');
 const root=new URL('../',import.meta.url);
 const out=new URL('tmp/sequence-check/',root);await mkdir(out,{recursive:true});
 const remoteMode=process.env.SEQUENCE_REMOTE==='1';
+const frameCount=remoteMode?65:67,lastFrame=frameCount-1;
 const source=await readFile(new URL(remoteMode?'src/framer/AdmiralHeroLoader.tsx':'src/framer/AdmiralHeroSequence.tsx',root),'utf8');
 const release=remoteMode?JSON.parse(await readFile(new URL('docs/hero-manifest.json',root),'utf8')):null;
 const releaseBundle=remoteMode?await readFile(new URL('docs/'+release.script,root),'utf8'):'';
 const code=ts.transpileModule(source,{compilerOptions:{target:ts.ScriptTarget.ES2020,module:ts.ModuleKind.CommonJS,jsx:ts.JsxEmit.React}}).outputText;
 const react=await readFile(path.join(path.dirname(requireDev.resolve('react/package.json')),'umd/react.development.js'),'utf8');
 const dom=await readFile(path.join(path.dirname(requireDev.resolve('react-dom/package.json')),'umd/react-dom.development.js'),'utf8');
-const assets=await Promise.all(Array.from({length:65},(_,i)=>readFile(new URL('assets/images/AVIF 30_1920x1010 DESKTOP HERO SEQUENCE/'+encodeURIComponent(`raw sequence${String(i).padStart(2,'0')}.avif`),root))));
+const assets=await Promise.all(Array.from({length:frameCount},(_,i)=>readFile(new URL('assets/images/AVIF 30_1920x1010 DESKTOP HERO SEQUENCE/'+encodeURIComponent(`raw sequence${String(i).padStart(2,'0')}.avif`),root))));
 const browser=await chromium.launch({headless:true,channel:process.env.PLAYWRIGHT_CHANNEL||'chrome'});
 const results=[];
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
@@ -43,9 +44,9 @@ async function fixture(options={}){
   const url=new URL(route.request().url());
   if(url.pathname.startsWith('/frames/')){
    const index=Number(decodeURIComponent(url.pathname).match(/sequence(\d+)/)?.[1]);requests.push(index);
-   if(options.delayLast&&index===64)await sleep(options.delayLast);
+   if(options.delayLast&&index===lastFrame)await sleep(options.delayLast);
    if(options.failFrame===index)return route.fulfill({status:503,body:'Test failure'});
-   if(options.solidFrames)return route.fulfill({contentType:'image/svg+xml',body:`<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1010"><rect width="1920" height="1010" fill="${index===0?'red':index===63?'lime':index===64?'yellow':'blue'}"/></svg>`});
+   if(options.solidFrames)return route.fulfill({contentType:'image/svg+xml',body:`<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1010"><rect width="1920" height="1010" fill="${index===0?'red':index===lastFrame-1?'lime':index===lastFrame?'yellow':'blue'}"/></svg>`});
    return route.fulfill({contentType:'image/avif',headers:{'Cache-Control':'public,max-age=3600'},body:assets[index]});
   }
   return route.fulfill({contentType:'text/html',body:'<html><head><meta name="viewport" content="width=device-width, initial-scale=1"><style>body{margin:0;background:#eee;color:white;font:18px Arial}#hero{height:100svh;position:relative}.copy{position:absolute;left:6%;top:20%;max-width:650px}.cta{position:absolute;left:6%;top:65%}.cta a{display:inline-block;background:#fff;color:#152a31;padding:18px;border-radius:4px}#after{height:160vh;padding:50px;color:#152a31}#nested{position:absolute;right:0;top:0;height:100px;width:100px;overflow:auto;z-index:5}</style></head><body><div id="mount"></div><section id="after">Content after the hero</section></body></html>'});
@@ -92,7 +93,7 @@ try{
   await page.waitForTimeout(250);
   assert.ok(Number(await page.locator('[data-admiral-sequence]').getAttribute('data-frame'))>Number(middle),'Continues without another scroll');
   await waitState(page,'arrival');
-  assert.equal(await page.locator('[data-admiral-sequence]').getAttribute('data-frame'),'64');
+  assert.equal(await page.locator('[data-admiral-sequence]').getAttribute('data-frame'),String(lastFrame));
   assert.equal(await page.evaluate(()=>scrollY),0);
   assert.equal(await page.locator('#cta').evaluate(e=>e.inert),false);
   assert.equal(await page.locator('#building').evaluate(e=>getComputedStyle(e).opacity),'1');
@@ -141,7 +142,7 @@ try{
    const fade=samples.filter(s=>s.edge===edge);assert.ok(fade.length>15,`${name} ${edge} has visible intermediate blends`);
    const ms=fade.at(-1).time-fade[0].time;
    // The optional hosted release is frozen at its previous half-second setting.
-   const expectedMs=remoteMode?500:2000;
+   const expectedMs=remoteMode?500:edge==='opening'?1250:1000;
    assert.ok(ms>=expectedMs-100&&ms<=expectedMs+150,`${name} ${edge} took ${ms}ms despite scroll acceleration`);
    assert.ok(fade.every(s=>s.held==='true'&&s.ctaInert),`${name} ${edge} keeps the page held and CTA inert`);
   }
@@ -173,9 +174,9 @@ try{
  });
  await pass('reduced motion uses endpoints only and never holds scrolling',async()=>{
   const f=await fixture({context:{reducedMotion:'reduce'}}),{page}=f;
-  await page.waitForFunction(()=>Number(document.querySelector('[data-admiral-sequence]').dataset.frame)===64);
+  await page.waitForFunction(last=>Number(document.querySelector('[data-admiral-sequence]').dataset.frame)===last,lastFrame);
   assert.equal(await state(page),'reduced');assert.equal(await page.locator('#cta').evaluate(e=>e.inert),false);
-  await page.waitForTimeout(250);assert.deepEqual([...new Set(f.requests)].sort((a,b)=>a-b),[0,64]);
+  await page.waitForTimeout(250);assert.deepEqual([...new Set(f.requests)].sort((a,b)=>a-b),[0,lastFrame]);
   await page.mouse.wheel(0,350);await page.waitForTimeout(150);assert.ok(await page.evaluate(()=>scrollY)>100);await f.close();
  });
  await pass('failed frame preserves a visible image and releases the page',async()=>{
@@ -217,7 +218,7 @@ try{
   const f=await fixture({staticMode:true,props:{editorView:'arrival'}}),{page}=f;
   assert.equal(await page.locator('#cta').evaluate(e=>getComputedStyle(e).opacity),'1');
   assert.equal(await page.locator('#intro').evaluate(e=>getComputedStyle(e).opacity),'0');
-  assert.deepEqual([...new Set(f.requests)],[64]);await f.close();
+  assert.deepEqual([...new Set(f.requests)],[lastFrame]);await f.close();
  });
  await pass('native CTA links and click handlers are preserved',async()=>{
   const f=await fixture({props:{duration:.6}}),{page}=f;
@@ -271,7 +272,7 @@ try{
   const failures=[];page.on('response',r=>{if((r.url().includes('raw.githubusercontent.com')||r.url().includes('unbuiltmarket.github.io'))&&r.status()>=400)failures.push(r.status());});
   await page.waitForTimeout(1500);await page.mouse.wheel(0,100);
   await waitState(page,'arrival',30000);
-  assert.equal(await page.locator('[data-admiral-sequence]').getAttribute('data-frame'),'64');
+  assert.equal(await page.locator('[data-admiral-sequence]').getAttribute('data-frame'),String(lastFrame));
   assert.equal(await page.locator('#cta').evaluate(e=>e.inert),false);assert.deepEqual(failures,[]);
   await f.close();
  });

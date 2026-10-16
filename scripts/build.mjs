@@ -1,4 +1,4 @@
-import {readFile,writeFile} from "node:fs/promises";
+import {readFile,writeFile,readdir} from "node:fs/promises";
 import {createHash} from "node:crypto";
 import {compileTS,inlineCore} from "./tooling.mjs";
 import {buildRemote} from "./build-remote.mjs";
@@ -8,8 +8,15 @@ for(const [coreName,componentName] of [["hero-player","AdmiralHeroVideo"],["hero
   let wrapper=await readFile(new URL(`src/framer/${componentName}.source.tsx`,root),"utf8");
   if(componentName==="AdmiralHeroSequence"){
     const hash=createHash("sha256");
-    for(let i=0;i<65;i++)hash.update(await readFile(new URL("assets/images/AVIF 30_1920x1010 DESKTOP HERO SEQUENCE/"+encodeURIComponent(`raw sequence${String(i).padStart(2,"0")}.avif`),root)));
-    wrapper=wrapper.replace("__SEQUENCE_VERSION__",hash.digest("hex").slice(0,12));
+    const folder=new URL("assets/images/AVIF 30_1920x1010 DESKTOP HERO SEQUENCE/",root);
+    const frames=(await readdir(folder)).filter(name=>/^raw sequence\d{2}\.avif$/.test(name)).sort();
+    if(frames.length<2)throw new Error("The hero sequence needs at least two numbered frames.");
+    for(const [i,name] of frames.entries()){
+      if(name!==`raw sequence${String(i).padStart(2,"0")}.avif`)throw new Error(`Missing or out-of-order hero frame at index ${i}.`);
+      hash.update(await readFile(new URL(encodeURIComponent(name),folder)));
+    }
+    wrapper=wrapper.replace("__SEQUENCE_VERSION__",hash.digest("hex").slice(0,12))
+      .replaceAll("__SEQUENCE_FRAME_COUNT__",String(frames.length));
   }
   const single="// Generated standalone Framer Code Component. Paste this entire file into Framer.\n"+
     wrapper.replace("// @CORE_INSERT",inlineCore(core)).trimEnd()+"\n";
