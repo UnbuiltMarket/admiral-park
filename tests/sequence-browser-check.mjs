@@ -10,7 +10,7 @@ const {chromium}=require(process.env.PLAYWRIGHT_MODULE_PATH||'playwright');
 const root=new URL('../',import.meta.url);
 const out=new URL('tmp/sequence-check/',root);await mkdir(out,{recursive:true});
 const remoteMode=process.env.SEQUENCE_REMOTE==='1';
-const frameCount=remoteMode?65:67,lastFrame=frameCount-1;
+const frameCount=65,lastFrame=frameCount-1;
 const source=await readFile(new URL(remoteMode?'src/framer/AdmiralHeroLoader.tsx':'src/framer/AdmiralHeroSequence.tsx',root),'utf8');
 const release=remoteMode?JSON.parse(await readFile(new URL('docs/hero-manifest.json',root),'utf8')):null;
 const releaseBundle=remoteMode?await readFile(new URL('docs/'+release.script,root),'utf8'):'';
@@ -142,7 +142,7 @@ try{
    const fade=samples.filter(s=>s.edge===edge);assert.ok(fade.length>15,`${name} ${edge} has visible intermediate blends`);
    const ms=fade.at(-1).time-fade[0].time;
    // The optional hosted release is frozen at its previous half-second setting.
-   const expectedMs=remoteMode?500:edge==='opening'?1250:1000;
+   const expectedMs=remoteMode?500:edge==='opening'?1000:330;
    assert.ok(ms>=expectedMs-100&&ms<=expectedMs+150,`${name} ${edge} took ${ms}ms despite scroll acceleration`);
    assert.ok(fade.every(s=>s.held==='true'&&s.ctaInert),`${name} ${edge} keeps the page held and CTA inert`);
   }

@@ -146,8 +146,8 @@ export function createHeroSequence(options) {
     const last = urls.length - 1;
     const duration = sequenceClamp(options.duration ?? 2.5, .6, 10);
     // Endpoint stills dissolve into their adjacent sequence frames in fixed real time.
-    const openingFade = last >= 3 ? 1.25 : 0;
-    const arrivalFade = last >= 3 ? 1 : 0;
+    const openingFade = last >= 3 ? 1 : 0;
+    const arrivalFade = last >= 3 ? .33 : 0;
     const flightEnd = openingFade + duration, totalDuration = flightEnd + arrivalFade;
     const maxSpeed = sequenceClamp(options.maxSpeed ?? 1.8, 1, 3);
     const momentum = sequenceClamp(options.momentum ?? .22, .08, .6);

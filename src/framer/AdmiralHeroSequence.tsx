@@ -4,7 +4,7 @@ import type { ComponentType } from "react"
 import { addPropertyControls, ControlType, RenderTarget, useIsStaticRenderer } from "framer"
 
 const ADMIRAL_SEQUENCE_BASE = "https://raw.githubusercontent.com/UnbuiltMarket/admiral-park/main/assets/images/AVIF%2030_1920x1010%20DESKTOP%20HERO%20SEQUENCE"
-const ADMIRAL_SEQUENCE_VERSION = "ad0ee961ca41"
+const ADMIRAL_SEQUENCE_VERSION = "92a9ae63b113"
 
 interface OverlayTiming {
     openingOut: number; buildingIn: number; buildingFull: number; ctaIn: number; rise: number
@@ -30,7 +30,7 @@ interface AdmiralHeroSequenceProps {
  */
 export default function AdmiralHeroSequence(props: AdmiralHeroSequenceProps): React.JSX.Element {
     const {
-        useGitHubAssets = true, baseUrl = "", filename = "frame-{index}.avif", frameCount = 67, firstIndex = 0, digits = 2,
+        useGitHubAssets = true, baseUrl = "", filename = "frame-{index}.avif", frameCount = 65, firstIndex = 0, digits = 2,
         duration = 2.5, maxSpeed = 1.8, momentum = .22, triggerDistance = 28, holdScroll = true, preload = true,
         cacheFrames = 14, mobileWidth = 1280, focalX = 50, focalY = 50, darken = 0,
         openingOut = 20, buildingIn = 68, buildingFull = 88, ctaIn = 86, rise = 20,
@@ -41,7 +41,7 @@ export default function AdmiralHeroSequence(props: AdmiralHeroSequenceProps): Re
     const urls = React.useMemo(() => {
         const base = (useGitHubAssets ? ADMIRAL_SEQUENCE_BASE : baseUrl).trim().replace(/\/+$/, "")
         const pattern = useGitHubAssets ? "raw sequence{index}.avif" : filename
-        const count = useGitHubAssets ? 67 : Math.round(Math.max(2, Math.min(300, frameCount)))
+        const count = useGitHubAssets ? 65 : Math.round(Math.max(2, Math.min(300, frameCount)))
         return Array.from({ length: count }, (_, i) => {
             const number = String(i + (useGitHubAssets ? 0 : firstIndex)).padStart(useGitHubAssets ? 2 : digits, "0")
             return base + "/" + encodeURIComponent(pattern.replace("{index}", number)) + (useGitHubAssets ? "?v=" + ADMIRAL_SEQUENCE_VERSION : "")
@@ -201,7 +201,7 @@ addPropertyControls(AdmiralHeroSequence, {
     useGitHubAssets: { type: ControlType.Boolean, title: "GitHub assets", defaultValue: true },
     baseUrl: { type: ControlType.String, title: "Folder URL", defaultValue: "", hidden: p => p.useGitHubAssets !== false },
     filename: { type: ControlType.String, title: "Filename", defaultValue: "frame-{index}.avif", hidden: p => p.useGitHubAssets !== false },
-    frameCount: { type: ControlType.Number, title: "Frames", defaultValue: 67, min: 2, max: 300, step: 1, hidden: p => p.useGitHubAssets !== false },
+    frameCount: { type: ControlType.Number, title: "Frames", defaultValue: 65, min: 2, max: 300, step: 1, hidden: p => p.useGitHubAssets !== false },
     firstIndex: { type: ControlType.Number, title: "First index", defaultValue: 0, min: 0, max: 999, step: 1, hidden: p => p.useGitHubAssets !== false },
     digits: { type: ControlType.Number, title: "Digits", defaultValue: 2, min: 1, max: 6, step: 1, hidden: p => p.useGitHubAssets !== false },
     duration: { type: ControlType.Number, title: "Journey", defaultValue: 2.5, min: .6, max: 10, step: .1, unit: "s" },
@@ -346,8 +346,8 @@ function createHeroSequence(options: SequenceOptions) {
     const last = urls.length - 1;
     const duration = sequenceClamp(options.duration ?? 2.5, .6, 10);
     // Endpoint stills dissolve into their adjacent sequence frames in fixed real time.
-    const openingFade = last >= 3 ? 1.25 : 0;
-    const arrivalFade = last >= 3 ? 1 : 0;
+    const openingFade = last >= 3 ? 1 : 0;
+    const arrivalFade = last >= 3 ? .33 : 0;
     const flightEnd = openingFade + duration, totalDuration = flightEnd + arrivalFade;
     const maxSpeed = sequenceClamp(options.maxSpeed ?? 1.8, 1, 3);
     const momentum = sequenceClamp(options.momentum ?? .22, .08, .6);

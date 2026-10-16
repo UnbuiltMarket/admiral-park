@@ -10,9 +10,9 @@ const source=await readFile(new URL('src/framer/AdmiralHeroSequence.tsx',root),'
 test('corrected sequence includes every expected numbered frame',async()=>{
  const folder=new URL('assets/images/AVIF 30_1920x1010 DESKTOP HERO SEQUENCE/',root);
  const files=(await readdir(folder)).filter(n=>/^raw sequence\d{2}\.avif$/.test(n));
- assert.equal(files.length,67);
- assert.match(source,/const count = useGitHubAssets \? 67 :/);
- for(let i=0;i<67;i++){
+ assert.equal(files.length,65);
+ assert.match(source,/const count = useGitHubAssets \? 65 :/);
+ for(let i=0;i<65;i++){
   const name=`raw sequence${String(i).padStart(2,'0')}.avif`;
   assert.ok(files.includes(name));
   const data=await readFile(new URL(encodeURIComponent(name),folder));
