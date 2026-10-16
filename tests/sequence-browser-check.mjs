@@ -138,12 +138,13 @@ try{
   await page.waitForTimeout(180);await page.evaluate(()=>window.samples=[]);
   await page.mouse.wheel(0,-100);await waitState(page,'moving');await waitState(page,'opening');
   const reverse=await page.evaluate(()=>window.samples);
-  for(const [name,samples] of [['forward',forward],['reverse',reverse]])for(const edge of ['opening','arrival']){
-   const fade=samples.filter(s=>s.edge===edge);assert.ok(fade.length>15,`${name} ${edge} has visible intermediate blends`);
+  // The optional hosted release retains its previous single half-second arrival fade.
+  const phases=[['opening',0,500],...(remoteMode?[['arrival',lastFrame-1,500]]:[['arrival',lastFrame-2,100],['arrival',lastFrame-1,100]])];
+  for(const [name,samples] of [['forward',forward],['reverse',reverse]])for(const [edge,frame,expectedMs] of phases){
+   const fade=samples.filter(s=>s.edge===edge&&s.frame===frame&&s.mix>0&&s.mix<1);
+   assert.ok(fade.length>=Math.max(2,Math.floor(expectedMs/32)),`${name} ${edge} frame ${frame} has visible intermediate blends`);
    const ms=fade.at(-1).time-fade[0].time;
-   // The optional hosted release is frozen at its previous half-second setting.
-   const expectedMs=remoteMode?500:edge==='opening'?1000:330;
-   assert.ok(ms>=expectedMs-100&&ms<=expectedMs+150,`${name} ${edge} took ${ms}ms despite scroll acceleration`);
+   assert.ok(ms>=expectedMs-75&&ms<=expectedMs+100,`${name} ${edge} frame ${frame} took ${ms}ms despite scroll acceleration`);
    assert.ok(fade.every(s=>s.held==='true'&&s.ctaInert),`${name} ${edge} keeps the page held and CTA inert`);
   }
   assert.equal(await page.locator('[data-admiral-sequence]').getAttribute('data-frame'),'0');await f.close();
