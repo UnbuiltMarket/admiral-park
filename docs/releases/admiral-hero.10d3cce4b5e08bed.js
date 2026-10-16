@@ -1,0 +1,810 @@
+// Admiral Park hero runtime. API 1. Generated; edit the source component.
+(function(scope){
+"use strict";
+const factories=scope.__admiralHeroFactoriesV1||(scope.__admiralHeroFactoriesV1=Object.create(null));
+factories["10d3cce4b5e08bed"]=function(react,framer){
+const module={exports:{}};const exports=module.exports;
+const require=name=>{if(name==="react")return react;if(name==="framer")return framer;throw new Error("Unsupported runtime import: "+name);};
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.default = AdmiralHeroSequence;
+exports.OpeningContent = OpeningContent;
+exports.BuildingContent = BuildingContent;
+exports.ArrivalCTA = ArrivalCTA;
+const React = require("react");
+const framer_1 = require("framer");
+const ADMIRAL_SEQUENCE_BASE = "https://unbuiltmarket.github.io/admiral-park/assets/92a9ae63b113";
+const ADMIRAL_SEQUENCE_VERSION = "92a9ae63b113";
+const sequenceChannels = new Map();
+const sequenceSubscribers = new Set();
+function notifySequenceOverlays() { sequenceSubscribers.forEach(update => update()); }
+function AdmiralHeroSequence(props) {
+    const { useGitHubAssets = true, baseUrl = "", filename = "frame-{index}.avif", frameCount = 65, firstIndex = 0, digits = 2, duration = 2.5, maxSpeed = 1.8, momentum = .22, triggerDistance = 28, holdScroll = true, preload = true, cacheFrames = 14, mobileWidth = 1280, focalX = 50, focalY = 50, darken = 0, openingOut = 20, buildingIn = 68, buildingFull = 88, ctaIn = 86, rise = 20, editorView = "opening", showControls = true, background = "#101820", alt = "Aerial approach from Lake Balaton to Admiral Park in Balatonfüred", style, } = props;
+    const staticRenderer = (0, framer_1.useIsStaticRenderer)();
+    const urls = React.useMemo(() => {
+        const base = (useGitHubAssets ? ADMIRAL_SEQUENCE_BASE : baseUrl).trim().replace(/\/+$/, "");
+        const pattern = useGitHubAssets ? "raw sequence{index}.avif" : filename;
+        const count = useGitHubAssets ? 65 : Math.round(Math.max(2, Math.min(300, frameCount)));
+        return Array.from({ length: count }, (_, i) => {
+            const number = String(i + (useGitHubAssets ? 0 : firstIndex)).padStart(useGitHubAssets ? 2 : digits, "0");
+            return base + "/" + encodeURIComponent(pattern.replace("{index}", number)) + (useGitHubAssets ? "?v=" + ADMIRAL_SEQUENCE_VERSION : "");
+        });
+    }, [useGitHubAssets, baseUrl, filename, frameCount, firstIndex, digits]);
+    const rootRef = React.useRef(null);
+    const canvasRef = React.useRef(null);
+    const posterRef = React.useRef(null);
+    const playerRef = React.useRef(null);
+    const timing = React.useRef({ openingOut, buildingIn, buildingFull, ctaIn, rise });
+    timing.current = { openingOut, buildingIn, buildingFull, ctaIn, rise };
+    const [state, setState] = React.useState("opening");
+    const previousState = React.useRef("opening");
+    const previewEnd = staticRenderer && typeof window !== "undefined" && framer_1.RenderTarget.current() === framer_1.RenderTarget.canvas && editorView === "arrival";
+    React.useEffect(() => {
+        const root = rootRef.current, canvas = canvasRef.current, poster = posterRef.current;
+        if (!root || !canvas || !poster)
+            return;
+        const initial = {
+            state: previewEnd ? "arrival" : "opening", progress: previewEnd ? 1 : 0,
+            frame: previewEnd ? urls.length - 1 : 0, direction: 1, held: false, decoded: 0, downloaded: 0,
+        };
+        const report = (snapshot) => {
+            sequenceChannels.set(root, { snapshot, timing: timing.current });
+            notifySequenceOverlays();
+            if (snapshot.state !== previousState.current) {
+                previousState.current = snapshot.state;
+                setState(snapshot.state);
+            }
+        };
+        report(initial);
+        if (!staticRenderer) {
+            const phone = window.matchMedia("(max-width: 767px)").matches;
+            const player = createHeroSequence({
+                root, canvas, poster, urls, duration, maxSpeed, momentum, triggerDistance, holdScroll, preload,
+                cacheFrames: phone ? Math.min(cacheFrames, 10) : cacheFrames,
+                decodeWidth: phone ? mobileWidth : 1920, focalX, focalY, onUpdate: report,
+            });
+            playerRef.current = player;
+        }
+        return () => {
+            playerRef.current?.destroy();
+            playerRef.current = null;
+            sequenceChannels.delete(root);
+            notifySequenceOverlays();
+        };
+    }, [urls, staticRenderer, previewEnd, duration, maxSpeed, momentum, triggerDistance, holdScroll, preload, cacheFrames, mobileWidth, focalX, focalY]);
+    React.useEffect(() => {
+        const channel = rootRef.current && sequenceChannels.get(rootRef.current);
+        if (channel) {
+            channel.timing = timing.current;
+            notifySequenceOverlays();
+        }
+    }, [openingOut, buildingIn, buildingFull, ctaIn, rise]);
+    const busy = state === "loading" || state === "moving";
+    const recoverable = state === "paused" || state === "error";
+    return (React.createElement("div", { ref: rootRef, className: "admiral-hero-sequence", "data-admiral-sequence": "", style: { position: "relative", width: "100%", height: "100%", overflow: "hidden", background, ...style } },
+        React.createElement("img", { ref: posterRef, src: urls[previewEnd ? urls.length - 1 : 0], alt: alt, loading: "eager", decoding: "async", fetchpriority: "high", crossOrigin: "anonymous", draggable: false, style: { position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover",
+                objectPosition: `${focalX}% ${focalY}%`, pointerEvents: "none" } }),
+        React.createElement("canvas", { ref: canvasRef, "aria-hidden": "true", width: 1, height: 1, style: { position: "absolute", inset: 0, width: "100%", height: "100%", opacity: 0, pointerEvents: "none" } }),
+        React.createElement("div", { "aria-hidden": "true", style: { position: "absolute", inset: 0, background: "black", opacity: darken, pointerEvents: "none" } }),
+        showControls && !staticRenderer && (busy || recoverable) && (React.createElement("div", { "data-sequence-controls": "", style: { position: "absolute", bottom: 16, right: 16, display: "flex", gap: 8, zIndex: 2 } },
+            recoverable && React.createElement("button", { type: "button", onClick: () => playerRef.current?.start(), style: sequenceControlStyle }, state === "error" ? "Retry animation" : "Continue animation"),
+            React.createElement("button", { type: "button", onClick: () => playerRef.current?.skip(), style: sequenceControlStyle }, "Skip animation"))),
+        React.createElement("span", { role: "status", "aria-live": "polite", style: { position: "absolute", width: 1, height: 1, padding: 0, overflow: "hidden", clipPath: "inset(50%)", whiteSpace: "nowrap" } }, state === "error" ? "Animation unavailable. You can continue down the page." : "")));
+}
+const sequenceControlStyle = {
+    appearance: "none", border: "1px solid rgba(255,255,255,.5)", borderRadius: 6,
+    background: "rgba(10,20,28,.75)", color: "white", font: "500 12px/1.3 system-ui,sans-serif",
+    padding: "8px 12px", cursor: "pointer",
+};
+function createSequenceOverlay(Component, kind) {
+    const Overlay = React.forwardRef((props, forwardedRef) => {
+        const elementRef = React.useRef(null);
+        const ref = React.useCallback((node) => {
+            elementRef.current = node;
+            if (typeof forwardedRef === "function")
+                forwardedRef(node);
+            else if (forwardedRef)
+                forwardedRef.current = node;
+        }, [forwardedRef]);
+        React.useEffect(() => {
+            const element = elementRef.current;
+            if (!element?.style)
+                return;
+            const original = { opacity: element.style.opacity, translate: element.style.translate,
+                pointerEvents: element.style.pointerEvents, visibility: element.style.visibility,
+                hidden: element.getAttribute("aria-hidden"), inert: element.inert };
+            let selected = null;
+            function resolve() {
+                if (selected?.isConnected && sequenceChannels.has(selected) && selected.getBoundingClientRect().width > 0)
+                    return sequenceChannels.get(selected);
+                let parent = element.parentElement;
+                while (parent) {
+                    const candidates = [...sequenceChannels.keys()].filter(root => parent.contains(root) && root.getBoundingClientRect().width > 0);
+                    if (candidates.length) {
+                        selected = candidates[0];
+                        return sequenceChannels.get(selected);
+                    }
+                    parent = parent.parentElement;
+                }
+            }
+            function update() {
+                const channel = resolve();
+                if (!channel)
+                    return;
+                const { progress } = channel.snapshot, t = channel.timing;
+                const ramp = (from, to) => sequenceEase(sequenceClamp((progress * 100 - from) / Math.max(1, to - from)));
+                const opacity = kind === "opening" ? 1 - ramp(0, t.openingOut) :
+                    kind === "building" ? ramp(t.buildingIn, t.buildingFull) : ramp(t.ctaIn, 100);
+                const interactive = opacity >= .98 && (kind !== "cta" || channel.snapshot.state === "arrival" || channel.snapshot.state === "reduced");
+                element.style.opacity = String(opacity);
+                element.style.translate = `0px ${kind === "opening" ? -(1 - opacity) * t.rise * .6 : (1 - opacity) * t.rise}px`;
+                element.style.visibility = opacity < .001 ? "hidden" : original.visibility;
+                element.style.pointerEvents = interactive ? original.pointerEvents : "none";
+                element.inert = interactive ? original.inert : true;
+                if (opacity < .01)
+                    element.setAttribute("aria-hidden", "true");
+                else if (original.hidden === null)
+                    element.removeAttribute("aria-hidden");
+                else
+                    element.setAttribute("aria-hidden", original.hidden);
+                element.dataset.heroOverlay = kind;
+            }
+            sequenceSubscribers.add(update);
+            update();
+            return () => {
+                sequenceSubscribers.delete(update);
+                element.style.opacity = original.opacity;
+                element.style.translate = original.translate;
+                element.style.pointerEvents = original.pointerEvents;
+                element.style.visibility = original.visibility;
+                element.inert = original.inert;
+                if (original.hidden === null)
+                    element.removeAttribute("aria-hidden");
+                else
+                    element.setAttribute("aria-hidden", original.hidden);
+                delete element.dataset.heroOverlay;
+            };
+        }, []);
+        return React.createElement(Component, { ...props, ref: ref, style: { ...props.style, opacity: kind === "opening" ? 1 : 0 } });
+    });
+    Overlay.displayName = `Sequence${kind}`;
+    return Overlay;
+}
+function OpeningContent(Component) {
+    return createSequenceOverlay(Component, "opening");
+}
+function BuildingContent(Component) {
+    return createSequenceOverlay(Component, "building");
+}
+function ArrivalCTA(Component) {
+    return createSequenceOverlay(Component, "cta");
+}
+AdmiralHeroSequence.displayName = "Hero Sequence";
+(0, framer_1.addPropertyControls)(AdmiralHeroSequence, {
+    useGitHubAssets: { type: framer_1.ControlType.Boolean, title: "GitHub assets", defaultValue: true },
+    baseUrl: { type: framer_1.ControlType.String, title: "Folder URL", defaultValue: "", hidden: p => p.useGitHubAssets !== false },
+    filename: { type: framer_1.ControlType.String, title: "Filename", defaultValue: "frame-{index}.avif", hidden: p => p.useGitHubAssets !== false },
+    frameCount: { type: framer_1.ControlType.Number, title: "Frames", defaultValue: 65, min: 2, max: 300, step: 1, hidden: p => p.useGitHubAssets !== false },
+    firstIndex: { type: framer_1.ControlType.Number, title: "First index", defaultValue: 0, min: 0, max: 999, step: 1, hidden: p => p.useGitHubAssets !== false },
+    digits: { type: framer_1.ControlType.Number, title: "Digits", defaultValue: 2, min: 1, max: 6, step: 1, hidden: p => p.useGitHubAssets !== false },
+    duration: { type: framer_1.ControlType.Number, title: "Journey", defaultValue: 2.5, min: .6, max: 10, step: .1, unit: "s" },
+    maxSpeed: { type: framer_1.ControlType.Number, title: "Max boost", defaultValue: 1.8, min: 1, max: 3, step: .1, unit: "×" },
+    momentum: { type: framer_1.ControlType.Number, title: "Momentum", defaultValue: .22, min: .08, max: .6, step: .02, unit: "s" },
+    triggerDistance: { type: framer_1.ControlType.Number, title: "Trigger", defaultValue: 28, min: 8, max: 150, step: 1, unit: "px" },
+    holdScroll: { type: framer_1.ControlType.Boolean, title: "Hold hero", defaultValue: true },
+    preload: { type: framer_1.ControlType.Boolean, title: "Preload", defaultValue: true },
+    openingOut: { type: framer_1.ControlType.Number, title: "Opening out", defaultValue: 20, min: 1, max: 50, step: 1, unit: "%" },
+    buildingIn: { type: framer_1.ControlType.Number, title: "Building in", defaultValue: 68, min: 20, max: 95, step: 1, unit: "%" },
+    buildingFull: { type: framer_1.ControlType.Number, title: "Building full", defaultValue: 88, min: 40, max: 100, step: 1, unit: "%" },
+    ctaIn: { type: framer_1.ControlType.Number, title: "CTA in", defaultValue: 86, min: 40, max: 99, step: 1, unit: "%" },
+    rise: { type: framer_1.ControlType.Number, title: "Text rise", defaultValue: 20, min: 0, max: 60, step: 1, unit: "px" },
+    focalX: { type: framer_1.ControlType.Number, title: "Focal X", defaultValue: 50, min: 0, max: 100, unit: "%" },
+    focalY: { type: framer_1.ControlType.Number, title: "Focal Y", defaultValue: 50, min: 0, max: 100, unit: "%" },
+    darken: { type: framer_1.ControlType.Number, title: "Darken", defaultValue: 0, min: 0, max: .8, step: .05 },
+    mobileWidth: { type: framer_1.ControlType.Number, title: "Phone decode", defaultValue: 1280, min: 640, max: 1920, step: 160, unit: "px" },
+    cacheFrames: { type: framer_1.ControlType.Number, title: "Decoded cache", defaultValue: 14, min: 8, max: 24, step: 1 },
+    editorView: { type: framer_1.ControlType.Enum, title: "Editor view", options: ["opening", "arrival"], optionTitles: ["Opening", "Arrival"], defaultValue: "opening" },
+    showControls: { type: framer_1.ControlType.Boolean, title: "Skip control", defaultValue: true },
+    background: { type: framer_1.ControlType.Color, title: "Background", defaultValue: "#101820" },
+    alt: { type: framer_1.ControlType.String, title: "Image alt", defaultValue: "Aerial approach from Lake Balaton to Admiral Park in Balatonfüred" },
+});
+let sequenceScrollOwner = null;
+function sequenceClamp(n, min = 0, max = 1) { return Math.min(max, Math.max(min, n)); }
+function sequenceEase(n) { return n * n * (3 - 2 * n); }
+function createSequenceFrames(urls, width, limit, notify) {
+    const abort = new AbortController();
+    const blobs = new Map();
+    const bitmaps = new Map();
+    const fetching = new Set(), decoding = new Set(), failed = new Set();
+    let disposed = false, all = false, center = 0, wanted = [0], downloads = 0;
+    const last = urls.length - 1;
+    const valid = (n) => n >= 0 && n <= last;
+    function evict() {
+        while (bitmaps.size > limit) {
+            const candidates = [...bitmaps.keys()].filter(i => i !== center && i !== 0 && i !== last);
+            candidates.sort((a, b) => Math.abs(b - center) - Math.abs(a - center));
+            const index = candidates[0];
+            if (index === undefined)
+                break;
+            bitmaps.get(index)?.close();
+            bitmaps.delete(index);
+        }
+    }
+    async function decode(index) {
+        decoding.add(index);
+        let bitmap;
+        try {
+            const blob = blobs.get(index);
+            if (typeof createImageBitmap === "function") {
+                try {
+                    const image = await createImageBitmap(blob, { resizeWidth: width, resizeQuality: "high" });
+                    bitmap = { image, width: image.width, height: image.height, close: () => image.close() };
+                }
+                catch { }
+            }
+            if (!bitmap) {
+                const image = new Image();
+                const objectURL = URL.createObjectURL(blob);
+                try {
+                    image.src = objectURL;
+                    await image.decode();
+                    bitmap = { image, width: image.naturalWidth, height: image.naturalHeight, close: () => { image.src = ""; } };
+                }
+                finally {
+                    URL.revokeObjectURL(objectURL);
+                }
+            }
+            if (disposed || !wanted.includes(index))
+                bitmap.close();
+            else {
+                bitmaps.set(index, bitmap);
+                evict();
+            }
+        }
+        catch {
+            if (!disposed)
+                failed.add(index);
+        }
+        finally {
+            decoding.delete(index);
+            if (!disposed) {
+                notify();
+                pump();
+            }
+        }
+    }
+    async function fetchFrame(index) {
+        fetching.add(index);
+        const requestAbort = new AbortController();
+        const timeout = setTimeout(() => requestAbort.abort(), 10000);
+        const cancel = () => requestAbort.abort();
+        abort.signal.addEventListener("abort", cancel, { once: true });
+        try {
+            const response = await fetch(urls[index], { signal: requestAbort.signal, mode: "cors", credentials: "omit", cache: "force-cache" });
+            if (!response.ok)
+                throw new Error("Frame " + index + ": " + response.status);
+            const blob = await response.blob();
+            if (!disposed) {
+                blobs.set(index, blob);
+                downloads++;
+            }
+        }
+        catch {
+            if (!disposed)
+                failed.add(index);
+        }
+        finally {
+            clearTimeout(timeout);
+            abort.signal.removeEventListener("abort", cancel);
+            fetching.delete(index);
+            if (!disposed) {
+                notify();
+                pump();
+            }
+        }
+    }
+    function pump() {
+        if (disposed)
+            return;
+        const queue = all ? [...new Set([...wanted, ...urls.map((_, i) => i)])] : wanted;
+        for (const index of queue) {
+            if (fetching.size >= 4)
+                break;
+            if (!blobs.has(index) && !fetching.has(index) && !failed.has(index))
+                void fetchFrame(index);
+        }
+        for (const index of wanted) {
+            if (decoding.size >= 2)
+                break;
+            if (blobs.has(index) && !bitmaps.has(index) && !decoding.has(index) && !failed.has(index))
+                void decode(index);
+        }
+    }
+    return {
+        request(index, direction, full = false, single = false) {
+            center = sequenceClamp(Math.round(index), 0, last);
+            all = single ? false : all || full;
+            const next = [center];
+            if (!single) {
+                next.push(0, last, center - direction, center - 2 * direction);
+                for (let step = 1; next.length < limit; step++)
+                    next.push(center + step * direction);
+            }
+            wanted = [...new Set(next.filter(valid))];
+            pump();
+        },
+        get: (index) => bitmaps.get(index),
+        failed: (index) => failed.has(index),
+        counts: () => ({ decoded: bitmaps.size, downloaded: downloads }),
+        retry() { failed.clear(); pump(); },
+        destroy() {
+            disposed = true;
+            abort.abort();
+            blobs.clear();
+            bitmaps.forEach(bitmap => bitmap.close());
+            bitmaps.clear();
+        },
+    };
+}
+function createHeroSequence(options) {
+    const { root, canvas, poster, urls } = options;
+    const last = urls.length - 1;
+    const duration = sequenceClamp(options.duration ?? 2.5, .6, 10);
+    const edgeFade = last >= 3 ? .5 : 0;
+    const flightEnd = edgeFade + duration, totalDuration = flightEnd + edgeFade;
+    const maxSpeed = sequenceClamp(options.maxSpeed ?? 1.8, 1, 3);
+    const momentum = sequenceClamp(options.momentum ?? .22, .08, .6);
+    const threshold = sequenceClamp(options.triggerDistance ?? 28, 8, 150);
+    const motion = matchMedia("(prefers-reduced-motion: reduce)");
+    const connection = navigator.connection;
+    const abort = new AbortController(), signal = abort.signal;
+    const context = canvas.getContext("2d", { alpha: false });
+    let disposed = false, state = "opening", displayed = 0, clock = 0;
+    let displayedProgress = 0;
+    let rendered = { index: 0, next: 0, mix: 0 };
+    let direction = 1, velocity = 0, boost = 0, held = false, playing = false;
+    let active = false, raf = 0, previousTime = 0, waitingSince = 0;
+    let holdY = 0, holdX = 0, holdTimer;
+    let intent = 0, intentAt = 0, lastIntentAt = -Infinity, drainUntil = 0, drainDirection = 0;
+    let scrollGuard = false, warmed = false, bypass = false;
+    let touch = null;
+    let warmTimer;
+    const width = sequenceClamp(options.decodeWidth ?? 1920, 640, 1920);
+    const frames = createSequenceFrames(urls, width, sequenceClamp(options.cacheFrames ?? 14, 8, 24), wake);
+    function snapshot() {
+        return { state, progress: displayedProgress, frame: displayed, direction, held, ...frames.counts() };
+    }
+    function publish() {
+        if (disposed)
+            return;
+        root.dataset.sequenceState = state;
+        root.dataset.frame = String(displayed);
+        root.dataset.progress = String(displayedProgress);
+        root.dataset.crossfade = rendered.index !== rendered.next ? (rendered.index === 0 ? "opening" : "arrival") : "";
+        root.dataset.crossfadeMix = String(rendered.mix);
+        root.dataset.scrollHeld = String(held);
+        root.dataset.decoded = String(frames.counts().decoded);
+        options.onUpdate?.(snapshot());
+    }
+    function visible() {
+        const rect = root.getBoundingClientRect();
+        return rect.width > 0 && rect.height > 0 && rect.bottom > 0 && rect.top < innerHeight;
+    }
+    function atHero() {
+        const rect = root.getBoundingClientRect();
+        return visible() && rect.top >= -3 && rect.top <= innerHeight * .15 && rect.bottom >= innerHeight * .6;
+    }
+    function release(reason) {
+        if (holdTimer)
+            clearTimeout(holdTimer);
+        holdTimer = undefined;
+        held = false;
+        if (sequenceScrollOwner === root)
+            sequenceScrollOwner = null;
+        root.dataset.scrollRelease = reason;
+    }
+    function hold() {
+        if (held || options.holdScroll === false || motion.matches || !atHero())
+            return;
+        if (sequenceScrollOwner && sequenceScrollOwner !== root)
+            return;
+        sequenceScrollOwner = root;
+        held = true;
+        holdX = scrollX;
+        holdY = scrollY;
+        holdTimer = setTimeout(() => fail("timeout"), options.timeoutMs ?? 12000);
+    }
+    function draw(index, force = false, nextIndex = index, mix = 0) {
+        const bitmap = frames.get(index), next = frames.get(nextIndex);
+        if (!context || !bitmap || !next)
+            return false;
+        if (index === rendered.index && nextIndex === rendered.next && mix === rendered.mix && !force && canvas.style.opacity === "1")
+            return true;
+        const box = root.getBoundingClientRect();
+        if (box.width <= 0 || box.height <= 0)
+            return false;
+        const boxRatio = box.width / box.height;
+        let sw = bitmap.width, sh = bitmap.height;
+        if (sw / sh > boxRatio)
+            sw = sh * boxRatio;
+        else
+            sh = sw / boxRatio;
+        const ratio = Math.min(devicePixelRatio || 1, 2, sw / box.width, sh / box.height);
+        const cw = Math.max(1, Math.round(box.width * ratio)), ch = Math.max(1, Math.round(box.height * ratio));
+        if (canvas.width !== cw)
+            canvas.width = cw;
+        if (canvas.height !== ch)
+            canvas.height = ch;
+        context.globalAlpha = 1;
+        context.fillStyle = "#101820";
+        context.fillRect(0, 0, cw, ch);
+        function paint(frame) {
+            let w = frame.width, h = frame.height;
+            if (w / h > boxRatio)
+                w = h * boxRatio;
+            else
+                h = w / boxRatio;
+            context.drawImage(frame.image, (frame.width - w) * sequenceClamp((options.focalX ?? 50) / 100), (frame.height - h) * sequenceClamp((options.focalY ?? 50) / 100), w, h, 0, 0, cw, ch);
+        }
+        paint(bitmap);
+        if (nextIndex !== index) {
+            context.globalAlpha = mix;
+            paint(next);
+            context.globalAlpha = 1;
+        }
+        rendered = { index, next: nextIndex, mix };
+        displayed = mix === 1 ? nextIndex : index;
+        displayedProgress = (index + (nextIndex - index) * mix) / Math.max(1, last);
+        canvas.style.opacity = "1";
+        poster.style.opacity = "0";
+        publish();
+        return true;
+    }
+    function redraw() { return draw(rendered.index, true, rendered.next, rendered.mix); }
+    function frameAt(time) {
+        if (time <= 0)
+            return { index: 0, next: 0, mix: 0 };
+        if (time >= totalDuration)
+            return { index: last, next: last, mix: 0 };
+        if (edgeFade && time < edgeFade)
+            return { index: 0, next: 1, mix: sequenceEase(time / edgeFade) };
+        if (edgeFade && time > flightEnd)
+            return { index: last - 1, next: last, mix: sequenceEase((time - flightEnd) / edgeFade) };
+        const index = (edgeFade ? 1 : 0) + Math.round(sequenceEase(sequenceClamp((time - edgeFade) / duration)) * (edgeFade ? last - 2 : last));
+        return { index, next: index, mix: 0 };
+    }
+    function warm(explicit = false) {
+        if (disposed || motion.matches)
+            return;
+        if (!explicit && (options.preload === false || connection?.saveData || /(^|-)2g$/.test(connection?.effectiveType || "")))
+            return;
+        warmed = true;
+        frames.request(displayed, direction, true);
+    }
+    function wake() {
+        if (disposed || raf || document.hidden)
+            return;
+        if (playing || (motion.matches && displayed !== last) || (active && canvas.style.opacity !== "1"))
+            raf = requestAnimationFrame(tick);
+    }
+    function finish() {
+        playing = false;
+        velocity = 0;
+        boost = 0;
+        waitingSince = 0;
+        state = direction > 0 ? "arrival" : "opening";
+        drainDirection = direction;
+        drainUntil = performance.now() + 350;
+        intent = 0;
+        release("endpoint");
+        publish();
+    }
+    function fail(reason) {
+        playing = false;
+        velocity = 0;
+        state = "error";
+        bypass = true;
+        release(reason);
+        publish();
+    }
+    function tick(now) {
+        raf = 0;
+        if (disposed || document.hidden)
+            return;
+        if (motion.matches) {
+            if (frames.failed(last)) {
+                state = "reduced";
+                publish();
+                return;
+            }
+            if (draw(last)) {
+                state = "reduced";
+                publish();
+            }
+            return;
+        }
+        if (!playing) {
+            if (active && canvas.style.opacity !== "1")
+                redraw();
+            return;
+        }
+        const elapsed = previousTime ? (now - previousTime) / 1000 : 1 / 60;
+        const dt = Math.min(.05, elapsed);
+        previousTime = now;
+        boost *= Math.exp(-dt / momentum);
+        const wantedVelocity = direction * (1 + boost);
+        velocity += (wantedVelocity - velocity) * (1 - Math.exp(-dt / .10));
+        let proposed;
+        if (edgeFade && (clock < edgeFade || (clock === edgeFade && direction < 0))) {
+            velocity = direction;
+            proposed = sequenceClamp(clock + direction * elapsed, 0, edgeFade);
+        }
+        else if (edgeFade && (clock > flightEnd || (clock === flightEnd && direction > 0))) {
+            velocity = direction;
+            proposed = sequenceClamp(clock + direction * elapsed, flightEnd, totalDuration);
+        }
+        else
+            proposed = sequenceClamp(clock + velocity * dt, edgeFade, flightEnd);
+        const frame = frameAt(proposed);
+        frames.request(frame.index, direction, true);
+        if (frames.failed(frame.index) || frames.failed(frame.next)) {
+            fail("frame-error");
+            return;
+        }
+        if (draw(frame.index, false, frame.next, frame.mix)) {
+            clock = proposed;
+            waitingSince = 0;
+            if (state !== "moving") {
+                state = "moving";
+                publish();
+            }
+            if ((direction > 0 && clock >= totalDuration && displayed === last) || (direction < 0 && clock <= 0 && displayed === 0)) {
+                finish();
+                return;
+            }
+        }
+        else {
+            if (canvas.style.opacity !== "1")
+                draw(displayed);
+            if (!waitingSince)
+                waitingSince = now;
+            if (now - waitingSince > 7000) {
+                fail("frame-timeout");
+                return;
+            }
+            if (state !== "loading") {
+                state = "loading";
+                publish();
+            }
+        }
+        wake();
+    }
+    function start(nextDirection, manual = false) {
+        if (disposed || document.hidden || motion.matches || !context || last < 1)
+            return;
+        if (!manual && (!atHero() || (sequenceScrollOwner && sequenceScrollOwner !== root)))
+            return;
+        bypass = false;
+        direction = nextDirection > 0 ? 1 : -1;
+        if ((direction > 0 && clock >= totalDuration && displayed === last) || (direction < 0 && clock <= 0 && displayed === 0))
+            return;
+        active = true;
+        playing = true;
+        previousTime = 0;
+        waitingSince = 0;
+        state = frames.get(displayed) ? "moving" : "loading";
+        frames.retry();
+        warm(true);
+        hold();
+        publish();
+        wake();
+    }
+    function pause(reason = "pause") {
+        playing = false;
+        velocity = 0;
+        boost = 0;
+        bypass = true;
+        if (raf)
+            cancelAnimationFrame(raf);
+        raf = 0;
+        if (state === "moving" || state === "loading")
+            state = "paused";
+        release(reason);
+        drainUntil = 0;
+        publish();
+    }
+    function skip() {
+        direction = 1;
+        clock = totalDuration;
+        active = true;
+        playing = true;
+        previousTime = 0;
+        bypass = true;
+        velocity = 0;
+        boost = 0;
+        frames.retry();
+        frames.request(last, 1, false, true);
+        release("skip");
+        state = "loading";
+        publish();
+        wake();
+    }
+    function nestedScroll(target, delta) {
+        let element = target instanceof Element ? target : null;
+        while (element && element !== document.body && element !== document.documentElement) {
+            const style = getComputedStyle(element);
+            if (/(auto|scroll)/.test(style.overflowY) && element.scrollHeight > element.clientHeight + 1 &&
+                (delta > 0 ? element.scrollTop + element.clientHeight < element.scrollHeight - 1 : element.scrollTop > 0))
+                return true;
+            element = element.parentElement;
+        }
+        return false;
+    }
+    function scrollIntent(event, delta) {
+        if (disposed || bypass || motion.matches || document.hidden || event.defaultPrevented || Math.abs(delta) < 1 || nestedScroll(event.target, delta))
+            return;
+        if (sequenceScrollOwner && sequenceScrollOwner !== root)
+            return;
+        const now = performance.now(), sign = Math.sign(delta);
+        if (!playing && sign === drainDirection && now < drainUntil && now - lastIntentAt < 140 && atHero()) {
+            if (event.cancelable)
+                event.preventDefault();
+            lastIntentAt = now;
+            return;
+        }
+        if (!playing && (!atHero() || (clock === 0 && sign < 0) || (clock === totalDuration && sign > 0)))
+            return;
+        if (!event.cancelable)
+            return;
+        if (held || (options.holdScroll !== false && atHero()))
+            event.preventDefault();
+        lastIntentAt = now;
+        if (now - intentAt > 180 || Math.sign(intent) !== sign)
+            intent = 0;
+        intentAt = now;
+        intent += delta;
+        if (!playing) {
+            if (Math.abs(intent) >= threshold) {
+                start(sign);
+                intent = 0;
+            }
+        }
+        else if (sign !== direction) {
+            if (Math.abs(intent) >= threshold) {
+                direction = sign;
+                boost = 0;
+                intent = 0;
+                publish();
+            }
+        }
+        else {
+            boost = Math.min(maxSpeed - 1, boost + Math.min(250, Math.abs(delta)) / 260);
+            intent = 0;
+        }
+    }
+    function wheel(event) {
+        if (event.ctrlKey || event.metaKey || Math.abs(event.deltaX) > Math.abs(event.deltaY))
+            return;
+        scrollIntent(event, event.deltaY * (event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? innerHeight : 1));
+    }
+    function key(event) {
+        if (event.key === "Escape") {
+            if (playing || held)
+                pause("escape");
+            return;
+        }
+        if (event.key === "Tab" && held) {
+            pause("focus-navigation");
+            return;
+        }
+        if (event.ctrlKey || event.metaKey || event.altKey)
+            return;
+        if (event.target instanceof Element && event.target.closest('input,textarea,select,button,a,[contenteditable="true"],[role="slider"]'))
+            return;
+        const delta = event.key === "ArrowDown" ? 45 : event.key === "ArrowUp" ? -45 :
+            ["PageDown", "End"].includes(event.key) ? innerHeight : ["PageUp", "Home"].includes(event.key) ? -innerHeight :
+                event.key === " " ? (event.shiftKey ? -innerHeight : innerHeight) : 0;
+        if (delta)
+            scrollIntent(event, delta);
+    }
+    function onScroll() {
+        if (held) {
+            if (!scrollGuard && (scrollY !== holdY || scrollX !== holdX)) {
+                scrollGuard = true;
+                window.scrollTo({ top: holdY, left: holdX, behavior: "instant" });
+                scrollGuard = false;
+            }
+        }
+        else {
+            if (playing && !visible())
+                pause("offscreen");
+            if (!warmed && visible() && poster.complete)
+                warm();
+            if (!atHero())
+                bypass = false;
+        }
+    }
+    function reducedChanged() {
+        pause("motion-preference");
+        if (motion.matches) {
+            state = "reduced";
+            frames.request(last, 1, false, true);
+            active = true;
+            wake();
+            publish();
+        }
+        else {
+            if (displayed === last)
+                clock = totalDuration;
+            state = displayed === last ? "arrival" : "opening";
+            publish();
+        }
+    }
+    const resize = new ResizeObserver(() => { if (active && !disposed)
+        redraw(); });
+    resize.observe(root);
+    const intersection = new IntersectionObserver(entries => {
+        if (entries[0]?.isIntersecting) {
+            if (poster.complete)
+                warm();
+        }
+        else if (playing)
+            pause("offscreen");
+    });
+    intersection.observe(root);
+    window.addEventListener("wheel", wheel, { passive: false, signal });
+    window.addEventListener("keydown", key, { signal });
+    window.addEventListener("touchstart", event => {
+        touch = event.touches.length === 1 ? { x: event.touches[0].clientX, y: event.touches[0].clientY } : null;
+    }, { passive: true, signal });
+    window.addEventListener("touchmove", event => {
+        if (!touch || event.touches.length !== 1) {
+            touch = null;
+            return;
+        }
+        const next = event.touches[0], dx = touch.x - next.clientX, dy = touch.y - next.clientY;
+        touch = { x: next.clientX, y: next.clientY };
+        if (Math.abs(dy) >= Math.abs(dx))
+            scrollIntent(event, dy);
+    }, { passive: false, signal });
+    window.addEventListener("touchend", () => { touch = null; }, { passive: true, signal });
+    window.addEventListener("touchcancel", () => { touch = null; }, { passive: true, signal });
+    window.addEventListener("scroll", onScroll, { passive: true, signal });
+    document.addEventListener("visibilitychange", () => { if (document.hidden)
+        pause("hidden"); }, { signal });
+    window.addEventListener("pagehide", () => pause("pagehide"), { signal });
+    motion.addEventListener("change", reducedChanged, { signal });
+    const loadedPoster = () => {
+        if (!visible() || motion.matches)
+            return;
+        clearTimeout(warmTimer);
+        warmTimer = setTimeout(() => warm(), 250);
+    };
+    poster.addEventListener("load", loadedPoster, { signal });
+    if (poster.complete)
+        loadedPoster();
+    canvas.style.opacity = "0";
+    poster.style.opacity = "1";
+    publish();
+    if (motion.matches)
+        reducedChanged();
+    return {
+        start: () => start(1, true), reverse: () => start(-1, true), pause, skip, snapshot,
+        destroy() {
+            if (disposed)
+                return;
+            pause("destroy");
+            disposed = true;
+            abort.abort();
+            if (warmTimer)
+                clearTimeout(warmTimer);
+            resize.disconnect();
+            intersection.disconnect();
+            frames.destroy();
+        },
+    };
+}
+
+return module.exports;
+};
+})(window);

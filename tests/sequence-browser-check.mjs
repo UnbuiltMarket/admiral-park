@@ -3,12 +3,16 @@ import {readFile,mkdir,writeFile} from 'node:fs/promises';
 import path from 'node:path';
 import {createRequire} from 'node:module';
 import {fileURLToPath} from 'node:url';
+import {createHash} from 'node:crypto';
 import {ts,requireDev} from '../scripts/tooling.mjs';
 const require=createRequire(import.meta.url);
 const {chromium}=require(process.env.PLAYWRIGHT_MODULE_PATH||'playwright');
 const root=new URL('../',import.meta.url);
 const out=new URL('tmp/sequence-check/',root);await mkdir(out,{recursive:true});
-const source=await readFile(new URL('src/framer/AdmiralHeroSequence.tsx',root),'utf8');
+const remoteMode=process.env.SEQUENCE_REMOTE==='1';
+const source=await readFile(new URL(remoteMode?'src/framer/AdmiralHeroLoader.tsx':'src/framer/AdmiralHeroSequence.tsx',root),'utf8');
+const release=remoteMode?JSON.parse(await readFile(new URL('docs/hero-manifest.json',root),'utf8')):null;
+const releaseBundle=remoteMode?await readFile(new URL('docs/'+release.script,root),'utf8'):'';
 const code=ts.transpileModule(source,{compilerOptions:{target:ts.ScriptTarget.ES2020,module:ts.ModuleKind.CommonJS,jsx:ts.JsxEmit.React}}).outputText;
 const react=await readFile(path.join(path.dirname(requireDev.resolve('react/package.json')),'umd/react.development.js'),'utf8');
 const dom=await readFile(path.join(path.dirname(requireDev.resolve('react-dom/package.json')),'umd/react-dom.development.js'),'utf8');
@@ -18,8 +22,23 @@ const results=[];
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 async function fixture(options={}){
  const context=await browser.newContext({viewport:{width:1200,height:800},...options.context});
- const page=await context.newPage(),errors=[],requests=[];
+ const page=await context.newPage(),errors=[],requests=[],remoteRequests=[];
  page.on('pageerror',e=>errors.push(e.message));
+ if(remoteMode&&process.env.SEQUENCE_PUBLIC!=='1'){
+  const updatedVersion='1111111111111111';
+  const updatedBundle=releaseBundle.replaceAll(release.version,updatedVersion)+'\nwindow.__runtimeUpdateProof=true;\n';
+  const selected=options.updatedRelease?{...release,version:updatedVersion,script:`releases/admiral-hero.${updatedVersion}.js`,integrity:'sha384-'+createHash('sha384').update(updatedBundle).digest('base64')}:release;
+  if(options.badIntegrity)selected.integrity='sha384-'+'A'.repeat(64);
+  await page.route('https://unbuiltmarket.github.io/admiral-park/**',async route=>{
+   const pathname=new URL(route.request().url()).pathname.slice('/admiral-park/'.length);remoteRequests.push(pathname);
+   const headers={'Access-Control-Allow-Origin':'*'};
+   if(pathname==='hero-manifest.json')return route.fulfill({status:options.manifestFailure?503:200,contentType:'application/json',headers,body:JSON.stringify(selected)});
+   if(pathname.endsWith('.js'))return route.fulfill({status:options.runtimeUnavailable?503:200,contentType:'application/javascript',headers,body:pathname===release.script?releaseBundle:updatedBundle});
+   if(options.pagesImagesDown)return route.fulfill({status:503,headers,body:'Test image host outage'});
+   return route.fulfill({headers,contentType:'image/avif',body:await readFile(new URL('docs/'+pathname,root))});
+  });
+  if(options.pagesImagesDown)await page.route('https://raw.githubusercontent.com/UnbuiltMarket/admiral-park/**',route=>route.fulfill({headers:{'Access-Control-Allow-Origin':'*'},contentType:'image/avif',body:assets[route.request().url().includes('sequence64')?64:0]}));
+ }
  await page.route('http://sequence.test/**',async route=>{
   const url=new URL(route.request().url());
   if(url.pathname.startsWith('/frames/')){
@@ -50,9 +69,11 @@ async function fixture(options={}){
   window.renderHero();window.samples=[];
   window.sampleTimer=setInterval(()=>{const e=document.querySelector('[data-admiral-sequence]');if(e)window.samples.push({time:performance.now(),frame:Number(e.dataset.frame),state:e.dataset.sequenceState,decoded:Number(e.dataset.decoded),held:e.dataset.scrollHeld,edge:e.dataset.crossfade,mix:Number(e.dataset.crossfadeMix),ctaInert:document.querySelector('#cta')?.inert});},16);
  },{code,props:options.props||{},staticMode:!!options.staticMode});
- await page.waitForFunction(()=>document.querySelector('.admiral-hero-sequence img')?.naturalWidth>0);
+ if(remoteMode&&!options.staticMode&&!options.runtimeUnavailable)await page.waitForSelector('[data-admiral-sequence]');
+ if(remoteMode&&options.runtimeUnavailable)await page.waitForSelector('[data-runtime-status="unavailable"]');
+ await page.waitForFunction(()=>document.querySelector('img')?.naturalWidth>0);
  await page.mouse.move(400,550);
- return {context,page,errors,requests,async close(){assert.deepEqual(errors,[]);await context.close();}};
+ return {context,page,errors,requests,remoteRequests,async close(){assert.deepEqual(errors,[]);await context.close();}};
 }
 const state=page=>page.locator('[data-admiral-sequence]').getAttribute('data-sequence-state');
 async function waitState(page,value,timeout=12000){await page.waitForFunction(value=>document.querySelector('[data-admiral-sequence]')?.dataset.sequenceState===value,value,{timeout});}
@@ -61,7 +82,7 @@ try{
  await pass('forward, coasting, overlay synchronization, release and reverse',async()=>{
   const f=await fixture(),{page}=f;
   assert.equal(await state(page),'opening');
-  assert.match(await page.locator('img').getAttribute('src'),/raw%20sequence00\.avif/);
+  assert.match(await page.locator('[data-admiral-sequence] img').getAttribute('src'),/raw%20sequence00\.avif/);
   assert.equal(await page.locator('#intro').evaluate(e=>getComputedStyle(e).opacity),'1');
   assert.equal(await page.locator('#cta').evaluate(e=>e.inert),true);
   await page.screenshot({path:fileURLToPath(new URL('opening.png',out))});
@@ -189,7 +210,7 @@ try{
   await page.evaluate(()=>window.root.unmount());await page.mouse.wheel(0,400);await page.waitForTimeout(150);
   assert.ok(await page.evaluate(()=>scrollY)>0);await f.close();
  });
- await pass('canvas arrival image is static and does not load a full sequence',async()=>{
+ if(!remoteMode)await pass('canvas arrival image is static and does not load a full sequence',async()=>{
   const f=await fixture({staticMode:true,props:{editorView:'arrival'}}),{page}=f;
   assert.equal(await page.locator('#cta').evaluate(e=>getComputedStyle(e).opacity),'1');
   assert.equal(await page.locator('#intro').evaluate(e=>getComputedStyle(e).opacity),'0');
@@ -203,15 +224,53 @@ try{
   assert.equal(await page.evaluate(()=>location.hash),'#after');
   assert.ok(await page.evaluate(()=>scrollY)>0);await f.close();
  });
+ if(remoteMode){
+  await pass('remote loader shares one verified runtime across the hero and all overlays',async()=>{
+   const f=await fixture();
+   assert.equal(f.remoteRequests.filter(p=>p==='hero-manifest.json').length,1);
+   assert.equal(f.remoteRequests.filter(p=>p.endsWith('.js')).length,1);
+   assert.equal(await f.page.locator('[data-admiral-loader]').getAttribute('data-runtime-version'),release.version);await f.close();
+  });
+  await pass('remote update runs on a new visit without changing the pasted bridge',async()=>{
+   const first=await fixture();assert.equal(await first.page.evaluate(()=>window.__runtimeUpdateProof),undefined);await first.close();
+   const second=await fixture({updatedRelease:true});
+   assert.equal(await second.page.evaluate(()=>window.__runtimeUpdateProof),true);
+   assert.equal(await second.page.locator('[data-admiral-loader]').getAttribute('data-runtime-version'),'1111111111111111');await second.close();
+  });
+  await pass('remote manifest failure and failed integrity both use the installed fallback release',async()=>{
+   for(const options of [{manifestFailure:true},{updatedRelease:true,badIntegrity:true}]){
+    const f=await fixture(options);
+    assert.equal(await f.page.locator('[data-admiral-loader]').getAttribute('data-runtime-version'),release.version);
+    assert.equal(await f.page.evaluate(()=>window.__runtimeUpdateProof),undefined);await f.close();
+   }
+  });
+  await pass('remote outage leaves the poster visible and page freely scrollable',async()=>{
+   const f=await fixture({runtimeUnavailable:true}),{page}=f;
+   assert.equal(await page.locator('[data-admiral-sequence]').count(),0);
+   assert.ok(await page.locator('img').evaluate(e=>e.naturalWidth>0));
+   assert.equal(await page.locator('#intro').evaluate(e=>getComputedStyle(e).opacity),'1');
+   assert.equal(await page.locator('#cta').evaluate(e=>getComputedStyle(e).visibility),'hidden');
+   await page.mouse.wheel(0,350);await page.waitForTimeout(150);assert.ok(await page.evaluate(()=>scrollY)>100);await f.close();
+  });
+  await pass('remote editor canvas uses the arrival poster without running hosted scripts',async()=>{
+   const f=await fixture({staticMode:true,props:{editorView:'arrival'}});
+   assert.deepEqual(f.remoteRequests,[]);assert.deepEqual([...new Set(f.requests)],[64]);await f.close();
+  });
+  await pass('remote image-host outage falls back to the original GitHub poster',async()=>{
+   const f=await fixture({runtimeUnavailable:true,pagesImagesDown:true,props:{useGitHubAssets:true}});
+   assert.match(await f.page.locator('img').getAttribute('src'),/^https:\/\/raw\.githubusercontent.com\//);
+   assert.ok(await f.page.locator('img').evaluate(e=>e.naturalWidth>0));await f.close();
+  });
+ }
  if(process.env.SEQUENCE_PUBLIC==='1')await pass('public GitHub sequence loads and reaches the final frame',async()=>{
   const f=await fixture({props:{useGitHubAssets:true}}),{page}=f;
-  assert.ok((await page.locator('img').getAttribute('src')).startsWith('https://raw.githubusercontent.com/UnbuiltMarket/admiral-park/'));
-  const failures=[];page.on('response',r=>{if(r.url().includes('raw.githubusercontent.com')&&r.status()>=400)failures.push(r.status());});
+  assert.match(await page.locator('[data-admiral-sequence] img').getAttribute('src'),/^https:\/\/(raw\.githubusercontent.com\/UnbuiltMarket\/admiral-park\/|unbuiltmarket.github.io\/admiral-park\/assets\/)/);
+  const failures=[];page.on('response',r=>{if((r.url().includes('raw.githubusercontent.com')||r.url().includes('unbuiltmarket.github.io'))&&r.status()>=400)failures.push(r.status());});
   await page.waitForTimeout(1500);await page.mouse.wheel(0,100);
   await waitState(page,'arrival',30000);
   assert.equal(await page.locator('[data-admiral-sequence]').getAttribute('data-frame'),'64');
   assert.equal(await page.locator('#cta').evaluate(e=>e.inert),false);assert.deepEqual(failures,[]);
   await f.close();
  });
- await writeFile(new URL(process.env.SEQUENCE_PUBLIC==='1'?'public-results.json':'results.json',out),JSON.stringify(results,null,2));
+ await writeFile(new URL((remoteMode?'remote-':'')+(process.env.SEQUENCE_PUBLIC==='1'?'public-results.json':'results.json'),out),JSON.stringify(results,null,2));
 }finally{await browser.close();}

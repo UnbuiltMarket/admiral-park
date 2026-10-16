@@ -1,4 +1,22 @@
-# Framer hero sequence — current version
+# Automatic updates from GitHub — recommended installation
+
+Paste **src/framer/AdmiralHeroLoader.tsx** into your existing AdmiralHeroSequence code file in Framer once, save, and publish. Keep the same code file and existing component instance so your settings and the OpeningContent, BuildingContent and ArrivalCTA overrides stay connected. This permanent bridge checks the published runtime at `https://unbuiltmarket.github.io/admiral-park/hero-manifest.json` once per page visit. Compatible animation, asset and overlay changes then arrive after a GitHub Pages deployment, without another Framer paste or publish. An already-open page keeps its loaded release until a reload; deployment and caching can take a few minutes.
+
+The bridge keeps the existing Framer controls and a server-rendered opening poster. The editor canvas stays static and does not fetch executable code. Preview and the published page load one small manifest and a versioned JavaScript bundle, sharing Framer's React instead of downloading a second copy. The initial release's poster and runtime use the same image URL. After a future asset change, an old bridge may briefly show its installed poster until the current runtime's image appears. The native text/CTA overrides use the same remote release as the hero.
+
+The manifest only selects runtime files on this repository's GitHub Pages host. Script integrity is verified by the browser. If the current manifest or runtime cannot load, the bridge tries the known release packaged with it. If that also fails, it leaves the opening still and normal page navigation available. If Pages cannot serve the still, the original GitHub image is a secondary source. Render errors are contained at the component/layer boundary. New Framer property-panel controls or an incompatible bridge API change can still require a one-time bridge update; ordinary player/overlay updates do not.
+
+## Release workflow
+
+Edit the existing sequence sources, run `node scripts/build.mjs`, and run the sequence and remote tests. The build writes a versioned runtime under `docs/releases/`, copies its versioned images under `docs/assets/`, and updates `docs/hero-manifest.json`. Commit the source changes and generated `docs` outputs, then push. GitHub Pages publishes **main /docs** automatically. No separate website is deployed; these files serve the Framer animation. Keep previous release and image folders so older bridges, cached manifests and rollbacks continue working.
+
+To roll back a runtime, restore the previous `docs/hero-manifest.json` in a new commit and push it. Keep its referenced JavaScript and images. No force push or Framer change is needed for compatible releases. The standalone component below remains available for a fully pasted installation.
+
+Run `node --test tests/remote.test.mjs tests/sequence.test.mjs` for type, server-render, release integrity and asset checks. Set `SEQUENCE_REMOTE=1` when running `node tests/sequence-browser-check.mjs` to exercise the bridge, the player, automatic updates, script/manifest failures and fallback images. Set `SEQUENCE_PUBLIC=1` and `SEQUENCE_TEST_FILTER=public` too for a smoke test against the real hosted release. Actual Framer Preview remains the final integration check; the automated fixture checks the Framer SDK separately.
+
+---
+
+# Framer hero sequence — standalone installation
 
 Use **src/framer/AdmiralHeroSequence.tsx** for the new AVIF hero. This is one complete paste-ready Code Component, including the three native-layer Code Overrides. The video component below remains available as a separate fallback.
 
