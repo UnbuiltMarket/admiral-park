@@ -138,8 +138,9 @@ try{
   await page.waitForTimeout(180);await page.evaluate(()=>window.samples=[]);
   await page.mouse.wheel(0,-100);await waitState(page,'moving');await waitState(page,'opening');
   const reverse=await page.evaluate(()=>window.samples);
-  // The optional hosted release retains its previous single half-second arrival fade.
-  const phases=[['opening',0,500],...(remoteMode?[['arrival',lastFrame-1,500]]:[['arrival',lastFrame-2,100],['arrival',lastFrame-1,100]])];
+  // The optional hosted release retains its previous half-second endpoint fades.
+  const phases=[['opening',0,remoteMode?500:800],['arrival',lastFrame-1,remoteMode?500:800]];
+  for(const samples of [forward,reverse])assert.ok(samples.every(s=>!s.edge||s.frame===0||s.frame===lastFrame-1),'Only the opening and final image transitions may crossfade');
   for(const [name,samples] of [['forward',forward],['reverse',reverse]])for(const [edge,frame,expectedMs] of phases){
    const fade=samples.filter(s=>s.edge===edge&&s.frame===frame&&s.mix>0&&s.mix<1);
    assert.ok(fade.length>=Math.max(2,Math.floor(expectedMs/32)),`${name} ${edge} frame ${frame} has visible intermediate blends`);

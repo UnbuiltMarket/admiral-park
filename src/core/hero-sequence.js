@@ -145,11 +145,10 @@ export function createHeroSequence(options) {
     const { root, canvas, poster, urls } = options;
     const last = urls.length - 1;
     const duration = sequenceClamp(options.duration ?? 2.5, .6, 10);
-    // Opening still: 0.5s. Last three images: two fixed 0.1s dissolves.
-    const openingFade = last >= 3 ? .5 : 0;
-    const arrivalFade = last >= 3 ? .1 : 0;
-    const arrivalSteps = last >= 3 ? Math.min(2, last - 2) : 0;
-    const flightEnd = openingFade + duration, totalDuration = flightEnd + arrivalFade * arrivalSteps;
+    // Only the opening and final image transitions dissolve, for 0.8s each.
+    const openingFade = last >= 3 ? .8 : 0;
+    const arrivalFade = last >= 3 ? .8 : 0;
+    const flightEnd = openingFade + duration, totalDuration = flightEnd + arrivalFade;
     const maxSpeed = sequenceClamp(options.maxSpeed ?? 1.8, 1, 3);
     const momentum = sequenceClamp(options.momentum ?? .22, .08, .6);
     const threshold = sequenceClamp(options.triggerDistance ?? 28, 8, 150);
@@ -268,14 +267,10 @@ export function createHeroSequence(options) {
             return { index: last, next: last, mix: 0 };
         if (openingFade && time < openingFade)
             return { index: 0, next: 1, mix: sequenceEase(time / openingFade) };
-        if (arrivalFade && time > flightEnd) {
-            const progress = (time - flightEnd) / arrivalFade;
-            const step = Math.min(arrivalSteps - 1, Math.floor(progress));
-            const index = last - arrivalSteps + step;
-            return { index, next: index + 1, mix: sequenceEase(sequenceClamp(progress - step)) };
-        }
+        if (arrivalFade && time > flightEnd)
+            return { index: last - 1, next: last, mix: sequenceEase((time - flightEnd) / arrivalFade) };
         const firstMoving = openingFade ? 1 : 0;
-        const index = firstMoving + Math.round(sequenceEase(sequenceClamp((time - openingFade) / duration)) * (last - arrivalSteps - firstMoving));
+        const index = firstMoving + Math.round(sequenceEase(sequenceClamp((time - openingFade) / duration)) * (last - (arrivalFade ? 1 : 0) - firstMoving));
         return { index, next: index, mix: 0 };
     }
     function warm(explicit = false) {
