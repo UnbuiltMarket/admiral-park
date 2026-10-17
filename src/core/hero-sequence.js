@@ -442,6 +442,8 @@ export function createHeroSequence(options) {
         return false;
     }
     function scrollIntent(event, delta) {
+        if (options.inputFilter && !options.inputFilter(event))
+            return;
         if (disposed || bypass || motion.matches || document.hidden || event.defaultPrevented || Math.abs(delta) < 1 || nestedScroll(event.target, delta))
             return;
         if (sequenceScrollOwner && sequenceScrollOwner !== root)

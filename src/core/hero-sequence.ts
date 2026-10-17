@@ -9,6 +9,7 @@ export interface SequenceOptions {
     preload?: boolean; holdScroll?: boolean; cacheFrames?: number; decodeWidth?: number;
     focalX?: number; focalY?: number; timeoutMs?: number;
     onUpdate?: (snapshot: SequenceSnapshot) => void;
+    inputFilter?: (event: Event) => boolean;
 }
 interface SequenceBitmap {
     image: CanvasImageSource; width: number; height: number; close: () => void;
@@ -308,6 +309,7 @@ export function createHeroSequence(options: SequenceOptions) {
         return false;
     }
     function scrollIntent(event: Event, delta: number) {
+        if (options.inputFilter && !options.inputFilter(event)) return;
         if (disposed || bypass || motion.matches || document.hidden || event.defaultPrevented || Math.abs(delta) < 1 || nestedScroll(event.target, delta)) return;
         if (sequenceScrollOwner && sequenceScrollOwner !== root) return;
         const now = performance.now(), sign = Math.sign(delta);
