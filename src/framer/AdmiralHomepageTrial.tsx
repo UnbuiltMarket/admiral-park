@@ -19,7 +19,7 @@ interface AdmiralHomepageTrialProps {
     startView?: "opening" | "orbit"; editorView?: "opening" | "building" | "orbit"
     duration?: number; maxSpeed?: number; momentum?: number; triggerDistance?: number
     checkpointCount?: number; motionWidth?: number; orbitMobileWidth?: number; inspectionWidth?: number
-    wheelSensitivity?: number; dragSensitivity?: number; orbitMomentum?: number; snapDuration?: number
+    snapDuration?: number; frameBlend?: number
     focalX?: number; focalY?: number; darken?: number; showControls?: boolean; showViewpoints?: boolean; showDiagnostics?: boolean
     openingOut?: number; buildingIn?: number; buildingFull?: number; ctaIn?: number; rise?: number
     background?: string; alt?: string; style?: React.CSSProperties
@@ -46,8 +46,8 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
     const {
         useGitHubAssets = true, heroBaseUrl = "", orbitBaseUrl = "", startView = "opening", editorView = "opening",
         duration = 2.5, maxSpeed = 1.8, momentum = .22, triggerDistance = 28, checkpointCount = 8,
-        motionWidth = 960, orbitMobileWidth = 640, inspectionWidth = 1920, wheelSensitivity = .025, dragSensitivity = .08,
-        orbitMomentum = .18, snapDuration = .32, focalX = 50, focalY = 50, darken = 0,
+        motionWidth = 960, orbitMobileWidth = 640, inspectionWidth = 1920, snapDuration = 1.5, frameBlend = 0,
+        focalX = 50, focalY = 50, darken = 0,
         showControls = true, showViewpoints = true, showDiagnostics = false,
         openingOut = 20, buildingIn = 68, buildingFull = 88, ctaIn = 86, rise = 20,
         background = "#101820", alt = "Explore Admiral Park, Balatonfüred", style,
@@ -114,7 +114,7 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
         function destroyHero() { heroGeneration++; hero?.destroy(); hero = null }
         const orbit = staticRenderer ? null : createOrbitPlayer({
             root, canvas: orbitCanvas, urls: orbitUrls, decodeWidth, inspectionWidth: phone ? Math.min(inspectionWidth, 1280) : inspectionWidth,
-            checkpointCount, wheelSensitivity, dragSensitivity, momentum: orbitMomentum, snapDuration, focalX: focalX / 100, focalY: focalY / 100,
+            checkpointCount, snapDuration, frameBlend: frameBlend / 100, focalX: focalX / 100, focalY: focalY / 100,
             onUpdate(snapshot) {
                 if (disposed) return
                 root!.dataset.orbitDownloaded = String(snapshot.downloaded)
@@ -232,7 +232,7 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
             homepageChannels.delete(root); notifyHomepage()
         }
     }, [heroUrls, orbitUrls, staticRenderer, hostVisible, startView, editorView, duration, maxSpeed, momentum, triggerDistance, checkpointCount,
-        motionWidth, orbitMobileWidth, inspectionWidth, wheelSensitivity, dragSensitivity, orbitMomentum, snapDuration, focalX, focalY, showDiagnostics])
+        motionWidth, orbitMobileWidth, inspectionWidth, snapDuration, frameBlend, focalX, focalY, showDiagnostics])
 
     React.useEffect(() => {
         const root = rootRef.current, channel = root && homepageChannels.get(root)
@@ -243,6 +243,8 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
     const percent = Math.round(100 * orbitInfo.ready / Math.max(1, orbitInfo.total))
     const checkpoints = Math.round(Math.max(2, Math.min(16, checkpointCount)))
     const paused = orbitInfo.state === "paused"
+    const orbitMoving = orbitInfo.state === "settling" || orbitInfo.state === "moving" || orbitInfo.state === "paused"
+    const orbitButtonStyle: React.CSSProperties = { ...homepageButton, opacity: orbitMoving ? .45 : 1, cursor: orbitMoving ? "default" : "pointer" }
     return (
         <div ref={rootRef} data-admiral-homepage="" data-admiral-orbit="" data-homepage-stage={stage} role="region" aria-label={alt} tabIndex={0}
             style={{ position: "relative", width: "100%", height: "100%", overflow: "hidden", background, ...style }}>
@@ -262,12 +264,12 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
                 {(stage === "building" || stage === "handoff") && orbitInfo.state === "error" && <button type="button" style={homepageButton} onClick={() => { void (rootRef.current as (HTMLElement & { retryOrbit?: () => Promise<void> }) | null)?.retryOrbit?.() }}>Retry orbit</button>}
                 {(stage === "building" || stage === "handoff" || stage === "orbit") && <button type="button" style={homepageButton} onClick={() => actions.current?.overview()}>Overview</button>}
                 {stage === "orbit" && <>
-                    <button type="button" aria-label="Previous view" style={homepageButton} onClick={() => actions.current?.orbit?.go(-1)}>←</button>
+                    <button type="button" aria-label="Previous view" disabled={orbitMoving} style={orbitButtonStyle} onClick={() => actions.current?.orbit?.go(-1)}>←</button>
                     <span aria-live="polite" style={{ ...homepageButton, cursor: "default", minWidth: 65, textAlign: "center" }}>{orbitInfo.checkpoint >= 0 ? `View ${orbitInfo.checkpoint + 1} / ${checkpoints}` : "Looking around"}</span>
-                    <button type="button" aria-label="Next view" style={homepageButton} onClick={() => actions.current?.orbit?.go(1)}>→</button>
+                    <button type="button" aria-label="Next view" disabled={orbitMoving} style={orbitButtonStyle} onClick={() => actions.current?.orbit?.go(1)}>→</button>
                     <button type="button" style={homepageButton} onClick={() => paused ? actions.current?.orbit?.resume() : actions.current?.orbit?.pause()}>{paused ? "Continue rotation" : "Pause rotation"}</button>
-                    {showViewpoints && Array.from({ length: checkpoints }, (_, i) => <button key={i} type="button" aria-label={`View ${i + 1}`} aria-pressed={orbitInfo.checkpoint === i}
-                        style={{ ...homepageButton, padding: "7px 9px", background: orbitInfo.checkpoint === i ? "rgba(255,255,255,.9)" : homepageButton.background, color: orbitInfo.checkpoint === i ? "#101820" : "#fff" }} onClick={() => actions.current?.orbit?.setCheckpoint(i)}>{i + 1}</button>)}
+                    {showViewpoints && Array.from({ length: checkpoints }, (_, i) => <button key={i} type="button" aria-label={`View ${i + 1}`} aria-pressed={orbitInfo.checkpoint === i} disabled={orbitMoving}
+                        style={{ ...orbitButtonStyle, padding: "7px 9px", background: orbitInfo.checkpoint === i ? "rgba(255,255,255,.9)" : homepageButton.background, color: orbitInfo.checkpoint === i ? "#101820" : "#fff" }} onClick={() => actions.current?.orbit?.setCheckpoint(i)}>{i + 1}</button>)}
                 </>}
             </div>}
             {!staticRenderer && showDiagnostics && <output data-homepage-diagnostics="" style={{ position: "absolute", left: 12, bottom: 94, pointerEvents: "none", background: "rgba(0,0,0,.65)", color: "#fff", padding: 8, borderRadius: 4, font: "11px/1.5 monospace", zIndex: 2 }}>
@@ -346,10 +348,8 @@ addPropertyControls(AdmiralHomepageTrial, {
     motionWidth: { type: ControlType.Number, title: "Orbit decode", defaultValue: 960, min: 480, max: 1920, step: 160, unit: "px" },
     orbitMobileWidth: { type: ControlType.Number, title: "Phone decode", defaultValue: 640, min: 480, max: 1280, step: 160, unit: "px" },
     inspectionWidth: { type: ControlType.Number, title: "Stopped detail", defaultValue: 1920, min: 960, max: 1920, step: 160, unit: "px" },
-    wheelSensitivity: { type: ControlType.Number, title: "Wheel speed", defaultValue: .025, min: .005, max: .12, step: .005 },
-    dragSensitivity: { type: ControlType.Number, title: "Drag speed", defaultValue: .08, min: .02, max: .3, step: .01 },
-    orbitMomentum: { type: ControlType.Number, title: "Orbit coast", defaultValue: .18, min: .05, max: .6, step: .01, unit: "s" },
-    snapDuration: { type: ControlType.Number, title: "Settle time", defaultValue: .32, min: .15, max: 1, step: .01, unit: "s" },
+    snapDuration: { type: ControlType.Number, title: "Settle time", defaultValue: 1.5, min: .15, max: 10, step: .05, unit: "s", description: "Time for one checkpoint move: slow start, quicker middle, slow arrival. New input is ignored until arrival." },
+    frameBlend: { type: ControlType.Number, title: "Frame blend", defaultValue: 0, min: 0, max: 100, step: 5, unit: "%", description: "Crossfade neighbouring orbit frames. 0% keeps frames crisp; 100% blends throughout each frame interval. Strong blending can produce double edges." },
     openingOut: { type: ControlType.Number, title: "Opening out", defaultValue: 20, min: 1, max: 50, unit: "%" },
     buildingIn: { type: ControlType.Number, title: "Building in", defaultValue: 68, min: 20, max: 95, unit: "%" },
     buildingFull: { type: ControlType.Number, title: "Building full", defaultValue: 88, min: 40, max: 100, unit: "%" },
@@ -788,8 +788,7 @@ interface OrbitSnapshot {
 interface OrbitOptions {
     root: HTMLElement; canvas: HTMLCanvasElement; urls: string[];
     decodeWidth?: number; inspectionWidth?: number; checkpointCount?: number;
-    wheelSensitivity?: number; dragSensitivity?: number; momentum?: number;
-    snapDuration?: number; focalX?: number; focalY?: number;
+    snapDuration?: number; frameBlend?: number; focalX?: number; focalY?: number;
     onUpdate?: (snapshot: OrbitSnapshot) => void;
 }
 
@@ -808,10 +807,8 @@ function createOrbitPlayer(options: OrbitOptions) {
     const inspectionWidth = Math.round(orbitClamp(options.inspectionWidth ?? 1920, motionWidth, 3840));
     const checkpointCount = Math.round(orbitClamp(options.checkpointCount ?? 8, 1, Math.max(1, total)));
     const checkpoints = Array.from({ length: checkpointCount }, (_, index) => Math.round(index * total / checkpointCount));
-    const wheelSensitivity = orbitClamp(options.wheelSensitivity ?? .035, .001, .5);
-    const dragSensitivity = orbitClamp(options.dragSensitivity ?? .10, .005, 1);
-    const momentum = orbitClamp(options.momentum ?? .18, .04, .8);
-    const snapDuration = orbitClamp(options.snapDuration ?? .5, .12, 2);
+    const snapDuration = orbitClamp(options.snapDuration ?? 1.5, .15, 10);
+    const frameBlend = orbitClamp(options.frameBlend ?? 0, 0, 1);
     const focalX = orbitClamp(options.focalX ?? .5, 0, 1), focalY = orbitClamp(options.focalY ?? .5, 0, 1);
     const context = canvas.getContext("2d", { alpha: false });
     const cancellation = new AbortController();
@@ -820,15 +817,15 @@ function createOrbitPlayer(options: OrbitOptions) {
     const reducedQuery = typeof matchMedia === "function" ? matchMedia("(prefers-reduced-motion: reduce)") : null;
     const originalTouchAction = canvas.style.touchAction;
     let destroyed = false, preparing = false, active = false, activation = 0, visible = true, automaticPause = false;
-    let state: OrbitState = "idle", position = 0, direction = 1, velocity = 0, error: string | undefined;
-    let raf = 0, lastInputAt = 0, previousInputAt = 0, wheelPending = false;
+    let state: OrbitState = "idle", position = 0, direction = 1, error: string | undefined;
+    let raf = 0, lastInputAt = -Infinity, lastWheelAt = -Infinity, wheelLatched = false, pausedAt = 0, suppressClickUntil = 0;
     let preparePromise: Promise<void> | null = null, prepareResolve: (() => void) | null = null;
     let prepareReject: ((reason: Error) => void) | null = null;
     let inspection: OrbitBitmap | null = null, inspectionFrame = -1, inspectionGeneration = 0, qualityStartedAt = 0, inspectionDecoding = false;
     let lastPaint = "", lastNotification = "";
-    let drag: { id: number; x: number; y: number; time: number; distance: number; moved: boolean } | null = null;
+    let drag: { id: number; x: number; y: number; moved: boolean; triggered: boolean } | null = null;
     let touchDragging = false;
-    let settling: { start: number; target: number; time: number; duration: number; tangent: number } | null = null;
+    let settling: { start: number; target: number; time: number; duration: number } | null = null;
     const frameAt = () => total ? orbitModulo(Math.round(position), total) : 0;
     const canRun = () => active && !destroyed && visible && !document.hidden && state !== "error";
     const fullyReady = () => total > 0 && frames.size === total;
@@ -852,6 +849,9 @@ function createOrbitPlayer(options: OrbitOptions) {
         root.dataset.orbitCheckpoint = String(value.checkpoint); root.dataset.orbitReady = String(value.ready);
         root.dataset.orbitDecoded = String(value.decoded); root.dataset.orbitDownloaded = String(value.downloaded);
         root.dataset.orbitPosition = position.toFixed(4); root.dataset.orbitMotionWidth = String(motionWidth);
+        root.dataset.orbitTarget = settling ? settling.target.toFixed(4) : position.toFixed(4);
+        root.dataset.orbitFrameBlend = String(frameBlend);
+        root.dataset.orbitLocked = String(!!settling);
         const signature = [state, value.frame, value.checkpoint, direction, value.ready, value.decoded, value.downloaded, position.toFixed(4), error].join("|");
         if (signature !== lastNotification) { lastNotification = signature; options.onUpdate?.(value); }
     }
@@ -993,7 +993,18 @@ function createOrbitPlayer(options: OrbitOptions) {
     }
 
     function paint(now: number) {
-        const frame = frameAt(), bitmap = frames.get(frame);
+        const frame = frameAt();
+        let from = frame, to = frame, frameMix = 0;
+        if (frameBlend > 0 && !reduced()) {
+            const lower = Math.floor(position), fraction = position - lower;
+            // Blend only around the boundary between the two nearest samples.
+            // Width zero is a hard nearest-frame cut; width one is linear interpolation.
+            frameMix = orbitClamp((fraction - (1 - frameBlend) / 2) / frameBlend, 0, 1);
+            from = orbitModulo(lower, total); to = orbitModulo(lower + 1, total);
+            if (frameMix === 1) { from = to; frameMix = 0; }
+            if (frameMix === 0) to = from;
+        }
+        const bitmap = frames.get(from), next = frameMix > 0 ? frames.get(to) : undefined;
         if (!context || !bitmap || !active || destroyed) return;
         const bounds = canvas.getBoundingClientRect();
         if (bounds.width <= 0 || bounds.height <= 0) return;
@@ -1003,12 +1014,15 @@ function createOrbitPlayer(options: OrbitOptions) {
         const width = Math.max(1, Math.round(bounds.width * dpr)), height = Math.max(1, Math.round(bounds.height * dpr));
         if (canvas.width !== width || canvas.height !== height) { canvas.width = width; canvas.height = height; lastPaint = ""; }
         const mix = inspection && inspectionFrame === frame ? (reduced() ? 1 : orbitClamp((now - qualityStartedAt) / 120, 0, 1)) : 0;
-        const signature = [frame, width, height, inspectionFrame, mix.toFixed(4)].join("|");
+        const signature = [from, to, frameMix.toFixed(4), width, height, inspectionFrame, mix.toFixed(4)].join("|");
         if (signature === lastPaint) return;
         context.globalAlpha = 1; drawImage(bitmap);
+        if (next) { context.globalAlpha = frameMix; drawImage(next); context.globalAlpha = 1; }
         if (inspection && mix > 0 && inspectionFrame === frame) {
             context.globalAlpha = mix; drawImage(inspection); context.globalAlpha = 1;
         }
+        root.dataset.orbitFrameFrom = String(from); root.dataset.orbitFrameTo = String(to);
+        root.dataset.orbitFrameMix = frameMix.toFixed(4);
         lastPaint = signature;
     }
 
@@ -1024,56 +1038,38 @@ function createOrbitPlayer(options: OrbitOptions) {
     }
 
     function arrive(target: number) {
-        position = target; velocity = 0; settling = null; wheelPending = false; state = "checkpoint";
+        position = target; settling = null; pausedAt = 0; state = "checkpoint";
         paint(performance.now()); notify(); void prepareInspection();
     }
 
     function startSettle(target = nextCheckpoint(position, direction)) {
         if (!canRun() || !fullyReady()) return;
-        dropInspection(); wheelPending = false;
+        dropInspection(); pausedAt = 0;
         if (reduced() || Math.abs(target - position) < .0001) { arrive(target); return; }
-        const distance = Math.abs(target - position), step = total / checkpointCount;
-        const duration = Math.max(.12, snapDuration * Math.min(1, .4 + .6 * distance / step));
         const heading = Math.sign(target - position);
-        const tangent = heading * Math.min(Math.max(0, velocity * heading) * duration, distance * 2);
-        settling = { start: position, target, time: performance.now(), duration: duration * 1000, tangent };
+        settling = { start: position, target, time: performance.now(), duration: snapDuration * 1000 };
         direction = heading; state = "settling"; notify(); requestPaint();
     }
 
     function tick(now: number) {
         raf = 0;
         if (!canRun() || state === "paused") return;
-        if (wheelPending && !drag && now - lastInputAt >= 110) startSettle();
         if (settling) {
             const motion = settling, t = orbitClamp((now - motion.time) / motion.duration, 0, 1);
-            const smooth = t * t * (3 - 2 * t), tangent = t * (t - 1) * (t - 1);
-            position = motion.start + (motion.target - motion.start) * smooth + motion.tangent * tangent;
+            const smooth = t * t * (3 - 2 * t);
+            position = motion.start + (motion.target - motion.start) * smooth;
             if (t >= 1) { arrive(motion.target); }
         }
         paint(now); notify();
         const qualityActive = inspection && inspectionFrame === frameAt() && now - qualityStartedAt < 120;
-        if (settling || wheelPending || qualityActive) requestPaint();
+        if (settling || qualityActive) requestPaint();
     }
 
     function releaseDrag() {
         if (!drag) return;
+        if (drag.moved) suppressClickUntil = performance.now() + 400;
         const pointer = drag.id; drag = null; touchDragging = false;
         try { if (root.hasPointerCapture(pointer)) root.releasePointerCapture(pointer); } catch { /* Detached elements have no capture. */ }
-    }
-
-    function beginInput(now: number) {
-        if (state === "paused") { automaticPause = false; state = "moving"; }
-        settling = null; dropInspection(); state = "moving"; lastInputAt = now;
-    }
-
-    function updateInput(delta: number, now: number) {
-        if (!delta) return;
-        const dt = orbitClamp((now - previousInputAt) / 1000, .008, .08);
-        const sample = orbitClamp(delta / dt, -240, 240);
-        const blend = 1 - Math.exp(-dt / momentum);
-        velocity = Math.sign(sample) !== Math.sign(velocity) ? sample : velocity + (sample - velocity) * Math.max(.25, blend);
-        position += delta; direction = Math.sign(delta); previousInputAt = now; lastInputAt = now;
-        notify(); requestPaint();
     }
 
     function ignored(target: EventTarget | null) {
@@ -1122,116 +1118,115 @@ function createOrbitPlayer(options: OrbitOptions) {
         const raw = (Math.abs(event.deltaX) > Math.abs(event.deltaY) ? event.deltaX : event.deltaY) * scale;
         if (Math.abs(raw) < .2) return;
         event.preventDefault();
-        if (reduced()) {
-            if (performance.now() - lastInputAt > 180) { direction = Math.sign(raw); lastInputAt = performance.now(); arrive(nextCheckpoint(position, direction)); }
-            return;
-        }
-        releaseDrag(); beginInput(performance.now()); wheelPending = true;
-        updateInput(orbitClamp(raw, -700, 700) * wheelSensitivity, performance.now());
+        const now = performance.now(), freshGesture = now - lastWheelAt >= 180;
+        lastWheelAt = lastInputAt = now;
+        if (freshGesture) wheelLatched = false;
+        const consumed = wheelLatched;
+        wheelLatched = true;
+        // Refresh the latch even for ignored input: a long trackpad tail must not
+        // become a second move merely because the camera arrived during that tail.
+        if (consumed || state !== "checkpoint" || settling || drag) return;
+        go(Math.sign(raw));
     }
 
     function onPointerDown(event: PointerEvent) {
         if (event.pointerType === "touch") return;
-        if (!event.isPrimary) { if (drag) { releaseDrag(); pauseInternal(true); } return; }
+        if (!event.isPrimary) { if (drag) releaseDrag(); return; }
         if (!canRun() || !fullyReady() || event.defaultPrevented || event.button !== 0 || !insideViewer(event.clientX, event.clientY) || coveredTrialControl(event.clientX, event.clientY) || ignored(event.target)) return;
         if (nestedScroll(event.target, 1, 0) || nestedScroll(event.target, 0, 1)) return;
-        drag = { id: event.pointerId, x: event.clientX, y: event.clientY, time: performance.now(), distance: 0, moved: false };
+        drag = { id: event.pointerId, x: event.clientX, y: event.clientY, moved: false, triggered: state !== "checkpoint" || !!settling };
         try { root.setPointerCapture(event.pointerId); } catch { /* Mouse events can still finish through the window listener. */ }
     }
 
     function onPointerMove(event: PointerEvent) {
         if (!drag || touchDragging || drag.id !== event.pointerId || !canRun()) return;
-        const now = performance.now(), dx = event.clientX - drag.x, dy = event.clientY - drag.y;
-        drag.distance += Math.abs(dx); drag.x = event.clientX; drag.y = event.clientY; drag.time = now;
-        if (!drag.moved && drag.distance < 3) return;
-        if (event.pointerType === "touch" && !drag.moved && Math.abs(dy) > Math.abs(dx) * 1.5) return;
+        const dx = event.clientX - drag.x;
+        if (Math.abs(dx) < 8 && !drag.moved) return;
         if (event.cancelable) event.preventDefault();
-        if (!drag.moved) { beginInput(now); velocity = 0; previousInputAt = now - 16; drag.moved = true; }
-        if (reduced()) { direction = dx < 0 ? 1 : -1; return; }
-        updateInput(-dx * dragSensitivity, now);
+        drag.moved = true; lastInputAt = performance.now();
+        if (drag.triggered) return;
+        drag.triggered = true; go(dx < 0 ? 1 : -1);
     }
 
     function onPointerUp(event: PointerEvent) {
         if (!drag || touchDragging || drag.id !== event.pointerId) return;
-        const moved = drag.moved; releaseDrag();
-        if (moved && canRun()) startSettle();
+        if (drag.moved) lastInputAt = performance.now();
+        releaseDrag();
     }
 
     function onPointerCancel(event: PointerEvent) {
         if (!drag || touchDragging || drag.id !== event.pointerId) return;
-        const moved = drag.moved; releaseDrag();
-        if (moved) pauseInternal(true);
+        releaseDrag();
     }
 
     function onClick(event: MouseEvent) {
         if (coveredTrialControl(event.clientX, event.clientY)) return;
         // A drag must not accidentally activate a picking listener attached by the wrapper.
-        if (performance.now() - lastInputAt < 120 && state !== "checkpoint" && insideViewer(event.clientX, event.clientY) && !ignored(event.target)) {
+        const now = performance.now();
+        if ((now < suppressClickUntil || (now - lastInputAt < 120 && state !== "checkpoint")) && insideViewer(event.clientX, event.clientY) && !ignored(event.target)) {
             event.preventDefault(); event.stopPropagation();
         }
     }
 
     function onTouchStart(event: TouchEvent) {
         if (event.touches.length !== 1) {
-            if (touchDragging) { releaseDrag(); pauseInternal(true); }
+            if (touchDragging) releaseDrag();
             return;
         }
         const touch = event.touches[0];
         if (!canRun() || !fullyReady() || event.defaultPrevented || !insideViewer(touch.clientX, touch.clientY) || coveredTrialControl(touch.clientX, touch.clientY) || ignored(event.target)) return;
         if (nestedScroll(event.target, 1, 0) || nestedScroll(event.target, 0, 1)) return;
-        drag = { id: touch.identifier, x: touch.clientX, y: touch.clientY, time: performance.now(), distance: 0, moved: false };
+        drag = { id: touch.identifier, x: touch.clientX, y: touch.clientY, moved: false, triggered: state !== "checkpoint" || !!settling };
         touchDragging = true;
     }
 
     function onTouchMove(event: TouchEvent) {
         if (!touchDragging || !drag || !canRun() || event.touches.length !== 1) return;
-        const touch = event.touches[0], now = performance.now();
+        const touch = event.touches[0];
         const dx = touch.clientX - drag.x, dy = touch.clientY - drag.y;
-        drag.distance += Math.max(Math.abs(dx), Math.abs(dy));
-        drag.x = touch.clientX; drag.y = touch.clientY; drag.time = now;
-        if (!drag.moved && drag.distance < 3) return;
         // A non-passive touch listener also reaches Framer sibling hit layers;
         // changing the canvas touch-action alone cannot prevent their page pan.
         if (event.cancelable) event.preventDefault();
-        if (!drag.moved) { beginInput(now); velocity = 0; previousInputAt = now - 16; drag.moved = true; }
+        if (!drag.moved && Math.max(Math.abs(dx), Math.abs(dy)) < 12) return;
+        drag.moved = true; lastInputAt = performance.now();
+        if (drag.triggered) return;
         const delta = Math.abs(dx) >= Math.abs(dy) ? -dx : -dy;
-        if (reduced()) { if (delta) direction = Math.sign(delta); return; }
-        updateInput(delta * dragSensitivity, now);
+        drag.triggered = true; go(Math.sign(delta));
     }
 
     function onTouchEnd(event: TouchEvent) {
         if (!touchDragging || !drag || event.touches.length) return;
-        const moved = drag.moved; releaseDrag();
-        if (moved && canRun()) startSettle();
+        if (drag.moved) lastInputAt = performance.now();
+        releaseDrag();
     }
 
     function onTouchCancel() {
         if (!touchDragging || !drag) return;
-        const moved = drag.moved; releaseDrag();
-        if (moved) pauseInternal(true);
+        releaseDrag();
     }
 
     function go(heading: number) {
-        if (!canRun() || !fullyReady() || !heading) return;
+        if (!canRun() || !fullyReady() || !heading || settling || state !== "checkpoint") return;
         automaticPause = false; direction = heading > 0 ? 1 : -1;
-        releaseDrag(); velocity = 0;
-        const from = settling && Math.sign(settling.target - position) === direction ? settling.target : position;
-        startSettle(nextCheckpoint(from, direction));
+        if (drag) drag.triggered = true;
+        startSettle(nextCheckpoint(position, direction));
     }
 
     function setCheckpoint(index: number) {
-        if (!canRun() || !fullyReady()) return;
+        if (!canRun() || !fullyReady() || settling || state !== "checkpoint") return;
         const desired = checkpoints[orbitModulo(Math.round(index), checkpointCount)];
         const current = orbitModulo(position, total);
         let distance = orbitModulo(desired - current + total / 2, total) - total / 2;
         if (Math.abs(distance + total / 2) < .0001) distance = direction * total / 2;
-        automaticPause = false; releaseDrag(); velocity = 0;
+        automaticPause = false;
+        if (drag) drag.triggered = true;
         startSettle(position + distance);
     }
 
     function pauseInternal(automatic: boolean) {
         if (!active || destroyed || state === "error" || state === "loading") return;
-        automaticPause = automatic; releaseDrag(); wheelPending = false; settling = null; velocity = 0;
+        automaticPause = automatic; releaseDrag();
+        if (state !== "paused") pausedAt = performance.now();
         if (raf) cancelAnimationFrame(raf); raf = 0;
         state = "paused"; notify();
     }
@@ -1239,6 +1234,11 @@ function createOrbitPlayer(options: OrbitOptions) {
     function resume() {
         if (!active || destroyed || !fullyReady() || !visible || document.hidden || state === "error") return;
         automaticPause = false;
+        if (settling) {
+            if (reduced()) { arrive(settling.target); return; }
+            if (pausedAt) settling.time += performance.now() - pausedAt;
+            pausedAt = 0; state = "settling"; notify(); requestPaint(); return;
+        }
         const current = orbitModulo(position, total), checkpoint = checkpoints.find(value => Math.abs(value - current) < .0001);
         if (checkpoint !== undefined) { state = "checkpoint"; paint(performance.now()); notify(); if (!inspection) void prepareInspection(); requestPaint(); }
         else { state = "moving"; startSettle(); }
@@ -1252,8 +1252,10 @@ function createOrbitPlayer(options: OrbitOptions) {
 
     function onKeyDown(event: KeyboardEvent) {
         if (!canRun() || event.defaultPrevented || event.ctrlKey || event.metaKey || event.altKey || ignored(event.target)) return;
-        if (event.key === "ArrowRight" || event.key === "ArrowDown") { event.preventDefault(); go(1); }
-        else if (event.key === "ArrowLeft" || event.key === "ArrowUp") { event.preventDefault(); go(-1); }
+        const heading = ["ArrowRight", "ArrowDown", "PageDown"].includes(event.key) ? 1 :
+            ["ArrowLeft", "ArrowUp", "PageUp"].includes(event.key) ? -1 :
+            event.key === " " || event.key === "Spacebar" ? (event.shiftKey ? -1 : 1) : 0;
+        if (heading) { event.preventDefault(); if (!event.repeat) go(heading); }
     }
 
     function onEscape(event: KeyboardEvent) {
@@ -1265,8 +1267,10 @@ function createOrbitPlayer(options: OrbitOptions) {
         await prepare();
         if (destroyed || token !== activation) return;
         active = true; automaticPause = false; canvas.style.touchAction = "pinch-zoom";
-        position = orbitModulo(Math.round(frame), total); direction = 1; velocity = 0;
-        wheelPending = false; settling = null; dropInspection();
+        position = orbitModulo(Math.round(frame), total); direction = 1;
+        settling = null; pausedAt = 0; dropInspection();
+        // Do not interpret the approach's remaining wheel momentum as an orbit move.
+        lastWheelAt = performance.now(); wheelLatched = true;
         state = "checkpoint";
         if (checkpointAt() < 0) { state = "moving"; startSettle(); }
         else { paint(performance.now()); notify(); void prepareInspection(); }
@@ -1274,7 +1278,7 @@ function createOrbitPlayer(options: OrbitOptions) {
     }
 
     function deactivate() {
-        activation++; active = false; automaticPause = false; releaseDrag(); wheelPending = false; settling = null;
+        activation++; active = false; automaticPause = false; releaseDrag(); settling = null; pausedAt = 0;
         if (raf) cancelAnimationFrame(raf); raf = 0; dropInspection();
         canvas.style.touchAction = originalTouchAction;
         if (state !== "error") state = fullyReady() ? "idle" : preparing ? "loading" : "idle";

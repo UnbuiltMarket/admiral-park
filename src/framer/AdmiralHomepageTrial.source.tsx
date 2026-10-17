@@ -18,7 +18,7 @@ interface AdmiralHomepageTrialProps {
     startView?: "opening" | "orbit"; editorView?: "opening" | "building" | "orbit"
     duration?: number; maxSpeed?: number; momentum?: number; triggerDistance?: number
     checkpointCount?: number; motionWidth?: number; orbitMobileWidth?: number; inspectionWidth?: number
-    wheelSensitivity?: number; dragSensitivity?: number; orbitMomentum?: number; snapDuration?: number
+    snapDuration?: number; frameBlend?: number
     focalX?: number; focalY?: number; darken?: number; showControls?: boolean; showViewpoints?: boolean; showDiagnostics?: boolean
     openingOut?: number; buildingIn?: number; buildingFull?: number; ctaIn?: number; rise?: number
     background?: string; alt?: string; style?: React.CSSProperties
@@ -45,8 +45,8 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
     const {
         useGitHubAssets = true, heroBaseUrl = "", orbitBaseUrl = "", startView = "opening", editorView = "opening",
         duration = 2.5, maxSpeed = 1.8, momentum = .22, triggerDistance = 28, checkpointCount = 8,
-        motionWidth = 960, orbitMobileWidth = 640, inspectionWidth = 1920, wheelSensitivity = .025, dragSensitivity = .08,
-        orbitMomentum = .18, snapDuration = .32, focalX = 50, focalY = 50, darken = 0,
+        motionWidth = 960, orbitMobileWidth = 640, inspectionWidth = 1920, snapDuration = 1.5, frameBlend = 0,
+        focalX = 50, focalY = 50, darken = 0,
         showControls = true, showViewpoints = true, showDiagnostics = false,
         openingOut = 20, buildingIn = 68, buildingFull = 88, ctaIn = 86, rise = 20,
         background = "#101820", alt = "Explore Admiral Park, Balatonfüred", style,
@@ -113,7 +113,7 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
         function destroyHero() { heroGeneration++; hero?.destroy(); hero = null }
         const orbit = staticRenderer ? null : createOrbitPlayer({
             root, canvas: orbitCanvas, urls: orbitUrls, decodeWidth, inspectionWidth: phone ? Math.min(inspectionWidth, 1280) : inspectionWidth,
-            checkpointCount, wheelSensitivity, dragSensitivity, momentum: orbitMomentum, snapDuration, focalX: focalX / 100, focalY: focalY / 100,
+            checkpointCount, snapDuration, frameBlend: frameBlend / 100, focalX: focalX / 100, focalY: focalY / 100,
             onUpdate(snapshot) {
                 if (disposed) return
                 root!.dataset.orbitDownloaded = String(snapshot.downloaded)
@@ -231,7 +231,7 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
             homepageChannels.delete(root); notifyHomepage()
         }
     }, [heroUrls, orbitUrls, staticRenderer, hostVisible, startView, editorView, duration, maxSpeed, momentum, triggerDistance, checkpointCount,
-        motionWidth, orbitMobileWidth, inspectionWidth, wheelSensitivity, dragSensitivity, orbitMomentum, snapDuration, focalX, focalY, showDiagnostics])
+        motionWidth, orbitMobileWidth, inspectionWidth, snapDuration, frameBlend, focalX, focalY, showDiagnostics])
 
     React.useEffect(() => {
         const root = rootRef.current, channel = root && homepageChannels.get(root)
@@ -242,6 +242,8 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
     const percent = Math.round(100 * orbitInfo.ready / Math.max(1, orbitInfo.total))
     const checkpoints = Math.round(Math.max(2, Math.min(16, checkpointCount)))
     const paused = orbitInfo.state === "paused"
+    const orbitMoving = orbitInfo.state === "settling" || orbitInfo.state === "moving" || orbitInfo.state === "paused"
+    const orbitButtonStyle: React.CSSProperties = { ...homepageButton, opacity: orbitMoving ? .45 : 1, cursor: orbitMoving ? "default" : "pointer" }
     return (
         <div ref={rootRef} data-admiral-homepage="" data-admiral-orbit="" data-homepage-stage={stage} role="region" aria-label={alt} tabIndex={0}
             style={{ position: "relative", width: "100%", height: "100%", overflow: "hidden", background, ...style }}>
@@ -261,12 +263,12 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
                 {(stage === "building" || stage === "handoff") && orbitInfo.state === "error" && <button type="button" style={homepageButton} onClick={() => { void (rootRef.current as (HTMLElement & { retryOrbit?: () => Promise<void> }) | null)?.retryOrbit?.() }}>Retry orbit</button>}
                 {(stage === "building" || stage === "handoff" || stage === "orbit") && <button type="button" style={homepageButton} onClick={() => actions.current?.overview()}>Overview</button>}
                 {stage === "orbit" && <>
-                    <button type="button" aria-label="Previous view" style={homepageButton} onClick={() => actions.current?.orbit?.go(-1)}>←</button>
+                    <button type="button" aria-label="Previous view" disabled={orbitMoving} style={orbitButtonStyle} onClick={() => actions.current?.orbit?.go(-1)}>←</button>
                     <span aria-live="polite" style={{ ...homepageButton, cursor: "default", minWidth: 65, textAlign: "center" }}>{orbitInfo.checkpoint >= 0 ? `View ${orbitInfo.checkpoint + 1} / ${checkpoints}` : "Looking around"}</span>
-                    <button type="button" aria-label="Next view" style={homepageButton} onClick={() => actions.current?.orbit?.go(1)}>→</button>
+                    <button type="button" aria-label="Next view" disabled={orbitMoving} style={orbitButtonStyle} onClick={() => actions.current?.orbit?.go(1)}>→</button>
                     <button type="button" style={homepageButton} onClick={() => paused ? actions.current?.orbit?.resume() : actions.current?.orbit?.pause()}>{paused ? "Continue rotation" : "Pause rotation"}</button>
-                    {showViewpoints && Array.from({ length: checkpoints }, (_, i) => <button key={i} type="button" aria-label={`View ${i + 1}`} aria-pressed={orbitInfo.checkpoint === i}
-                        style={{ ...homepageButton, padding: "7px 9px", background: orbitInfo.checkpoint === i ? "rgba(255,255,255,.9)" : homepageButton.background, color: orbitInfo.checkpoint === i ? "#101820" : "#fff" }} onClick={() => actions.current?.orbit?.setCheckpoint(i)}>{i + 1}</button>)}
+                    {showViewpoints && Array.from({ length: checkpoints }, (_, i) => <button key={i} type="button" aria-label={`View ${i + 1}`} aria-pressed={orbitInfo.checkpoint === i} disabled={orbitMoving}
+                        style={{ ...orbitButtonStyle, padding: "7px 9px", background: orbitInfo.checkpoint === i ? "rgba(255,255,255,.9)" : homepageButton.background, color: orbitInfo.checkpoint === i ? "#101820" : "#fff" }} onClick={() => actions.current?.orbit?.setCheckpoint(i)}>{i + 1}</button>)}
                 </>}
             </div>}
             {!staticRenderer && showDiagnostics && <output data-homepage-diagnostics="" style={{ position: "absolute", left: 12, bottom: 94, pointerEvents: "none", background: "rgba(0,0,0,.65)", color: "#fff", padding: 8, borderRadius: 4, font: "11px/1.5 monospace", zIndex: 2 }}>
@@ -345,10 +347,8 @@ addPropertyControls(AdmiralHomepageTrial, {
     motionWidth: { type: ControlType.Number, title: "Orbit decode", defaultValue: 960, min: 480, max: 1920, step: 160, unit: "px" },
     orbitMobileWidth: { type: ControlType.Number, title: "Phone decode", defaultValue: 640, min: 480, max: 1280, step: 160, unit: "px" },
     inspectionWidth: { type: ControlType.Number, title: "Stopped detail", defaultValue: 1920, min: 960, max: 1920, step: 160, unit: "px" },
-    wheelSensitivity: { type: ControlType.Number, title: "Wheel speed", defaultValue: .025, min: .005, max: .12, step: .005 },
-    dragSensitivity: { type: ControlType.Number, title: "Drag speed", defaultValue: .08, min: .02, max: .3, step: .01 },
-    orbitMomentum: { type: ControlType.Number, title: "Orbit coast", defaultValue: .18, min: .05, max: .6, step: .01, unit: "s" },
-    snapDuration: { type: ControlType.Number, title: "Settle time", defaultValue: .32, min: .15, max: 1, step: .01, unit: "s" },
+    snapDuration: { type: ControlType.Number, title: "Settle time", defaultValue: 1.5, min: .15, max: 10, step: .05, unit: "s", description: "Time for one checkpoint move: slow start, quicker middle, slow arrival. New input is ignored until arrival." },
+    frameBlend: { type: ControlType.Number, title: "Frame blend", defaultValue: 0, min: 0, max: 100, step: 5, unit: "%", description: "Crossfade neighbouring orbit frames. 0% keeps frames crisp; 100% blends throughout each frame interval. Strong blending can produce double edges." },
     openingOut: { type: ControlType.Number, title: "Opening out", defaultValue: 20, min: 1, max: 50, unit: "%" },
     buildingIn: { type: ControlType.Number, title: "Building in", defaultValue: 68, min: 20, max: 95, unit: "%" },
     buildingFull: { type: ControlType.Number, title: "Building full", defaultValue: 88, min: 40, max: 100, unit: "%" },
