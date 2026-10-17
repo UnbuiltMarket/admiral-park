@@ -2,12 +2,14 @@ import assert from 'node:assert/strict';
 import {readFile,mkdir,writeFile} from 'node:fs/promises';
 import path from 'node:path';
 import {createRequire} from 'node:module';
-import {fileURLToPath} from 'node:url';
-import {ts,requireDev} from '../scripts/tooling.mjs';
+import {fileURLToPath,pathToFileURL} from 'node:url';
+
+const root=process.env.HOMEPAGE_TEST_ROOT?pathToFileURL(path.resolve(process.env.HOMEPAGE_TEST_ROOT)+path.sep):new URL('../',import.meta.url);
+const {ts,requireDev}=await import(new URL('scripts/tooling.mjs',root));
 
 const require=createRequire(import.meta.url);
 const {chromium}=require(process.env.PLAYWRIGHT_MODULE_PATH||'playwright');
-const root=new URL('../',import.meta.url),out=new URL('tmp/homepage-trial-check/',root);
+const out=new URL('tmp/homepage-trial-check/',root);
 await mkdir(out,{recursive:true});
 const publicMode=process.env.HOMEPAGE_PUBLIC==='1';
 const source=await readFile(new URL('src/framer/AdmiralHomepageTrial.tsx',root),'utf8');
@@ -36,10 +38,10 @@ async function fixture(options={}){
    if(index===failIndex)return route.fulfill({status:503,body:'Deliberate trial orbit outage'});
    return route.fulfill({contentType:'image/avif',headers:{'Cache-Control':'public,max-age=3600'},body:orbits[index]});
   }
-  return route.fulfill({contentType:'text/html',body:'<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><style>html,body{margin:0;font:18px Arial;background:#0e1720}#stage{height:100svh;position:relative;overflow:hidden}.copy{position:absolute;left:6%;top:20%;max-width:650px;color:white;z-index:4}.cta{position:absolute;left:6%;top:65%;z-index:4}.cta a{display:inline-block;padding:18px;background:white;color:black}#navbar{position:fixed;z-index:50;top:8px;left:12px;display:flex;gap:12px}#nested{position:absolute;right:0;top:100px;width:110px;height:100px;overflow:auto;z-index:40;background:white}#native-input{position:absolute;right:5px;top:220px;z-index:40;width:95px}</style></head><body><nav id="navbar"><a id="nav-link" href="#apartments">Apartments</a><button id="nav-button">Contact</button></nav><div id="mount"></div></body></html>'});
+  return route.fulfill({contentType:'text/html',body:'<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><style>html,body{margin:0;font:18px Arial;background:#0e1720}#stage{height:100svh;position:relative;overflow:hidden}.copy{position:absolute;left:6%;top:20%;max-width:650px;color:white;z-index:4}.cta{position:absolute;left:6%;top:65%;z-index:4}.cta a{display:inline-block;padding:18px;background:white;color:black}#navbar{position:fixed;z-index:50;top:8px;left:12px;display:flex;gap:12px}#nested{position:absolute;right:0;top:100px;width:110px;height:100px;overflow:auto;z-index:40;background:white}#native-input{position:absolute;right:5px;top:220px;z-index:40;width:95px}#external-framer-overlay{position:absolute;inset:0;z-index:20;pointer-events:auto}#external-framer-overlay>div{width:100%;height:100%}</style></head><body'+(options.externalOverlay?' style="height:300vh"':'')+'><nav id="navbar"><a id="nav-link" href="#apartments">Apartments</a><button id="nav-button">Contact</button></nav><div id="mount"></div></body></html>'});
  });
  await page.goto('http://homepage.test/');await page.addScriptTag({content:react});await page.addScriptTag({content:dom});
- await page.evaluate(({code,props,staticMode,publicMode,twoInstances})=>{
+ await page.evaluate(({code,props,staticMode,publicMode,twoInstances,externalOverlay})=>{
   window.bitmapCreated=0;window.bitmapClosed=0;
   const nativeCreateImageBitmap=window.createImageBitmap.bind(window);
   window.createImageBitmap=async(...args)=>{const bitmap=await nativeCreateImageBitmap(...args);window.bitmapCreated++;const close=bitmap.close.bind(bitmap);let closed=false;bitmap.close=()=>{if(!closed){closed=true;window.bitmapClosed++;}close();};return bitmap;};
@@ -57,12 +59,13 @@ async function fixture(options={}){
    React.createElement(Intro,{id:'intro',className:'copy'},'LOCATION'),
    React.createElement(Building,{id:'building',className:'copy'},'BUILDING'),
    React.createElement(CTA,{id:'cta',className:'cta'},React.createElement('a',{href:'#apartments',onClick:()=>window.ctaClicked=true},'Apartment details')),
+   externalOverlay?React.createElement('div',{id:'external-framer-overlay','data-external-framer-wrapper':''},React.createElement('div',{'data-external-framer-surface':''})):null,
    React.createElement('div',{id:'nested'},React.createElement('div',{style:{height:500}},'Native scroll panel')),
    React.createElement('input',{id:'native-input',defaultValue:'Apartment'})),
    twoInstances?React.createElement('section',{id:'secondary',style:{display:'none',position:'relative',height:'100svh'}},React.createElement(window.component,window.props)):null));
   window.renderTrial();window.samples=[];
   window.sampleTimer=setInterval(()=>{const root=document.querySelector('[data-admiral-homepage]'),orbit=document.querySelector('[data-admiral-orbit]')||root,hero=document.querySelector('[data-admiral-sequence]');if(root)window.samples.push({time:performance.now(),stage:root.dataset.homepageStage,state:orbit?.dataset.orbitState,position:Number(orbit?.dataset.orbitPosition),frame:Number(orbit?.dataset.orbitFrame),checkpoint:Number(orbit?.dataset.orbitCheckpoint),decoded:Number(orbit?.dataset.orbitDecoded),ready:orbit?.dataset.orbitReady,heroFrame:Number(hero?.dataset.frame)});},16);
- },{code,props:options.props||{},staticMode:!!options.staticMode,publicMode,twoInstances:!!options.twoInstances});
+ },{code,props:options.props||{},staticMode:!!options.staticMode,publicMode,twoInstances:!!options.twoInstances,externalOverlay:!!options.externalOverlay});
  await page.waitForSelector('[data-admiral-homepage]');
  await page.waitForFunction(()=>[...document.images].some(image=>image.naturalWidth>0));
  await page.mouse.move(450,500);
@@ -75,6 +78,66 @@ async function waitStage(page,stage,timeout=20000){await page.waitForFunction(st
 async function pass(name,fn){if(process.env.HOMEPAGE_TEST_FILTER&&!name.includes(process.env.HOMEPAGE_TEST_FILTER))return;const started=Date.now();await fn();results.push({name,ms:Date.now()-started});console.log('PASS '+name);}
 
 try{
+ await pass('external Framer wrapper accepts wheel, reverse, drag and body keys without scrolling past the viewer',async()=>{
+  const f=await fixture({externalOverlay:true,props:{startView:'orbit'}}),{page}=f;await waitOrbit(page);
+  assert.ok(await page.evaluate(()=>document.body.scrollHeight>innerHeight*2),'Fixture has real page overflow');
+  assert.equal(await page.evaluate(()=>document.elementFromPoint(450,500)?.hasAttribute('data-external-framer-surface')),true,'Pointer hits a transparent Framer sibling outside the code component');
+  await page.mouse.move(450,500);await page.mouse.wheel(0,450);await page.waitForTimeout(70);
+  const forward=Number((await orbitData(page)).orbitPosition);
+  assert.ok(forward>0,`Wheel over the external wrapper must rotate the orbit (position ${forward}, scrollY ${await page.evaluate(()=>scrollY)})`);
+  assert.equal(await page.evaluate(()=>scrollY),0,'Orbit wheel consumes page movement despite body overflow');
+  await page.mouse.wheel(0,-450);await page.waitForTimeout(40);
+  assert.ok(Number((await orbitData(page)).orbitPosition)<forward,'Reverse input over the wrapper reverses from the current frame');
+  await page.mouse.wheel(0,-300);await waitOrbit(page);
+  assert.equal(Number((await orbitData(page)).orbitFrame)%15,0);assert.equal(await page.evaluate(()=>scrollY),0);
+  const beforeDrag=Number((await orbitData(page)).orbitPosition);
+  await page.mouse.move(700,500);await page.mouse.down();await page.mouse.move(100,500,{steps:10});await page.mouse.move(-80,500,{steps:4});
+  assert.ok(Number((await orbitData(page)).orbitPosition)>beforeDrag,'Dragging the external wrapper retains capture outside the viewer');
+  await page.mouse.up();await waitOrbit(page);assert.equal(Number((await orbitData(page)).orbitFrame)%15,0);
+  await page.mouse.move(450,500);await page.evaluate(()=>{document.activeElement?.blur();document.body.tabIndex=-1;document.body.focus();});
+  const beforeKey=Number((await orbitData(page)).orbitPosition);await page.keyboard.press('ArrowDown');await page.waitForTimeout(60);
+  assert.ok(Number((await orbitData(page)).orbitPosition)>beforeKey,'Body-focused arrow key controls the visible orbit');
+  await waitOrbit(page);assert.equal(await page.evaluate(()=>scrollY),0,'Arrow input cannot scroll past the homepage');
+  const clickCovered=async name=>{const box=await page.getByRole('button',{name,exact:true}).boundingBox();await page.mouse.click(box.x+box.width/2,box.y+box.height/2);};
+  const beforeButton=Number((await orbitData(page)).orbitPosition);
+  await clickCovered('Next view');await page.waitForTimeout(60);
+  assert.ok(Number((await orbitData(page)).orbitPosition)>beforeButton,'Covered viewpoint button still receives its native React click');await waitOrbit(page);
+  await page.getByRole('button',{name:'Contact',exact:true}).click();assert.equal(await page.evaluate(()=>window.navClicked),1,'Navbar keeps its native click');
+  await clickCovered('Overview');await waitStage(page,'opening');
+  await clickCovered('Skip approach');await waitStage(page,'building');
+  await clickCovered('Explore building');await waitOrbit(page);
+  await page.evaluate(()=>{clearInterval(window.sampleTimer);window.root.unmount();});
+  await page.mouse.move(450,500);await page.mouse.wheel(0,450);await page.waitForTimeout(120);
+  assert.ok(await page.evaluate(()=>scrollY)>100,'Unmount restores normal page wheel scrolling');await f.close();
+ });
+ await pass('external Framer wrapper accepts phone dragging and holds vertical gestures while preserving pinch zoom',async()=>{
+  const f=await fixture({externalOverlay:true,props:{startView:'orbit'},context:{viewport:{width:390,height:844},isMobile:true,hasTouch:true,deviceScaleFactor:3}}),{page}=f;await waitOrbit(page);
+  const cdp=await page.context().newCDPSession(page);
+  await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:330,y:450}]});
+  for(let x=300;x>=90;x-=30)await cdp.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x,y:450}]});
+  await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
+  await page.waitForTimeout(80);
+  assert.ok(Number((await orbitData(page)).orbitPosition)>0,'Horizontal touch over a sibling wrapper rotates the orbit');
+  await waitOrbit(page);assert.equal(Number((await orbitData(page)).orbitFrame)%15,0);
+  const button=await page.getByRole('button',{name:'Next view',exact:true}).boundingBox(),beforeButton=Number((await orbitData(page)).orbitPosition);
+  await page.touchscreen.tap(button.x+button.width/2,button.y+button.height/2);await page.waitForTimeout(60);
+  assert.ok(Number((await orbitData(page)).orbitPosition)>beforeButton,'Covered viewpoint button accepts a touch tap');await waitOrbit(page);
+  await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:180,y:650}]});
+  for(let y=620;y>=350;y-=30)await cdp.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x:180,y}]});
+  await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});await page.waitForTimeout(180);
+  assert.equal(await page.evaluate(()=>scrollY),0,'Single-finger vertical input cannot scroll past the orbit');
+  const pinch=await page.evaluate(()=>{
+   const target=document.querySelector('[data-external-framer-surface]'),touches=[new Touch({identifier:10,target,clientX:130,clientY:400}),new Touch({identifier:11,target,clientX:250,clientY:400})];
+   const start=new TouchEvent('touchstart',{touches,targetTouches:touches,changedTouches:touches,bubbles:true,cancelable:true});
+   target.dispatchEvent(start);
+   const move=new TouchEvent('touchmove',{touches,targetTouches:touches,changedTouches:touches,bubbles:true,cancelable:true});target.dispatchEvent(move);
+   const end=new TouchEvent('touchend',{touches:[],targetTouches:[],changedTouches:touches,bubbles:true,cancelable:true});target.dispatchEvent(end);
+   return {startPrevented:start.defaultPrevented,movePrevented:move.defaultPrevented};
+  });
+  assert.equal(pinch.startPrevented,false,'Two-finger touch start stays available to browser pinch zoom');
+  assert.equal(pinch.movePrevented,false,'Two-finger touch movement stays available to browser pinch zoom');
+  await page.getByRole('button',{name:'Contact',exact:true}).tap();assert.equal(await page.evaluate(()=>window.navClicked),1);await f.close();
+ });
  await pass('complete orbit prepares all frames before activating and keeps a sharp checkpoint',async()=>{
   const f=await fixture({props:{startView:'orbit'}}),{page}=f;await waitOrbit(page);
   const data=await orbitData(page);

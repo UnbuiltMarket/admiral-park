@@ -171,6 +171,16 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
                 }
             } catch { /* The retry control remains available. */ }
         }
+        function relayControlClick(event: MouseEvent) {
+            if (!isVisible() || root!.contains(event.target as Node) || homepageBlocked(event.target)) return
+            for (const button of Array.from(root!.querySelectorAll<HTMLButtonElement>("[data-homepage-controls] button"))) {
+                const box = button.getBoundingClientRect()
+                if (!button.disabled && box.width > 0 && box.height > 0 && event.clientX >= box.left && event.clientX <= box.right && event.clientY >= box.top && event.clientY <= box.bottom) {
+                    event.preventDefault(); event.stopPropagation(); button.click(); return
+                }
+            }
+        }
+        window.addEventListener("click", relayControlClick, { capture: true, signal })
         function wheel(event: WheelEvent) {
             const now = performance.now(), gap = now - lastWheelAt; lastWheelAt = now
             const box = root!.getBoundingClientRect()
@@ -817,6 +827,7 @@ function createOrbitPlayer(options: OrbitOptions) {
     let inspection: OrbitBitmap | null = null, inspectionFrame = -1, inspectionGeneration = 0, qualityStartedAt = 0, inspectionDecoding = false;
     let lastPaint = "", lastNotification = "";
     let drag: { id: number; x: number; y: number; time: number; distance: number; moved: boolean } | null = null;
+    let touchDragging = false;
     let settling: { start: number; target: number; time: number; duration: number; tangent: number } | null = null;
     const frameAt = () => total ? orbitModulo(Math.round(position), total) : 0;
     const canRun = () => active && !destroyed && visible && !document.hidden && state !== "error";
@@ -1046,7 +1057,7 @@ function createOrbitPlayer(options: OrbitOptions) {
 
     function releaseDrag() {
         if (!drag) return;
-        const pointer = drag.id; drag = null;
+        const pointer = drag.id; drag = null; touchDragging = false;
         try { if (root.hasPointerCapture(pointer)) root.releasePointerCapture(pointer); } catch { /* Detached elements have no capture. */ }
     }
 
@@ -1066,13 +1077,32 @@ function createOrbitPlayer(options: OrbitOptions) {
     }
 
     function ignored(target: EventTarget | null) {
-        const element = target instanceof Element ? target : null;
-        return !element || !root.contains(element) || !!element.closest("nav,header,a,button,input,textarea,select,option,[contenteditable]:not([contenteditable='false']),[role='button'],[role='link'],[data-orbit-ignore]");
+        let element = target instanceof Element ? target : null;
+        if (!element) return true;
+        // Framer may place a transparent sibling above this component. Stop at the
+        // shared container: its role/overflow belongs to the page, not a control.
+        while (element && element !== root && !element.contains(root)) {
+            if (element.matches("nav,header,a,button,input,textarea,select,option,[contenteditable]:not([contenteditable='false']),[role='button'],[role='link'],[data-orbit-ignore]")) return true;
+            element = element.parentElement;
+        }
+        return false;
+    }
+
+    function insideViewer(x: number, y: number) {
+        const box = root.getBoundingClientRect();
+        return box.width > 0 && box.height > 0 && x >= box.left && x <= box.right && y >= box.top && y <= box.bottom;
+    }
+
+    function coveredTrialControl(x: number, y: number) {
+        return Array.from(root.querySelectorAll<HTMLButtonElement>("[data-homepage-controls] button")).some(button => {
+            const box = button.getBoundingClientRect();
+            return !button.disabled && box.width > 0 && box.height > 0 && x >= box.left && x <= box.right && y >= box.top && y <= box.bottom;
+        });
     }
 
     function nestedScroll(target: EventTarget | null, deltaX: number, deltaY: number) {
         let element = target instanceof Element ? target : null;
-        while (element && element !== root) {
+        while (element && element !== root && !element.contains(root)) {
             const style = getComputedStyle(element), horizontal = Math.abs(deltaX) > Math.abs(deltaY);
             if (horizontal && /auto|scroll/.test(style.overflowX) && element.scrollWidth > element.clientWidth + 1) {
                 if (deltaX < 0 ? element.scrollLeft > 0 : element.scrollLeft < element.scrollWidth - element.clientWidth - 1) return true;
@@ -1086,7 +1116,7 @@ function createOrbitPlayer(options: OrbitOptions) {
     }
 
     function onWheel(event: WheelEvent) {
-        if (!canRun() || !fullyReady() || event.defaultPrevented || event.ctrlKey || event.metaKey || ignored(event.target)) return;
+        if (!canRun() || !fullyReady() || event.defaultPrevented || event.ctrlKey || event.metaKey || !insideViewer(event.clientX, event.clientY) || ignored(event.target)) return;
         if (nestedScroll(event.target, event.deltaX, event.deltaY)) return;
         const scale = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? Math.max(1, root.clientHeight) : 1;
         const raw = (Math.abs(event.deltaX) > Math.abs(event.deltaY) ? event.deltaX : event.deltaY) * scale;
@@ -1101,15 +1131,16 @@ function createOrbitPlayer(options: OrbitOptions) {
     }
 
     function onPointerDown(event: PointerEvent) {
+        if (event.pointerType === "touch") return;
         if (!event.isPrimary) { if (drag) { releaseDrag(); pauseInternal(true); } return; }
-        if (!canRun() || !fullyReady() || event.defaultPrevented || event.button !== 0 || ignored(event.target)) return;
+        if (!canRun() || !fullyReady() || event.defaultPrevented || event.button !== 0 || !insideViewer(event.clientX, event.clientY) || coveredTrialControl(event.clientX, event.clientY) || ignored(event.target)) return;
         if (nestedScroll(event.target, 1, 0) || nestedScroll(event.target, 0, 1)) return;
         drag = { id: event.pointerId, x: event.clientX, y: event.clientY, time: performance.now(), distance: 0, moved: false };
         try { root.setPointerCapture(event.pointerId); } catch { /* Mouse events can still finish through the window listener. */ }
     }
 
     function onPointerMove(event: PointerEvent) {
-        if (!drag || drag.id !== event.pointerId || !canRun()) return;
+        if (!drag || touchDragging || drag.id !== event.pointerId || !canRun()) return;
         const now = performance.now(), dx = event.clientX - drag.x, dy = event.clientY - drag.y;
         drag.distance += Math.abs(dx); drag.x = event.clientX; drag.y = event.clientY; drag.time = now;
         if (!drag.moved && drag.distance < 3) return;
@@ -1121,22 +1152,63 @@ function createOrbitPlayer(options: OrbitOptions) {
     }
 
     function onPointerUp(event: PointerEvent) {
-        if (!drag || drag.id !== event.pointerId) return;
+        if (!drag || touchDragging || drag.id !== event.pointerId) return;
         const moved = drag.moved; releaseDrag();
         if (moved && canRun()) startSettle();
     }
 
     function onPointerCancel(event: PointerEvent) {
-        if (!drag || drag.id !== event.pointerId) return;
+        if (!drag || touchDragging || drag.id !== event.pointerId) return;
         const moved = drag.moved; releaseDrag();
         if (moved) pauseInternal(true);
     }
 
     function onClick(event: MouseEvent) {
+        if (coveredTrialControl(event.clientX, event.clientY)) return;
         // A drag must not accidentally activate a picking listener attached by the wrapper.
-        if (performance.now() - lastInputAt < 120 && state !== "checkpoint" && !ignored(event.target)) {
+        if (performance.now() - lastInputAt < 120 && state !== "checkpoint" && insideViewer(event.clientX, event.clientY) && !ignored(event.target)) {
             event.preventDefault(); event.stopPropagation();
         }
+    }
+
+    function onTouchStart(event: TouchEvent) {
+        if (event.touches.length !== 1) {
+            if (touchDragging) { releaseDrag(); pauseInternal(true); }
+            return;
+        }
+        const touch = event.touches[0];
+        if (!canRun() || !fullyReady() || event.defaultPrevented || !insideViewer(touch.clientX, touch.clientY) || coveredTrialControl(touch.clientX, touch.clientY) || ignored(event.target)) return;
+        if (nestedScroll(event.target, 1, 0) || nestedScroll(event.target, 0, 1)) return;
+        drag = { id: touch.identifier, x: touch.clientX, y: touch.clientY, time: performance.now(), distance: 0, moved: false };
+        touchDragging = true;
+    }
+
+    function onTouchMove(event: TouchEvent) {
+        if (!touchDragging || !drag || !canRun() || event.touches.length !== 1) return;
+        const touch = event.touches[0], now = performance.now();
+        const dx = touch.clientX - drag.x, dy = touch.clientY - drag.y;
+        drag.distance += Math.max(Math.abs(dx), Math.abs(dy));
+        drag.x = touch.clientX; drag.y = touch.clientY; drag.time = now;
+        if (!drag.moved && drag.distance < 3) return;
+        // A non-passive touch listener also reaches Framer sibling hit layers;
+        // changing the canvas touch-action alone cannot prevent their page pan.
+        if (event.cancelable) event.preventDefault();
+        if (!drag.moved) { beginInput(now); velocity = 0; previousInputAt = now - 16; drag.moved = true; }
+        const delta = Math.abs(dx) >= Math.abs(dy) ? -dx : -dy;
+        if (reduced()) { if (delta) direction = Math.sign(delta); return; }
+        updateInput(delta * dragSensitivity, now);
+    }
+
+    function onTouchEnd(event: TouchEvent) {
+        if (!touchDragging || !drag || event.touches.length) return;
+        const moved = drag.moved; releaseDrag();
+        if (moved && canRun()) startSettle();
+    }
+
+    function onTouchCancel() {
+        if (!touchDragging || !drag) return;
+        const moved = drag.moved; releaseDrag();
+        if (moved) pauseInternal(true);
     }
 
     function go(heading: number) {
@@ -1232,12 +1304,15 @@ function createOrbitPlayer(options: OrbitOptions) {
     const reducedChanged = () => {
         if (reduced() && active && fullyReady() && (state === "moving" || state === "settling")) arrive(settling?.target ?? nextCheckpoint(position, direction));
     };
-    root.addEventListener("wheel", onWheel, { passive: false });
-    root.addEventListener("pointerdown", onPointerDown);
-    root.addEventListener("pointermove", onPointerMove, { passive: false });
-    root.addEventListener("pointerup", onPointerUp); root.addEventListener("pointercancel", onPointerCancel);
-    root.addEventListener("click", onClick, true); root.addEventListener("keydown", onKeyDown);
-    window.addEventListener("pointerup", onPointerUp); window.addEventListener("resize", resize); window.addEventListener("keydown", onEscape);
+    window.addEventListener("wheel", onWheel, { passive: false, capture: true });
+    window.addEventListener("pointerdown", onPointerDown, true);
+    window.addEventListener("pointermove", onPointerMove, { passive: false, capture: true });
+    window.addEventListener("pointerup", onPointerUp, true); window.addEventListener("pointercancel", onPointerCancel, true);
+    window.addEventListener("touchstart", onTouchStart, { passive: true, capture: true });
+    window.addEventListener("touchmove", onTouchMove, { passive: false, capture: true });
+    window.addEventListener("touchend", onTouchEnd, true); window.addEventListener("touchcancel", onTouchCancel, true);
+    window.addEventListener("click", onClick, true); window.addEventListener("keydown", onKeyDown, true);
+    window.addEventListener("resize", resize); window.addEventListener("keydown", onEscape);
     document.addEventListener("visibilitychange", visibilityChanged);
     reducedQuery?.addEventListener?.("change", reducedChanged);
     notify();
@@ -1250,10 +1325,12 @@ function createOrbitPlayer(options: OrbitOptions) {
             const reject = prepareReject; prepareResolve = prepareReject = null; reject?.(new Error("Orbit disposed"));
             frames.forEach(bitmap => bitmap.close()); frames.clear(); blobs.clear();
             resizeObserver?.disconnect(); intersectionObserver?.disconnect();
-            root.removeEventListener("wheel", onWheel); root.removeEventListener("pointerdown", onPointerDown);
-            root.removeEventListener("pointermove", onPointerMove); root.removeEventListener("pointerup", onPointerUp);
-            root.removeEventListener("pointercancel", onPointerCancel); root.removeEventListener("click", onClick, true);
-            root.removeEventListener("keydown", onKeyDown); window.removeEventListener("pointerup", onPointerUp);
+            window.removeEventListener("wheel", onWheel, true); window.removeEventListener("pointerdown", onPointerDown, true);
+            window.removeEventListener("pointermove", onPointerMove, true); window.removeEventListener("pointerup", onPointerUp, true);
+            window.removeEventListener("pointercancel", onPointerCancel, true); window.removeEventListener("click", onClick, true);
+            window.removeEventListener("touchstart", onTouchStart, true); window.removeEventListener("touchmove", onTouchMove, true);
+            window.removeEventListener("touchend", onTouchEnd, true); window.removeEventListener("touchcancel", onTouchCancel, true);
+            window.removeEventListener("keydown", onKeyDown, true);
             window.removeEventListener("resize", resize); window.removeEventListener("keydown", onEscape); document.removeEventListener("visibilitychange", visibilityChanged);
             reducedQuery?.removeEventListener?.("change", reducedChanged);
         },

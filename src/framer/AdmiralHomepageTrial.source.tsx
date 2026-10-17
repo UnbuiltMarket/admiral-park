@@ -170,6 +170,16 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
                 }
             } catch { /* The retry control remains available. */ }
         }
+        function relayControlClick(event: MouseEvent) {
+            if (!isVisible() || root!.contains(event.target as Node) || homepageBlocked(event.target)) return
+            for (const button of Array.from(root!.querySelectorAll<HTMLButtonElement>("[data-homepage-controls] button"))) {
+                const box = button.getBoundingClientRect()
+                if (!button.disabled && box.width > 0 && box.height > 0 && event.clientX >= box.left && event.clientX <= box.right && event.clientY >= box.top && event.clientY <= box.bottom) {
+                    event.preventDefault(); event.stopPropagation(); button.click(); return
+                }
+            }
+        }
+        window.addEventListener("click", relayControlClick, { capture: true, signal })
         function wheel(event: WheelEvent) {
             const now = performance.now(), gap = now - lastWheelAt; lastWheelAt = now
             const box = root!.getBoundingClientRect()
