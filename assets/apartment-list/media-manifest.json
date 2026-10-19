@@ -182,28 +182,72 @@
       "full": "assets/floor-layouts/00/full.webp",
       "label": "Földszinti szintrajz · A, B és C épület",
       "sourcePage": 3,
-      "floorCode": "FSZ"
+      "floorCode": "FSZ",
+      "source": {
+        "filename": "00-plan-art.png",
+        "sha256": "3e184927087fccd92a9cf81a31a189054a45bb74087398373c8e67da32330965",
+        "revision": "2026-10-08-customer-book-r02",
+        "kind": "native-transparent-plan-art",
+        "dimensions": [
+          2560,
+          1600
+        ],
+        "nativeTransparency": true
+      }
     },
     "1": {
       "thumbnail": "assets/floor-layouts/01/thumb.webp",
       "full": "assets/floor-layouts/01/full.webp",
       "label": "1. emeleti szintrajz · A, B és C épület",
       "sourcePage": 4,
-      "floorCode": "01"
+      "floorCode": "01",
+      "source": {
+        "filename": "01-plan-art.png",
+        "sha256": "1beb68541d93374f14ac1a157b2020c8816c70e86bdace19658be358db588503",
+        "revision": "2026-10-08-customer-book-r02",
+        "kind": "native-transparent-plan-art",
+        "dimensions": [
+          2560,
+          1600
+        ],
+        "nativeTransparency": true
+      }
     },
     "2": {
       "thumbnail": "assets/floor-layouts/02/thumb.webp",
       "full": "assets/floor-layouts/02/full.webp",
       "label": "2. emeleti szintrajz · A, B és C épület",
       "sourcePage": 5,
-      "floorCode": "02"
+      "floorCode": "02",
+      "source": {
+        "filename": "02-plan-art.png",
+        "sha256": "57e2245c0db7565386a7b017273258d16016e400168fa467a7bfec1f2923d2ea",
+        "revision": "2026-10-08-customer-book-r02",
+        "kind": "native-transparent-plan-art",
+        "dimensions": [
+          2560,
+          1600
+        ],
+        "nativeTransparency": true
+      }
     },
     "3": {
       "thumbnail": "assets/floor-layouts/03/thumb.webp",
       "full": "assets/floor-layouts/03/full.webp",
       "label": "3. emeleti szintrajz · A, B és C épület",
       "sourcePage": 6,
-      "floorCode": "03"
+      "floorCode": "03",
+      "source": {
+        "filename": "03-plan-art.png",
+        "sha256": "cdf4f1897710ab2664de4213c01caa6f50c4a2d4b954d29e57f1201c7823c68f",
+        "revision": "2026-10-08-customer-book-r02",
+        "kind": "native-transparent-plan-art",
+        "dimensions": [
+          2560,
+          1600
+        ],
+        "nativeTransparency": true
+      }
     }
   },
   "apartments": {
@@ -1898,21 +1942,26 @@
     },
     {
       "path": "assets/floor-layouts/00/full.webp",
-      "bytes": 654802,
-      "sha256": "bc402248d69b0f4e95fc0eeefda325cf671b609006619d6f9c10633b14dbd37d",
+      "bytes": 253540,
+      "sha256": "e71f8f9148581b5ad5bb283ae6b3b9b6b0d516ebab9ee463ec94d189096290f1",
       "role": "floor-layout-full",
       "floor": 0,
       "dimensions": [
-        3600,
-        2250
+        2560,
+        1600
       ],
       "lossless": true,
+      "hasAlpha": true,
+      "sourceFile": "00-plan-art.png",
+      "sourceSha256": "3e184927087fccd92a9cf81a31a189054a45bb74087398373c8e67da32330965",
+      "sourceRevision": "2026-10-08-customer-book-r02",
+      "sourceKind": "native-transparent-plan-art",
       "sourceBookPage": 3
     },
     {
       "path": "assets/floor-layouts/00/thumb.webp",
-      "bytes": 36204,
-      "sha256": "b79264d88b3a03736497155fef58b4ef6ad4e0c10ec8eb29a62f0497b45d5c6c",
+      "bytes": 32230,
+      "sha256": "a648257d566e08229869cc97abae4942bb494fe89561811b1057b0ed6e7f54de",
       "role": "floor-layout-thumbnail",
       "floor": 0,
       "dimensions": [
@@ -1920,25 +1969,35 @@
         225
       ],
       "lossless": true,
+      "hasAlpha": true,
+      "sourceFile": "00-plan-art.png",
+      "sourceSha256": "3e184927087fccd92a9cf81a31a189054a45bb74087398373c8e67da32330965",
+      "sourceRevision": "2026-10-08-customer-book-r02",
+      "sourceKind": "native-transparent-plan-art",
       "sourceBookPage": 3
     },
     {
       "path": "assets/floor-layouts/01/full.webp",
-      "bytes": 719378,
-      "sha256": "485528db4b089232875e4ab58752a891dacb484adb5e1571b6d53dbc2bff2162",
+      "bytes": 339702,
+      "sha256": "61dc4b603c90f3a12da7fd63477b8d29f9e20fd34b61aca52d78756de040aff7",
       "role": "floor-layout-full",
       "floor": 1,
       "dimensions": [
-        3600,
-        2250
+        2560,
+        1600
       ],
       "lossless": true,
+      "hasAlpha": true,
+      "sourceFile": "01-plan-art.png",
+      "sourceSha256": "1beb68541d93374f14ac1a157b2020c8816c70e86bdace19658be358db588503",
+      "sourceRevision": "2026-10-08-customer-book-r02",
+      "sourceKind": "native-transparent-plan-art",
       "sourceBookPage": 4
     },
     {
       "path": "assets/floor-layouts/01/thumb.webp",
-      "bytes": 37142,
-      "sha256": "202fc44d46d9097390ca281085a3d385b8c6611c6b3153170359022e09ea7314",
+      "bytes": 32134,
+      "sha256": "e744f0d7ee51c8441bce571e5c09a58bab1a599744b6c162f915f63491a72aca",
       "role": "floor-layout-thumbnail",
       "floor": 1,
       "dimensions": [
@@ -1946,25 +2005,35 @@
         225
       ],
       "lossless": true,
+      "hasAlpha": true,
+      "sourceFile": "01-plan-art.png",
+      "sourceSha256": "1beb68541d93374f14ac1a157b2020c8816c70e86bdace19658be358db588503",
+      "sourceRevision": "2026-10-08-customer-book-r02",
+      "sourceKind": "native-transparent-plan-art",
       "sourceBookPage": 4
     },
     {
       "path": "assets/floor-layouts/02/full.webp",
-      "bytes": 718118,
-      "sha256": "d8a509228978eb28cca2634541c9ad1385592fe223e64bad89c553108c7f24fa",
+      "bytes": 339400,
+      "sha256": "c0324d07bc56e3de33b1331aede7ccc1d8d4c53c0fd5b1fc3bc62f7506b5fbc0",
       "role": "floor-layout-full",
       "floor": 2,
       "dimensions": [
-        3600,
-        2250
+        2560,
+        1600
       ],
       "lossless": true,
+      "hasAlpha": true,
+      "sourceFile": "02-plan-art.png",
+      "sourceSha256": "57e2245c0db7565386a7b017273258d16016e400168fa467a7bfec1f2923d2ea",
+      "sourceRevision": "2026-10-08-customer-book-r02",
+      "sourceKind": "native-transparent-plan-art",
       "sourceBookPage": 5
     },
     {
       "path": "assets/floor-layouts/02/thumb.webp",
-      "bytes": 37022,
-      "sha256": "1a261fe5c69dac9c8c2d497ce1e368e32099b5cd7faf27612f7de693912a22a8",
+      "bytes": 31070,
+      "sha256": "1c53f259996f0fce91c8b660b3205d5edad74853e7ab9f7bb6570ba797dca95c",
       "role": "floor-layout-thumbnail",
       "floor": 2,
       "dimensions": [
@@ -1972,25 +2041,35 @@
         225
       ],
       "lossless": true,
+      "hasAlpha": true,
+      "sourceFile": "02-plan-art.png",
+      "sourceSha256": "57e2245c0db7565386a7b017273258d16016e400168fa467a7bfec1f2923d2ea",
+      "sourceRevision": "2026-10-08-customer-book-r02",
+      "sourceKind": "native-transparent-plan-art",
       "sourceBookPage": 5
     },
     {
       "path": "assets/floor-layouts/03/full.webp",
-      "bytes": 704522,
-      "sha256": "1d49571ca1c721221f68a97a6458522025ec9c8df3ced802471363760ba9e423",
+      "bytes": 354102,
+      "sha256": "e3da4528f3080102e8e20792cedd4ab24626d5593ba43378f2434752c0fcf4f2",
       "role": "floor-layout-full",
       "floor": 3,
       "dimensions": [
-        3600,
-        2250
+        2560,
+        1600
       ],
       "lossless": true,
+      "hasAlpha": true,
+      "sourceFile": "03-plan-art.png",
+      "sourceSha256": "cdf4f1897710ab2664de4213c01caa6f50c4a2d4b954d29e57f1201c7823c68f",
+      "sourceRevision": "2026-10-08-customer-book-r02",
+      "sourceKind": "native-transparent-plan-art",
       "sourceBookPage": 6
     },
     {
       "path": "assets/floor-layouts/03/thumb.webp",
-      "bytes": 34438,
-      "sha256": "e355d21e7dca245abcda9ced989c01a8e9947e0ccfd500c4c620e5e44b48d48b",
+      "bytes": 28700,
+      "sha256": "8a3a06d628c83cd01ae04f7e38641f01cfdfaa15e1cfa2688221db7655e3ec9d",
       "role": "floor-layout-thumbnail",
       "floor": 3,
       "dimensions": [
@@ -1998,6 +2077,11 @@
         225
       ],
       "lossless": true,
+      "hasAlpha": true,
+      "sourceFile": "03-plan-art.png",
+      "sourceSha256": "cdf4f1897710ab2664de4213c01caa6f50c4a2d4b954d29e57f1201c7823c68f",
+      "sourceRevision": "2026-10-08-customer-book-r02",
+      "sourceKind": "native-transparent-plan-art",
       "sourceBookPage": 6
     },
     {
@@ -2363,7 +2447,7 @@
   ],
   "totals": {
     "files": 48,
-    "bytes": 51005577,
+    "bytes": 49474829,
     "apartments": 69,
     "types": 10,
     "floorLayouts": 4

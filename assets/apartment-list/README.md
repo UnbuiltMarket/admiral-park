@@ -13,7 +13,7 @@ media-manifest.json       Exact apartment-to-type mapping and file hashes
 
 Plan images are type illustrations. They do not establish the precise mirrored arrangement or terrace variant of every apartment. The official type workbook maps all 69 apartment IDs; building letters and type letters remain separate. Each floor layout contains buildings A, B and C together.
 
-Original PNG copies retain their source bytes. Full WebP plan images preserve their decoded pixels and alpha, while thumbnails are separate smaller files. Floor layouts are rendered from the latest supplied customer book (r05) at 3600 × 2250. The ten one-page PDFs preserve the matching type pages from that book. The corrected C entry image is used.
+Original PNG copies retain their source bytes. Full WebP plan images preserve their decoded pixels and alpha, while thumbnails are separate smaller files. Floor layouts use the supplied native transparent plan artwork at 2560 × 1600, preserving the full canvas, apartment labels and linework used in the latest customer book. The ten one-page PDFs preserve the matching type pages from the current customer book (r05). The corrected C entry image is used.
 
 The manifest uses application-relative `assets/` paths. When resolving against this directory, remove that prefix: `assets/floorplans/types/B/full.webp` becomes `floorplans/types/B/full.webp`. The Framer component's Asset folder control performs this resolution.
 
