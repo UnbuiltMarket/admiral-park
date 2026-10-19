@@ -76,11 +76,17 @@ async function fixture(options={}){
   window.releaseDecodeGates=()=>{window.decodeGateOpen=true;waiting.splice(0).forEach(resolve=>resolve());};
   const nativeWaiting=[];window.nativeDecodeGateOpen=!gateFirstNativeDecodes;
   window.releaseNativeDecodeGates=()=>{window.nativeDecodeGateOpen=true;nativeWaiting.splice(0).forEach(resolve=>resolve());};
+  const sequenceWaiting=[];window.sequenceDecodeGate=null;window.sequenceDecodeGateWaiters=0;
+  window.gateSequenceDecodes=sequence=>{window.sequenceDecodeGate=sequence;};
+  window.releaseSequenceDecodeGates=()=>{window.sequenceDecodeGate=null;sequenceWaiting.splice(0).forEach(resolve=>resolve());};
   const nativeCreateImageBitmap=window.createImageBitmap.bind(window);
   window.createImageBitmap=async(...args)=>{
    const call=++window.nativeBitmapCalls;window.nativeBitmapActive++;window.nativeBitmapPeak=Math.max(window.nativeBitmapPeak,window.nativeBitmapActive);
    const record={index:orbitBlobs.get(args[0]),...sequenceBlobs.get(args[0]),width:args[1]?.resizeWidth,started:performance.now(),created:false,returned:false,closed:false};window.bitmapRecords.push(record);
    try{
+    if(record.sequence&&(window.sequenceDecodeGate==='all'||window.sequenceDecodeGate===record.sequence)){
+     window.sequenceDecodeGateWaiters++;await new Promise(resolve=>sequenceWaiting.push(resolve));window.sequenceDecodeGateWaiters--;
+    }
     if(call<=gateFirstNativeDecodes&&!window.nativeDecodeGateOpen)await new Promise(resolve=>nativeWaiting.push(resolve));
     const bitmap=await nativeCreateImageBitmap(...args);bitmapRecords.set(bitmap,record);window.bitmapCreated++;record.created=true;record.nativeReadyAt=performance.now();
     if(Number.isFinite(record.index)){window.orbitLive++;window.orbitLiveMax=Math.max(window.orbitLiveMax,window.orbitLive);}
@@ -115,7 +121,7 @@ async function fixture(options={}){
  await page.waitForSelector('[data-admiral-homepage]');
  await page.waitForFunction(()=>[...document.images].some(image=>image.naturalWidth>0));
  await page.mouse.move(450,500);
- return {context,page,errors,heroRequests,connectionRequests,orbitRequests,floorplanRequests,restoreOrbit(){failIndex=undefined;corruptIndex=undefined;},restoreConnection(){failConnection=undefined;corruptConnection=undefined;},async close(){await page.evaluate(()=>{window.releaseDecodeGates?.();window.releaseNativeDecodeGates?.();}).catch(()=>{});assert.deepEqual(errors,[]);await context.close();}};
+ return {context,page,errors,heroRequests,connectionRequests,orbitRequests,floorplanRequests,restoreOrbit(){failIndex=undefined;corruptIndex=undefined;},restoreConnection(){failConnection=undefined;corruptConnection=undefined;},async close(){await page.evaluate(()=>{window.releaseDecodeGates?.();window.releaseNativeDecodeGates?.();window.releaseSequenceDecodeGates?.();}).catch(()=>{});assert.deepEqual(errors,[]);await context.close();}};
 }
 const orbitSelector='[data-admiral-orbit]';
 async function orbitData(page){return page.locator(orbitSelector).evaluate(element=>({...element.dataset}));}
@@ -136,6 +142,30 @@ async function waitDetails(page,visible=true){await page.locator(detailsSelector
 async function sendApartment(page,detail){await page.locator('[data-admiral-homepage]').evaluate((root,detail)=>root.dispatchEvent(new CustomEvent('admiral:apartment-hover',{detail})),detail);}
 async function apartmentField(page,name){return page.locator(`[data-apartment-field="${name}"]`).innerText();}
 async function componentScreenshot(page,name){const style=await page.addStyleTag({content:'#navbar{visibility:hidden!important}'});try{await page.screenshot({path:fileURLToPath(new URL(name,out))});}finally{await style.evaluate(element=>element.remove());}}
+
+// Sample the actual painted surface, not only the existence of an image/canvas element.
+// An opaque old canvas is essential while a new sequence's first decode is still pending.
+async function captureSequencePresentation(page){
+ await page.evaluate(()=>{
+  if(window.presentationRaf)cancelAnimationFrame(window.presentationRaf);
+  window.presentationSamples=[];
+  window.readSequencePresentation=()=>{
+   const root=document.querySelector('[data-admiral-homepage]'),canvas=root.querySelector('[data-admiral-sequence] canvas'),context=canvas.getContext('2d'),pixels=[];
+   for(const y of [.2,.5,.8])for(const x of [.2,.5,.8])pixels.push(...context.getImageData(Math.min(canvas.width-1,Math.floor(canvas.width*x)),Math.min(canvas.height-1,Math.floor(canvas.height*y)),1,1).data);
+   return {stage:root.dataset.homepageStage,sequence:root.dataset.activeSequence,opacity:Number(getComputedStyle(canvas).opacity),width:canvas.width,height:canvas.height,pixels};
+  };
+  const sample=()=>{window.presentationSamples.push(window.readSequencePresentation());window.presentationRaf=requestAnimationFrame(sample);};sample();
+ });
+}
+function assertSamePaint(samples,baseline,message){
+ assert.ok(samples.length>=5,'Several compositor frames are checked during the delayed decode');
+ assert.ok(new Set(Array.from({length:9},(_,i)=>baseline.pixels.slice(i*4,i*4+3).join(','))).size>1,'Baseline contains real image detail, not just the canvas background');
+ for(const sample of samples){
+  assert.equal(sample.opacity,1,message+' keeps the painted canvas opaque');
+  assert.equal(sample.width,baseline.width,message+' preserves the canvas width');assert.equal(sample.height,baseline.height,message+' preserves the canvas height');
+  assert.deepEqual(sample.pixels,baseline.pixels,message+' preserves its exact painted image');
+ }
+}
 
 
 const storySelector=view=>`[data-orbit-story="${view}"]`;
@@ -220,6 +250,48 @@ try{
    }
    await f.close();
   }
+ });
+ await pass('handoff presentation keeps the SEQ_01 image visible until SEQ_02 has decoded and drawn',async()=>{
+  for(const phone of [false,true]){
+   const f=await fixture({context:phone?{viewport:{width:390,height:844},isMobile:true,hasTouch:true,deviceScaleFactor:2}:{},props:{duration:.6,connectionDuration:.6,maxSpeed:1}}),{page}=f;
+   try{
+    await coveredClick(page,'Skip approach');await waitStage(page,'building');await page.waitForFunction(()=>document.querySelector('[data-admiral-sequence] canvas').style.opacity==='1');
+    await captureSequencePresentation(page);const before=await page.evaluate(()=>window.readSequencePresentation());
+    await page.evaluate(()=>{window.gateSequenceDecodes('all');window.presentationSamples=[];window.handoffStarted=performance.now();});
+    await coveredClick(page,'Explore building');await waitStage(page,'connection');await page.waitForFunction(()=>window.sequenceDecodeGateWaiters>0);await page.waitForTimeout(350);
+    const pending=await page.evaluate(()=>window.presentationSamples.filter(sample=>sample.stage==='connection'));
+    assertSamePaint(pending,before,(phone?'Phone':'Desktop')+' SEQ_01 → SEQ_02');
+    assert.equal(await page.evaluate(()=>window.sequenceDraws.some(draw=>draw.time>=window.handoffStarted)),false,'The pending decoder has not supplied a replacement image yet');
+    await page.evaluate(()=>window.releaseSequenceDecodeGates());await waitOrbit(page);
+    assert.ok(await page.evaluate(()=>window.sequenceDraws.some(draw=>draw.sequence==='SEQ_02'&&draw.index===0&&draw.time>=window.handoffStarted)),'The new sequence paints its first connector image after the gate opens');
+   }finally{await f.close();}
+  }
+ });
+ await pass('handoff presentation keeps the connector endpoint visible while reverse return decodes SEQ_01',async()=>{
+  const f=await fixture({props:{connectionDuration:2,maxSpeed:1}}),{page}=f;
+  try{
+   await coveredClick(page,'Skip approach');await waitStage(page,'building');await captureSequencePresentation(page);const building=await page.evaluate(()=>window.readSequencePresentation());
+   await coveredClick(page,'Explore building');await waitConnectionFrame(page,10,40);
+   await page.evaluate(()=>{window.gateSequenceDecodes('SEQ_01');window.presentationSamples=[];window.reverseStarted=performance.now();});
+   await freshWheel(page,-120);await waitStage(page,'building');await page.waitForFunction(()=>window.sequenceDecodeGateWaiters>0);await page.waitForTimeout(350);
+   const pending=await page.evaluate(()=>window.presentationSamples.filter(sample=>sample.stage==='building'));
+   assert.ok(pending.length>0);assert.ok(pending[0].pixels.every((value,index)=>Math.abs(value-building.pixels[index])<=2),'The connector returned to the same building endpoint (independent AVIF decodes can round a channel by one)');
+   assertSamePaint(pending,pending[0],'Reverse SEQ_02 → SEQ_01');
+   await page.evaluate(()=>window.releaseSequenceDecodeGates());
+   await page.waitForFunction(()=>window.sequenceDraws.some(draw=>draw.sequence==='SEQ_01'&&draw.index===64&&draw.activeSequence==='SEQ_01'&&draw.time>=window.reverseStarted));
+   await freshWheel(page,-120);await waitStage(page,'opening');
+   assert.equal(await page.locator('[data-admiral-sequence]').getAttribute('data-frame'),'0','The restored engine can still reverse all the way to the opening');
+  }finally{await f.close();}
+ });
+ await pass('handoff presentation Overview resets to the opening poster instead of retaining a stale connector frame',async()=>{
+  const f=await fixture({props:{connectionDuration:3,maxSpeed:1}}),{page}=f;
+  try{
+   await coveredClick(page,'Skip approach');await waitStage(page,'building');await coveredClick(page,'Explore building');await waitConnectionFrame(page,10,40);
+   await page.evaluate(()=>window.gateSequenceDecodes('SEQ_01'));await coveredClick(page,'Overview');await waitStage(page,'opening');await page.waitForTimeout(150);
+   const presentation=await page.locator('[data-admiral-sequence]').evaluate(root=>{const poster=root.querySelector('img'),canvas=root.querySelector('canvas');return {canvasOpacity:Number(getComputedStyle(canvas).opacity),posterOpacity:Number(getComputedStyle(poster).opacity),posterSource:poster.src,posterReady:poster.complete&&poster.naturalWidth>0};});
+   assert.equal(presentation.canvasOpacity,0,'An explicit Overview reset hides the stale connector canvas');assert.equal(presentation.posterOpacity,1);assert.match(presentation.posterSource,/raw%20sequence00\.avif/);assert.equal(presentation.posterReady,true,'Overview shows the actual opening poster');
+   await page.evaluate(()=>window.releaseSequenceDecodeGates());await page.waitForTimeout(150);assert.equal(await page.locator('[data-admiral-homepage]').getAttribute('data-homepage-stage'),'opening');
+  }finally{await f.close();}
  });
  await pass('SEQ_02 full journey waits for a fresh scroll draws the connector endpoint and drains wheel momentum',async()=>{
   const f=await fixture({useDefaultOrbitStart:true,externalOverlay:true,props:{duration:.6,connectionDuration:.8,maxSpeed:1}}),{page}=f;

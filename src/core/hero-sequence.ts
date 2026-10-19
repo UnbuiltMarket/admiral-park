@@ -8,6 +8,8 @@ export interface SequenceOptions {
     duration?: number; maxSpeed?: number; momentum?: number; triggerDistance?: number;
     preload?: boolean; holdScroll?: boolean; cacheFrames?: number; decodeWidth?: number;
     startAtEnd?: boolean;
+    /** Keep the previous sequence's painted endpoint until this sequence paints successfully. */
+    preservePresentation?: boolean;
     focalX?: number; focalY?: number; timeoutMs?: number;
     onUpdate?: (snapshot: SequenceSnapshot) => void;
     inputFilter?: (event: Event) => boolean;
@@ -134,10 +136,13 @@ export function createHeroSequence(options: SequenceOptions) {
     const connection = (navigator as Navigator & { connection?: { saveData?: boolean; effectiveType?: string } }).connection;
     const abort = new AbortController(), signal = abort.signal;
     const context = canvas.getContext("2d", { alpha: false });
+    const preservePresentation = options.preservePresentation === true && canvas.style.opacity === "1" && canvas.width > 1 && canvas.height > 1;
     const initialFrame = options.startAtEnd ? last : 0;
     let disposed = false, state: SequenceState = options.startAtEnd ? "arrival" : "opening", displayed = initialFrame, clock = options.startAtEnd ? totalDuration : 0;
     let displayedProgress = options.startAtEnd ? 1 : 0;
     let rendered = { index: initialFrame, next: initialFrame, mix: 0 };
+    // An opaque canvas may belong to the preceding sequence, so this controller must still paint once.
+    let hasPainted = false;
     let direction = 1, velocity = 0, boost = 0, held = false, playing = false;
     let active = false, raf = 0, previousTime = 0, waitingSince = 0;
     let holdY = 0, holdX = 0, holdTimer: ReturnType<typeof setTimeout> | undefined;
@@ -184,7 +189,7 @@ export function createHeroSequence(options: SequenceOptions) {
     function draw(index: number, force = false, nextIndex = index, mix = 0) {
         const bitmap = frames.get(index), next = frames.get(nextIndex);
         if (!context || !bitmap || !next) return false;
-        if (index === rendered.index && nextIndex === rendered.next && mix === rendered.mix && !force && canvas.style.opacity === "1") return true;
+        if (hasPainted && index === rendered.index && nextIndex === rendered.next && mix === rendered.mix && !force && canvas.style.opacity === "1") return true;
         const box = root.getBoundingClientRect();
         if (box.width <= 0 || box.height <= 0) return false;
         const boxRatio = box.width / box.height;
@@ -209,6 +214,7 @@ export function createHeroSequence(options: SequenceOptions) {
         paint(bitmap);
         if (nextIndex !== index) { context.globalAlpha = mix; paint(next); context.globalAlpha = 1; }
         rendered = { index, next: nextIndex, mix };
+        hasPainted = true;
         displayed = mix === 1 ? nextIndex : index;
         displayedProgress = (index + (nextIndex - index) * mix) / Math.max(1, last);
         canvas.style.opacity = "1"; poster.style.opacity = "0";
@@ -232,7 +238,7 @@ export function createHeroSequence(options: SequenceOptions) {
     }
     function wake() {
         if (disposed || raf || document.hidden) return;
-        if (playing || (motion.matches && displayed !== last) || (active && canvas.style.opacity !== "1")) raf = requestAnimationFrame(tick);
+        if (playing || (motion.matches && displayed !== last) || (active && (!hasPainted || canvas.style.opacity !== "1"))) raf = requestAnimationFrame(tick);
     }
     function finish() {
         playing = false; velocity = 0; boost = 0; waitingSince = 0;
@@ -252,7 +258,7 @@ export function createHeroSequence(options: SequenceOptions) {
             if (draw(last)) { state = "reduced"; publish(); }
             return;
         }
-        if (!playing) { if (active && canvas.style.opacity !== "1") redraw(); return; }
+        if (!playing) { if (active && (!hasPainted || canvas.style.opacity !== "1")) redraw(); return; }
         const elapsed = previousTime ? (now - previousTime) / 1000 : 1 / 60;
         const dt = Math.min(.05, elapsed);
         previousTime = now;
@@ -275,7 +281,7 @@ export function createHeroSequence(options: SequenceOptions) {
             if (state !== "moving") { state = "moving"; publish(); }
             if ((direction > 0 && clock >= totalDuration && displayed === last) || (direction < 0 && clock <= 0 && displayed === 0)) { finish(); return; }
         } else {
-            if (canvas.style.opacity !== "1") draw(displayed);
+            if (!hasPainted || canvas.style.opacity !== "1") draw(displayed);
             if (!waitingSince) waitingSince = now;
             if (now - waitingSince > 7000) { fail("frame-timeout"); return; }
             if (state !== "loading") { state = "loading"; publish(); }
@@ -402,7 +408,9 @@ export function createHeroSequence(options: SequenceOptions) {
     };
     poster.addEventListener("load", loadedPoster, { signal });
     if (poster.complete) loadedPoster();
-    canvas.style.opacity = "0"; poster.style.opacity = "1";
+    // A newly assigned poster can still be undecoded. Leave the shared canvas visible across
+    // matching sequence endpoints; draw() replaces it atomically when the next image is ready.
+    if (!preservePresentation) { canvas.style.opacity = "0"; poster.style.opacity = "1"; }
     // A restored endpoint is parked, not skipped: reverse input stays enabled and the opening copy never flashes.
     if (options.startAtEnd) { active = true; frames.request(last, 1, false, true); wake(); }
     publish();

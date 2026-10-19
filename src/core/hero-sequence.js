@@ -166,10 +166,13 @@ export function createHeroSequence(options) {
     const connection = navigator.connection;
     const abort = new AbortController(), signal = abort.signal;
     const context = canvas.getContext("2d", { alpha: false });
+    const preservePresentation = options.preservePresentation === true && canvas.style.opacity === "1" && canvas.width > 1 && canvas.height > 1;
     const initialFrame = options.startAtEnd ? last : 0;
     let disposed = false, state = options.startAtEnd ? "arrival" : "opening", displayed = initialFrame, clock = options.startAtEnd ? totalDuration : 0;
     let displayedProgress = options.startAtEnd ? 1 : 0;
     let rendered = { index: initialFrame, next: initialFrame, mix: 0 };
+    // An opaque canvas may belong to the preceding sequence, so this controller must still paint once.
+    let hasPainted = false;
     let direction = 1, velocity = 0, boost = 0, held = false, playing = false;
     let active = false, raf = 0, previousTime = 0, waitingSince = 0;
     let holdY = 0, holdX = 0, holdTimer;
@@ -226,7 +229,7 @@ export function createHeroSequence(options) {
         const bitmap = frames.get(index), next = frames.get(nextIndex);
         if (!context || !bitmap || !next)
             return false;
-        if (index === rendered.index && nextIndex === rendered.next && mix === rendered.mix && !force && canvas.style.opacity === "1")
+        if (hasPainted && index === rendered.index && nextIndex === rendered.next && mix === rendered.mix && !force && canvas.style.opacity === "1")
             return true;
         const box = root.getBoundingClientRect();
         if (box.width <= 0 || box.height <= 0)
@@ -263,6 +266,7 @@ export function createHeroSequence(options) {
             context.globalAlpha = 1;
         }
         rendered = { index, next: nextIndex, mix };
+        hasPainted = true;
         displayed = mix === 1 ? nextIndex : index;
         displayedProgress = (index + (nextIndex - index) * mix) / Math.max(1, last);
         canvas.style.opacity = "1";
@@ -295,7 +299,7 @@ export function createHeroSequence(options) {
     function wake() {
         if (disposed || raf || document.hidden)
             return;
-        if (playing || (motion.matches && displayed !== last) || (active && canvas.style.opacity !== "1"))
+        if (playing || (motion.matches && displayed !== last) || (active && (!hasPainted || canvas.style.opacity !== "1")))
             raf = requestAnimationFrame(tick);
     }
     function finish() {
@@ -335,7 +339,7 @@ export function createHeroSequence(options) {
             return;
         }
         if (!playing) {
-            if (active && canvas.style.opacity !== "1")
+            if (active && (!hasPainted || canvas.style.opacity !== "1"))
                 redraw();
             return;
         }
@@ -375,7 +379,7 @@ export function createHeroSequence(options) {
             }
         }
         else {
-            if (canvas.style.opacity !== "1")
+            if (!hasPainted || canvas.style.opacity !== "1")
                 draw(displayed);
             if (!waitingSince)
                 waitingSince = now;
@@ -598,8 +602,12 @@ export function createHeroSequence(options) {
     poster.addEventListener("load", loadedPoster, { signal });
     if (poster.complete)
         loadedPoster();
-    canvas.style.opacity = "0";
-    poster.style.opacity = "1";
+    // A newly assigned poster can still be undecoded. Leave the shared canvas visible across
+    // matching sequence endpoints; draw() replaces it atomically when the next image is ready.
+    if (!preservePresentation) {
+        canvas.style.opacity = "0";
+        poster.style.opacity = "1";
+    }
     // A restored endpoint is parked, not skipped: reverse input stays enabled and the opening copy never flashes.
     if (options.startAtEnd) {
         active = true;

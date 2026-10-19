@@ -198,7 +198,7 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
             const generation = ++heroGeneration
             hero = createHeroSequence({
                 root: heroRoot!, canvas: heroCanvas!, poster: poster!, urls: heroUrls, duration, maxSpeed, momentum, triggerDistance, startAtEnd: atEnd,
-                holdScroll: true, preload: true, cacheFrames: phone ? 10 : 14, decodeWidth: phone ? 1280 : 1920, focalX, focalY,
+                preservePresentation: atEnd, holdScroll: true, preload: true, cacheFrames: phone ? 10 : 14, decodeWidth: phone ? 1280 : 1920, focalX, focalY,
                 inputFilter: event => !homepageBlocked(event.target),
                 onUpdate(snapshot) {
                     if (disposed || generation !== heroGeneration) return
@@ -233,7 +233,7 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
             let completed = false
             hero = createHeroSequence({
                 root: heroRoot!, canvas: heroCanvas!, poster: poster!, urls: connectionPlaybackUrls,
-                duration: connectionDuration, maxSpeed, momentum, triggerDistance,
+                duration: connectionDuration, maxSpeed, momentum, triggerDistance, preservePresentation: true,
                 holdScroll: true, preload: true, cacheFrames: phone ? 10 : 14, decodeWidth: phone ? 1280 : 1920, focalX, focalY,
                 inputFilter: event => !homepageBlocked(event.target),
                 onUpdate(snapshot) {
