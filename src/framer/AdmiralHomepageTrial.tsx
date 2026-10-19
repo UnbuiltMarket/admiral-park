@@ -4,20 +4,22 @@ import type { ComponentType } from "react"
 import { addPropertyControls, ControlType, useIsStaticRenderer } from "framer"
 
 const HOMEPAGE_HERO_NAMES: string[] = ["raw sequence00.avif","raw sequence01.avif","raw sequence02.avif","raw sequence03.avif","raw sequence04.avif","raw sequence05.avif","raw sequence06.avif","raw sequence07.avif","raw sequence08.avif","raw sequence09.avif","raw sequence10.avif","raw sequence11.avif","raw sequence12.avif","raw sequence13.avif","raw sequence14.avif","raw sequence15.avif","raw sequence16.avif","raw sequence17.avif","raw sequence18.avif","raw sequence19.avif","raw sequence20.avif","raw sequence21.avif","raw sequence22.avif","raw sequence23.avif","raw sequence24.avif","raw sequence25.avif","raw sequence26.avif","raw sequence27.avif","raw sequence28.avif","raw sequence29.avif","raw sequence30.avif","raw sequence31.avif","raw sequence32.avif","raw sequence33.avif","raw sequence34.avif","raw sequence35.avif","raw sequence36.avif","raw sequence37.avif","raw sequence38.avif","raw sequence39.avif","raw sequence40.avif","raw sequence41.avif","raw sequence42.avif","raw sequence43.avif","raw sequence44.avif","raw sequence45.avif","raw sequence46.avif","raw sequence47.avif","raw sequence48.avif","raw sequence49.avif","raw sequence50.avif","raw sequence51.avif","raw sequence52.avif","raw sequence53.avif","raw sequence54.avif","raw sequence55.avif","raw sequence56.avif","raw sequence57.avif","raw sequence58.avif","raw sequence59.avif","raw sequence60.avif","raw sequence61.avif","raw sequence62.avif","raw sequence63.avif","raw sequence64.avif"]
+const HOMEPAGE_CONNECTION_NAMES: string[] = ["02 sequence00 copy.avif","02 sequence01 copy.avif","02 sequence02 copy.avif","02 sequence03 copy.avif","02 sequence04 copy.avif","02 sequence05 copy.avif","02 sequence06 copy.avif","02 sequence07 copy.avif","02 sequence08 copy.avif","02 sequence09 copy.avif","02 sequence10 copy.avif","02 sequence11 copy.avif","02 sequence12 copy.avif","02 sequence13 copy.avif","02 sequence14 copy.avif","02 sequence15 copy.avif","02 sequence16 copy.avif","02 sequence17 copy.avif","02 sequence18 copy.avif","02 sequence19 copy.avif","02 sequence20 copy.avif","02 sequence21 copy.avif","02 sequence22 copy.avif","02 sequence23 copy.avif","02 sequence24 copy.avif","02 sequence25 copy.avif","02 sequence26 copy.avif","02 sequence27 copy.avif","02 sequence28 copy.avif","02 sequence29 copy.avif","02 sequence30 copy.avif","02 sequence31 copy.avif","02 sequence32 copy.avif","02 sequence33 copy.avif","02 sequence34 copy.avif","02 sequence35 copy.avif","02 sequence36 copy.avif","02 sequence37 copy.avif","02 sequence38 copy.avif","02 sequence39 copy.avif","02 sequence40 copy.avif","02 sequence41 copy.avif","02 sequence42 copy.avif","02 sequence43 copy.avif","02 sequence44 copy.avif","02 sequence45 copy.avif","02 sequence46 copy.avif","02 sequence47 copy.avif","02 sequence48 copy.avif","02 sequence49 copy.avif","02 sequence50 copy.avif","02 sequence51 copy.avif","02 sequence52 copy.avif","02 sequence53 copy.avif","02 sequence54 copy.avif","02 sequence55 copy.avif","02 sequence56 copy.avif","02 sequence57 copy.avif","02 sequence58 copy.avif","02 sequence59 copy.avif","02 sequence60 copy.avif","02 sequence61 copy.avif","02 sequence62 copy.avif","02 sequence63 copy.avif","02 sequence64 copy.avif","02 sequence65 copy.avif","02 sequence66 copy.avif","02 sequence67 copy.avif","02 sequence68 copy.avif","02 sequence69 copy.avif","02 sequence70 copy.avif","02 sequence71 copy.avif","02 sequence72 copy.avif"]
 const HOMEPAGE_ORBIT_NAMES: string[] = ["adjusted sequence0000 copy.avif","adjusted sequence0001 copy.avif","adjusted sequence0002 copy.avif","adjusted sequence0003 copy.avif","adjusted sequence0004 copy.avif","adjusted sequence0005 copy.avif","adjusted sequence0006 copy.avif","adjusted sequence0007 copy.avif","adjusted sequence0008 copy.avif","adjusted sequence0009 copy.avif","adjusted sequence0010 copy.avif","adjusted sequence0011 copy.avif","adjusted sequence0012 copy.avif","adjusted sequence0013 copy.avif","adjusted sequence0014 copy.avif","adjusted sequence0015 copy.avif","adjusted sequence0016 copy.avif","adjusted sequence0017 copy.avif","adjusted sequence0018 copy.avif","adjusted sequence0019 copy.avif","adjusted sequence0020 copy.avif","adjusted sequence0021 copy.avif","adjusted sequence0022 copy.avif","adjusted sequence0023 copy.avif","adjusted sequence0024 copy.avif","adjusted sequence0025 copy.avif","adjusted sequence0026 copy.avif","adjusted sequence0027 copy.avif","adjusted sequence0028 copy.avif","adjusted sequence0029 copy.avif","adjusted sequence0030 copy.avif","adjusted sequence0031 copy.avif","adjusted sequence0032 copy.avif","adjusted sequence0033 copy.avif","adjusted sequence0034 copy.avif","adjusted sequence0035 copy.avif","adjusted sequence0036 copy.avif","adjusted sequence0037 copy.avif","adjusted sequence0038 copy.avif","adjusted sequence0039 copy.avif","adjusted sequence0040 copy.avif","adjusted sequence0041 copy.avif","adjusted sequence0042 copy.avif","adjusted sequence0043 copy.avif","adjusted sequence0044 copy.avif","adjusted sequence0045 copy.avif","adjusted sequence0046 copy.avif","adjusted sequence0047 copy.avif","adjusted sequence0048 copy.avif","adjusted sequence0049 copy.avif","adjusted sequence0050 copy.avif","adjusted sequence0051 copy.avif","adjusted sequence0052 copy.avif","adjusted sequence0053 copy.avif","adjusted sequence0054 copy.avif","adjusted sequence0055 copy.avif","adjusted sequence0056 copy.avif","adjusted sequence0057 copy.avif","adjusted sequence0058 copy.avif","adjusted sequence0059 copy.avif","adjusted sequence0060 copy.avif","adjusted sequence0061 copy.avif","adjusted sequence0062 copy.avif","adjusted sequence0063 copy.avif","adjusted sequence0064 copy.avif","adjusted sequence0065 copy.avif","adjusted sequence0066 copy.avif","adjusted sequence0067 copy.avif","adjusted sequence0068 copy.avif","adjusted sequence0069 copy.avif","adjusted sequence0070 copy.avif","adjusted sequence0071 copy.avif","adjusted sequence0072 copy.avif","adjusted sequence0073 copy.avif","adjusted sequence0074 copy.avif","adjusted sequence0075 copy.avif","adjusted sequence0076 copy.avif","adjusted sequence0077 copy.avif","adjusted sequence0078 copy.avif","adjusted sequence0079 copy.avif","adjusted sequence0080 copy.avif","adjusted sequence0081 copy.avif","adjusted sequence0082 copy.avif","adjusted sequence0083 copy.avif","adjusted sequence0084 copy.avif","adjusted sequence0085 copy.avif","adjusted sequence0086 copy.avif","adjusted sequence0087 copy.avif","adjusted sequence0088 copy.avif","adjusted sequence0089 copy.avif","adjusted sequence0090 copy.avif","adjusted sequence0091 copy.avif","adjusted sequence0092 copy.avif","adjusted sequence0093 copy.avif","adjusted sequence0094 copy.avif","adjusted sequence0095 copy.avif","adjusted sequence0096 copy.avif","adjusted sequence0097 copy.avif","adjusted sequence0098 copy.avif","adjusted sequence0099 copy.avif","adjusted sequence0100 copy.avif","adjusted sequence0101 copy.avif","adjusted sequence0102 copy.avif","adjusted sequence0103 copy.avif","adjusted sequence0104 copy.avif","adjusted sequence0105 copy.avif","adjusted sequence0106 copy.avif","adjusted sequence0107 copy.avif","adjusted sequence0108 copy.avif","adjusted sequence0109 copy.avif","adjusted sequence0110 copy.avif","adjusted sequence0111 copy.avif","adjusted sequence0112 copy.avif","adjusted sequence0113 copy.avif","adjusted sequence0114 copy.avif","adjusted sequence0115 copy.avif","adjusted sequence0116 copy.avif","adjusted sequence0117 copy.avif","adjusted sequence0118 copy.avif","adjusted sequence0119 copy.avif"]
 const HOMEPAGE_HERO_VERSION = "1d4b64cbfa4f"
+const HOMEPAGE_CONNECTION_VERSION = "426c29f22325"
 const HOMEPAGE_ORBIT_VERSION = "15fce8a9d4fe"
 const HOMEPAGE_ASSETS = "https://raw.githubusercontent.com/UnbuiltMarket/admiral-park/main/assets"
-type HomepageStage = "opening" | "approach" | "building" | "handoff" | "orbit"
+type HomepageStage = "opening" | "approach" | "building" | "connection" | "handoff" | "orbit"
 interface HomepageTiming { openingOut: number; buildingIn: number; buildingFull: number; ctaIn: number; rise: number }
 interface HomepageChannel { snapshot: SequenceSnapshot; timing: HomepageTiming; enabled: boolean }
 const homepageChannels = new Map<HTMLElement, HomepageChannel>()
 const homepageSubscribers = new Set<() => void>()
 const notifyHomepage = () => homepageSubscribers.forEach(update => update())
 interface AdmiralHomepageTrialProps {
-    useGitHubAssets?: boolean; heroBaseUrl?: string; orbitBaseUrl?: string
-    startView?: "opening" | "orbit"; editorView?: "opening" | "building" | "orbit"; orbitStartFrame?: number
-    duration?: number; maxSpeed?: number; momentum?: number; triggerDistance?: number
+    useGitHubAssets?: boolean; heroBaseUrl?: string; connectionBaseUrl?: string; orbitBaseUrl?: string
+    startView?: "opening" | "orbit"; editorView?: "opening" | "building" | "connection" | "orbit"; orbitStartFrame?: number
+    duration?: number; connectionDuration?: number; maxSpeed?: number; momentum?: number; triggerDistance?: number
     checkpointCount?: number; motionWidth?: number; orbitMobileWidth?: number; inspectionWidth?: number
     desktopBuffer?: number; phoneBuffer?: number
     snapDuration?: number; frameBlend?: number
@@ -47,8 +49,8 @@ function homepageUrls(base: string, names: string[], version = "") {
  */
 export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): React.JSX.Element {
     const {
-        useGitHubAssets = true, heroBaseUrl = "", orbitBaseUrl = "", startView = "opening", editorView = "opening", orbitStartFrame = 45,
-        duration = 2.5, maxSpeed = 1.8, momentum = .22, triggerDistance = 28, checkpointCount = 8,
+        useGitHubAssets = true, heroBaseUrl = "", connectionBaseUrl = "", orbitBaseUrl = "", startView = "opening", editorView = "opening", orbitStartFrame = 45,
+        duration = 2.5, connectionDuration = 2.5, maxSpeed = 1.8, momentum = .22, triggerDistance = 28, checkpointCount = 8,
         motionWidth = 960, orbitMobileWidth = 640, inspectionWidth = 1920, desktopBuffer = 2, phoneBuffer = 1, snapDuration = 1.5, frameBlend = 0,
         focalX = 50, focalY = 50, darken = 0,
         showControls = true, showViewpoints = true, showDiagnostics = false,
@@ -59,12 +61,17 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
     const staticRenderer = useIsStaticRenderer()
     const heroUrls = React.useMemo(() => homepageUrls(useGitHubAssets ? HOMEPAGE_ASSETS + "/images/AVIF%2030_1920x1010%20DESKTOP%20HERO%20SEQUENCE" : heroBaseUrl,
         HOMEPAGE_HERO_NAMES, useGitHubAssets ? HOMEPAGE_HERO_VERSION : ""), [useGitHubAssets, heroBaseUrl])
+    const connectionUrls = React.useMemo(() => homepageUrls(useGitHubAssets ? HOMEPAGE_ASSETS + "/images/SEQ_02_V01" : connectionBaseUrl,
+        HOMEPAGE_CONNECTION_NAMES, useGitHubAssets ? HOMEPAGE_CONNECTION_VERSION : ""), [useGitHubAssets, connectionBaseUrl])
+    // Keep the displayed SEQ_01 endpoint as the first dissolve layer; the new render differs slightly in colour.
+    const connectionPlaybackUrls = React.useMemo(() => [heroUrls[heroUrls.length - 1], ...connectionUrls], [heroUrls, connectionUrls])
     const orbitUrls = React.useMemo(() => homepageUrls(useGitHubAssets ? HOMEPAGE_ASSETS + "/ORBIT%20PICKER/BEAUTY%20sequence_Desktop" : orbitBaseUrl,
         HOMEPAGE_ORBIT_NAMES, useGitHubAssets ? HOMEPAGE_ORBIT_VERSION : ""), [useGitHubAssets, orbitBaseUrl])
     const orbitStartIndex = Math.round(Math.max(0, Math.min(orbitUrls.length - 1, Number.isFinite(orbitStartFrame) ? orbitStartFrame : 45)))
     const orbitPoster = orbitUrls[orbitStartIndex]
-    const previewStage: HomepageStage = staticRenderer ? (editorView === "orbit" ? "orbit" : editorView === "building" ? "building" : "opening") : startView === "orbit" ? "handoff" : "opening"
-    const initialPoster = staticRenderer && editorView === "building" ? heroUrls[heroUrls.length - 1] :
+    const previewStage: HomepageStage = staticRenderer ? (editorView === "orbit" ? "orbit" : editorView === "building" ? "building" : editorView === "connection" ? "connection" : "opening") : startView === "orbit" ? "handoff" : "opening"
+    const initialPoster = staticRenderer && editorView === "connection" ? connectionUrls[Math.floor(connectionUrls.length / 2)] :
+        staticRenderer && editorView === "building" ? heroUrls[heroUrls.length - 1] :
         (staticRenderer && editorView === "orbit") || (!staticRenderer && startView === "orbit") ? orbitPoster : heroUrls[0]
     const [stage, setStage] = React.useState<HomepageStage>(previewStage)
     const [posterUrl, setPosterUrl] = React.useState(initialPoster)
@@ -103,6 +110,7 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
         let disposed = false, heroGeneration = 0, enterToken = 0
         let currentStage: HomepageStage = previewStage
         let hero: ReturnType<typeof createHeroSequence> | null = null
+        let activeSequence: "SEQ_01" | "SEQ_02" = "SEQ_01", connectionWarmed = false
         let heroSnapshot: SequenceSnapshot = { state: previewStage === "building" ? "arrival" : "opening", progress: previewStage === "building" ? 1 : 0, frame: previewStage === "building" ? heroUrls.length - 1 : 0, direction: 1, held: false, decoded: 0, downloaded: 0 }
         let arrivedAt = -Infinity, lastWheelAt = -Infinity, wheelIntent = 0, lastUI = 0, lastOrbitUI = ""
         const abort = new AbortController(), signal = abort.signal
@@ -117,7 +125,7 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
             return box.width > 0 && box.height > 0 && box.bottom > 0 && box.top < innerHeight
         }
         function publish() {
-            homepageChannels.set(root!, { snapshot: heroSnapshot, timing: timing.current, enabled: currentStage !== "orbit" && currentStage !== "handoff" })
+            homepageChannels.set(root!, { snapshot: heroSnapshot, timing: timing.current, enabled: currentStage === "opening" || currentStage === "approach" || currentStage === "building" })
             notifyHomepage()
         }
         function changeStage(next: HomepageStage) {
@@ -139,19 +147,43 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
                 }
             },
         })
+        // Prefetch only compressed bytes, using the browser cache. No second decoded sequence lives beside SEQ_01.
+        function warmConnection() {
+            const connection = (navigator as Navigator & { connection?: { saveData?: boolean; effectiveType?: string } }).connection
+            if (connectionWarmed || staticRenderer || reducedMedia.matches || connection?.saveData || /(^|-)2g$/.test(connection?.effectiveType || "")) return
+            connectionWarmed = true
+            let next = 0
+            async function worker() {
+                while (!disposed && next < connectionUrls.length) {
+                    const url = connectionUrls[next++], request = new AbortController()
+                    const cancel = () => request.abort(), timeout = setTimeout(cancel, 10000)
+                    signal.addEventListener("abort", cancel, { once: true })
+                    try {
+                        const response = await fetch(url, { signal: request.signal, mode: "cors", credentials: "omit", cache: "force-cache" })
+                        if (response.ok) await response.blob()
+                    } catch { /* The active sequence retries a failed background download. */ }
+                    finally { clearTimeout(timeout); signal.removeEventListener("abort", cancel) }
+                }
+            }
+            void Promise.all([worker(), worker()])
+        }
         function mountHero(atEnd = false) {
             if (disposed) return
             enterToken++; orbit?.deactivate(); destroyHero()
+            activeSequence = "SEQ_01"; root!.dataset.activeSequence = activeSequence
             changePoster(heroUrls[atEnd ? heroUrls.length - 1 : 0])
+            if (atEnd) heroSnapshot = { state: "arrival", progress: 1, frame: heroUrls.length - 1, direction: 1, held: false, decoded: 0, downloaded: 0 }
             changeStage(atEnd ? "building" : "opening")
+            if (atEnd) arrivedAt = performance.now()
             const generation = ++heroGeneration
             hero = createHeroSequence({
-                root: heroRoot!, canvas: heroCanvas!, poster: poster!, urls: heroUrls, duration, maxSpeed, momentum, triggerDistance,
+                root: heroRoot!, canvas: heroCanvas!, poster: poster!, urls: heroUrls, duration, maxSpeed, momentum, triggerDistance, startAtEnd: atEnd,
                 holdScroll: true, preload: true, cacheFrames: phone ? 10 : 14, decodeWidth: phone ? 1280 : 1920, focalX, focalY,
                 inputFilter: event => !homepageBlocked(event.target),
                 onUpdate(snapshot) {
                     if (disposed || generation !== heroGeneration) return
                     heroSnapshot = snapshot; setHeroState(previous => previous === snapshot.state ? previous : snapshot.state)
+                    if (snapshot.state === "moving" || snapshot.state === "loading" || snapshot.state === "arrival") warmConnection()
                     if (snapshot.state === "arrival" || snapshot.state === "reduced") {
                         if (currentStage !== "building") arrivedAt = performance.now()
                         changeStage("building")
@@ -160,17 +192,48 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
                     else publish()
                 },
             })
-            if (atEnd) hero.skip()
         }
-        async function explore() {
-            if (disposed || !orbit || !isVisible() || currentStage === "orbit" || currentStage === "handoff") return
+        async function activateOrbit() {
+            if (disposed || !orbit || !isVisible()) return
             const token = ++enterToken
-            changeStage("handoff"); destroyHero()
+            destroyHero(); changeStage("handoff")
             try {
                 await orbit.activate()
                 if (disposed || token !== enterToken) return
                 changeStage("orbit")
-            } catch { /* The orbit reports a visible retry state. The current hero remains visible. */ }
+            } catch { /* The orbit reports a visible retry state. The completed sequence remains visible. */ }
+        }
+        function explore() {
+            if (disposed || !orbit || !isVisible() || currentStage !== "building") return
+            if (reducedMedia.matches) { void activateOrbit(); return }
+            enterToken++; destroyHero(); clearApartmentDetails()
+            activeSequence = "SEQ_02"; root!.dataset.activeSequence = activeSequence
+            changePoster(heroUrls[heroUrls.length - 1]); changeStage("connection")
+            const generation = ++heroGeneration
+            let completed = false
+            hero = createHeroSequence({
+                root: heroRoot!, canvas: heroCanvas!, poster: poster!, urls: connectionPlaybackUrls,
+                duration: connectionDuration, maxSpeed, momentum, triggerDistance,
+                holdScroll: true, preload: true, cacheFrames: phone ? 10 : 14, decodeWidth: phone ? 1280 : 1920, focalX, focalY,
+                inputFilter: event => !homepageBlocked(event.target),
+                onUpdate(snapshot) {
+                    if (disposed || generation !== heroGeneration) return
+                    heroSnapshot = snapshot; setHeroState(previous => previous === snapshot.state ? previous : snapshot.state)
+                    publish()
+                    const arrived = (snapshot.state === "arrival" || snapshot.state === "reduced") && snapshot.frame === connectionPlaybackUrls.length - 1
+                    const returned = snapshot.state === "opening" && snapshot.direction < 0 && snapshot.frame === 0
+                    if (!completed && (arrived || returned)) {
+                        completed = true
+                        // Constructors may publish synchronously under reduced motion. Teardown follows assignment, never precedes it.
+                        queueMicrotask(() => {
+                            if (disposed || generation !== heroGeneration) return
+                            if (returned) mountHero(true)
+                            else void activateOrbit()
+                        })
+                    }
+                },
+            })
+            hero.start()
         }
         function overview() { mountHero(false) }
         const retry = async () => {
@@ -222,18 +285,22 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
         window.addEventListener("wheel", wheel, { passive: false, signal })
         window.addEventListener("keydown", event => {
             if (!isVisible() || homepageBlocked(event.target) || event.ctrlKey || event.metaKey || event.altKey) return
-            if (event.key === "Escape" && currentStage === "handoff") { mountHero(true); return }
+            if (currentStage === "handoff") {
+                if (event.key === "Escape") { mountHero(true); return }
+                if (["ArrowDown", "ArrowUp", "PageDown", "PageUp", "Home", "End", " "].includes(event.key)) event.preventDefault()
+                return
+            }
             if (currentStage === "building" && ["ArrowDown", "PageDown", " "].includes(event.key)) { event.preventDefault(); void explore() }
         }, { signal })
         root.addEventListener("admiral:overview", overview, { signal })
         window.addEventListener("admiral:overview", event => { if (event.target === window && root!.getBoundingClientRect().width > 0) overview() }, { signal })
         root.addEventListener("admiral:explore", () => { void explore() }, { signal })
-        actions.current = { explore: () => { void explore() }, overview, skip: () => hero?.skip(), resumeHero: () => { if (heroSnapshot.direction < 0) hero?.reverse(); else hero?.start() }, orbit }
+        actions.current = { explore: () => { void explore() }, overview, skip: () => { if (activeSequence === "SEQ_02" && reducedMedia.matches) void activateOrbit(); else hero?.skip() }, resumeHero: () => { if (heroSnapshot.direction < 0) hero?.reverse(); else hero?.start() }, orbit }
         ;(root as HTMLElement & { retryOrbit?: () => Promise<void> }).retryOrbit = retry
         if (staticRenderer) { changeStage(previewStage); changePoster(initialPoster) }
         else {
             changeStage("opening")
-            if (startView === "orbit") { changePoster(orbitPoster); void explore() }
+            if (startView === "orbit") { changePoster(orbitPoster); void activateOrbit() }
             else mountHero()
             // The opening picture wins the first network requests; preload the entire orbit behind it.
             const warm = window.setTimeout(() => { if (!disposed && isVisible()) void orbit!.prepare().catch(() => {}) }, 300)
@@ -245,7 +312,7 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
             actions.current = null; delete (root as HTMLElement & { retryOrbit?: () => Promise<void> }).retryOrbit
             homepageChannels.delete(root); notifyHomepage()
         }
-    }, [heroUrls, orbitUrls, staticRenderer, hostVisible, startView, editorView, duration, maxSpeed, momentum, triggerDistance, checkpointCount,
+    }, [heroUrls, connectionUrls, connectionPlaybackUrls, orbitUrls, staticRenderer, hostVisible, startView, editorView, duration, connectionDuration, maxSpeed, momentum, triggerDistance, checkpointCount,
         motionWidth, orbitMobileWidth, inspectionWidth, desktopBuffer, phoneBuffer, orbitStartIndex, snapDuration, frameBlend, focalX, focalY, showDiagnostics, clearApartmentDetails])
 
     React.useEffect(() => {
@@ -295,10 +362,12 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
             {!staticRenderer && showControls && <div data-homepage-controls="" data-orbit-ignore="" style={{ position: "absolute", bottom: controlsBottom, left: "50%", transform: "translateX(-50%)", display: "flex", alignItems: "center", justifyContent: "center", flexWrap: "wrap", gap: 7, width: "max-content", maxWidth: "94%", zIndex: 3 }}>
                 {(stage === "opening" || stage === "approach") && <button type="button" style={homepageButton} onClick={() => actions.current?.skip()}>Skip approach</button>}
                 {stage === "approach" && (heroState === "paused" || heroState === "error") && <button type="button" style={homepageButton} onClick={() => actions.current?.resumeHero()}>{heroState === "error" ? "Retry approach" : "Continue approach"}</button>}
+                {stage === "connection" && <button type="button" style={homepageButton} onClick={() => actions.current?.skip()}>Skip connection</button>}
+                {stage === "connection" && (heroState === "paused" || heroState === "error") && <button type="button" style={homepageButton} onClick={() => actions.current?.resumeHero()}>{heroState === "error" ? "Retry connection" : "Continue connection"}</button>}
                 {stage === "building" && <button type="button" style={homepageButton} onClick={() => actions.current?.explore()}>Explore building</button>}
                 {stage === "handoff" && orbitInfo.state !== "error" && <span role="status" style={{ ...homepageButton, cursor: "default" }}>Preparing orbit {preparationPercent}%</span>}
                 {(stage === "building" || stage === "handoff" || stage === "orbit") && orbitInfo.state === "error" && <button type="button" style={homepageButton} onClick={() => { void (rootRef.current as (HTMLElement & { retryOrbit?: () => Promise<void> }) | null)?.retryOrbit?.() }}>Retry orbit</button>}
-                {(stage === "building" || stage === "handoff" || stage === "orbit") && <button type="button" style={homepageButton} onClick={() => actions.current?.overview()}>Overview</button>}
+                {(stage === "building" || stage === "connection" || stage === "handoff" || stage === "orbit") && <button type="button" style={homepageButton} onClick={() => actions.current?.overview()}>Overview</button>}
                 {stage === "orbit" && <>
                     <button type="button" aria-label="Previous view" disabled={orbitMoving} style={orbitButtonStyle} onClick={() => actions.current?.orbit?.go(-1)}>←</button>
                     <span aria-live="polite" style={{ ...homepageButton, cursor: "default", minWidth: 65, textAlign: "center" }}>{orbitInfo.checkpoint >= 0 ? `View ${orbitInfo.checkpoint + 1} / ${checkpoints}` : orbitInfo.state === "checkpoint" ? "Custom view" : orbitInfo.state === "buffering" ? "Preparing view…" : orbitInfo.state === "error" ? "View unavailable" : "Looking around"}</span>
@@ -307,6 +376,10 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
                     {showViewpoints && Array.from({ length: checkpoints }, (_, i) => <button key={i} type="button" aria-label={`View ${i + 1}`} aria-pressed={orbitInfo.checkpoint === i} disabled={orbitMoving}
                         style={{ ...orbitButtonStyle, padding: "7px 9px", background: orbitInfo.checkpoint === i ? "rgba(255,255,255,.9)" : homepageButton.background, color: orbitInfo.checkpoint === i ? "#101820" : "#fff" }} onClick={() => actions.current?.orbit?.setCheckpoint(i)}>{i + 1}</button>)}
                 </>}
+            </div>}
+            {!staticRenderer && !showControls && stage === "connection" && (heroState === "paused" || heroState === "error") && <div data-homepage-controls="" data-orbit-ignore="" style={{ position: "absolute", bottom: 18, left: "50%", transform: "translateX(-50%)", display: "flex", gap: 7, zIndex: 3 }}>
+                <button type="button" style={homepageButton} onClick={() => actions.current?.resumeHero()}>{heroState === "error" ? "Retry connection" : "Continue connection"}</button>
+                <button type="button" style={homepageButton} onClick={() => actions.current?.overview()}>Overview</button>
             </div>}
             {!staticRenderer && !showControls && orbitInfo.state === "buffering" && <span role="status" style={{ ...homepageButton, position: "absolute", bottom: 18, left: "50%", transform: "translateX(-50%)", pointerEvents: "none", zIndex: 3 }}>Preparing view…</span>}
             {!staticRenderer && !showControls && orbitInfo.state === "error" && <div data-homepage-controls="" data-orbit-ignore="" style={{ position: "absolute", bottom: 18, left: "50%", transform: "translateX(-50%)", zIndex: 3 }}>
@@ -378,14 +451,16 @@ export function ArrivalCTA(Component: ComponentType<any>): ComponentType { retur
 AdmiralHomepageTrial.displayName = "Admiral Homepage Trial"
 addPropertyControls(AdmiralHomepageTrial, {
     useGitHubAssets: { type: ControlType.Boolean, title: "GitHub assets", defaultValue: true },
-    heroBaseUrl: { type: ControlType.String, title: "Approach folder", defaultValue: "", hidden: p => p.useGitHubAssets !== false },
+    heroBaseUrl: { type: ControlType.String, title: "SEQ_01 folder", defaultValue: "", hidden: p => p.useGitHubAssets !== false },
+    connectionBaseUrl: { type: ControlType.String, title: "SEQ_02 folder", defaultValue: "", hidden: p => p.useGitHubAssets !== false },
     orbitBaseUrl: { type: ControlType.String, title: "Orbit folder", defaultValue: "", hidden: p => p.useGitHubAssets !== false },
     startView: { type: ControlType.Enum, title: "Start trial", options: ["opening", "orbit"], optionTitles: ["Full journey", "Orbit directly"], defaultValue: "opening" },
-    editorView: { type: ControlType.Enum, title: "Editor view", options: ["opening", "building", "orbit"], defaultValue: "opening" },
+    editorView: { type: ControlType.Enum, title: "Editor view", options: ["opening", "building", "connection", "orbit"], optionTitles: ["SEQ_01 opening", "SEQ_01 arrival", "SEQ_02 midway", "Orbit"], defaultValue: "opening" },
     orbitStartFrame: { type: ControlType.Number, title: "Orbit start frame", defaultValue: 45, min: 0, max: HOMEPAGE_ORBIT_NAMES.length - 1, step: 1, description: "Exact first orbit image, numbered 0–119 to match the filenames. With 8 viewpoints: 0 = camera 1, 15 = camera 2, 30 = camera 3, 45 = camera 4. Custom frames stay still until the next gesture; the checkpoint cameras stay fixed." },
-    duration: { type: ControlType.Number, title: "Approach", defaultValue: 2.5, min: .6, max: 10, step: .1, unit: "s" },
-    maxSpeed: { type: ControlType.Number, title: "Approach boost", defaultValue: 1.8, min: 1, max: 3, step: .1 },
-    momentum: { type: ControlType.Number, title: "Approach coast", defaultValue: .22, min: .08, max: .6, step: .02 },
+    duration: { type: ControlType.Number, title: "SEQ_01 duration", defaultValue: 2.5, min: .6, max: 10, step: .1, unit: "s" },
+    connectionDuration: { type: ControlType.Number, title: "SEQ_02 duration", defaultValue: 2.5, min: .6, max: 10, step: .1, unit: "s", description: "Flight time from the SEQ_01 arrival into the orbit. Uses the same scroll trigger, boost, coast, reversal and 0.8-second endpoint fades as SEQ_01." },
+    maxSpeed: { type: ControlType.Number, title: "Flight boost", defaultValue: 1.8, min: 1, max: 3, step: .1, description: "Scroll acceleration for both SEQ_01 and SEQ_02." },
+    momentum: { type: ControlType.Number, title: "Flight coast", defaultValue: .22, min: .08, max: .6, step: .02, description: "Momentum response for both SEQ_01 and SEQ_02." },
     triggerDistance: { type: ControlType.Number, title: "Scroll trigger", defaultValue: 28, min: 8, max: 150, step: 1 },
     checkpointCount: { type: ControlType.Number, title: "Viewpoints", defaultValue: 8, min: 2, max: 16, step: 1 },
     motionWidth: { type: ControlType.Number, title: "Orbit decode", defaultValue: 960, min: 480, max: 1920, step: 160, unit: "px" },
@@ -710,6 +785,7 @@ interface SequenceOptions {
     root: HTMLElement; canvas: HTMLCanvasElement; poster: HTMLImageElement; urls: string[];
     duration?: number; maxSpeed?: number; momentum?: number; triggerDistance?: number;
     preload?: boolean; holdScroll?: boolean; cacheFrames?: number; decodeWidth?: number;
+    startAtEnd?: boolean;
     focalX?: number; focalY?: number; timeoutMs?: number;
     onUpdate?: (snapshot: SequenceSnapshot) => void;
     inputFilter?: (event: Event) => boolean;
@@ -727,7 +803,7 @@ function createSequenceFrames(urls: string[], width: number, limit: number, noti
     const abort = new AbortController();
     const blobs = new Map<number, Blob>();
     const bitmaps = new Map<number, SequenceBitmap>();
-    const fetching = new Set<number>(), decoding = new Set<number>(), failed = new Set<number>();
+    const fetching = new Set<number>(), decoding = new Set<number>(), failed = new Set<number>(), retrying = new Set<number>();
     let disposed = false, all = false, center = 0, wanted: number[] = [0], downloads = 0;
     const last = urls.length - 1;
     const valid = (n: number) => n >= 0 && n <= last;
@@ -772,10 +848,10 @@ function createSequenceFrames(urls: string[], width: number, limit: number, noti
         const cancel = () => requestAbort.abort();
         abort.signal.addEventListener("abort", cancel, { once: true });
         try {
-            const response = await fetch(urls[index], { signal: requestAbort.signal, mode: "cors", credentials: "omit", cache: "force-cache" });
+            const response = await fetch(urls[index], { signal: requestAbort.signal, mode: "cors", credentials: "omit", cache: retrying.has(index) ? "reload" : "force-cache" });
             if (!response.ok) throw new Error("Frame " + index + ": " + response.status);
             const blob = await response.blob();
-            if (!disposed) { blobs.set(index, blob); downloads++; }
+            if (!disposed) { blobs.set(index, blob); retrying.delete(index); downloads++; }
         } catch { if (!disposed) failed.add(index); }
         finally {
             clearTimeout(timeout); abort.signal.removeEventListener("abort", cancel); fetching.delete(index);
@@ -808,9 +884,13 @@ function createSequenceFrames(urls: string[], width: number, limit: number, noti
         get: (index: number) => bitmaps.get(index),
         failed: (index: number) => failed.has(index),
         counts: () => ({ decoded: bitmaps.size, downloaded: downloads }),
-        retry() { failed.clear(); pump(); },
+        retry() {
+            // A failed decode may have cached a damaged body. An explicit retry downloads a fresh copy.
+            for (const index of failed) { blobs.delete(index); retrying.add(index); }
+            failed.clear(); pump();
+        },
         destroy() {
-            disposed = true; abort.abort(); blobs.clear();
+            disposed = true; abort.abort(); blobs.clear(); retrying.clear();
             bitmaps.forEach(bitmap => bitmap.close()); bitmaps.clear();
         },
     };
@@ -832,9 +912,10 @@ function createHeroSequence(options: SequenceOptions) {
     const connection = (navigator as Navigator & { connection?: { saveData?: boolean; effectiveType?: string } }).connection;
     const abort = new AbortController(), signal = abort.signal;
     const context = canvas.getContext("2d", { alpha: false });
-    let disposed = false, state: SequenceState = "opening", displayed = 0, clock = 0;
-    let displayedProgress = 0;
-    let rendered = { index: 0, next: 0, mix: 0 };
+    const initialFrame = options.startAtEnd ? last : 0;
+    let disposed = false, state: SequenceState = options.startAtEnd ? "arrival" : "opening", displayed = initialFrame, clock = options.startAtEnd ? totalDuration : 0;
+    let displayedProgress = options.startAtEnd ? 1 : 0;
+    let rendered = { index: initialFrame, next: initialFrame, mix: 0 };
     let direction = 1, velocity = 0, boost = 0, held = false, playing = false;
     let active = false, raf = 0, previousTime = 0, waitingSince = 0;
     let holdY = 0, holdX = 0, holdTimer: ReturnType<typeof setTimeout> | undefined;
@@ -1100,6 +1181,8 @@ function createHeroSequence(options: SequenceOptions) {
     poster.addEventListener("load", loadedPoster, { signal });
     if (poster.complete) loadedPoster();
     canvas.style.opacity = "0"; poster.style.opacity = "1";
+    // A restored endpoint is parked, not skipped: reverse input stays enabled and the opening copy never flashes.
+    if (options.startAtEnd) { active = true; frames.request(last, 1, false, true); wake(); }
     publish();
     if (motion.matches) reducedChanged();
     return {

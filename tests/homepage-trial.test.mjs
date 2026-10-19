@@ -27,6 +27,22 @@ test('trial orbit contains exactly 120 consecutive AVIFs at the intended aspect 
  assert.ok(bytes>0);
 });
 
+test('SEQ_02 contains every connecting frame at the same aspect ratio as the hero and orbit',async()=>{
+ const folder=new URL('assets/images/SEQ_02_V01/',root);
+ const names=(await readdir(folder)).filter(name=>/^02 sequence\d{2} copy\.avif$/.test(name));
+ assert.equal(names.length,73);
+ let bytes=0;
+ for(let index=0;index<73;index++){
+  const name=`02 sequence${String(index).padStart(2,'0')} copy.avif`;
+  assert.ok(names.includes(name),name);assert.ok(source.includes(JSON.stringify(name)),`Generated component includes ${name}`);
+  const data=await readFile(new URL(encodeURIComponent(name),folder));bytes+=data.length;
+  assert.equal(data.toString('ascii',4,8),'ftyp',name);assert.ok(data.subarray(8,64).includes(Buffer.from('avif')),name);
+  const ispe=data.indexOf(Buffer.from('ispe'));assert.ok(ispe>=0,`${name}: image dimensions`);
+  assert.equal(data.readUInt32BE(ispe+8),1920,name);assert.equal(data.readUInt32BE(ispe+12),1010,name);
+ }
+ assert.ok(bytes>3_000_000&&bytes<5_000_000,'Connector retains the exported compressed frames');
+});
+
 test('combined homepage and native overrides type-check with the real React and Framer SDKs',()=>{
  const file=fileURLToPath(new URL('src/framer/AdmiralHomepageTrial.tsx',root));
  const modules=path.dirname(path.dirname(requireDev.resolve('react/package.json')));
@@ -47,7 +63,9 @@ test('paste-in homepage registers its controls and server-renders without loadin
  vm.runInNewContext(compiled,{module,exports:module.exports,require:name=>name==='framer'?stub:requireDev(name)});
  assert.deepEqual(Object.keys(module.exports).sort(),['ArrivalCTA','BuildingContent','OpeningContent','default']);
  assert.equal(registered,module.exports.default);
- for(const key of ['startView','editorView','checkpointCount','motionWidth','orbitMobileWidth','snapDuration','frameBlend','desktopBuffer','phoneBuffer','orbitStartFrame','detailsMode','detailsLanguage','detailsBottom','detailsInset','apartmentPreview'])assert.ok(controls[key],`Framer control ${key}`);
+ for(const key of ['startView','editorView','connectionBaseUrl','connectionDuration','checkpointCount','motionWidth','orbitMobileWidth','snapDuration','frameBlend','desktopBuffer','phoneBuffer','orbitStartFrame','detailsMode','detailsLanguage','detailsBottom','detailsInset','apartmentPreview'])assert.ok(controls[key],`Framer control ${key}`);
+ assert.equal(controls.duration.title,'SEQ_01 duration');assert.equal(controls.connectionDuration.title,'SEQ_02 duration');assert.equal(controls.connectionDuration.defaultValue,2.5);assert.equal(controls.connectionBaseUrl.defaultValue,'');
+ assert.ok(Array.from(controls.editorView.options).includes('connection'),'Editor exposes a static connection preview');
  assert.equal(controls.snapDuration.title,'Settle time');assert.equal(controls.snapDuration.defaultValue,1.5);assert.equal(controls.snapDuration.max,10);
  assert.equal(controls.frameBlend.defaultValue,0);assert.equal(controls.frameBlend.min,0);assert.equal(controls.frameBlend.max,100);
  assert.equal(controls.desktopBuffer.title,'Desktop buffer');assert.equal(controls.desktopBuffer.defaultValue,2);assert.equal(controls.desktopBuffer.min,1);assert.equal(controls.desktopBuffer.max,3);
@@ -61,6 +79,8 @@ test('paste-in homepage registers its controls and server-renders without loadin
  assert.match(html,/raw%20sequence00\.avif/);
  assert.doesNotMatch(html,/<script|<iframe|<nav|<video/);
  assert.doesNotMatch(source,/hero-manifest\.json|__admiralHeroFactoriesV1|AdmiralHeroLoader/);
+ const connectionPreview=requireDev('react-dom/server').renderToStaticMarkup(requireDev('react').createElement(module.exports.default,{editorView:'connection'}));
+ assert.match(connectionPreview,/02%20sequence36%20copy\.avif/,'Connection editor displays its middle frame');assert.match(connectionPreview,/data-homepage-stage="connection"/);
  const orbitPreview=requireDev('react-dom/server').renderToStaticMarkup(requireDev('react').createElement(module.exports.default,{editorView:'orbit'}));
  assert.match(orbitPreview,/adjusted%20sequence0045%20copy\.avif/,'Editor orbit preview uses the new default fourth camera');
  assert.match(orbitPreview,/data-apartment-details/);assert.match(orbitPreview,/MINTA/);assert.match(orbitPreview,/A\.204/);

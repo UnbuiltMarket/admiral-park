@@ -3,20 +3,22 @@ import type { ComponentType } from "react"
 import { addPropertyControls, ControlType, useIsStaticRenderer } from "framer"
 
 const HOMEPAGE_HERO_NAMES: string[] = __HERO_NAMES__
+const HOMEPAGE_CONNECTION_NAMES: string[] = __CONNECTION_NAMES__
 const HOMEPAGE_ORBIT_NAMES: string[] = __ORBIT_NAMES__
 const HOMEPAGE_HERO_VERSION = "__HERO_VERSION__"
+const HOMEPAGE_CONNECTION_VERSION = "__CONNECTION_VERSION__"
 const HOMEPAGE_ORBIT_VERSION = "__ORBIT_VERSION__"
 const HOMEPAGE_ASSETS = "https://raw.githubusercontent.com/UnbuiltMarket/admiral-park/main/assets"
-type HomepageStage = "opening" | "approach" | "building" | "handoff" | "orbit"
+type HomepageStage = "opening" | "approach" | "building" | "connection" | "handoff" | "orbit"
 interface HomepageTiming { openingOut: number; buildingIn: number; buildingFull: number; ctaIn: number; rise: number }
 interface HomepageChannel { snapshot: SequenceSnapshot; timing: HomepageTiming; enabled: boolean }
 const homepageChannels = new Map<HTMLElement, HomepageChannel>()
 const homepageSubscribers = new Set<() => void>()
 const notifyHomepage = () => homepageSubscribers.forEach(update => update())
 interface AdmiralHomepageTrialProps {
-    useGitHubAssets?: boolean; heroBaseUrl?: string; orbitBaseUrl?: string
-    startView?: "opening" | "orbit"; editorView?: "opening" | "building" | "orbit"; orbitStartFrame?: number
-    duration?: number; maxSpeed?: number; momentum?: number; triggerDistance?: number
+    useGitHubAssets?: boolean; heroBaseUrl?: string; connectionBaseUrl?: string; orbitBaseUrl?: string
+    startView?: "opening" | "orbit"; editorView?: "opening" | "building" | "connection" | "orbit"; orbitStartFrame?: number
+    duration?: number; connectionDuration?: number; maxSpeed?: number; momentum?: number; triggerDistance?: number
     checkpointCount?: number; motionWidth?: number; orbitMobileWidth?: number; inspectionWidth?: number
     desktopBuffer?: number; phoneBuffer?: number
     snapDuration?: number; frameBlend?: number
@@ -46,8 +48,8 @@ function homepageUrls(base: string, names: string[], version = "") {
  */
 export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): React.JSX.Element {
     const {
-        useGitHubAssets = true, heroBaseUrl = "", orbitBaseUrl = "", startView = "opening", editorView = "opening", orbitStartFrame = 45,
-        duration = 2.5, maxSpeed = 1.8, momentum = .22, triggerDistance = 28, checkpointCount = 8,
+        useGitHubAssets = true, heroBaseUrl = "", connectionBaseUrl = "", orbitBaseUrl = "", startView = "opening", editorView = "opening", orbitStartFrame = 45,
+        duration = 2.5, connectionDuration = 2.5, maxSpeed = 1.8, momentum = .22, triggerDistance = 28, checkpointCount = 8,
         motionWidth = 960, orbitMobileWidth = 640, inspectionWidth = 1920, desktopBuffer = 2, phoneBuffer = 1, snapDuration = 1.5, frameBlend = 0,
         focalX = 50, focalY = 50, darken = 0,
         showControls = true, showViewpoints = true, showDiagnostics = false,
@@ -58,12 +60,17 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
     const staticRenderer = useIsStaticRenderer()
     const heroUrls = React.useMemo(() => homepageUrls(useGitHubAssets ? HOMEPAGE_ASSETS + "/images/AVIF%2030_1920x1010%20DESKTOP%20HERO%20SEQUENCE" : heroBaseUrl,
         HOMEPAGE_HERO_NAMES, useGitHubAssets ? HOMEPAGE_HERO_VERSION : ""), [useGitHubAssets, heroBaseUrl])
+    const connectionUrls = React.useMemo(() => homepageUrls(useGitHubAssets ? HOMEPAGE_ASSETS + "/images/SEQ_02_V01" : connectionBaseUrl,
+        HOMEPAGE_CONNECTION_NAMES, useGitHubAssets ? HOMEPAGE_CONNECTION_VERSION : ""), [useGitHubAssets, connectionBaseUrl])
+    // Keep the displayed SEQ_01 endpoint as the first dissolve layer; the new render differs slightly in colour.
+    const connectionPlaybackUrls = React.useMemo(() => [heroUrls[heroUrls.length - 1], ...connectionUrls], [heroUrls, connectionUrls])
     const orbitUrls = React.useMemo(() => homepageUrls(useGitHubAssets ? HOMEPAGE_ASSETS + "/ORBIT%20PICKER/BEAUTY%20sequence_Desktop" : orbitBaseUrl,
         HOMEPAGE_ORBIT_NAMES, useGitHubAssets ? HOMEPAGE_ORBIT_VERSION : ""), [useGitHubAssets, orbitBaseUrl])
     const orbitStartIndex = Math.round(Math.max(0, Math.min(orbitUrls.length - 1, Number.isFinite(orbitStartFrame) ? orbitStartFrame : 45)))
     const orbitPoster = orbitUrls[orbitStartIndex]
-    const previewStage: HomepageStage = staticRenderer ? (editorView === "orbit" ? "orbit" : editorView === "building" ? "building" : "opening") : startView === "orbit" ? "handoff" : "opening"
-    const initialPoster = staticRenderer && editorView === "building" ? heroUrls[heroUrls.length - 1] :
+    const previewStage: HomepageStage = staticRenderer ? (editorView === "orbit" ? "orbit" : editorView === "building" ? "building" : editorView === "connection" ? "connection" : "opening") : startView === "orbit" ? "handoff" : "opening"
+    const initialPoster = staticRenderer && editorView === "connection" ? connectionUrls[Math.floor(connectionUrls.length / 2)] :
+        staticRenderer && editorView === "building" ? heroUrls[heroUrls.length - 1] :
         (staticRenderer && editorView === "orbit") || (!staticRenderer && startView === "orbit") ? orbitPoster : heroUrls[0]
     const [stage, setStage] = React.useState<HomepageStage>(previewStage)
     const [posterUrl, setPosterUrl] = React.useState(initialPoster)
@@ -102,6 +109,7 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
         let disposed = false, heroGeneration = 0, enterToken = 0
         let currentStage: HomepageStage = previewStage
         let hero: ReturnType<typeof createHeroSequence> | null = null
+        let activeSequence: "SEQ_01" | "SEQ_02" = "SEQ_01", connectionWarmed = false
         let heroSnapshot: SequenceSnapshot = { state: previewStage === "building" ? "arrival" : "opening", progress: previewStage === "building" ? 1 : 0, frame: previewStage === "building" ? heroUrls.length - 1 : 0, direction: 1, held: false, decoded: 0, downloaded: 0 }
         let arrivedAt = -Infinity, lastWheelAt = -Infinity, wheelIntent = 0, lastUI = 0, lastOrbitUI = ""
         const abort = new AbortController(), signal = abort.signal
@@ -116,7 +124,7 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
             return box.width > 0 && box.height > 0 && box.bottom > 0 && box.top < innerHeight
         }
         function publish() {
-            homepageChannels.set(root!, { snapshot: heroSnapshot, timing: timing.current, enabled: currentStage !== "orbit" && currentStage !== "handoff" })
+            homepageChannels.set(root!, { snapshot: heroSnapshot, timing: timing.current, enabled: currentStage === "opening" || currentStage === "approach" || currentStage === "building" })
             notifyHomepage()
         }
         function changeStage(next: HomepageStage) {
@@ -138,19 +146,43 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
                 }
             },
         })
+        // Prefetch only compressed bytes, using the browser cache. No second decoded sequence lives beside SEQ_01.
+        function warmConnection() {
+            const connection = (navigator as Navigator & { connection?: { saveData?: boolean; effectiveType?: string } }).connection
+            if (connectionWarmed || staticRenderer || reducedMedia.matches || connection?.saveData || /(^|-)2g$/.test(connection?.effectiveType || "")) return
+            connectionWarmed = true
+            let next = 0
+            async function worker() {
+                while (!disposed && next < connectionUrls.length) {
+                    const url = connectionUrls[next++], request = new AbortController()
+                    const cancel = () => request.abort(), timeout = setTimeout(cancel, 10000)
+                    signal.addEventListener("abort", cancel, { once: true })
+                    try {
+                        const response = await fetch(url, { signal: request.signal, mode: "cors", credentials: "omit", cache: "force-cache" })
+                        if (response.ok) await response.blob()
+                    } catch { /* The active sequence retries a failed background download. */ }
+                    finally { clearTimeout(timeout); signal.removeEventListener("abort", cancel) }
+                }
+            }
+            void Promise.all([worker(), worker()])
+        }
         function mountHero(atEnd = false) {
             if (disposed) return
             enterToken++; orbit?.deactivate(); destroyHero()
+            activeSequence = "SEQ_01"; root!.dataset.activeSequence = activeSequence
             changePoster(heroUrls[atEnd ? heroUrls.length - 1 : 0])
+            if (atEnd) heroSnapshot = { state: "arrival", progress: 1, frame: heroUrls.length - 1, direction: 1, held: false, decoded: 0, downloaded: 0 }
             changeStage(atEnd ? "building" : "opening")
+            if (atEnd) arrivedAt = performance.now()
             const generation = ++heroGeneration
             hero = createHeroSequence({
-                root: heroRoot!, canvas: heroCanvas!, poster: poster!, urls: heroUrls, duration, maxSpeed, momentum, triggerDistance,
+                root: heroRoot!, canvas: heroCanvas!, poster: poster!, urls: heroUrls, duration, maxSpeed, momentum, triggerDistance, startAtEnd: atEnd,
                 holdScroll: true, preload: true, cacheFrames: phone ? 10 : 14, decodeWidth: phone ? 1280 : 1920, focalX, focalY,
                 inputFilter: event => !homepageBlocked(event.target),
                 onUpdate(snapshot) {
                     if (disposed || generation !== heroGeneration) return
                     heroSnapshot = snapshot; setHeroState(previous => previous === snapshot.state ? previous : snapshot.state)
+                    if (snapshot.state === "moving" || snapshot.state === "loading" || snapshot.state === "arrival") warmConnection()
                     if (snapshot.state === "arrival" || snapshot.state === "reduced") {
                         if (currentStage !== "building") arrivedAt = performance.now()
                         changeStage("building")
@@ -159,17 +191,48 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
                     else publish()
                 },
             })
-            if (atEnd) hero.skip()
         }
-        async function explore() {
-            if (disposed || !orbit || !isVisible() || currentStage === "orbit" || currentStage === "handoff") return
+        async function activateOrbit() {
+            if (disposed || !orbit || !isVisible()) return
             const token = ++enterToken
-            changeStage("handoff"); destroyHero()
+            destroyHero(); changeStage("handoff")
             try {
                 await orbit.activate()
                 if (disposed || token !== enterToken) return
                 changeStage("orbit")
-            } catch { /* The orbit reports a visible retry state. The current hero remains visible. */ }
+            } catch { /* The orbit reports a visible retry state. The completed sequence remains visible. */ }
+        }
+        function explore() {
+            if (disposed || !orbit || !isVisible() || currentStage !== "building") return
+            if (reducedMedia.matches) { void activateOrbit(); return }
+            enterToken++; destroyHero(); clearApartmentDetails()
+            activeSequence = "SEQ_02"; root!.dataset.activeSequence = activeSequence
+            changePoster(heroUrls[heroUrls.length - 1]); changeStage("connection")
+            const generation = ++heroGeneration
+            let completed = false
+            hero = createHeroSequence({
+                root: heroRoot!, canvas: heroCanvas!, poster: poster!, urls: connectionPlaybackUrls,
+                duration: connectionDuration, maxSpeed, momentum, triggerDistance,
+                holdScroll: true, preload: true, cacheFrames: phone ? 10 : 14, decodeWidth: phone ? 1280 : 1920, focalX, focalY,
+                inputFilter: event => !homepageBlocked(event.target),
+                onUpdate(snapshot) {
+                    if (disposed || generation !== heroGeneration) return
+                    heroSnapshot = snapshot; setHeroState(previous => previous === snapshot.state ? previous : snapshot.state)
+                    publish()
+                    const arrived = (snapshot.state === "arrival" || snapshot.state === "reduced") && snapshot.frame === connectionPlaybackUrls.length - 1
+                    const returned = snapshot.state === "opening" && snapshot.direction < 0 && snapshot.frame === 0
+                    if (!completed && (arrived || returned)) {
+                        completed = true
+                        // Constructors may publish synchronously under reduced motion. Teardown follows assignment, never precedes it.
+                        queueMicrotask(() => {
+                            if (disposed || generation !== heroGeneration) return
+                            if (returned) mountHero(true)
+                            else void activateOrbit()
+                        })
+                    }
+                },
+            })
+            hero.start()
         }
         function overview() { mountHero(false) }
         const retry = async () => {
@@ -221,18 +284,22 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
         window.addEventListener("wheel", wheel, { passive: false, signal })
         window.addEventListener("keydown", event => {
             if (!isVisible() || homepageBlocked(event.target) || event.ctrlKey || event.metaKey || event.altKey) return
-            if (event.key === "Escape" && currentStage === "handoff") { mountHero(true); return }
+            if (currentStage === "handoff") {
+                if (event.key === "Escape") { mountHero(true); return }
+                if (["ArrowDown", "ArrowUp", "PageDown", "PageUp", "Home", "End", " "].includes(event.key)) event.preventDefault()
+                return
+            }
             if (currentStage === "building" && ["ArrowDown", "PageDown", " "].includes(event.key)) { event.preventDefault(); void explore() }
         }, { signal })
         root.addEventListener("admiral:overview", overview, { signal })
         window.addEventListener("admiral:overview", event => { if (event.target === window && root!.getBoundingClientRect().width > 0) overview() }, { signal })
         root.addEventListener("admiral:explore", () => { void explore() }, { signal })
-        actions.current = { explore: () => { void explore() }, overview, skip: () => hero?.skip(), resumeHero: () => { if (heroSnapshot.direction < 0) hero?.reverse(); else hero?.start() }, orbit }
+        actions.current = { explore: () => { void explore() }, overview, skip: () => { if (activeSequence === "SEQ_02" && reducedMedia.matches) void activateOrbit(); else hero?.skip() }, resumeHero: () => { if (heroSnapshot.direction < 0) hero?.reverse(); else hero?.start() }, orbit }
         ;(root as HTMLElement & { retryOrbit?: () => Promise<void> }).retryOrbit = retry
         if (staticRenderer) { changeStage(previewStage); changePoster(initialPoster) }
         else {
             changeStage("opening")
-            if (startView === "orbit") { changePoster(orbitPoster); void explore() }
+            if (startView === "orbit") { changePoster(orbitPoster); void activateOrbit() }
             else mountHero()
             // The opening picture wins the first network requests; preload the entire orbit behind it.
             const warm = window.setTimeout(() => { if (!disposed && isVisible()) void orbit!.prepare().catch(() => {}) }, 300)
@@ -244,7 +311,7 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
             actions.current = null; delete (root as HTMLElement & { retryOrbit?: () => Promise<void> }).retryOrbit
             homepageChannels.delete(root); notifyHomepage()
         }
-    }, [heroUrls, orbitUrls, staticRenderer, hostVisible, startView, editorView, duration, maxSpeed, momentum, triggerDistance, checkpointCount,
+    }, [heroUrls, connectionUrls, connectionPlaybackUrls, orbitUrls, staticRenderer, hostVisible, startView, editorView, duration, connectionDuration, maxSpeed, momentum, triggerDistance, checkpointCount,
         motionWidth, orbitMobileWidth, inspectionWidth, desktopBuffer, phoneBuffer, orbitStartIndex, snapDuration, frameBlend, focalX, focalY, showDiagnostics, clearApartmentDetails])
 
     React.useEffect(() => {
@@ -294,10 +361,12 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
             {!staticRenderer && showControls && <div data-homepage-controls="" data-orbit-ignore="" style={{ position: "absolute", bottom: controlsBottom, left: "50%", transform: "translateX(-50%)", display: "flex", alignItems: "center", justifyContent: "center", flexWrap: "wrap", gap: 7, width: "max-content", maxWidth: "94%", zIndex: 3 }}>
                 {(stage === "opening" || stage === "approach") && <button type="button" style={homepageButton} onClick={() => actions.current?.skip()}>Skip approach</button>}
                 {stage === "approach" && (heroState === "paused" || heroState === "error") && <button type="button" style={homepageButton} onClick={() => actions.current?.resumeHero()}>{heroState === "error" ? "Retry approach" : "Continue approach"}</button>}
+                {stage === "connection" && <button type="button" style={homepageButton} onClick={() => actions.current?.skip()}>Skip connection</button>}
+                {stage === "connection" && (heroState === "paused" || heroState === "error") && <button type="button" style={homepageButton} onClick={() => actions.current?.resumeHero()}>{heroState === "error" ? "Retry connection" : "Continue connection"}</button>}
                 {stage === "building" && <button type="button" style={homepageButton} onClick={() => actions.current?.explore()}>Explore building</button>}
                 {stage === "handoff" && orbitInfo.state !== "error" && <span role="status" style={{ ...homepageButton, cursor: "default" }}>Preparing orbit {preparationPercent}%</span>}
                 {(stage === "building" || stage === "handoff" || stage === "orbit") && orbitInfo.state === "error" && <button type="button" style={homepageButton} onClick={() => { void (rootRef.current as (HTMLElement & { retryOrbit?: () => Promise<void> }) | null)?.retryOrbit?.() }}>Retry orbit</button>}
-                {(stage === "building" || stage === "handoff" || stage === "orbit") && <button type="button" style={homepageButton} onClick={() => actions.current?.overview()}>Overview</button>}
+                {(stage === "building" || stage === "connection" || stage === "handoff" || stage === "orbit") && <button type="button" style={homepageButton} onClick={() => actions.current?.overview()}>Overview</button>}
                 {stage === "orbit" && <>
                     <button type="button" aria-label="Previous view" disabled={orbitMoving} style={orbitButtonStyle} onClick={() => actions.current?.orbit?.go(-1)}>←</button>
                     <span aria-live="polite" style={{ ...homepageButton, cursor: "default", minWidth: 65, textAlign: "center" }}>{orbitInfo.checkpoint >= 0 ? `View ${orbitInfo.checkpoint + 1} / ${checkpoints}` : orbitInfo.state === "checkpoint" ? "Custom view" : orbitInfo.state === "buffering" ? "Preparing view…" : orbitInfo.state === "error" ? "View unavailable" : "Looking around"}</span>
@@ -306,6 +375,10 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
                     {showViewpoints && Array.from({ length: checkpoints }, (_, i) => <button key={i} type="button" aria-label={`View ${i + 1}`} aria-pressed={orbitInfo.checkpoint === i} disabled={orbitMoving}
                         style={{ ...orbitButtonStyle, padding: "7px 9px", background: orbitInfo.checkpoint === i ? "rgba(255,255,255,.9)" : homepageButton.background, color: orbitInfo.checkpoint === i ? "#101820" : "#fff" }} onClick={() => actions.current?.orbit?.setCheckpoint(i)}>{i + 1}</button>)}
                 </>}
+            </div>}
+            {!staticRenderer && !showControls && stage === "connection" && (heroState === "paused" || heroState === "error") && <div data-homepage-controls="" data-orbit-ignore="" style={{ position: "absolute", bottom: 18, left: "50%", transform: "translateX(-50%)", display: "flex", gap: 7, zIndex: 3 }}>
+                <button type="button" style={homepageButton} onClick={() => actions.current?.resumeHero()}>{heroState === "error" ? "Retry connection" : "Continue connection"}</button>
+                <button type="button" style={homepageButton} onClick={() => actions.current?.overview()}>Overview</button>
             </div>}
             {!staticRenderer && !showControls && orbitInfo.state === "buffering" && <span role="status" style={{ ...homepageButton, position: "absolute", bottom: 18, left: "50%", transform: "translateX(-50%)", pointerEvents: "none", zIndex: 3 }}>Preparing view…</span>}
             {!staticRenderer && !showControls && orbitInfo.state === "error" && <div data-homepage-controls="" data-orbit-ignore="" style={{ position: "absolute", bottom: 18, left: "50%", transform: "translateX(-50%)", zIndex: 3 }}>
@@ -377,14 +450,16 @@ export function ArrivalCTA(Component: ComponentType<any>): ComponentType { retur
 AdmiralHomepageTrial.displayName = "Admiral Homepage Trial"
 addPropertyControls(AdmiralHomepageTrial, {
     useGitHubAssets: { type: ControlType.Boolean, title: "GitHub assets", defaultValue: true },
-    heroBaseUrl: { type: ControlType.String, title: "Approach folder", defaultValue: "", hidden: p => p.useGitHubAssets !== false },
+    heroBaseUrl: { type: ControlType.String, title: "SEQ_01 folder", defaultValue: "", hidden: p => p.useGitHubAssets !== false },
+    connectionBaseUrl: { type: ControlType.String, title: "SEQ_02 folder", defaultValue: "", hidden: p => p.useGitHubAssets !== false },
     orbitBaseUrl: { type: ControlType.String, title: "Orbit folder", defaultValue: "", hidden: p => p.useGitHubAssets !== false },
     startView: { type: ControlType.Enum, title: "Start trial", options: ["opening", "orbit"], optionTitles: ["Full journey", "Orbit directly"], defaultValue: "opening" },
-    editorView: { type: ControlType.Enum, title: "Editor view", options: ["opening", "building", "orbit"], defaultValue: "opening" },
+    editorView: { type: ControlType.Enum, title: "Editor view", options: ["opening", "building", "connection", "orbit"], optionTitles: ["SEQ_01 opening", "SEQ_01 arrival", "SEQ_02 midway", "Orbit"], defaultValue: "opening" },
     orbitStartFrame: { type: ControlType.Number, title: "Orbit start frame", defaultValue: 45, min: 0, max: HOMEPAGE_ORBIT_NAMES.length - 1, step: 1, description: "Exact first orbit image, numbered 0–119 to match the filenames. With 8 viewpoints: 0 = camera 1, 15 = camera 2, 30 = camera 3, 45 = camera 4. Custom frames stay still until the next gesture; the checkpoint cameras stay fixed." },
-    duration: { type: ControlType.Number, title: "Approach", defaultValue: 2.5, min: .6, max: 10, step: .1, unit: "s" },
-    maxSpeed: { type: ControlType.Number, title: "Approach boost", defaultValue: 1.8, min: 1, max: 3, step: .1 },
-    momentum: { type: ControlType.Number, title: "Approach coast", defaultValue: .22, min: .08, max: .6, step: .02 },
+    duration: { type: ControlType.Number, title: "SEQ_01 duration", defaultValue: 2.5, min: .6, max: 10, step: .1, unit: "s" },
+    connectionDuration: { type: ControlType.Number, title: "SEQ_02 duration", defaultValue: 2.5, min: .6, max: 10, step: .1, unit: "s", description: "Flight time from the SEQ_01 arrival into the orbit. Uses the same scroll trigger, boost, coast, reversal and 0.8-second endpoint fades as SEQ_01." },
+    maxSpeed: { type: ControlType.Number, title: "Flight boost", defaultValue: 1.8, min: 1, max: 3, step: .1, description: "Scroll acceleration for both SEQ_01 and SEQ_02." },
+    momentum: { type: ControlType.Number, title: "Flight coast", defaultValue: .22, min: .08, max: .6, step: .02, description: "Momentum response for both SEQ_01 and SEQ_02." },
     triggerDistance: { type: ControlType.Number, title: "Scroll trigger", defaultValue: 28, min: 8, max: 150, step: 1 },
     checkpointCount: { type: ControlType.Number, title: "Viewpoints", defaultValue: 8, min: 2, max: 16, step: 1 },
     motionWidth: { type: ControlType.Number, title: "Orbit decode", defaultValue: 960, min: 480, max: 1920, step: 160, unit: "px" },

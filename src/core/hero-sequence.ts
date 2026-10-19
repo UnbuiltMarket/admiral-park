@@ -7,6 +7,7 @@ export interface SequenceOptions {
     root: HTMLElement; canvas: HTMLCanvasElement; poster: HTMLImageElement; urls: string[];
     duration?: number; maxSpeed?: number; momentum?: number; triggerDistance?: number;
     preload?: boolean; holdScroll?: boolean; cacheFrames?: number; decodeWidth?: number;
+    startAtEnd?: boolean;
     focalX?: number; focalY?: number; timeoutMs?: number;
     onUpdate?: (snapshot: SequenceSnapshot) => void;
     inputFilter?: (event: Event) => boolean;
@@ -24,7 +25,7 @@ function createSequenceFrames(urls: string[], width: number, limit: number, noti
     const abort = new AbortController();
     const blobs = new Map<number, Blob>();
     const bitmaps = new Map<number, SequenceBitmap>();
-    const fetching = new Set<number>(), decoding = new Set<number>(), failed = new Set<number>();
+    const fetching = new Set<number>(), decoding = new Set<number>(), failed = new Set<number>(), retrying = new Set<number>();
     let disposed = false, all = false, center = 0, wanted: number[] = [0], downloads = 0;
     const last = urls.length - 1;
     const valid = (n: number) => n >= 0 && n <= last;
@@ -69,10 +70,10 @@ function createSequenceFrames(urls: string[], width: number, limit: number, noti
         const cancel = () => requestAbort.abort();
         abort.signal.addEventListener("abort", cancel, { once: true });
         try {
-            const response = await fetch(urls[index], { signal: requestAbort.signal, mode: "cors", credentials: "omit", cache: "force-cache" });
+            const response = await fetch(urls[index], { signal: requestAbort.signal, mode: "cors", credentials: "omit", cache: retrying.has(index) ? "reload" : "force-cache" });
             if (!response.ok) throw new Error("Frame " + index + ": " + response.status);
             const blob = await response.blob();
-            if (!disposed) { blobs.set(index, blob); downloads++; }
+            if (!disposed) { blobs.set(index, blob); retrying.delete(index); downloads++; }
         } catch { if (!disposed) failed.add(index); }
         finally {
             clearTimeout(timeout); abort.signal.removeEventListener("abort", cancel); fetching.delete(index);
@@ -105,9 +106,13 @@ function createSequenceFrames(urls: string[], width: number, limit: number, noti
         get: (index: number) => bitmaps.get(index),
         failed: (index: number) => failed.has(index),
         counts: () => ({ decoded: bitmaps.size, downloaded: downloads }),
-        retry() { failed.clear(); pump(); },
+        retry() {
+            // A failed decode may have cached a damaged body. An explicit retry downloads a fresh copy.
+            for (const index of failed) { blobs.delete(index); retrying.add(index); }
+            failed.clear(); pump();
+        },
         destroy() {
-            disposed = true; abort.abort(); blobs.clear();
+            disposed = true; abort.abort(); blobs.clear(); retrying.clear();
             bitmaps.forEach(bitmap => bitmap.close()); bitmaps.clear();
         },
     };
@@ -129,9 +134,10 @@ export function createHeroSequence(options: SequenceOptions) {
     const connection = (navigator as Navigator & { connection?: { saveData?: boolean; effectiveType?: string } }).connection;
     const abort = new AbortController(), signal = abort.signal;
     const context = canvas.getContext("2d", { alpha: false });
-    let disposed = false, state: SequenceState = "opening", displayed = 0, clock = 0;
-    let displayedProgress = 0;
-    let rendered = { index: 0, next: 0, mix: 0 };
+    const initialFrame = options.startAtEnd ? last : 0;
+    let disposed = false, state: SequenceState = options.startAtEnd ? "arrival" : "opening", displayed = initialFrame, clock = options.startAtEnd ? totalDuration : 0;
+    let displayedProgress = options.startAtEnd ? 1 : 0;
+    let rendered = { index: initialFrame, next: initialFrame, mix: 0 };
     let direction = 1, velocity = 0, boost = 0, held = false, playing = false;
     let active = false, raf = 0, previousTime = 0, waitingSince = 0;
     let holdY = 0, holdX = 0, holdTimer: ReturnType<typeof setTimeout> | undefined;
@@ -397,6 +403,8 @@ export function createHeroSequence(options: SequenceOptions) {
     poster.addEventListener("load", loadedPoster, { signal });
     if (poster.complete) loadedPoster();
     canvas.style.opacity = "0"; poster.style.opacity = "1";
+    // A restored endpoint is parked, not skipped: reverse input stays enabled and the opening copy never flashes.
+    if (options.startAtEnd) { active = true; frames.request(last, 1, false, true); wake(); }
     publish();
     if (motion.matches) reducedChanged();
     return {

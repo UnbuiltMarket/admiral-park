@@ -17,14 +17,15 @@ const code=ts.transpileModule(source,{compilerOptions:{target:ts.ScriptTarget.ES
 const react=await readFile(path.join(path.dirname(requireDev.resolve('react/package.json')),'umd/react.development.js'),'utf8');
 const dom=await readFile(path.join(path.dirname(requireDev.resolve('react-dom/package.json')),'umd/react-dom.development.js'),'utf8');
 const heroes=await Promise.all(Array.from({length:65},(_,i)=>readFile(new URL('assets/images/AVIF 30_1920x1010 DESKTOP HERO SEQUENCE/'+encodeURIComponent(`raw sequence${String(i).padStart(2,'0')}.avif`),root))));
+const connections=await Promise.all(Array.from({length:73},(_,i)=>readFile(new URL('assets/images/SEQ_02_V01/'+encodeURIComponent(`02 sequence${String(i).padStart(2,'0')} copy.avif`),root))));
 const orbits=await Promise.all(Array.from({length:120},(_,i)=>readFile(new URL('assets/ORBIT PICKER/BEAUTY sequence_Desktop/'+encodeURIComponent(`adjusted sequence${String(i).padStart(4,'0')} copy.avif`),root))));
 const browser=await chromium.launch({headless:true,channel:process.env.PLAYWRIGHT_CHANNEL||'chrome'}),results=[];
 const pause=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 
 async function fixture(options={}){
  const context=await browser.newContext({viewport:{width:1200,height:800},...options.context});
- const page=await context.newPage(),errors=[],heroRequests=[],orbitRequests=[],floorplanRequests=[];
- let failIndex=options.failOrbit,corruptIndex=options.corruptOrbit;
+ const page=await context.newPage(),errors=[],heroRequests=[],connectionRequests=[],orbitRequests=[],floorplanRequests=[];
+ let failIndex=options.failOrbit,corruptIndex=options.corruptOrbit,failConnection=options.failConnection,corruptConnection=options.corruptConnection;
  page.on('pageerror',error=>errors.push(error.message));
  await page.route('http://homepage.test/**',async route=>{
   const url=new URL(route.request().url()),pathname=decodeURIComponent(url.pathname);
@@ -36,6 +37,13 @@ async function fixture(options={}){
   if(pathname.startsWith('/hero/')){
    const index=Number(pathname.match(/sequence(\d+)/)?.[1]);heroRequests.push(index);
    return route.fulfill({contentType:'image/avif',headers:{'Cache-Control':'public,max-age=3600'},body:heroes[index]});
+  }
+  if(pathname.startsWith('/connection/')){
+   const index=Number(pathname.match(/02 sequence(\d+)/)?.[1]);connectionRequests.push(index);
+   if(options.delayConnection)await pause(options.delayConnection);
+   if(index===failConnection)return route.fulfill({status:503,body:'Deliberate trial connector outage'});
+   if(index===corruptConnection)return route.fulfill({contentType:'image/avif',body:'Deliberately invalid encoded connector frame'});
+   return route.fulfill({contentType:'image/avif',headers:{'Cache-Control':'public,max-age=3600'},body:connections[index]});
   }
   if(pathname.startsWith('/orbit/')){
    const index=Number(pathname.match(/adjusted sequence(\d{4})/)?.[1]);orbitRequests.push(index);
@@ -50,12 +58,20 @@ async function fixture(options={}){
  await page.goto('http://homepage.test/');await page.addScriptTag({content:react});await page.addScriptTag({content:dom});
  await page.evaluate(({code,props,staticMode,publicMode,twoInstances,externalOverlay,gateDecodeIndices,gateFirstNativeDecodes,accelerateDecodeWatchdog,useDefaultOrbitStart,cleanFixture})=>{
   if(cleanFixture){const style=document.createElement('style');style.textContent='#nested,#native-input{display:none!important}';document.head.appendChild(style);}
-  window.bitmapCreated=0;window.bitmapClosed=0;window.bitmapRecords=[];window.orbitLive=0;window.orbitLiveMax=0;
+  window.bitmapCreated=0;window.bitmapClosed=0;window.bitmapRecords=[];window.sequenceDraws=[];window.orbitLive=0;window.orbitLiveMax=0;
+  const bitmapRecords=new WeakMap(),nativeDrawImage=CanvasRenderingContext2D.prototype.drawImage;
+  CanvasRenderingContext2D.prototype.drawImage=function(...args){const record=bitmapRecords.get(args[0]),root=document.querySelector('[data-admiral-homepage]');if(record?.sequence)window.sequenceDraws.push({time:performance.now(),stage:root?.dataset.homepageStage,activeSequence:root?.dataset.activeSequence,sequence:record.sequence,index:record.sequenceIndex});return nativeDrawImage.apply(this,args);};
   window.nativeBitmapCalls=0;window.nativeBitmapActive=0;window.nativeBitmapPeak=0;
   const nativeTimers=window.setTimeout.bind(window);window.acceleratedWatchdog=accelerateDecodeWatchdog;
   if(accelerateDecodeWatchdog)window.setTimeout=(callback,delay,...args)=>nativeTimers(callback,window.acceleratedWatchdog&&delay===15000?100:delay,...args);
-  const orbitBlobs=new WeakMap(),nativeFetch=window.fetch.bind(window);
-  window.fetch=async(...args)=>{const response=await nativeFetch(...args),match=decodeURIComponent(String(args[0])).match(/adjusted sequence(\d{4})/);if(match){const readBlob=response.blob.bind(response);response.blob=async()=>{const blob=await readBlob();orbitBlobs.set(blob,Number(match[1]));return blob;};}return response;};
+  const orbitBlobs=new WeakMap(),sequenceBlobs=new WeakMap(),nativeFetch=window.fetch.bind(window);window.sequenceRequests=[];
+  window.fetch=async(...args)=>{
+   const url=decodeURIComponent(String(args[0])),match=url.match(/adjusted sequence(\d{4})/),sequence=url.match(/\/(hero|connection)\/(?:raw sequence|02 sequence)(\d+)/);
+   if(sequence)window.sequenceRequests.push({sequence:sequence[1]==='connection'?'SEQ_02':'SEQ_01',index:Number(sequence[2]),cache:args[1]?.cache,time:performance.now()});
+   const response=await nativeFetch(...args);
+   if(match||sequence){const readBlob=response.blob.bind(response);response.blob=async()=>{const blob=await readBlob();if(match)orbitBlobs.set(blob,Number(match[1]));if(sequence)sequenceBlobs.set(blob,{sequence:sequence[1]==='connection'?'SEQ_02':'SEQ_01',sequenceIndex:Number(sequence[2])});return blob;};}
+   return response;
+  };
   const gates=new Set(gateDecodeIndices),waiting=[];window.decodeGateOpen=!gates.size;
   window.releaseDecodeGates=()=>{window.decodeGateOpen=true;waiting.splice(0).forEach(resolve=>resolve());};
   const nativeWaiting=[];window.nativeDecodeGateOpen=!gateFirstNativeDecodes;
@@ -63,10 +79,10 @@ async function fixture(options={}){
   const nativeCreateImageBitmap=window.createImageBitmap.bind(window);
   window.createImageBitmap=async(...args)=>{
    const call=++window.nativeBitmapCalls;window.nativeBitmapActive++;window.nativeBitmapPeak=Math.max(window.nativeBitmapPeak,window.nativeBitmapActive);
-   const record={index:orbitBlobs.get(args[0]),width:args[1]?.resizeWidth,started:performance.now(),created:false,returned:false,closed:false};window.bitmapRecords.push(record);
+   const record={index:orbitBlobs.get(args[0]),...sequenceBlobs.get(args[0]),width:args[1]?.resizeWidth,started:performance.now(),created:false,returned:false,closed:false};window.bitmapRecords.push(record);
    try{
     if(call<=gateFirstNativeDecodes&&!window.nativeDecodeGateOpen)await new Promise(resolve=>nativeWaiting.push(resolve));
-    const bitmap=await nativeCreateImageBitmap(...args);window.bitmapCreated++;record.created=true;record.nativeReadyAt=performance.now();
+    const bitmap=await nativeCreateImageBitmap(...args);bitmapRecords.set(bitmap,record);window.bitmapCreated++;record.created=true;record.nativeReadyAt=performance.now();
     if(Number.isFinite(record.index)){window.orbitLive++;window.orbitLiveMax=Math.max(window.orbitLiveMax,window.orbitLive);}
     const close=bitmap.close.bind(bitmap);bitmap.close=()=>{if(!record.closed){record.closed=true;record.closedAt=performance.now();window.bitmapClosed++;if(Number.isFinite(record.index))window.orbitLive--;}close();};
     if(gates.has(record.index)&&!window.decodeGateOpen)await new Promise(resolve=>waiting.push(resolve));record.returned=true;record.returnedAt=performance.now();return bitmap;
@@ -79,7 +95,7 @@ async function fixture(options={}){
   const Frame=React.forwardRef((props,ref)=>React.createElement('div',{...props,ref}));
   const Intro=module.exports.OpeningContent(Frame),Building=module.exports.BuildingContent(Frame),CTA=module.exports.ArrivalCTA(Frame);
   window.component=module.exports.default;
-  window.props={useGitHubAssets:publicMode,heroBaseUrl:'http://homepage.test/hero',orbitBaseUrl:'http://homepage.test/orbit',orbitStartFrame:0,detailsMode:'off',snapDuration:.3,...props};
+  window.props={useGitHubAssets:publicMode,heroBaseUrl:'http://homepage.test/hero',connectionBaseUrl:'http://homepage.test/connection',connectionDuration:.6,orbitBaseUrl:'http://homepage.test/orbit',orbitStartFrame:0,detailsMode:'off',snapDuration:.3,...props};
   if(useDefaultOrbitStart)delete window.props.orbitStartFrame;
   window.root=ReactDOM.createRoot(document.querySelector('#mount'));
   window.renderTrial=()=>window.root.render(React.createElement(React.StrictMode,null,React.createElement('section',{id:'stage'},
@@ -92,17 +108,18 @@ async function fixture(options={}){
    React.createElement('input',{id:'native-input',defaultValue:'Apartment'})),
    twoInstances?React.createElement('section',{id:'secondary',style:{display:'none',position:'relative',height:'100svh'}},React.createElement(window.component,window.props)):null));
   window.renderTrial();window.samples=[];
-  window.sampleTimer=setInterval(()=>{const root=document.querySelector('[data-admiral-homepage]'),orbit=document.querySelector('[data-admiral-orbit]')||root,hero=document.querySelector('[data-admiral-sequence]');if(root)window.samples.push({time:performance.now(),stage:root.dataset.homepageStage,state:orbit?.dataset.orbitState,position:Number(orbit?.dataset.orbitPosition),frame:Number(orbit?.dataset.orbitFrame),checkpoint:Number(orbit?.dataset.orbitCheckpoint),decoded:Number(orbit?.dataset.orbitDecoded),buffered:Number(orbit?.dataset.orbitBuffered),bufferTotal:Number(orbit?.dataset.orbitBufferTotal),requiredReady:Number(orbit?.dataset.orbitRequiredReady),requiredTotal:Number(orbit?.dataset.orbitRequiredTotal),decoding:Number(orbit?.dataset.orbitDecoding),ready:orbit?.dataset.orbitReady,target:Number(orbit?.dataset.orbitTarget),mix:Number(orbit?.dataset.orbitFrameMix),heroFrame:Number(hero?.dataset.frame)});},16);
+  window.sampleTimer=setInterval(()=>{const root=document.querySelector('[data-admiral-homepage]'),orbit=document.querySelector('[data-admiral-orbit]')||root,hero=document.querySelector('[data-admiral-sequence]');if(root)window.samples.push({time:performance.now(),stage:root.dataset.homepageStage,sequence:root.dataset.activeSequence,sequenceState:hero?.dataset.sequenceState,heroDecoded:Number(hero?.dataset.decoded),state:orbit?.dataset.orbitState,position:Number(orbit?.dataset.orbitPosition),frame:Number(orbit?.dataset.orbitFrame),checkpoint:Number(orbit?.dataset.orbitCheckpoint),decoded:Number(orbit?.dataset.orbitDecoded),buffered:Number(orbit?.dataset.orbitBuffered),bufferTotal:Number(orbit?.dataset.orbitBufferTotal),requiredReady:Number(orbit?.dataset.orbitRequiredReady),requiredTotal:Number(orbit?.dataset.orbitRequiredTotal),decoding:Number(orbit?.dataset.orbitDecoding),ready:orbit?.dataset.orbitReady,target:Number(orbit?.dataset.orbitTarget),mix:Number(orbit?.dataset.orbitFrameMix),heroFrame:Number(hero?.dataset.frame)});},16);
  },{code,props:options.props||{},staticMode:!!options.staticMode,publicMode,twoInstances:!!options.twoInstances,externalOverlay:!!options.externalOverlay,gateDecodeIndices:options.gateDecodeIndices||[],gateFirstNativeDecodes:options.gateFirstNativeDecodes||0,accelerateDecodeWatchdog:!!options.accelerateDecodeWatchdog,useDefaultOrbitStart:!!options.useDefaultOrbitStart,cleanFixture:!!options.cleanFixture});
  await page.waitForSelector('[data-admiral-homepage]');
  await page.waitForFunction(()=>[...document.images].some(image=>image.naturalWidth>0));
  await page.mouse.move(450,500);
- return {context,page,errors,heroRequests,orbitRequests,floorplanRequests,restoreOrbit(){failIndex=undefined;corruptIndex=undefined;},async close(){await page.evaluate(()=>{window.releaseDecodeGates?.();window.releaseNativeDecodeGates?.();}).catch(()=>{});assert.deepEqual(errors,[]);await context.close();}};
+ return {context,page,errors,heroRequests,connectionRequests,orbitRequests,floorplanRequests,restoreOrbit(){failIndex=undefined;corruptIndex=undefined;},restoreConnection(){failConnection=undefined;corruptConnection=undefined;},async close(){await page.evaluate(()=>{window.releaseDecodeGates?.();window.releaseNativeDecodeGates?.();}).catch(()=>{});assert.deepEqual(errors,[]);await context.close();}};
 }
 const orbitSelector='[data-admiral-orbit]';
 async function orbitData(page){return page.locator(orbitSelector).evaluate(element=>({...element.dataset}));}
 async function waitOrbit(page,state='checkpoint',timeout=30000){await page.waitForFunction(state=>{const root=document.querySelector('[data-admiral-homepage]'),orbit=document.querySelector('[data-admiral-orbit]');return root?.dataset.homepageStage==='orbit'&&orbit?.dataset.orbitState===state;},state,{timeout});if(state==='checkpoint')await page.waitForTimeout(220);}
 async function waitStage(page,stage,timeout=20000){await page.waitForFunction(stage=>document.querySelector('[data-admiral-homepage]')?.dataset.homepageStage===stage,stage,{timeout});}
+async function waitConnectionFrame(page,min=1,max=72){await page.waitForFunction(({min,max})=>{const root=document.querySelector('[data-admiral-homepage]'),sequence=document.querySelector('[data-admiral-sequence]');return root?.dataset.homepageStage==='connection'&&root.dataset.activeSequence==='SEQ_02'&&sequence?.dataset.sequenceState==='moving'&&Number(sequence.dataset.frame)>=min&&Number(sequence.dataset.frame)<=max;},{min,max},{timeout:20000});}
 async function pass(name,fn){if(process.env.HOMEPAGE_TEST_FILTER&&!name.includes(process.env.HOMEPAGE_TEST_FILTER))return;const started=Date.now();await fn();results.push({name,ms:Date.now()-started});console.log('PASS '+name);}
 
 async function waitFrame(page,frame,timeout=12000){
@@ -119,6 +136,67 @@ async function apartmentField(page,name){return page.locator(`[data-apartment-fi
 async function componentScreenshot(page,name){const style=await page.addStyleTag({content:'#navbar{visibility:hidden!important}'});try{await page.screenshot({path:fileURLToPath(new URL(name,out))});}finally{await style.evaluate(element=>element.remove());}}
 
 try{
+ await pass('SEQ_02 full journey waits for a fresh scroll draws the connector endpoint and drains wheel momentum',async()=>{
+  const f=await fixture({useDefaultOrbitStart:true,externalOverlay:true,props:{duration:.6,connectionDuration:.8,maxSpeed:1}}),{page}=f;
+  await waitStage(page,'opening');assert.equal(await page.evaluate(()=>window.bitmapRecords.filter(record=>record.sequence==='SEQ_02').length),0,'Opening does not decode the connector');
+  await page.mouse.wheel(0,120);await waitStage(page,'approach');await waitStage(page,'building');await page.waitForTimeout(300);
+  assert.equal(await page.locator('[data-admiral-homepage]').getAttribute('data-homepage-stage'),'building','SEQ_01 completion waits at the building');
+  assert.equal(await page.evaluate(()=>window.bitmapRecords.filter(record=>record.sequence==='SEQ_02').length),0,'Background connector downloads do not decode inactive images');
+  await page.evaluate(()=>window.samples=[]);await freshWheel(page,120);await waitStage(page,'connection');
+  assert.equal(await page.locator('[data-admiral-homepage]').getAttribute('data-active-sequence'),'SEQ_02');
+  for(let index=0;index<85;index++){await page.mouse.wheel(0,60);await page.waitForTimeout(40);}
+  await waitOrbit(page);assert.equal(Number((await orbitData(page)).orbitPosition),45,'Wheel momentum cannot rotate the newly entered orbit');assert.equal(await page.evaluate(()=>scrollY),0);
+  const trace=await page.evaluate(()=>({samples:window.samples,draws:window.sequenceDraws,records:window.bitmapRecords}));
+  assert.ok(trace.samples.some(sample=>sample.stage==='connection'&&sample.sequence==='SEQ_02'&&sample.heroFrame>1&&sample.heroFrame<73),'Connector advances through intermediate images');
+  assert.ok(trace.draws.some(draw=>draw.sequence==='SEQ_02'&&draw.index===0),'First exported connector image is drawn');
+  const final=trace.draws.find(draw=>draw.sequence==='SEQ_02'&&draw.index===72);assert.ok(final,'The actual final connector asset is drawn before handoff');
+  const orbit=trace.samples.find(sample=>sample.stage==='orbit');assert.ok(orbit&&final.time<=orbit.time,'Orbit appears after the connector endpoint');
+  assert.ok(trace.samples.filter(sample=>sample.stage==='connection').every(sample=>sample.heroDecoded<=16),'Desktop connector decoder remains bounded');
+  assert.ok(trace.records.filter(record=>record.sequence==='SEQ_02').every(record=>!record.created||record.closed),'Connector bitmaps are released on orbit entry');
+  assert.equal(new Set(f.connectionRequests).size,73,'All connector assets are fetched');
+  await freshWheel(page,1);await waitFrame(page,60);await writeFile(new URL('seq02-journey.json',out),JSON.stringify(trace,null,2));await f.close();
+ });
+ await pass('SEQ_02 reverses to the building and a later fresh gesture can replay it',async()=>{
+  const f=await fixture({useDefaultOrbitStart:true,props:{connectionDuration:4,maxSpeed:1}}),{page}=f;await page.getByRole('button',{name:'Skip approach',exact:true}).click();await waitStage(page,'building');
+  await freshWheel(page,120);await waitConnectionFrame(page,8,40);await page.evaluate(()=>window.samples=[]);await freshWheel(page,-120);await waitStage(page,'building');
+  assert.equal(await page.locator('[data-admiral-homepage]').getAttribute('data-active-sequence'),'SEQ_01');
+  assert.match(await page.locator('[data-admiral-sequence] img').getAttribute('src'),/raw%20sequence64\.avif/,'Reversing returns to the SEQ_01 building endpoint');
+  await page.waitForTimeout(300);assert.equal(await page.locator('[data-admiral-homepage]').getAttribute('data-homepage-stage'),'building');assert.ok((await page.evaluate(()=>window.samples)).every(sample=>sample.stage!=='opening'),'Restoring the building has no opening-stage flash');
+  await freshWheel(page,-120);await waitStage(page,'approach');await waitStage(page,'opening');
+  await page.getByRole('button',{name:'Skip approach',exact:true}).click();await waitStage(page,'building');
+  await freshWheel(page,120);await waitStage(page,'connection');await page.getByRole('button',{name:'Skip connection',exact:true}).click();await waitFrame(page,45);await f.close();
+ });
+ await pass('SEQ_02 Overview cancels old callbacks and a new Explore activation survives',async()=>{
+  const f=await fixture({useDefaultOrbitStart:true,props:{connectionDuration:3,maxSpeed:1}}),{page}=f;await page.getByRole('button',{name:'Skip approach',exact:true}).click();await waitStage(page,'building');await page.getByRole('button',{name:'Explore building',exact:true}).click();await waitConnectionFrame(page,3,55);
+  await page.getByRole('button',{name:'Overview',exact:true}).click();await waitStage(page,'opening');await page.waitForTimeout(250);
+  assert.equal(await page.locator('[data-admiral-homepage]').getAttribute('data-active-sequence'),'SEQ_01');assert.equal(await page.locator('[data-admiral-sequence]').getAttribute('data-frame'),'0');
+  await page.getByRole('button',{name:'Skip approach',exact:true}).click();await waitStage(page,'building');await page.getByRole('button',{name:'Explore building',exact:true}).click();await waitStage(page,'connection');await page.getByRole('button',{name:'Skip connection',exact:true}).click();await waitFrame(page,45);
+  await page.waitForTimeout(350);assert.equal(await page.locator('[data-admiral-homepage]').getAttribute('data-homepage-stage'),'orbit','A destroyed sequence cannot replace the newer activation');await f.close();
+ });
+ await pass('SEQ_02 slow downloads keep a useful image and failed assets retry with trial controls hidden',async()=>{
+  const slow=await fixture({externalOverlay:true,delayConnection:180,props:{connectionDuration:.6,maxSpeed:1}});await coveredClick(slow.page,'Skip approach');await waitStage(slow.page,'building');await coveredClick(slow.page,'Explore building');await waitStage(slow.page,'connection');
+  for(let index=0;index<5;index++){assert.ok(await slow.page.evaluate(()=>[...document.images].some(image=>image.complete&&image.naturalWidth>0&&getComputedStyle(image).opacity!=='0')||[...document.querySelectorAll('canvas')].some(canvas=>canvas.width>1&&canvas.getContext('2d')?.getImageData(5,5,1,1).data[3]>0)),'Slow connection keeps a rendered image');await slow.page.waitForTimeout(120);}
+  assert.equal(await slow.page.evaluate(()=>scrollY),0);await waitOrbit(slow.page);await slow.close();
+  for(const failure of [{failConnection:0},{corruptConnection:0}]){
+   const f=await fixture({...failure,props:{showControls:false,duration:.6,connectionDuration:.6,maxSpeed:1}}),{page}=f;await page.mouse.wheel(0,120);await waitStage(page,'building');await page.locator('[data-admiral-homepage]').evaluate(root=>root.dispatchEvent(new CustomEvent('admiral:explore')));await waitStage(page,'connection');
+   await page.getByRole('button',{name:'Retry connection',exact:true}).waitFor({timeout:25000});assert.equal(await page.locator('[data-admiral-sequence]').getAttribute('data-sequence-state'),'error');
+   assert.equal(await page.locator('[data-admiral-homepage]').getAttribute('data-homepage-stage'),'connection','Connection error never silently skips the flight');
+   f.restoreConnection();await page.getByRole('button',{name:'Retry connection',exact:true}).click();
+   try{await waitOrbit(page);}catch(error){const state=await page.evaluate(()=>({root:{...document.querySelector('[data-admiral-homepage]').dataset},sequence:{...document.querySelector('[data-admiral-sequence]').dataset},samples:window.samples.slice(-60),records:window.bitmapRecords.filter(record=>record.sequence==='SEQ_02')}));await writeFile(new URL('seq02-retry-failure.json',out),JSON.stringify({failure,state},null,2));throw error;}
+   assert.ok(await page.evaluate(()=>window.sequenceRequests.some(request=>request.sequence==='SEQ_02'&&request.index===0&&request.cache==='reload')),'An explicit retry refetches the failed source instead of reusing corrupt encoded bytes');await f.close();
+  }
+ });
+ await pass('SEQ_02 phone swipe over building copy holds the page and parks at the configured orbit camera',async()=>{
+  const f=await fixture({useDefaultOrbitStart:true,externalOverlay:true,context:{viewport:{width:390,height:844},isMobile:true,hasTouch:true,deviceScaleFactor:2},props:{connectionDuration:.9,maxSpeed:1}}),{page}=f;await coveredClick(page,'Skip approach');await waitStage(page,'building');await page.waitForTimeout(250);
+  const cdp=await page.context().newCDPSession(page);await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:180,y:430}]});await cdp.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x:180,y:350}]});await waitStage(page,'connection');
+  for(const y of [330,300,270,230,180]){await cdp.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x:180,y}]});await page.waitForTimeout(80);}await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});await waitFrame(page,45);
+  assert.equal(await page.evaluate(()=>scrollY),0,'The connecting flight cannot pan the mobile page');assert.equal(Number((await orbitData(page)).orbitPosition),45);await page.waitForTimeout(250);assert.equal(Number((await orbitData(page)).orbitPosition),45,'The entry swipe cannot leave a queued orbit turn');
+  const samples=await page.evaluate(()=>window.samples.filter(sample=>sample.stage==='connection'));assert.ok(samples.length>0&&samples.every(sample=>sample.heroDecoded<=12),'Phone connector decoder retains its smaller bounded cache');await f.close();
+ });
+ await pass('SEQ_02 static preview and direct orbit entry do not run a connecting decoder',async()=>{
+  const staticView=await fixture({staticMode:true,props:{editorView:'connection'}});await staticView.page.waitForTimeout(200);assert.deepEqual([...new Set(staticView.connectionRequests)],[36]);assert.equal(await staticView.page.locator('[data-admiral-homepage]').getAttribute('data-homepage-stage'),'connection');assert.equal(await staticView.page.evaluate(()=>window.bitmapRecords.length),0);await staticView.close();
+  const direct=await fixture({useDefaultOrbitStart:true,props:{startView:'orbit'}});await waitFrame(direct.page,45);await direct.page.waitForTimeout(350);assert.equal(direct.connectionRequests.length,0,'Direct orbit entry does not prefetch the unused connector');assert.equal(await direct.page.evaluate(()=>window.bitmapRecords.filter(record=>record.sequence==='SEQ_02').length),0);await direct.close();
+ });
  await pass('apartment details desktop shows seven transparent localized preview columns and clears the toolbar',async()=>{
   for(const language of ['hu','en']){
    const f=await fixture({cleanFixture:true,externalOverlay:true,context:{viewport:{width:1440,height:900}},props:{startView:'orbit',orbitStartFrame:45,detailsMode:'preview',detailsLanguage:language,showControls:false}}),{page}=f;await waitOrbit(page);await waitDetails(page);

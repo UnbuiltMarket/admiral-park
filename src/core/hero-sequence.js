@@ -8,7 +8,7 @@ function createSequenceFrames(urls, width, limit, notify) {
     const abort = new AbortController();
     const blobs = new Map();
     const bitmaps = new Map();
-    const fetching = new Set(), decoding = new Set(), failed = new Set();
+    const fetching = new Set(), decoding = new Set(), failed = new Set(), retrying = new Set();
     let disposed = false, all = false, center = 0, wanted = [0], downloads = 0;
     const last = urls.length - 1;
     const valid = (n) => n >= 0 && n <= last;
@@ -73,12 +73,13 @@ function createSequenceFrames(urls, width, limit, notify) {
         const cancel = () => requestAbort.abort();
         abort.signal.addEventListener("abort", cancel, { once: true });
         try {
-            const response = await fetch(urls[index], { signal: requestAbort.signal, mode: "cors", credentials: "omit", cache: "force-cache" });
+            const response = await fetch(urls[index], { signal: requestAbort.signal, mode: "cors", credentials: "omit", cache: retrying.has(index) ? "reload" : "force-cache" });
             if (!response.ok)
                 throw new Error("Frame " + index + ": " + response.status);
             const blob = await response.blob();
             if (!disposed) {
                 blobs.set(index, blob);
+                retrying.delete(index);
                 downloads++;
             }
         }
@@ -130,11 +131,20 @@ function createSequenceFrames(urls, width, limit, notify) {
         get: (index) => bitmaps.get(index),
         failed: (index) => failed.has(index),
         counts: () => ({ decoded: bitmaps.size, downloaded: downloads }),
-        retry() { failed.clear(); pump(); },
+        retry() {
+            // A failed decode may have cached a damaged body. An explicit retry downloads a fresh copy.
+            for (const index of failed) {
+                blobs.delete(index);
+                retrying.add(index);
+            }
+            failed.clear();
+            pump();
+        },
         destroy() {
             disposed = true;
             abort.abort();
             blobs.clear();
+            retrying.clear();
             bitmaps.forEach(bitmap => bitmap.close());
             bitmaps.clear();
         },
@@ -156,9 +166,10 @@ export function createHeroSequence(options) {
     const connection = navigator.connection;
     const abort = new AbortController(), signal = abort.signal;
     const context = canvas.getContext("2d", { alpha: false });
-    let disposed = false, state = "opening", displayed = 0, clock = 0;
-    let displayedProgress = 0;
-    let rendered = { index: 0, next: 0, mix: 0 };
+    const initialFrame = options.startAtEnd ? last : 0;
+    let disposed = false, state = options.startAtEnd ? "arrival" : "opening", displayed = initialFrame, clock = options.startAtEnd ? totalDuration : 0;
+    let displayedProgress = options.startAtEnd ? 1 : 0;
+    let rendered = { index: initialFrame, next: initialFrame, mix: 0 };
     let direction = 1, velocity = 0, boost = 0, held = false, playing = false;
     let active = false, raf = 0, previousTime = 0, waitingSince = 0;
     let holdY = 0, holdX = 0, holdTimer;
@@ -589,6 +600,12 @@ export function createHeroSequence(options) {
         loadedPoster();
     canvas.style.opacity = "0";
     poster.style.opacity = "1";
+    // A restored endpoint is parked, not skipped: reverse input stays enabled and the opening copy never flashes.
+    if (options.startAtEnd) {
+        active = true;
+        frames.request(last, 1, false, true);
+        wake();
+    }
     publish();
     if (motion.matches)
         reducedChanged();
