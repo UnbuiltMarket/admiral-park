@@ -5,6 +5,7 @@ const orbitModulo = (value, size) => ((value % size) + size) % size;
 export function createOrbitPlayer(options) {
     const { root, canvas } = options;
     const urls = [...options.urls], total = urls.length;
+    const startFrame = Math.round(orbitClamp(Number.isFinite(options.startFrame) ? options.startFrame : 0, 0, Math.max(0, total - 1)));
     const motionWidth = Math.round(orbitClamp(options.decodeWidth ?? 960, 240, 1920));
     const inspectionWidth = Math.round(orbitClamp(options.inspectionWidth ?? 1920, motionWidth, 3840));
     const checkpointCount = Math.round(orbitClamp(options.checkpointCount ?? 8, 1, Math.max(1, total)));
@@ -21,7 +22,7 @@ export function createOrbitPlayer(options) {
     const reducedQuery = typeof matchMedia === "function" ? matchMedia("(prefers-reduced-motion: reduce)") : null;
     const originalTouchAction = canvas.style.touchAction;
     let destroyed = false, started = false, prepared = false, preparing = false, active = false, activation = 0, visible = true, automaticPause = false;
-    let state = "idle", position = 0, direction = 1, error;
+    let state = "idle", position = startFrame, entryFrame = startFrame, direction = 1, error;
     let raf = 0, lastInputAt = -Infinity, lastWheelAt = -Infinity, wheelLatched = false, pausedAt = 0, suppressClickUntil = 0;
     let preparePromise = null, prepareResolve = null;
     let prepareReject = null;
@@ -329,8 +330,8 @@ export function createOrbitPlayer(options) {
         state = "loading";
         error = undefined;
         preparePromise = new Promise((resolve, reject) => { prepareResolve = resolve; prepareReject = reject; });
-        preparationRequired = nearestFirst(windowIndices(0, 1), 0);
-        setRestBuffer(0, true);
+        preparationRequired = nearestFirst(windowIndices(startFrame, 1), startFrame);
+        setRestBuffer(startFrame, true);
         return preparePromise;
     }
     function dropInspection() {
@@ -751,7 +752,7 @@ export function createOrbitPlayer(options) {
             return;
         }
         const current = orbitModulo(position, total), checkpoint = checkpoints.find(value => Math.abs(value - current) < .0001);
-        if (checkpoint !== undefined) {
+        if (checkpoint !== undefined || Math.abs(current - entryFrame) < .0001) {
             state = "checkpoint";
             paint(performance.now());
             notify();
@@ -788,14 +789,14 @@ export function createOrbitPlayer(options) {
         if (event.key === "Escape" && !event.defaultPrevented && active && visible && !document.hidden)
             pauseInternal(false);
     }
-    async function activate(frame = 0) {
+    async function activate(frame = startFrame) {
         const token = ++activation;
         await prepare();
         if (destroyed || token !== activation)
             return;
         active = false;
         automaticPause = false;
-        position = orbitModulo(Math.round(frame), total);
+        position = entryFrame = orbitModulo(Math.round(Number.isFinite(frame) ? frame : startFrame), total);
         direction = 1;
         settling = null;
         pendingMove = null;
@@ -822,16 +823,11 @@ export function createOrbitPlayer(options) {
         lastWheelAt = performance.now();
         wheelLatched = true;
         state = "checkpoint";
-        if (checkpointAt() < 0) {
-            state = "moving";
-            startSettle();
-        }
-        else {
-            setRestBuffer(position);
-            paint(performance.now());
-            notify();
-            void prepareInspection();
-        }
+        // A custom entry frame is parked exactly; the eight selectable cameras stay fixed.
+        setRestBuffer(position);
+        paint(performance.now());
+        notify();
+        void prepareInspection();
         if (!visible || document.hidden)
             pauseInternal(true);
     }
@@ -851,7 +847,7 @@ export function createOrbitPlayer(options) {
         error = undefined;
         state = prepared ? "idle" : preparing ? "loading" : "idle";
         if (started && !destroyed)
-            setRestBuffer(0, true);
+            setRestBuffer(startFrame, true);
         else {
             finishWaiters();
             notify();

@@ -43,7 +43,7 @@ async function fixture(options={}){
   return route.fulfill({contentType:'text/html',body:'<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><style>html,body{margin:0;font:18px Arial;background:#0e1720}#stage{height:100svh;position:relative;overflow:hidden}.copy{position:absolute;left:6%;top:20%;max-width:650px;color:white;z-index:4}.cta{position:absolute;left:6%;top:65%;z-index:4}.cta a{display:inline-block;padding:18px;background:white;color:black}#navbar{position:fixed;z-index:50;top:8px;left:12px;display:flex;gap:12px}#nested{position:absolute;right:0;top:100px;width:110px;height:100px;overflow:auto;z-index:40;background:white}#native-input{position:absolute;right:5px;top:220px;z-index:40;width:95px}#external-framer-overlay{position:absolute;inset:0;z-index:20;pointer-events:auto}#external-framer-overlay>div{width:100%;height:100%}</style></head><body'+(options.externalOverlay?' style="height:300vh"':'')+'><nav id="navbar"><a id="nav-link" href="#apartments">Apartments</a><button id="nav-button">Contact</button></nav><div id="mount"></div></body></html>'});
  });
  await page.goto('http://homepage.test/');await page.addScriptTag({content:react});await page.addScriptTag({content:dom});
- await page.evaluate(({code,props,staticMode,publicMode,twoInstances,externalOverlay,gateDecodeIndices,gateFirstNativeDecodes,accelerateDecodeWatchdog})=>{
+ await page.evaluate(({code,props,staticMode,publicMode,twoInstances,externalOverlay,gateDecodeIndices,gateFirstNativeDecodes,accelerateDecodeWatchdog,useDefaultOrbitStart})=>{
   window.bitmapCreated=0;window.bitmapClosed=0;window.bitmapRecords=[];window.orbitLive=0;window.orbitLiveMax=0;
   window.nativeBitmapCalls=0;window.nativeBitmapActive=0;window.nativeBitmapPeak=0;
   const nativeTimers=window.setTimeout.bind(window);window.acceleratedWatchdog=accelerateDecodeWatchdog;
@@ -73,7 +73,8 @@ async function fixture(options={}){
   const Frame=React.forwardRef((props,ref)=>React.createElement('div',{...props,ref}));
   const Intro=module.exports.OpeningContent(Frame),Building=module.exports.BuildingContent(Frame),CTA=module.exports.ArrivalCTA(Frame);
   window.component=module.exports.default;
-  window.props={useGitHubAssets:publicMode,heroBaseUrl:'http://homepage.test/hero',orbitBaseUrl:'http://homepage.test/orbit',snapDuration:.3,...props};
+  window.props={useGitHubAssets:publicMode,heroBaseUrl:'http://homepage.test/hero',orbitBaseUrl:'http://homepage.test/orbit',orbitStartFrame:0,snapDuration:.3,...props};
+  if(useDefaultOrbitStart)delete window.props.orbitStartFrame;
   window.root=ReactDOM.createRoot(document.querySelector('#mount'));
   window.renderTrial=()=>window.root.render(React.createElement(React.StrictMode,null,React.createElement('section',{id:'stage'},
    React.createElement(window.component,window.props),
@@ -86,7 +87,7 @@ async function fixture(options={}){
    twoInstances?React.createElement('section',{id:'secondary',style:{display:'none',position:'relative',height:'100svh'}},React.createElement(window.component,window.props)):null));
   window.renderTrial();window.samples=[];
   window.sampleTimer=setInterval(()=>{const root=document.querySelector('[data-admiral-homepage]'),orbit=document.querySelector('[data-admiral-orbit]')||root,hero=document.querySelector('[data-admiral-sequence]');if(root)window.samples.push({time:performance.now(),stage:root.dataset.homepageStage,state:orbit?.dataset.orbitState,position:Number(orbit?.dataset.orbitPosition),frame:Number(orbit?.dataset.orbitFrame),checkpoint:Number(orbit?.dataset.orbitCheckpoint),decoded:Number(orbit?.dataset.orbitDecoded),buffered:Number(orbit?.dataset.orbitBuffered),bufferTotal:Number(orbit?.dataset.orbitBufferTotal),requiredReady:Number(orbit?.dataset.orbitRequiredReady),requiredTotal:Number(orbit?.dataset.orbitRequiredTotal),decoding:Number(orbit?.dataset.orbitDecoding),ready:orbit?.dataset.orbitReady,target:Number(orbit?.dataset.orbitTarget),mix:Number(orbit?.dataset.orbitFrameMix),heroFrame:Number(hero?.dataset.frame)});},16);
- },{code,props:options.props||{},staticMode:!!options.staticMode,publicMode,twoInstances:!!options.twoInstances,externalOverlay:!!options.externalOverlay,gateDecodeIndices:options.gateDecodeIndices||[],gateFirstNativeDecodes:options.gateFirstNativeDecodes||0,accelerateDecodeWatchdog:!!options.accelerateDecodeWatchdog});
+ },{code,props:options.props||{},staticMode:!!options.staticMode,publicMode,twoInstances:!!options.twoInstances,externalOverlay:!!options.externalOverlay,gateDecodeIndices:options.gateDecodeIndices||[],gateFirstNativeDecodes:options.gateFirstNativeDecodes||0,accelerateDecodeWatchdog:!!options.accelerateDecodeWatchdog,useDefaultOrbitStart:!!options.useDefaultOrbitStart});
  await page.waitForSelector('[data-admiral-homepage]');
  await page.waitForFunction(()=>[...document.images].some(image=>image.naturalWidth>0));
  await page.mouse.move(450,500);
@@ -106,6 +107,43 @@ async function freshWheel(page,delta){await page.waitForTimeout(220);await page.
 async function coveredClick(page,name){const box=await page.getByRole('button',{name,exact:true}).boundingBox();assert.ok(box,name);await page.mouse.click(box.x+box.width/2,box.y+box.height/2);}
 
 try{
+ await pass('orbit start defaults to the fourth camera and preloads its nearest desktop and phone frames',async()=>{
+  for(const setting of [{count:61},{count:31,context:{viewport:{width:390,height:844},isMobile:true,hasTouch:true,deviceScaleFactor:2}}]){
+   const f=await fixture({useDefaultOrbitStart:true,props:{startView:'orbit'},context:setting.context}),{page}=f;
+   assert.equal(f.orbitRequests[0],45,'The first displayed orbit poster is the configured fourth camera');await waitOrbit(page);await waitBuffer(page,setting.count);
+   const data=await orbitData(page);assert.equal(Number(data.orbitFrame),45);assert.equal(Number(data.orbitPosition),45);assert.equal(Number(data.orbitCheckpoint),3);assert.ok(Number(data.orbitDecoded)<=setting.count+1);
+   const first=await page.evaluate(()=>window.bitmapRecords.filter(record=>Number.isFinite(record.index)&&record.width===Number(document.querySelector('[data-admiral-orbit]').dataset.orbitMotionWidth)).slice(0,12).map(record=>record.index));
+   assert.ok(first.every(index=>Math.min(Math.abs(index-45),120-Math.abs(index-45))<=15),'Initial decoding prioritizes the configured camera instead of frame0');
+   const idle=await page.evaluate(()=>window.samples.filter(sample=>sample.stage==='orbit'));assert.ok(idle.every(sample=>!['buffering','moving','settling'].includes(sample.state)&&sample.frame===45),'Entry parks directly at45 without a sampled0-to45 transition');
+   await page.waitForTimeout(250);assert.equal(Number((await orbitData(page)).orbitFrame),45);
+   await page.getByRole('button',{name:'Next view',exact:true}).click();await waitFrame(page,60);await waitBuffer(page,setting.count);await f.close();
+  }
+ });
+ await pass('orbit start survives the full approach retry and Overview reentry at the chosen fourth camera',async()=>{
+  const f=await fixture({useDefaultOrbitStart:true,failOrbit:45}),{page}=f;await waitStage(page,'opening');
+  await page.getByRole('button',{name:'Skip approach',exact:true}).click();await waitStage(page,'building');await page.getByRole('button',{name:'Explore building',exact:true}).click();
+  await page.waitForFunction(()=>document.querySelector('[data-admiral-orbit]')?.dataset.orbitState==='error');f.restoreOrbit();await page.getByRole('button',{name:'Retry orbit',exact:true}).click();await waitFrame(page,45);await waitBuffer(page,61);
+  assert.equal(Number((await orbitData(page)).orbitCheckpoint),3);await page.getByRole('button',{name:'Next view',exact:true}).click();await waitFrame(page,60);
+  await page.getByRole('button',{name:'Overview',exact:true}).click();await waitStage(page,'opening');await page.getByRole('button',{name:'Skip approach',exact:true}).click();await waitStage(page,'building');await page.getByRole('button',{name:'Explore building',exact:true}).click();await waitFrame(page,45);
+  assert.equal(Number((await orbitData(page)).orbitPosition),45,'Reentry resets to the configured start instead of retaining the previous orbit pose');await f.close();
+ });
+ await pass('custom orbit start stays parked and preserves the fixed apartment checkpoint cameras',async()=>{
+  for(const [button,target,checkpoint] of [['Next view',45,3],['Previous view',30,2]]){
+   const f=await fixture({props:{startView:'orbit',orbitStartFrame:42}}),{page}=f;await waitOrbit(page);await waitBuffer(page,46);
+   const data=await orbitData(page);assert.equal(Number(data.orbitFrame),42);assert.equal(Number(data.orbitCheckpoint),-1);assert.ok(Number(data.orbitDecoded)<=47);
+   assert.equal(await page.getByText('Custom view',{exact:true}).isVisible(),true);
+   await page.getByRole('button',{name:'Pause rotation',exact:true}).click();await waitOrbit(page,'paused');await page.getByRole('button',{name:'Continue rotation',exact:true}).click();await waitOrbit(page);
+   assert.equal(Number((await orbitData(page)).orbitFrame),42,'Resuming a custom parked start cannot autoplay to a checkpoint');await page.waitForTimeout(250);assert.equal(Number((await orbitData(page)).orbitFrame),42);
+   await page.getByRole('button',{name:button,exact:true}).click();await waitFrame(page,target);await waitBuffer(page,61);assert.equal(Number((await orbitData(page)).orbitCheckpoint),checkpoint);await f.close();
+  }
+ });
+ await pass('editor orbit start previews only the requested frame without running a sequence',async()=>{
+  for(const input of [undefined,119]){
+   const f=await fixture({staticMode:true,useDefaultOrbitStart:input===undefined,props:{editorView:'orbit',...(input===undefined?{}:{orbitStartFrame:input})}}),{page}=f;
+   await page.waitForTimeout(250);assert.deepEqual([...new Set(f.orbitRequests)],[input===undefined?45:119]);assert.equal(await page.evaluate(()=>window.bitmapRecords.length),0,'Editor preview creates no decoder engine');
+   await page.mouse.wheel(0,100);await page.waitForTimeout(80);assert.equal(await page.locator('[data-admiral-homepage]').getAttribute('data-homepage-stage'),'orbit');await f.close();
+  }
+ });
  await pass('one small scroll plays a complete long transition with symmetric easing and no speed boost',async()=>{
   const f=await fixture({props:{startView:'orbit',snapDuration:1.5}}),{page}=f;await waitOrbit(page);
   await page.evaluate(()=>{window.samples=[];window.motionStarted=performance.now();});

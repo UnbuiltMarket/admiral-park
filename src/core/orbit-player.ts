@@ -9,7 +9,7 @@ export interface OrbitSnapshot {
 
 export interface OrbitOptions {
     root: HTMLElement; canvas: HTMLCanvasElement; urls: string[];
-    decodeWidth?: number; inspectionWidth?: number; checkpointCount?: number; bufferCheckpoints?: number;
+    decodeWidth?: number; inspectionWidth?: number; checkpointCount?: number; bufferCheckpoints?: number; startFrame?: number;
     snapDuration?: number; frameBlend?: number; focalX?: number; focalY?: number;
     onUpdate?: (snapshot: OrbitSnapshot) => void;
 }
@@ -25,6 +25,7 @@ const orbitModulo = (value: number, size: number) => ((value % size) + size) % s
 export function createOrbitPlayer(options: OrbitOptions) {
     const { root, canvas } = options;
     const urls = [...options.urls], total = urls.length;
+    const startFrame = Math.round(orbitClamp(Number.isFinite(options.startFrame) ? options.startFrame! : 0, 0, Math.max(0, total - 1)));
     const motionWidth = Math.round(orbitClamp(options.decodeWidth ?? 960, 240, 1920));
     const inspectionWidth = Math.round(orbitClamp(options.inspectionWidth ?? 1920, motionWidth, 3840));
     const checkpointCount = Math.round(orbitClamp(options.checkpointCount ?? 8, 1, Math.max(1, total)));
@@ -41,7 +42,7 @@ export function createOrbitPlayer(options: OrbitOptions) {
     const reducedQuery = typeof matchMedia === "function" ? matchMedia("(prefers-reduced-motion: reduce)") : null;
     const originalTouchAction = canvas.style.touchAction;
     let destroyed = false, started = false, prepared = false, preparing = false, active = false, activation = 0, visible = true, automaticPause = false;
-    let state: OrbitState = "idle", position = 0, direction = 1, error: string | undefined;
+    let state: OrbitState = "idle", position = startFrame, entryFrame = startFrame, direction = 1, error: string | undefined;
     let raf = 0, lastInputAt = -Infinity, lastWheelAt = -Infinity, wheelLatched = false, pausedAt = 0, suppressClickUntil = 0;
     let preparePromise: Promise<void> | null = null, prepareResolve: (() => void) | null = null;
     let prepareReject: ((reason: Error) => void) | null = null;
@@ -277,8 +278,8 @@ export function createOrbitPlayer(options: OrbitOptions) {
         }
         started = preparing = true; state = "loading"; error = undefined;
         preparePromise = new Promise<void>((resolve, reject) => { prepareResolve = resolve; prepareReject = reject; });
-        preparationRequired = nearestFirst(windowIndices(0, 1), 0);
-        setRestBuffer(0, true); return preparePromise;
+        preparationRequired = nearestFirst(windowIndices(startFrame, 1), startFrame);
+        setRestBuffer(startFrame, true); return preparePromise;
     }
 
     function dropInspection() {
@@ -583,7 +584,7 @@ export function createOrbitPlayer(options: OrbitOptions) {
             pausedAt = 0; state = "settling"; notify(); requestPaint(); return;
         }
         const current = orbitModulo(position, total), checkpoint = checkpoints.find(value => Math.abs(value - current) < .0001);
-        if (checkpoint !== undefined) { state = "checkpoint"; paint(performance.now()); notify(); if (!inspection) void prepareInspection(); requestPaint(); }
+        if (checkpoint !== undefined || Math.abs(current - entryFrame) < .0001) { state = "checkpoint"; paint(performance.now()); notify(); if (!inspection) void prepareInspection(); requestPaint(); }
         else { state = "moving"; startSettle(); }
     }
 
@@ -605,12 +606,12 @@ export function createOrbitPlayer(options: OrbitOptions) {
         if (event.key === "Escape" && !event.defaultPrevented && active && visible && !document.hidden) pauseInternal(false);
     }
 
-    async function activate(frame = 0) {
+    async function activate(frame = startFrame) {
         const token = ++activation;
         await prepare();
         if (destroyed || token !== activation) return;
         active = false; automaticPause = false;
-        position = orbitModulo(Math.round(frame), total); direction = 1;
+        position = entryFrame = orbitModulo(Math.round(Number.isFinite(frame) ? frame : startFrame), total); direction = 1;
         settling = null; pendingMove = null; pausedAt = 0; dropInspection();
         state = "loading";
         const initial = nearestFirst(windowIndices(position, 1), position);
@@ -625,8 +626,8 @@ export function createOrbitPlayer(options: OrbitOptions) {
         // Do not interpret the approach's remaining wheel momentum as an orbit move.
         lastWheelAt = performance.now(); wheelLatched = true;
         state = "checkpoint";
-        if (checkpointAt() < 0) { state = "moving"; startSettle(); }
-        else { setRestBuffer(position); paint(performance.now()); notify(); void prepareInspection(); }
+        // A custom entry frame is parked exactly; the eight selectable cameras stay fixed.
+        setRestBuffer(position); paint(performance.now()); notify(); void prepareInspection();
         if (!visible || document.hidden) pauseInternal(true);
     }
 
@@ -636,7 +637,7 @@ export function createOrbitPlayer(options: OrbitOptions) {
         canvas.style.touchAction = originalTouchAction;
         error = undefined;
         state = prepared ? "idle" : preparing ? "loading" : "idle";
-        if (started && !destroyed) setRestBuffer(0, true);
+        if (started && !destroyed) setRestBuffer(startFrame, true);
         else { finishWaiters(); notify(); }
     }
 

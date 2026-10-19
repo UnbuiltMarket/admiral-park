@@ -16,7 +16,7 @@ const homepageSubscribers = new Set<() => void>()
 const notifyHomepage = () => homepageSubscribers.forEach(update => update())
 interface AdmiralHomepageTrialProps {
     useGitHubAssets?: boolean; heroBaseUrl?: string; orbitBaseUrl?: string
-    startView?: "opening" | "orbit"; editorView?: "opening" | "building" | "orbit"
+    startView?: "opening" | "orbit"; editorView?: "opening" | "building" | "orbit"; orbitStartFrame?: number
     duration?: number; maxSpeed?: number; momentum?: number; triggerDistance?: number
     checkpointCount?: number; motionWidth?: number; orbitMobileWidth?: number; inspectionWidth?: number
     desktopBuffer?: number; phoneBuffer?: number
@@ -45,7 +45,7 @@ function homepageUrls(base: string, names: string[], version = "") {
  */
 export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): React.JSX.Element {
     const {
-        useGitHubAssets = true, heroBaseUrl = "", orbitBaseUrl = "", startView = "opening", editorView = "opening",
+        useGitHubAssets = true, heroBaseUrl = "", orbitBaseUrl = "", startView = "opening", editorView = "opening", orbitStartFrame = 45,
         duration = 2.5, maxSpeed = 1.8, momentum = .22, triggerDistance = 28, checkpointCount = 8,
         motionWidth = 960, orbitMobileWidth = 640, inspectionWidth = 1920, desktopBuffer = 2, phoneBuffer = 1, snapDuration = 1.5, frameBlend = 0,
         focalX = 50, focalY = 50, darken = 0,
@@ -58,13 +58,15 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
         HOMEPAGE_HERO_NAMES, useGitHubAssets ? HOMEPAGE_HERO_VERSION : ""), [useGitHubAssets, heroBaseUrl])
     const orbitUrls = React.useMemo(() => homepageUrls(useGitHubAssets ? HOMEPAGE_ASSETS + "/ORBIT%20PICKER/BEAUTY%20sequence_Desktop" : orbitBaseUrl,
         HOMEPAGE_ORBIT_NAMES, useGitHubAssets ? HOMEPAGE_ORBIT_VERSION : ""), [useGitHubAssets, orbitBaseUrl])
+    const orbitStartIndex = Math.round(Math.max(0, Math.min(orbitUrls.length - 1, Number.isFinite(orbitStartFrame) ? orbitStartFrame : 45)))
+    const orbitPoster = orbitUrls[orbitStartIndex]
     const previewStage: HomepageStage = staticRenderer ? (editorView === "orbit" ? "orbit" : editorView === "building" ? "building" : "opening") : startView === "orbit" ? "handoff" : "opening"
     const initialPoster = staticRenderer && editorView === "building" ? heroUrls[heroUrls.length - 1] :
-        (staticRenderer && editorView === "orbit") || (!staticRenderer && startView === "orbit") ? orbitUrls[0] : heroUrls[0]
+        (staticRenderer && editorView === "orbit") || (!staticRenderer && startView === "orbit") ? orbitPoster : heroUrls[0]
     const [stage, setStage] = React.useState<HomepageStage>(previewStage)
     const [posterUrl, setPosterUrl] = React.useState(initialPoster)
     const [heroState, setHeroState] = React.useState<SequenceState>("opening")
-    const [orbitInfo, setOrbitInfo] = React.useState<OrbitSnapshot>({ state: "idle", frame: 0, checkpoint: -1, direction: 1, ready: 0, total: orbitUrls.length, decoded: 0, downloaded: 0, buffered: 0, bufferTotal: 0, requiredReady: 0, requiredTotal: 0, position: 0 })
+    const [orbitInfo, setOrbitInfo] = React.useState<OrbitSnapshot>({ state: "idle", frame: orbitStartIndex, checkpoint: -1, direction: 1, ready: 0, total: orbitUrls.length, decoded: 0, downloaded: 0, buffered: 0, bufferTotal: 0, requiredReady: 0, requiredTotal: 0, position: orbitStartIndex })
     const [reduced, setReduced] = React.useState(false)
     const [hostVisible, setHostVisible] = React.useState(false)
     const rootRef = React.useRef<HTMLDivElement>(null), heroRootRef = React.useRef<HTMLDivElement>(null)
@@ -114,7 +116,7 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
         function changePoster(url: string) { poster!.src = url; setPosterUrl(url) }
         function destroyHero() { heroGeneration++; hero?.destroy(); hero = null }
         const orbit = staticRenderer ? null : createOrbitPlayer({
-            root, canvas: orbitCanvas, urls: orbitUrls, decodeWidth, inspectionWidth: phone ? Math.min(inspectionWidth, 1280) : inspectionWidth,
+            root, canvas: orbitCanvas, urls: orbitUrls, startFrame: orbitStartIndex, decodeWidth, inspectionWidth: phone ? Math.min(inspectionWidth, 1280) : inspectionWidth,
             checkpointCount, bufferCheckpoints: phone ? phoneBuffer : desktopBuffer, snapDuration, frameBlend: frameBlend / 100, focalX: focalX / 100, focalY: focalY / 100,
             onUpdate(snapshot) {
                 if (disposed) return
@@ -154,7 +156,7 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
             const token = ++enterToken
             changeStage("handoff"); destroyHero()
             try {
-                await orbit.activate(0)
+                await orbit.activate()
                 if (disposed || token !== enterToken) return
                 changeStage("orbit")
             } catch { /* The orbit reports a visible retry state. The current hero remains visible. */ }
@@ -167,7 +169,7 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
                 await orbit.retry()
                 if (disposed || token !== enterToken) return
                 if (currentStage === "handoff") {
-                    await orbit.activate(0)
+                    await orbit.activate()
                     if (!disposed && token === enterToken) changeStage("orbit")
                 }
             } catch { /* The retry control remains available. */ }
@@ -220,7 +222,7 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
         if (staticRenderer) { changeStage(previewStage); changePoster(initialPoster) }
         else {
             changeStage("opening")
-            if (startView === "orbit") { changePoster(orbitUrls[0]); void explore() }
+            if (startView === "orbit") { changePoster(orbitPoster); void explore() }
             else mountHero()
             // The opening picture wins the first network requests; preload the entire orbit behind it.
             const warm = window.setTimeout(() => { if (!disposed && isVisible()) void orbit!.prepare().catch(() => {}) }, 300)
@@ -233,7 +235,7 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
             homepageChannels.delete(root); notifyHomepage()
         }
     }, [heroUrls, orbitUrls, staticRenderer, hostVisible, startView, editorView, duration, maxSpeed, momentum, triggerDistance, checkpointCount,
-        motionWidth, orbitMobileWidth, inspectionWidth, desktopBuffer, phoneBuffer, snapDuration, frameBlend, focalX, focalY, showDiagnostics])
+        motionWidth, orbitMobileWidth, inspectionWidth, desktopBuffer, phoneBuffer, orbitStartIndex, snapDuration, frameBlend, focalX, focalY, showDiagnostics])
 
     React.useEffect(() => {
         const root = rootRef.current, channel = root && homepageChannels.get(root)
@@ -268,7 +270,7 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
                 {(stage === "building" || stage === "handoff" || stage === "orbit") && <button type="button" style={homepageButton} onClick={() => actions.current?.overview()}>Overview</button>}
                 {stage === "orbit" && <>
                     <button type="button" aria-label="Previous view" disabled={orbitMoving} style={orbitButtonStyle} onClick={() => actions.current?.orbit?.go(-1)}>←</button>
-                    <span aria-live="polite" style={{ ...homepageButton, cursor: "default", minWidth: 65, textAlign: "center" }}>{orbitInfo.checkpoint >= 0 ? `View ${orbitInfo.checkpoint + 1} / ${checkpoints}` : orbitInfo.state === "buffering" ? "Preparing view…" : orbitInfo.state === "error" ? "View unavailable" : "Looking around"}</span>
+                    <span aria-live="polite" style={{ ...homepageButton, cursor: "default", minWidth: 65, textAlign: "center" }}>{orbitInfo.checkpoint >= 0 ? `View ${orbitInfo.checkpoint + 1} / ${checkpoints}` : orbitInfo.state === "checkpoint" ? "Custom view" : orbitInfo.state === "buffering" ? "Preparing view…" : orbitInfo.state === "error" ? "View unavailable" : "Looking around"}</span>
                     <button type="button" aria-label="Next view" disabled={orbitMoving} style={orbitButtonStyle} onClick={() => actions.current?.orbit?.go(1)}>→</button>
                     <button type="button" disabled={orbitInfo.state === "error"} style={homepageButton} onClick={() => paused ? actions.current?.orbit?.resume() : actions.current?.orbit?.pause()}>{paused ? "Continue rotation" : "Pause rotation"}</button>
                     {showViewpoints && Array.from({ length: checkpoints }, (_, i) => <button key={i} type="button" aria-label={`View ${i + 1}`} aria-pressed={orbitInfo.checkpoint === i} disabled={orbitMoving}
@@ -347,6 +349,7 @@ addPropertyControls(AdmiralHomepageTrial, {
     orbitBaseUrl: { type: ControlType.String, title: "Orbit folder", defaultValue: "", hidden: p => p.useGitHubAssets !== false },
     startView: { type: ControlType.Enum, title: "Start trial", options: ["opening", "orbit"], optionTitles: ["Full journey", "Orbit directly"], defaultValue: "opening" },
     editorView: { type: ControlType.Enum, title: "Editor view", options: ["opening", "building", "orbit"], defaultValue: "opening" },
+    orbitStartFrame: { type: ControlType.Number, title: "Orbit start frame", defaultValue: 45, min: 0, max: HOMEPAGE_ORBIT_NAMES.length - 1, step: 1, description: "Exact first orbit image, numbered 0–119 to match the filenames. With 8 viewpoints: 0 = camera 1, 15 = camera 2, 30 = camera 3, 45 = camera 4. Custom frames stay still until the next gesture; the checkpoint cameras stay fixed." },
     duration: { type: ControlType.Number, title: "Approach", defaultValue: 2.5, min: .6, max: 10, step: .1, unit: "s" },
     maxSpeed: { type: ControlType.Number, title: "Approach boost", defaultValue: 1.8, min: 1, max: 3, step: .1 },
     momentum: { type: ControlType.Number, title: "Approach coast", defaultValue: .22, min: .08, max: .6, step: .02 },
@@ -797,7 +800,7 @@ interface OrbitSnapshot {
 
 interface OrbitOptions {
     root: HTMLElement; canvas: HTMLCanvasElement; urls: string[];
-    decodeWidth?: number; inspectionWidth?: number; checkpointCount?: number; bufferCheckpoints?: number;
+    decodeWidth?: number; inspectionWidth?: number; checkpointCount?: number; bufferCheckpoints?: number; startFrame?: number;
     snapDuration?: number; frameBlend?: number; focalX?: number; focalY?: number;
     onUpdate?: (snapshot: OrbitSnapshot) => void;
 }
@@ -813,6 +816,7 @@ const orbitModulo = (value: number, size: number) => ((value % size) + size) % s
 function createOrbitPlayer(options: OrbitOptions) {
     const { root, canvas } = options;
     const urls = [...options.urls], total = urls.length;
+    const startFrame = Math.round(orbitClamp(Number.isFinite(options.startFrame) ? options.startFrame! : 0, 0, Math.max(0, total - 1)));
     const motionWidth = Math.round(orbitClamp(options.decodeWidth ?? 960, 240, 1920));
     const inspectionWidth = Math.round(orbitClamp(options.inspectionWidth ?? 1920, motionWidth, 3840));
     const checkpointCount = Math.round(orbitClamp(options.checkpointCount ?? 8, 1, Math.max(1, total)));
@@ -829,7 +833,7 @@ function createOrbitPlayer(options: OrbitOptions) {
     const reducedQuery = typeof matchMedia === "function" ? matchMedia("(prefers-reduced-motion: reduce)") : null;
     const originalTouchAction = canvas.style.touchAction;
     let destroyed = false, started = false, prepared = false, preparing = false, active = false, activation = 0, visible = true, automaticPause = false;
-    let state: OrbitState = "idle", position = 0, direction = 1, error: string | undefined;
+    let state: OrbitState = "idle", position = startFrame, entryFrame = startFrame, direction = 1, error: string | undefined;
     let raf = 0, lastInputAt = -Infinity, lastWheelAt = -Infinity, wheelLatched = false, pausedAt = 0, suppressClickUntil = 0;
     let preparePromise: Promise<void> | null = null, prepareResolve: (() => void) | null = null;
     let prepareReject: ((reason: Error) => void) | null = null;
@@ -1065,8 +1069,8 @@ function createOrbitPlayer(options: OrbitOptions) {
         }
         started = preparing = true; state = "loading"; error = undefined;
         preparePromise = new Promise<void>((resolve, reject) => { prepareResolve = resolve; prepareReject = reject; });
-        preparationRequired = nearestFirst(windowIndices(0, 1), 0);
-        setRestBuffer(0, true); return preparePromise;
+        preparationRequired = nearestFirst(windowIndices(startFrame, 1), startFrame);
+        setRestBuffer(startFrame, true); return preparePromise;
     }
 
     function dropInspection() {
@@ -1371,7 +1375,7 @@ function createOrbitPlayer(options: OrbitOptions) {
             pausedAt = 0; state = "settling"; notify(); requestPaint(); return;
         }
         const current = orbitModulo(position, total), checkpoint = checkpoints.find(value => Math.abs(value - current) < .0001);
-        if (checkpoint !== undefined) { state = "checkpoint"; paint(performance.now()); notify(); if (!inspection) void prepareInspection(); requestPaint(); }
+        if (checkpoint !== undefined || Math.abs(current - entryFrame) < .0001) { state = "checkpoint"; paint(performance.now()); notify(); if (!inspection) void prepareInspection(); requestPaint(); }
         else { state = "moving"; startSettle(); }
     }
 
@@ -1393,12 +1397,12 @@ function createOrbitPlayer(options: OrbitOptions) {
         if (event.key === "Escape" && !event.defaultPrevented && active && visible && !document.hidden) pauseInternal(false);
     }
 
-    async function activate(frame = 0) {
+    async function activate(frame = startFrame) {
         const token = ++activation;
         await prepare();
         if (destroyed || token !== activation) return;
         active = false; automaticPause = false;
-        position = orbitModulo(Math.round(frame), total); direction = 1;
+        position = entryFrame = orbitModulo(Math.round(Number.isFinite(frame) ? frame : startFrame), total); direction = 1;
         settling = null; pendingMove = null; pausedAt = 0; dropInspection();
         state = "loading";
         const initial = nearestFirst(windowIndices(position, 1), position);
@@ -1413,8 +1417,8 @@ function createOrbitPlayer(options: OrbitOptions) {
         // Do not interpret the approach's remaining wheel momentum as an orbit move.
         lastWheelAt = performance.now(); wheelLatched = true;
         state = "checkpoint";
-        if (checkpointAt() < 0) { state = "moving"; startSettle(); }
-        else { setRestBuffer(position); paint(performance.now()); notify(); void prepareInspection(); }
+        // A custom entry frame is parked exactly; the eight selectable cameras stay fixed.
+        setRestBuffer(position); paint(performance.now()); notify(); void prepareInspection();
         if (!visible || document.hidden) pauseInternal(true);
     }
 
@@ -1424,7 +1428,7 @@ function createOrbitPlayer(options: OrbitOptions) {
         canvas.style.touchAction = originalTouchAction;
         error = undefined;
         state = prepared ? "idle" : preparing ? "loading" : "idle";
-        if (started && !destroyed) setRestBuffer(0, true);
+        if (started && !destroyed) setRestBuffer(startFrame, true);
         else { finishWaiters(); notify(); }
     }
 

@@ -47,14 +47,21 @@ test('paste-in homepage registers its controls and server-renders without loadin
  vm.runInNewContext(compiled,{module,exports:module.exports,require:name=>name==='framer'?stub:requireDev(name)});
  assert.deepEqual(Object.keys(module.exports).sort(),['ArrivalCTA','BuildingContent','OpeningContent','default']);
  assert.equal(registered,module.exports.default);
- for(const key of ['startView','editorView','checkpointCount','motionWidth','orbitMobileWidth','snapDuration','frameBlend','desktopBuffer','phoneBuffer'])assert.ok(controls[key],`Framer control ${key}`);
+ for(const key of ['startView','editorView','checkpointCount','motionWidth','orbitMobileWidth','snapDuration','frameBlend','desktopBuffer','phoneBuffer','orbitStartFrame'])assert.ok(controls[key],`Framer control ${key}`);
  assert.equal(controls.snapDuration.title,'Settle time');assert.equal(controls.snapDuration.defaultValue,1.5);assert.equal(controls.snapDuration.max,10);
  assert.equal(controls.frameBlend.defaultValue,0);assert.equal(controls.frameBlend.min,0);assert.equal(controls.frameBlend.max,100);
  assert.equal(controls.desktopBuffer.title,'Desktop buffer');assert.equal(controls.desktopBuffer.defaultValue,2);assert.equal(controls.desktopBuffer.min,1);assert.equal(controls.desktopBuffer.max,3);
  assert.equal(controls.phoneBuffer.title,'Phone buffer');assert.equal(controls.phoneBuffer.defaultValue,1);assert.equal(controls.phoneBuffer.min,1);assert.equal(controls.phoneBuffer.max,3);
+ assert.equal(controls.orbitStartFrame.title,'Orbit start frame');assert.equal(controls.orbitStartFrame.defaultValue,45);assert.equal(controls.orbitStartFrame.min,0);assert.equal(controls.orbitStartFrame.max,119);assert.equal(controls.orbitStartFrame.step,1);
  for(const removed of ['wheelSensitivity','dragSensitivity','orbitMomentum'])assert.equal(controls[removed],undefined,`Obsolete speed control ${removed} is hidden`);
  const html=requireDev('react-dom/server').renderToStaticMarkup(requireDev('react').createElement(module.exports.default));
  assert.match(html,/raw%20sequence00\.avif/);
  assert.doesNotMatch(html,/<script|<iframe|<nav|<video/);
  assert.doesNotMatch(source,/hero-manifest\.json|__admiralHeroFactoriesV1|AdmiralHeroLoader/);
+ const orbitPreview=requireDev('react-dom/server').renderToStaticMarkup(requireDev('react').createElement(module.exports.default,{editorView:'orbit'}));
+ assert.match(orbitPreview,/adjusted%20sequence0045%20copy\.avif/,'Editor orbit preview uses the new default fourth camera');
+ for(const [input,expected] of [[42.7,43],[-2,0],[125,119],[NaN,45],[Infinity,45]]){
+  const preview=requireDev('react-dom/server').renderToStaticMarkup(requireDev('react').createElement(module.exports.default,{editorView:'orbit',orbitStartFrame:input}));
+  assert.ok(preview.includes(`adjusted%20sequence${String(expected).padStart(4,'0')}%20copy.avif`),`Orbit start ${String(input)} resolves to ${expected}`);
+ }
 });
