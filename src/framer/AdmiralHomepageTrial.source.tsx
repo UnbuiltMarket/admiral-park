@@ -22,6 +22,8 @@ interface AdmiralHomepageTrialProps {
     snapDuration?: number; frameBlend?: number
     focalX?: number; focalY?: number; darken?: number; showControls?: boolean; showViewpoints?: boolean; showDiagnostics?: boolean
     openingOut?: number; buildingIn?: number; buildingFull?: number; ctaIn?: number; rise?: number
+    detailsMode?: "preview" | "hover" | "off"; detailsLanguage?: ApartmentDetailsLanguage
+    detailsBottom?: number; detailsInset?: number; apartmentPreview?: ApartmentDetailsPreview
     background?: string; alt?: string; style?: React.CSSProperties
 }
 interface HomepageActions { explore: () => void; overview: () => void; skip: () => void; resumeHero: () => void; orbit: ReturnType<typeof createOrbitPlayer> | null }
@@ -50,6 +52,7 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
         focalX = 50, focalY = 50, darken = 0,
         showControls = true, showViewpoints = true, showDiagnostics = false,
         openingOut = 20, buildingIn = 68, buildingFull = 88, ctaIn = 86, rise = 20,
+        detailsMode = "preview", detailsLanguage = "hu", detailsBottom = 32, detailsInset = 48, apartmentPreview,
         background = "#101820", alt = "Explore Admiral Park, Balatonfüred", style,
     } = props
     const staticRenderer = useIsStaticRenderer()
@@ -68,6 +71,13 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
     const [orbitInfo, setOrbitInfo] = React.useState<OrbitSnapshot>({ state: "idle", frame: orbitStartIndex, checkpoint: -1, direction: 1, ready: 0, total: orbitUrls.length, decoded: 0, downloaded: 0, buffered: 0, bufferTotal: 0, requiredReady: 0, requiredTotal: 0, position: orbitStartIndex })
     const [reduced, setReduced] = React.useState(false)
     const [hostVisible, setHostVisible] = React.useState(false)
+    const [hoveredApartment, setHoveredApartment] = React.useState<ApartmentDetailsData | null>(null)
+    const [detailsHeight, setDetailsHeight] = React.useState(140)
+    const hoveredApartmentRef = React.useRef<ApartmentDetailsData | null>(null)
+    const clearApartmentDetails = React.useCallback(() => {
+        if (hoveredApartmentRef.current !== null) { hoveredApartmentRef.current = null; setHoveredApartment(null) }
+    }, [])
+    const sampleApartment = React.useMemo(() => createApartmentPreview(apartmentPreview), [apartmentPreview])
     const rootRef = React.useRef<HTMLDivElement>(null), heroRootRef = React.useRef<HTMLDivElement>(null)
     const heroCanvasRef = React.useRef<HTMLCanvasElement>(null), orbitCanvasRef = React.useRef<HTMLCanvasElement>(null), posterRef = React.useRef<HTMLImageElement>(null)
     const actions = React.useRef<HomepageActions | null>(null)
@@ -120,6 +130,7 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
             onUpdate(snapshot) {
                 if (disposed) return
                 root!.dataset.orbitDownloaded = String(snapshot.downloaded)
+                if (snapshot.state !== "checkpoint" || snapshot.checkpoint < 0) clearApartmentDetails()
                 const key = `${snapshot.state}:${snapshot.checkpoint}:${Math.floor(snapshot.ready / 6)}:${Math.floor(snapshot.buffered / 6)}:${Math.floor(snapshot.requiredReady / 3)}:${snapshot.buffered === snapshot.bufferTotal}:${snapshot.requiredReady === snapshot.requiredTotal}:${snapshot.decoded > snapshot.buffered}`
                 const now = performance.now()
                 if (key !== lastOrbitUI || (showDiagnostics && now - lastUI > 150)) {
@@ -229,17 +240,32 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
         }
         publish()
         return () => {
-            disposed = true; enterToken++; destroyHero(); orbit?.destroy(); abort.abort()
+            disposed = true; enterToken++; clearApartmentDetails(); destroyHero(); orbit?.destroy(); abort.abort()
             actions.current = null; delete (root as HTMLElement & { retryOrbit?: () => Promise<void> }).retryOrbit
             homepageChannels.delete(root); notifyHomepage()
         }
     }, [heroUrls, orbitUrls, staticRenderer, hostVisible, startView, editorView, duration, maxSpeed, momentum, triggerDistance, checkpointCount,
-        motionWidth, orbitMobileWidth, inspectionWidth, desktopBuffer, phoneBuffer, orbitStartIndex, snapDuration, frameBlend, focalX, focalY, showDiagnostics])
+        motionWidth, orbitMobileWidth, inspectionWidth, desktopBuffer, phoneBuffer, orbitStartIndex, snapDuration, frameBlend, focalX, focalY, showDiagnostics, clearApartmentDetails])
 
     React.useEffect(() => {
         const root = rootRef.current, channel = root && homepageChannels.get(root)
         if (channel) { channel.timing = timing.current; notifyHomepage() }
     }, [openingOut, buildingIn, buildingFull, ctaIn, rise])
+    React.useEffect(() => {
+        const root = rootRef.current
+        if (!root || staticRenderer) return
+        clearApartmentDetails()
+        function hover(event: Event) {
+            const box = root!.getBoundingClientRect()
+            const eligible = detailsMode === "hover" && box.width > 0 && box.height > 0 && box.bottom > 0 && box.top < innerHeight && box.right > 0 && box.left < innerWidth &&
+                root!.dataset.homepageStage === "orbit" && root!.dataset.orbitState === "checkpoint" && Number(root!.dataset.orbitCheckpoint) >= 0
+            const apartment = eligible ? normalizeApartmentDetails((event as CustomEvent<unknown>).detail) : null
+            hoveredApartmentRef.current = apartment; setHoveredApartment(apartment)
+        }
+        root.addEventListener("admiral:apartment-hover", hover)
+        root.addEventListener("pointerleave", clearApartmentDetails)
+        return () => { root.removeEventListener("admiral:apartment-hover", hover); root.removeEventListener("pointerleave", clearApartmentDetails) }
+    }, [detailsMode, staticRenderer, clearApartmentDetails])
     const orbitVisible = !staticRenderer && stage === "orbit"
     const orbitStatic = staticRenderer && editorView === "orbit"
     const percent = Math.round(100 * orbitInfo.downloaded / Math.max(1, orbitInfo.total))
@@ -249,6 +275,11 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
     const paused = orbitInfo.state === "paused"
     const orbitMoving = orbitInfo.state !== "checkpoint"
     const orbitButtonStyle: React.CSSProperties = { ...homepageButton, opacity: orbitMoving ? .45 : 1, cursor: orbitMoving ? "default" : "pointer" }
+    const detailsVisible = detailsMode === "preview" ? (orbitStatic || (orbitVisible && orbitInfo.state === "checkpoint")) :
+        detailsMode === "hover" && orbitVisible && orbitInfo.state === "checkpoint" && orbitInfo.checkpoint >= 0 && hoveredApartment !== null
+    const detailsData = detailsMode === "preview" ? sampleApartment : hoveredApartment
+    const controlsBottom = detailsVisible ? `calc(${detailsBottom + detailsHeight + 20}px + env(safe-area-inset-bottom, 0px))` : "18px"
+    const diagnosticBottom = detailsVisible ? detailsBottom + detailsHeight + (showControls ? 112 : 20) : 94
     return (
         <div ref={rootRef} data-admiral-homepage="" data-admiral-orbit="" data-homepage-stage={stage} role="region" aria-label={alt} tabIndex={0}
             style={{ position: "relative", width: "100%", height: "100%", overflow: "hidden", background, ...style }}>
@@ -260,7 +291,7 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
             <canvas ref={orbitCanvasRef} aria-hidden="true" width={1} height={1} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", opacity: orbitVisible ? 1 : 0, transition: reduced ? "none" : "opacity .35s", touchAction: "pan-y pinch-zoom", pointerEvents: orbitVisible ? "auto" : "none" }} />
             {orbitStatic && <span style={{ position: "absolute", inset: 0, pointerEvents: "none" }} />}
             <div aria-hidden="true" style={{ position: "absolute", inset: 0, background: "#000", opacity: darken, pointerEvents: "none" }} />
-            {!staticRenderer && showControls && <div data-homepage-controls="" data-orbit-ignore="" style={{ position: "absolute", bottom: 18, left: "50%", transform: "translateX(-50%)", display: "flex", alignItems: "center", justifyContent: "center", flexWrap: "wrap", gap: 7, width: "max-content", maxWidth: "94%", zIndex: 3 }}>
+            {!staticRenderer && showControls && <div data-homepage-controls="" data-orbit-ignore="" style={{ position: "absolute", bottom: controlsBottom, left: "50%", transform: "translateX(-50%)", display: "flex", alignItems: "center", justifyContent: "center", flexWrap: "wrap", gap: 7, width: "max-content", maxWidth: "94%", zIndex: 3 }}>
                 {(stage === "opening" || stage === "approach") && <button type="button" style={homepageButton} onClick={() => actions.current?.skip()}>Skip approach</button>}
                 {stage === "approach" && (heroState === "paused" || heroState === "error") && <button type="button" style={homepageButton} onClick={() => actions.current?.resumeHero()}>{heroState === "error" ? "Retry approach" : "Continue approach"}</button>}
                 {stage === "building" && <button type="button" style={homepageButton} onClick={() => actions.current?.explore()}>Explore building</button>}
@@ -280,7 +311,9 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
             {!staticRenderer && !showControls && orbitInfo.state === "error" && <div data-homepage-controls="" data-orbit-ignore="" style={{ position: "absolute", bottom: 18, left: "50%", transform: "translateX(-50%)", zIndex: 3 }}>
                 <button type="button" style={homepageButton} onClick={() => { void (rootRef.current as (HTMLElement & { retryOrbit?: () => Promise<void> }) | null)?.retryOrbit?.() }}>Retry orbit</button>
             </div>}
-            {!staticRenderer && showDiagnostics && <output data-homepage-diagnostics="" style={{ position: "absolute", left: 12, bottom: 94, pointerEvents: "none", background: "rgba(0,0,0,.65)", color: "#fff", padding: 8, borderRadius: 4, font: "11px/1.5 monospace", zIndex: 2 }}>
+            {detailsMode !== "off" && <ApartmentDetailsStrip apartment={detailsData} language={detailsLanguage} visible={detailsVisible} preview={detailsMode === "preview"}
+                bottom={detailsBottom} inset={detailsInset} onHeightChange={setDetailsHeight} />}
+            {!staticRenderer && showDiagnostics && <output data-homepage-diagnostics="" style={{ position: "absolute", left: 12, bottom: diagnosticBottom, pointerEvents: "none", background: "rgba(0,0,0,.65)", color: "#fff", padding: 8, borderRadius: 4, font: "11px/1.5 monospace", zIndex: 2 }}>
                 {stage} · {orbitInfo.state} · frame {orbitInfo.frame} · downloaded {orbitInfo.downloaded}/{orbitInfo.total} · buffered {orbitInfo.buffered}/{orbitInfo.bufferTotal} · required {orbitInfo.requiredReady}/{orbitInfo.requiredTotal} · decoded {orbitInfo.decoded}
             </output>}
             <span role="status" aria-live="polite" style={{ position: "absolute", width: 1, height: 1, overflow: "hidden", clipPath: "inset(50%)" }}>{orbitInfo.state === "error" ? "Orbit unavailable. Retry the images or use the navigation." : ""}</span>
@@ -372,9 +405,23 @@ addPropertyControls(AdmiralHomepageTrial, {
     showControls: { type: ControlType.Boolean, title: "Trial controls", defaultValue: true },
     showViewpoints: { type: ControlType.Boolean, title: "View buttons", defaultValue: true },
     showDiagnostics: { type: ControlType.Boolean, title: "Diagnostics", defaultValue: false },
+    detailsMode: { type: ControlType.Enum, title: "Apartment details", options: ["preview", "hover", "off"], optionTitles: ["Sample", "Hover", "Off"], defaultValue: "preview", description: "Sample previews the design with example values. Hover waits for apartment data from the future picking masks. Off hides the strip." },
+    detailsLanguage: { type: ControlType.Enum, title: "Details language", options: ["hu", "en"], optionTitles: ["Magyar", "English"], defaultValue: "hu", hidden: p => p.detailsMode === "off" },
+    detailsBottom: { type: ControlType.Number, title: "Details bottom", defaultValue: 32, min: 0, max: 160, step: 1, unit: "px", hidden: p => p.detailsMode === "off" },
+    detailsInset: { type: ControlType.Number, title: "Details margin", defaultValue: 48, min: 0, max: 120, step: 1, unit: "px", hidden: p => p.detailsMode === "off" },
+    apartmentPreview: { type: ControlType.Object, title: "Sample apartment", hidden: p => p.detailsMode !== undefined && p.detailsMode !== "preview", controls: {
+        number: { type: ControlType.String, title: "Apartment", defaultValue: "A.204" },
+        area: { type: ControlType.Number, title: "Area", defaultValue: 66.4, min: 0, max: 500, step: .1, unit: "m²" },
+        terrace: { type: ControlType.Number, title: "Terrace", defaultValue: 12.8, min: 0, max: 500, step: .1, unit: "m²" },
+        garden: { type: ControlType.Number, title: "Garden", defaultValue: 0, min: 0, max: 3000, step: .1, unit: "m²" },
+        rooms: { type: ControlType.Number, title: "Rooms", defaultValue: 3, min: 0, max: 20, step: .5 },
+        availability: { type: ControlType.Enum, title: "Availability", options: ["available", "reserved", "sold"], optionTitles: ["Available", "Reserved", "Sold"], defaultValue: "available" },
+        floorplan: { type: ControlType.Image, title: "Floorplan" },
+    } },
     background: { type: ControlType.Color, title: "Background", defaultValue: "#101820" },
     alt: { type: ControlType.String, title: "Image alt", defaultValue: "Explore Admiral Park, Balatonfüred" },
 })
 
+// @APARTMENT_DETAILS_INSERT
 // @HERO_CORE_INSERT
 // @ORBIT_CORE_INSERT

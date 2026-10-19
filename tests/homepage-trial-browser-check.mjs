@@ -23,11 +23,16 @@ const pause=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 
 async function fixture(options={}){
  const context=await browser.newContext({viewport:{width:1200,height:800},...options.context});
- const page=await context.newPage(),errors=[],heroRequests=[],orbitRequests=[];
+ const page=await context.newPage(),errors=[],heroRequests=[],orbitRequests=[],floorplanRequests=[];
  let failIndex=options.failOrbit,corruptIndex=options.corruptOrbit;
  page.on('pageerror',error=>errors.push(error.message));
  await page.route('http://homepage.test/**',async route=>{
   const url=new URL(route.request().url()),pathname=decodeURIComponent(url.pathname);
+  if(pathname==='/floorplan.svg'){
+   floorplanRequests.push(pathname);
+   if(options.brokenFloorplan)return route.fulfill({status:404,body:'Missing trial floorplan'});
+   return route.fulfill({contentType:'image/svg+xml',body:'<svg xmlns="http://www.w3.org/2000/svg" width="240" height="160"><path fill="none" stroke="white" stroke-width="6" d="M10 10H230V150H10Z M90 10V110H230 M90 80H10"/></svg>'});
+  }
   if(pathname.startsWith('/hero/')){
    const index=Number(pathname.match(/sequence(\d+)/)?.[1]);heroRequests.push(index);
    return route.fulfill({contentType:'image/avif',headers:{'Cache-Control':'public,max-age=3600'},body:heroes[index]});
@@ -43,7 +48,8 @@ async function fixture(options={}){
   return route.fulfill({contentType:'text/html',body:'<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><style>html,body{margin:0;font:18px Arial;background:#0e1720}#stage{height:100svh;position:relative;overflow:hidden}.copy{position:absolute;left:6%;top:20%;max-width:650px;color:white;z-index:4}.cta{position:absolute;left:6%;top:65%;z-index:4}.cta a{display:inline-block;padding:18px;background:white;color:black}#navbar{position:fixed;z-index:50;top:8px;left:12px;display:flex;gap:12px}#nested{position:absolute;right:0;top:100px;width:110px;height:100px;overflow:auto;z-index:40;background:white}#native-input{position:absolute;right:5px;top:220px;z-index:40;width:95px}#external-framer-overlay{position:absolute;inset:0;z-index:20;pointer-events:auto}#external-framer-overlay>div{width:100%;height:100%}</style></head><body'+(options.externalOverlay?' style="height:300vh"':'')+'><nav id="navbar"><a id="nav-link" href="#apartments">Apartments</a><button id="nav-button">Contact</button></nav><div id="mount"></div></body></html>'});
  });
  await page.goto('http://homepage.test/');await page.addScriptTag({content:react});await page.addScriptTag({content:dom});
- await page.evaluate(({code,props,staticMode,publicMode,twoInstances,externalOverlay,gateDecodeIndices,gateFirstNativeDecodes,accelerateDecodeWatchdog,useDefaultOrbitStart})=>{
+ await page.evaluate(({code,props,staticMode,publicMode,twoInstances,externalOverlay,gateDecodeIndices,gateFirstNativeDecodes,accelerateDecodeWatchdog,useDefaultOrbitStart,cleanFixture})=>{
+  if(cleanFixture){const style=document.createElement('style');style.textContent='#nested,#native-input{display:none!important}';document.head.appendChild(style);}
   window.bitmapCreated=0;window.bitmapClosed=0;window.bitmapRecords=[];window.orbitLive=0;window.orbitLiveMax=0;
   window.nativeBitmapCalls=0;window.nativeBitmapActive=0;window.nativeBitmapPeak=0;
   const nativeTimers=window.setTimeout.bind(window);window.acceleratedWatchdog=accelerateDecodeWatchdog;
@@ -73,7 +79,7 @@ async function fixture(options={}){
   const Frame=React.forwardRef((props,ref)=>React.createElement('div',{...props,ref}));
   const Intro=module.exports.OpeningContent(Frame),Building=module.exports.BuildingContent(Frame),CTA=module.exports.ArrivalCTA(Frame);
   window.component=module.exports.default;
-  window.props={useGitHubAssets:publicMode,heroBaseUrl:'http://homepage.test/hero',orbitBaseUrl:'http://homepage.test/orbit',orbitStartFrame:0,snapDuration:.3,...props};
+  window.props={useGitHubAssets:publicMode,heroBaseUrl:'http://homepage.test/hero',orbitBaseUrl:'http://homepage.test/orbit',orbitStartFrame:0,detailsMode:'off',snapDuration:.3,...props};
   if(useDefaultOrbitStart)delete window.props.orbitStartFrame;
   window.root=ReactDOM.createRoot(document.querySelector('#mount'));
   window.renderTrial=()=>window.root.render(React.createElement(React.StrictMode,null,React.createElement('section',{id:'stage'},
@@ -87,11 +93,11 @@ async function fixture(options={}){
    twoInstances?React.createElement('section',{id:'secondary',style:{display:'none',position:'relative',height:'100svh'}},React.createElement(window.component,window.props)):null));
   window.renderTrial();window.samples=[];
   window.sampleTimer=setInterval(()=>{const root=document.querySelector('[data-admiral-homepage]'),orbit=document.querySelector('[data-admiral-orbit]')||root,hero=document.querySelector('[data-admiral-sequence]');if(root)window.samples.push({time:performance.now(),stage:root.dataset.homepageStage,state:orbit?.dataset.orbitState,position:Number(orbit?.dataset.orbitPosition),frame:Number(orbit?.dataset.orbitFrame),checkpoint:Number(orbit?.dataset.orbitCheckpoint),decoded:Number(orbit?.dataset.orbitDecoded),buffered:Number(orbit?.dataset.orbitBuffered),bufferTotal:Number(orbit?.dataset.orbitBufferTotal),requiredReady:Number(orbit?.dataset.orbitRequiredReady),requiredTotal:Number(orbit?.dataset.orbitRequiredTotal),decoding:Number(orbit?.dataset.orbitDecoding),ready:orbit?.dataset.orbitReady,target:Number(orbit?.dataset.orbitTarget),mix:Number(orbit?.dataset.orbitFrameMix),heroFrame:Number(hero?.dataset.frame)});},16);
- },{code,props:options.props||{},staticMode:!!options.staticMode,publicMode,twoInstances:!!options.twoInstances,externalOverlay:!!options.externalOverlay,gateDecodeIndices:options.gateDecodeIndices||[],gateFirstNativeDecodes:options.gateFirstNativeDecodes||0,accelerateDecodeWatchdog:!!options.accelerateDecodeWatchdog,useDefaultOrbitStart:!!options.useDefaultOrbitStart});
+ },{code,props:options.props||{},staticMode:!!options.staticMode,publicMode,twoInstances:!!options.twoInstances,externalOverlay:!!options.externalOverlay,gateDecodeIndices:options.gateDecodeIndices||[],gateFirstNativeDecodes:options.gateFirstNativeDecodes||0,accelerateDecodeWatchdog:!!options.accelerateDecodeWatchdog,useDefaultOrbitStart:!!options.useDefaultOrbitStart,cleanFixture:!!options.cleanFixture});
  await page.waitForSelector('[data-admiral-homepage]');
  await page.waitForFunction(()=>[...document.images].some(image=>image.naturalWidth>0));
  await page.mouse.move(450,500);
- return {context,page,errors,heroRequests,orbitRequests,restoreOrbit(){failIndex=undefined;corruptIndex=undefined;},async close(){await page.evaluate(()=>{window.releaseDecodeGates?.();window.releaseNativeDecodeGates?.();}).catch(()=>{});assert.deepEqual(errors,[]);await context.close();}};
+ return {context,page,errors,heroRequests,orbitRequests,floorplanRequests,restoreOrbit(){failIndex=undefined;corruptIndex=undefined;},async close(){await page.evaluate(()=>{window.releaseDecodeGates?.();window.releaseNativeDecodeGates?.();}).catch(()=>{});assert.deepEqual(errors,[]);await context.close();}};
 }
 const orbitSelector='[data-admiral-orbit]';
 async function orbitData(page){return page.locator(orbitSelector).evaluate(element=>({...element.dataset}));}
@@ -105,8 +111,57 @@ async function waitFrame(page,frame,timeout=12000){
 async function waitBuffer(page,count,selector=orbitSelector){await page.waitForFunction(({count,selector})=>{const root=document.querySelector(selector);return Number(root?.dataset.orbitBuffered)===count&&Number(root?.dataset.orbitDecoding)===0;},{count,selector},{timeout:30000});}
 async function freshWheel(page,delta){await page.waitForTimeout(220);await page.mouse.move(450,500);await page.mouse.wheel(0,delta);}
 async function coveredClick(page,name){const box=await page.getByRole('button',{name,exact:true}).boundingBox();assert.ok(box,name);await page.mouse.click(box.x+box.width/2,box.y+box.height/2);}
+const detailsSelector='[data-apartment-details]';
+const apartmentFields=['number','area','terrace','garden','rooms','availability','floorplan'];
+async function waitDetails(page,visible=true){await page.locator(detailsSelector).waitFor({state:visible?'visible':'hidden'});}
+async function sendApartment(page,detail){await page.locator('[data-admiral-homepage]').evaluate((root,detail)=>root.dispatchEvent(new CustomEvent('admiral:apartment-hover',{detail})),detail);}
+async function apartmentField(page,name){return page.locator(`[data-apartment-field="${name}"]`).innerText();}
+async function componentScreenshot(page,name){const style=await page.addStyleTag({content:'#navbar{visibility:hidden!important}'});try{await page.screenshot({path:fileURLToPath(new URL(name,out))});}finally{await style.evaluate(element=>element.remove());}}
 
 try{
+ await pass('apartment details desktop shows seven transparent localized preview columns and clears the toolbar',async()=>{
+  for(const language of ['hu','en']){
+   const f=await fixture({cleanFixture:true,externalOverlay:true,context:{viewport:{width:1440,height:900}},props:{startView:'orbit',orbitStartFrame:45,detailsMode:'preview',detailsLanguage:language,showControls:false}}),{page}=f;await waitOrbit(page);await waitDetails(page);
+   assert.match(await page.locator(detailsSelector).innerText(),language==='hu'?/MINTA/:/SAMPLE/);
+   assert.match(await apartmentField(page,'number'),/A\.204/);assert.match(await apartmentField(page,'area'),/66[,.]4/);assert.match(await apartmentField(page,'terrace'),/12[,.]8/);assert.match(await apartmentField(page,'garden'),/[—–]/);assert.match(await apartmentField(page,'rooms'),/3/);assert.match(await apartmentField(page,'availability'),language==='hu'?/Szabad/:/Available/);
+   const layout=await page.locator(detailsSelector).evaluate(root=>{const fields=[...root.querySelectorAll('[data-apartment-field]')].map(field=>{const r=field.getBoundingClientRect();return {x:r.x,y:r.y,width:r.width,height:r.height};});const styles=[root,...root.querySelectorAll('*')].map(element=>getComputedStyle(element));return {fields,styles:styles.map(style=>({pointer:style.pointerEvents,bg:style.backgroundColor,image:style.backgroundImage,shadow:style.boxShadow,blur:style.backdropFilter})),rule:styles.some(style=>parseFloat(style.borderTopWidth)>0&&parseFloat(style.borderTopWidth)<=1.5&&/^rgba?\(255,\s*255,\s*255/.test(style.borderTopColor))};});
+   assert.equal(layout.fields.length,7);assert.ok(layout.fields.every((field,index)=>field.width>20&&(index===0||field.x>layout.fields[index-1].x)),'All seven columns share one desktop row');assert.ok(Math.max(...layout.fields.map(field=>field.y))-Math.min(...layout.fields.map(field=>field.y))<25);
+   assert.ok(layout.styles.every(style=>style.pointer==='none'&&style.bg==='rgba(0, 0, 0, 0)'&&style.image==='none'&&style.shadow==='none'&&(!style.blur||style.blur==='none')),'Text and lines stay transparent and pass input through');assert.ok(layout.rule,'The strip has a thin white rule');
+   if(language==='hu')await componentScreenshot(page,'apartment-details-desktop.png');
+   await page.evaluate(()=>{window.props={...window.props,showControls:true};window.renderTrial();});await page.getByRole('button',{name:'Next view',exact:true}).waitFor();await page.waitForTimeout(150);
+   const positions=await page.evaluate(()=>({panel:document.querySelector('[data-apartment-details]').getBoundingClientRect().top,controls:document.querySelector('[data-homepage-controls]').getBoundingClientRect().bottom}));assert.ok(positions.controls<=positions.panel-4,'Measured details height keeps the controls above the strip');
+   const box=await page.locator(detailsSelector).boundingBox();await page.mouse.move(box.x+box.width/2,box.y+box.height/2);await page.mouse.wheel(0,1);await waitDetails(page,false);await waitFrame(page,60);await waitDetails(page);await f.close();
+  }
+ });
+ await pass('apartment details phone layout stays inside the viewport and touch passes through its fields',async()=>{
+  const f=await fixture({cleanFixture:true,context:{viewport:{width:390,height:844},isMobile:true,hasTouch:true,deviceScaleFactor:2},props:{startView:'orbit',orbitStartFrame:45,detailsMode:'preview',showControls:false}}),{page}=f;await waitOrbit(page);await waitDetails(page);
+  const boxes={};for(const field of apartmentFields){assert.equal(await page.locator(`[data-apartment-field="${field}"]`).isVisible(),true);boxes[field]=await page.locator(`[data-apartment-field="${field}"]`).boundingBox();assert.ok(boxes[field].x>=0&&boxes[field].x+boxes[field].width<=391,`${field} fits the phone viewport`);}
+  assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'No horizontal page overflow');
+  assert.ok(Math.abs(boxes.number.y-boxes.availability.y)<25&&Math.abs(boxes.number.y-boxes.floorplan.y)<25,'Apartment number, status and floorplan occupy the mobile header');
+  assert.ok(['area','terrace','garden','rooms'].every(field=>boxes[field].y>boxes.number.y+25),'Four statistics occupy the second mobile row');
+  await componentScreenshot(page,'apartment-details-mobile.png');
+  const cdp=await page.context().newCDPSession(page),y=Math.min(820,boxes.area.y+boxes.area.height/2);await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:260,y}]});await cdp.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x:200,y}]});await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});await waitFrame(page,60);await waitDetails(page);assert.equal(await page.evaluate(()=>scrollY),0);await f.close();
+ });
+ await pass('apartment details preview appears only at orbit rest and static orbit editor',async()=>{
+  const f=await fixture({props:{detailsMode:'preview'}}),{page}=f;await waitStage(page,'opening');assert.equal(await page.locator(detailsSelector+'[data-details-visible="true"]').count(),0);await page.mouse.wheel(0,100);await waitStage(page,'approach');assert.equal(await page.locator(detailsSelector+'[data-details-visible="true"]').count(),0);await page.getByRole('button',{name:'Skip approach',exact:true}).click();await waitStage(page,'building');assert.equal(await page.locator(detailsSelector+'[data-details-visible="true"]').count(),0);await page.getByRole('button',{name:'Explore building',exact:true}).click();await waitOrbit(page);await waitDetails(page);await page.getByRole('button',{name:'Overview',exact:true}).click();await waitStage(page,'opening');await waitDetails(page,false);await f.close();
+  const editor=await fixture({staticMode:true,props:{editorView:'orbit',detailsMode:'preview'}});await waitDetails(editor.page);assert.equal(editor.floorplanRequests.length,0,'Schematic sample does not fetch a fake floorplan');assert.equal(await editor.page.evaluate(()=>window.bitmapRecords.length),0);await editor.close();
+ });
+ await pass('apartment details hover events require a real parked view and fresh selection after travel',async()=>{
+  const f=await fixture({props:{startView:'orbit',orbitStartFrame:45,detailsMode:'hover',detailsLanguage:'en',snapDuration:.7}}),{page}=f;await waitOrbit(page);assert.equal(await page.locator(detailsSelector+'[data-details-visible="true"]').count(),0);assert.equal(f.floorplanRequests.length,0);
+  const apartment={id:'test-503',number:'A.503',area:86,terrace:0,garden:null,rooms:4,availability:'reserved',floorplanUrl:'http://homepage.test/floorplan.svg'};
+  await sendApartment(page,apartment);await waitDetails(page);assert.match(await apartmentField(page,'number'),/A\.503/);assert.match(await apartmentField(page,'availability'),/Reserved/);assert.doesNotMatch(await page.locator(detailsSelector).innerText(),/SAMPLE/);
+  const image=page.locator('[data-apartment-field="floorplan"] img');assert.equal(await image.getAttribute('loading'),'lazy');await page.waitForFunction(()=>document.querySelector('[data-apartment-field="floorplan"] img')?.naturalWidth>0);assert.ok(f.floorplanRequests.length>0);
+  await sendApartment(page,null);await waitDetails(page,false);await sendApartment(page,apartment);await waitDetails(page);
+  await page.getByRole('button',{name:'Next view',exact:true}).click();await waitDetails(page,false);await sendApartment(page,{...apartment,number:'LATE'});await waitFrame(page,60);await page.waitForTimeout(100);assert.equal(await page.locator(detailsSelector+'[data-details-visible="true"]').count(),0,'A stale event during travel cannot reappear at arrival');
+  await sendApartment(page,{...apartment,number:'A.603'});await waitDetails(page);assert.match(await apartmentField(page,'number'),/A\.603/);await sendApartment(page,null);await waitDetails(page,false);await f.close();
+  const custom=await fixture({props:{startView:'orbit',orbitStartFrame:42,detailsMode:'hover'}});await waitOrbit(custom.page);await sendApartment(custom.page,apartment);assert.equal(await custom.page.locator(detailsSelector+'[data-details-visible="true"]').count(),0,'A custom off-grid pose has no selectable facade mask');await custom.close();
+ });
+ await pass('apartment details retain zeros missing values and long identifiers with a broken floorplan fallback',async()=>{
+  const f=await fixture({brokenFloorplan:true,context:{viewport:{width:390,height:844},isMobile:true,hasTouch:true},props:{startView:'orbit',orbitStartFrame:45,detailsMode:'hover',detailsLanguage:'en',showControls:false}}),{page}=f;await waitOrbit(page);assert.equal(f.floorplanRequests.length,0);
+  const number='ADMIRAL-PARK-BUILDING-A-APARTMENT-000000000204';await sendApartment(page,{number,area:0,terrace:null,garden:0,rooms:null,availability:'Coming soon — private release information',floorplanUrl:'http://homepage.test/floorplan.svg'});await waitDetails(page);
+  assert.ok((await apartmentField(page,'number')).includes(number));assert.match(await apartmentField(page,'area'),/0/);assert.match(await apartmentField(page,'garden'),/[—–]/);assert.match(await apartmentField(page,'terrace'),/[—–]/);assert.match(await apartmentField(page,'rooms'),/[—–]/);
+  await page.waitForFunction(()=>document.querySelector('[data-apartment-field="floorplan"]')?.textContent.includes('Unavailable'));assert.ok(f.floorplanRequests.length>0);assert.doesNotMatch(await page.locator(detailsSelector).innerText(),/NaN|undefined|null/);assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'Long user data cannot overflow the phone viewport');await f.close();
+ });
  await pass('orbit start defaults to the fourth camera and preloads its nearest desktop and phone frames',async()=>{
   for(const setting of [{count:61},{count:31,context:{viewport:{width:390,height:844},isMobile:true,hasTouch:true,deviceScaleFactor:2}}]){
    const f=await fixture({useDefaultOrbitStart:true,props:{startView:'orbit'},context:setting.context}),{page}=f;
