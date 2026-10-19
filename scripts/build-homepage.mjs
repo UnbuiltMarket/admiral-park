@@ -6,7 +6,7 @@ export async function buildHomepage() {
  const heroFolder = new URL('assets/images/AVIF 30_1920x1010 DESKTOP HERO SEQUENCE/', root);
  const orbitFolder = new URL('assets/ORBIT PICKER/BEAUTY sequence_Desktop/', root);
  const heroNames = (await readdir(heroFolder)).filter(name => /^raw sequence\d{2}\.avif$/.test(name)).sort();
- const orbitNames = (await readdir(orbitFolder)).filter(name => /^AP_ORBIT_V01\d{4} copy\.avif$/.test(name)).sort();
+ const orbitNames = (await readdir(orbitFolder)).filter(name => /^adjusted sequence\d{4} copy\.avif$/.test(name)).sort();
  if (heroNames.length < 2 || orbitNames.length !== 120) throw new Error('Homepage trial requires the existing hero and exactly 120 orbit AVIF frames.');
  const heroHash = createHash('sha256'), orbitHash = createHash('sha256');
  for (const [i, name] of heroNames.entries()) {
@@ -14,7 +14,7 @@ export async function buildHomepage() {
   heroHash.update(await readFile(new URL(encodeURIComponent(name),heroFolder)));
  }
  for (const [i, name] of orbitNames.entries()) {
-  if (name !== `AP_ORBIT_V01${String(i).padStart(4,'0')} copy.avif`) throw new Error('Missing orbit image at index '+i);
+  if (name !== `adjusted sequence${String(i).padStart(4,'0')} copy.avif`) throw new Error('Missing orbit image at index '+i);
   orbitHash.update(await readFile(new URL(encodeURIComponent(name),orbitFolder)));
  }
  const hero = await readFile(new URL('src/core/hero-sequence.ts',root),'utf8');

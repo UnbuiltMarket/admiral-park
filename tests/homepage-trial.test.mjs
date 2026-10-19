@@ -11,12 +11,13 @@ const source=await readFile(new URL('src/framer/AdmiralHomepageTrial.tsx',root),
 
 test('trial orbit contains exactly 120 consecutive AVIFs at the intended aspect ratio',async()=>{
  const folder=new URL('assets/ORBIT PICKER/BEAUTY sequence_Desktop/',root);
- const names=(await readdir(folder)).filter(name=>/^AP_ORBIT_V01\d{4} copy\.avif$/.test(name));
+ const names=(await readdir(folder)).filter(name=>/^adjusted sequence\d{4} copy\.avif$/.test(name));
  assert.equal(names.length,120);
  let bytes=0;
  for(let index=0;index<120;index++){
-  const name=`AP_ORBIT_V01${String(index).padStart(4,'0')} copy.avif`;
+  const name=`adjusted sequence${String(index).padStart(4,'0')} copy.avif`;
   assert.ok(names.includes(name),name);
+  assert.ok(source.includes(JSON.stringify(name)),`Generated component uses the rerendered frame ${name}`);
   const data=await readFile(new URL(encodeURIComponent(name),folder));bytes+=data.length;
   assert.equal(data.toString('ascii',4,8),'ftyp',name);
   assert.ok(data.subarray(8,64).includes(Buffer.from('avif')),name);
