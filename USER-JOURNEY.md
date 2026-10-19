@@ -76,7 +76,29 @@ These controls belong to the camera component's Framer sidebar; the content and 
 
 The entrance and exit directions are independent. For a composition on the left, entering from the left can complement the open space in that view; another camera may work better with a composition on the right or near the top. Choose these against the actual image. Selecting **Fade only** keeps the fade and removes the directional movement. Motion settings can be adjusted without resetting the camera journey.
 
-The animation uses a separate translation, preserving the group's Framer position and layout. It does not reposition content automatically to avoid the building.
+The animation uses a separate translation, preserving the group's Framer position and layout on desktop. With **Phone framing** enabled, mobile orbit stories are placed below the image and above the apartment details. Long compositions can scroll inside that area.
+
+## Try the mobile framing
+
+Replace the contents of the existing Framer code file with the updated **AdmiralHomepageTrial.tsx**. Keep the existing camera instance and native content overrides. No permanent loader is needed.
+
+On the Phone breakpoint, keep the outer viewer at the full screen height. The code manages the image inside that fixed area:
+
+| Framer control | Trial value | Effect |
+| --- | ---: | --- |
+| **Phone framing** | On | SEQ_01 stays fullscreen. SEQ_02 gradually opens into a landscape image, and the orbit keeps that framing. Applies to component widths of 767 px or less. |
+| **Phone image width** | 80% | Shows at least 80% of the original landscape image width. Increase toward 100% to show more of each view. This is image coverage, not the component's CSS width. |
+| **Phone image top** | 80 px | Leaves room above the parked image for the navbar. Adjust to the actual mobile header. |
+| **Apartment details** | Sample | Shows the example strip below the image while testing the layout. Use Hover only when apartment picking is connected. |
+| **Trial controls** | Off for content layout | Leaves the available phone space for the story and apartment strip. Enable temporarily when checking camera buttons. |
+
+At a 390 px screen width, the default parked image is approximately 390 × 256 px. At 100% source coverage it becomes approximately 390 × 205 px. The outer viewer height does not change, so the transition does not move the page. On short screens the image height and top inset are constrained to leave room for the details.
+
+Test **Start trial → Orbit directly** first to tune the phone layout. Then choose **Full journey** to inspect the fullscreen-to-landscape change during SEQ_02. The image framing follows the displayed frames, including reversal. Overview restores the fullscreen opening picture. Desktop framing stays as authored; turning Phone framing off restores the previous fullscreen phone layout.
+
+The eight native OrbitView groups remain editable in Framer. On phones their overridden parent is positioned 20 px below the image and given the available height above the details and trial controls. Keep mobile text and graphics concise. If a group is taller than its available area, it can scroll without turning the camera. On desktop the original native placement is restored. Framer design-canvas overrides do not run; use Preview to check this final placement.
+
+The existing AVIF files and bounded decode buffers are reused. The canvas backing allocation stays fixed throughout SEQ_02 rather than resizing every frame. The future apartment-mask picker must use this same displayed image rectangle when mapping a phone tap to source-image coordinates. Actual apartment tap selection is not part of this layout trial.
 
 ## Preview one composition without changing live entry
 

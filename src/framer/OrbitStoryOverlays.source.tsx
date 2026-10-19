@@ -21,7 +21,11 @@ function createOrbitStoryOverlay(Component: ComponentType<any>, viewIndex: numbe
                 translate: element.style.translate, visibility: element.style.visibility,
                 pointerEvents: element.style.pointerEvents, hidden: element.getAttribute("aria-hidden"), inert: element.inert,
                 story: element.getAttribute("data-orbit-story"), target: element.getAttribute("data-story-target"), state: element.getAttribute("data-story-state"),
+                orbitIgnore: element.getAttribute("data-orbit-ignore"),
             }
+            const layoutProperties = ["position", "top", "bottom", "left", "right", "width", "minWidth", "maxWidth", "minHeight", "maxHeight", "boxSizing", "overflowY", "overscrollBehavior", "touchAction"] as const
+            const originalLayout = Object.fromEntries(layoutProperties.map(property => [property, element.style[property]])) as Record<typeof layoutProperties[number], string>
+            let mobileLayout = false
             const computedTranslate = getComputedStyle(element).translate
             const baseTranslate = original.translate || computedTranslate
             const translateParts: string[] = []
@@ -80,6 +84,42 @@ function createOrbitStoryOverlay(Component: ComponentType<any>, viewIndex: numbe
                 }
                 return true
             }
+            function restoreLayout() {
+                if (!mobileLayout) return
+                for (const property of layoutProperties) if (element!.style[property] !== originalLayout[property]) element!.style[property] = originalLayout[property]
+                if (original.orbitIgnore === null) element!.removeAttribute("data-orbit-ignore")
+                else element!.setAttribute("data-orbit-ignore", original.orbitIgnore)
+                mobileLayout = false
+            }
+            function positionForMobile(root: HTMLElement | null, channel: HomepageChannel | null | undefined) {
+                if (!root || !channel?.mobile?.enabled) { restoreLayout(); return }
+                mobileLayout = true
+                const set = (property: typeof layoutProperties[number], value: string) => {
+                    if (element!.style[property] !== value) element!.style[property] = value
+                }
+                // Read the containing block after switching to absolute positioning: its
+                // padding edge is the origin, and its own scrolling moves that origin.
+                set("position", "absolute")
+                const rootBox = root.getBoundingClientRect()
+                const parent = element!.offsetParent as HTMLElement | null
+                const initialBlock = !parent || (parent === document.body && getComputedStyle(parent).position === "static")
+                const parentBox = parent?.getBoundingClientRect()
+                const scaleX = !initialBlock && parentBox && parent!.offsetWidth > 0 ? parentBox.width / parent!.offsetWidth : 1
+                const scaleY = !initialBlock && parentBox && parent!.offsetHeight > 0 ? parentBox.height / parent!.offsetHeight : 1
+                const safeScaleX = Number.isFinite(scaleX) && scaleX > 0 ? scaleX : 1
+                const safeScaleY = Number.isFinite(scaleY) && scaleY > 0 ? scaleY : 1
+                const left = initialBlock ? rootBox.left + window.scrollX + 24 : (rootBox.left + 24 - parentBox!.left) / safeScaleX + parent!.scrollLeft - parent!.clientLeft
+                const top = initialBlock ? rootBox.top + window.scrollY + channel.mobile.storyTop : (rootBox.top + channel.mobile.storyTop - parentBox!.top) / safeScaleY + parent!.scrollTop - parent!.clientTop
+                const pixel = (value: number) => `${Math.round(value * 1000) / 1000}px`
+                set("left", pixel(left)); set("top", pixel(top))
+                set("bottom", "auto"); set("right", "auto")
+                set("boxSizing", "border-box")
+                set("width", pixel(Math.max(0, rootBox.width - 48) / safeScaleX))
+                set("minWidth", "0px"); set("maxWidth", "none"); set("minHeight", "0px")
+                set("maxHeight", pixel(Math.max(0, channel.mobile.storyMaxHeight) / safeScaleY))
+                set("overflowY", "auto"); set("overscrollBehavior", "contain"); set("touchAction", "pan-y")
+                if (!element!.hasAttribute("data-orbit-ignore")) element!.setAttribute("data-orbit-ignore", "")
+            }
             function observeSource(root: HTMLElement | null) {
                 sourceResize?.disconnect(); sourceIntersection?.disconnect(); sourceMutation?.disconnect()
                 sourceResize = null; sourceIntersection = null; sourceMutation = null
@@ -137,6 +177,7 @@ function createOrbitStoryOverlay(Component: ComponentType<any>, viewIndex: numbe
                 const root = resolve()
                 if (selected !== root) { hide(); selected = root; observeSource(root) }
                 const channel = root && homepageChannels.get(root)
+                positionForMobile(root, channel)
                 if (!channel || channel.stage !== "orbit" || !channel.story.enabled) { hide(); return }
                 const settings = channel.story, motion = settings.views[viewIndex] || DEFAULT_ORBIT_STORY_VIEWS[viewIndex]
                 const enterFrom = direction(motion.enterFrom), exitTo = direction(motion.exitTo)
@@ -181,6 +222,7 @@ function createOrbitStoryOverlay(Component: ComponentType<any>, viewIndex: numbe
                 disposed = true; cancel(); observeSource(null); homepageSubscribers.delete(update)
                 reduced.removeEventListener("change", update)
                 window.removeEventListener("resize", update); window.removeEventListener("scroll", update, true)
+                restoreLayout()
                 element.style.opacity = original.opacity; element.style.translate = original.translate; element.style.visibility = original.visibility
                 element.style.pointerEvents = original.pointerEvents; element.inert = original.inert
                 const restore = (name: string, value: string | null) => value === null ? element.removeAttribute(name) : element.setAttribute(name, value)

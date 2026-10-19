@@ -11,6 +11,8 @@ export interface OrbitOptions {
     root: HTMLElement; canvas: HTMLCanvasElement; urls: string[];
     decodeWidth?: number; inspectionWidth?: number; checkpointCount?: number; bufferCheckpoints?: number; startFrame?: number;
     snapDuration?: number; frameBlend?: number; focalX?: number; focalY?: number;
+    /** Optional image rectangle in CSS pixels, independent of the full canvas backing size. */
+    viewport?: (bounds: { width: number; height: number }) => { x: number; y: number; width: number; height: number } | null;
     onUpdate?: (snapshot: OrbitSnapshot) => void;
 }
 
@@ -313,11 +315,12 @@ export function createOrbitPlayer(options: OrbitOptions) {
         }
     }
 
-    function drawImage(bitmap: OrbitBitmap) {
+    function drawImage(bitmap: OrbitBitmap, viewport?: { x: number; y: number; width: number; height: number }) {
         if (!context) return;
-        const scale = Math.max(canvas.width / bitmap.width, canvas.height / bitmap.height);
+        const target = viewport ?? { x: 0, y: 0, width: canvas.width, height: canvas.height };
+        const scale = Math.max(target.width / bitmap.width, target.height / bitmap.height);
         const width = bitmap.width * scale, height = bitmap.height * scale;
-        context.drawImage(bitmap.image, (canvas.width - width) * focalX, (canvas.height - height) * focalY, width, height);
+        context.drawImage(bitmap.image, target.x + (target.width - width) * focalX, target.y + (target.height - height) * focalY, width, height);
     }
 
     function paint(now: number) {
@@ -336,19 +339,31 @@ export function createOrbitPlayer(options: OrbitOptions) {
         if (!context || !bitmap || !active || destroyed) return;
         const bounds = canvas.getBoundingClientRect();
         if (bounds.width <= 0 || bounds.height <= 0) return;
+        const requestedViewport = options.viewport?.({ width: bounds.width, height: bounds.height });
+        const viewport = requestedViewport && [requestedViewport.x, requestedViewport.y, requestedViewport.width, requestedViewport.height].every(Number.isFinite) &&
+            requestedViewport.width > 0 && requestedViewport.height > 0 ? requestedViewport : null;
         const useful = inspection && inspectionFrame === frame ? inspection : bitmap;
         const usefulDPR = Math.min(useful.width / bounds.width, useful.height / bounds.height);
-        const dpr = Math.min(window.devicePixelRatio || 1, 2, usefulDPR);
+        const dpr = viewport ? Math.min(window.devicePixelRatio || 1, 2) : Math.min(window.devicePixelRatio || 1, 2, usefulDPR);
         const width = Math.max(1, Math.round(bounds.width * dpr)), height = Math.max(1, Math.round(bounds.height * dpr));
         if (canvas.width !== width || canvas.height !== height) { canvas.width = width; canvas.height = height; lastPaint = ""; }
+        const destination = viewport ? { x: viewport.x * width / bounds.width, y: viewport.y * height / bounds.height,
+            width: viewport.width * width / bounds.width, height: viewport.height * height / bounds.height } : undefined;
         const mix = inspection && inspectionFrame === frame ? (reduced() ? 1 : orbitClamp((now - qualityStartedAt) / 120, 0, 1)) : 0;
-        const signature = [from, to, frameMix.toFixed(4), width, height, inspectionFrame, mix.toFixed(4)].join("|");
+        const signature = [from, to, frameMix.toFixed(4), width, height, inspectionFrame, mix.toFixed(4),
+            viewport ? 1 : 0, destination?.x ?? 0, destination?.y ?? 0, destination?.width ?? width, destination?.height ?? height].join("|");
         if (signature === lastPaint) return;
-        context.globalAlpha = 1; drawImage(bitmap);
-        if (next) { context.globalAlpha = frameMix; drawImage(next); context.globalAlpha = 1; }
-        if (inspection && mix > 0 && inspectionFrame === frame) {
-            context.globalAlpha = mix; drawImage(inspection); context.globalAlpha = 1;
+        context.globalAlpha = 1;
+        if (destination) {
+            context.fillStyle = "#101820"; context.fillRect(0, 0, width, height);
+            context.save(); context.beginPath(); context.rect(destination.x, destination.y, destination.width, destination.height); context.clip();
         }
+        drawImage(bitmap, destination);
+        if (next) { context.globalAlpha = frameMix; drawImage(next, destination); context.globalAlpha = 1; }
+        if (inspection && mix > 0 && inspectionFrame === frame) {
+            context.globalAlpha = mix; drawImage(inspection, destination); context.globalAlpha = 1;
+        }
+        if (destination) context.restore();
         root.dataset.orbitFrameFrom = String(from); root.dataset.orbitFrameTo = String(to);
         root.dataset.orbitFrameMix = frameMix.toFixed(4);
         lastPaint = signature;
@@ -690,7 +705,7 @@ export function createOrbitPlayer(options: OrbitOptions) {
     notify();
 
     return {
-        prepare, activate, deactivate, go, setCheckpoint, pause: () => pauseInternal(false), resume, retry, snapshot,
+        prepare, activate, deactivate, go, setCheckpoint, pause: () => pauseInternal(false), resume, retry, snapshot, redraw: () => paint(performance.now()),
         destroy() {
             if (destroyed) return;
             destroyed = true; deactivate(); cancellation.abort();

@@ -56,7 +56,7 @@ async function fixture(options={}){
   return route.fulfill({contentType:'text/html',body:'<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><style>html,body{margin:0;font:18px Arial;background:#0e1720}#stage{height:100svh;position:relative;overflow:hidden}.copy{position:absolute;left:6%;top:20%;max-width:650px;color:white;z-index:4}.cta{position:absolute;left:6%;top:65%;z-index:4}.cta a{display:inline-block;padding:18px;background:white;color:black}#navbar{position:fixed;z-index:50;top:8px;left:12px;display:flex;gap:12px}#nested{position:absolute;right:0;top:100px;width:110px;height:100px;overflow:auto;z-index:40;background:white}#native-input{position:absolute;right:5px;top:220px;z-index:40;width:95px}#external-framer-overlay{position:absolute;inset:0;z-index:20;pointer-events:auto}#external-framer-overlay>div{width:100%;height:100%}</style></head><body'+(options.externalOverlay?' style="height:300vh"':'')+'><nav id="navbar"><a id="nav-link" href="#apartments">Apartments</a><button id="nav-button">Contact</button></nav><div id="mount"></div></body></html>'});
  });
  await page.goto('http://homepage.test/');await page.addScriptTag({content:react});await page.addScriptTag({content:dom});
- await page.evaluate(({code,props,staticMode,publicMode,twoInstances,externalOverlay,gateDecodeIndices,gateFirstNativeDecodes,accelerateDecodeWatchdog,useDefaultOrbitStart,cleanFixture,storyOverlays,storyAliases})=>{
+ await page.evaluate(({code,props,staticMode,publicMode,twoInstances,externalOverlay,gateDecodeIndices,gateFirstNativeDecodes,accelerateDecodeWatchdog,useDefaultOrbitStart,cleanFixture,storyOverlays,storyAliases,tallStory,stageScale,stageWidth,stageHeight})=>{
   if(cleanFixture){const style=document.createElement('style');style.textContent='#nested,#native-input{display:none!important}';document.head.appendChild(style);}
   window.bitmapCreated=0;window.bitmapClosed=0;window.bitmapRecords=[];window.sequenceDraws=[];window.orbitLive=0;window.orbitLiveMax=0;
   const bitmapRecords=new WeakMap(),nativeDrawImage=CanvasRenderingContext2D.prototype.drawImage;
@@ -105,19 +105,19 @@ async function fixture(options={}){
   window.props={useGitHubAssets:publicMode,heroBaseUrl:'http://homepage.test/hero',connectionBaseUrl:'http://homepage.test/connection',connectionDuration:.6,orbitBaseUrl:'http://homepage.test/orbit',orbitStartFrame:0,detailsMode:'off',snapDuration:.3,...props};
   if(useDefaultOrbitStart)delete window.props.orbitStartFrame;
   window.root=ReactDOM.createRoot(document.querySelector('#mount'));
-  window.renderTrial=()=>window.root.render(React.createElement(React.StrictMode,null,React.createElement('section',{id:'stage'},
+  window.renderTrial=()=>window.root.render(React.createElement(React.StrictMode,null,React.createElement('section',{id:'stage',style:{...(stageScale?{transform:`scale(${stageScale})`,transformOrigin:'top left'}:{}),...(stageWidth?{width:stageWidth}:{}),...(stageHeight?{height:stageHeight}:{})}},
    React.createElement(window.component,window.props),
    React.createElement(Intro,{id:'intro',className:'copy'},'LOCATION'),
    React.createElement(Building,{id:'building',className:'copy'},'BUILDING'),
    React.createElement(CTA,{id:'cta',className:'cta'},React.createElement('a',{href:'#apartments',onClick:()=>window.ctaClicked=true},'Apartment details')),
-   ...Stories.map((Story,index)=>React.createElement(Story,{key:index,id:`story-${index+1}`,style:{position:'absolute',left:'6%',top:'32%',width:'240px',zIndex:30,color:'white'}},React.createElement('span',{'data-story-fixture':index+1},`Native Framer group ${index+1}`),React.createElement('button',{'data-story-fixture-cta':index+1,onClick:()=>window.storyClicks=(window.storyClicks||0)+1},`Story action ${index+1}`))),
+   ...Stories.map((Story,index)=>React.createElement(Story,{key:index,id:`story-${index+1}`,style:{position:'absolute',left:'6%',top:'32%',width:'240px',zIndex:30,color:'white'}},React.createElement('span',{'data-story-fixture':index+1},`Native Framer group ${index+1}`),tallStory&&index===7?React.createElement('div',{'data-story-long':'',style:{height:600}},'Editable native logo, heading and long supporting text'):null,React.createElement('button',{'data-story-fixture-cta':index+1,onClick:()=>window.storyClicks=(window.storyClicks||0)+1},`Story action ${index+1}`))),
    externalOverlay?React.createElement('div',{id:'external-framer-overlay','data-external-framer-wrapper':''},React.createElement('div',{'data-external-framer-surface':''})):null,
    React.createElement('div',{id:'nested'},React.createElement('div',{style:{height:500}},'Native scroll panel')),
    React.createElement('input',{id:'native-input',defaultValue:'Apartment'})),
    twoInstances?React.createElement('section',{id:'secondary',style:{display:'none',position:'relative',height:'100svh'}},React.createElement(window.component,window.props)):null));
   window.renderTrial();window.samples=[];
   window.sampleTimer=setInterval(()=>{const root=document.querySelector('[data-admiral-homepage]'),orbit=document.querySelector('[data-admiral-orbit]')||root,hero=document.querySelector('[data-admiral-sequence]');if(root)window.samples.push({time:performance.now(),stage:root.dataset.homepageStage,sequence:root.dataset.activeSequence,sequenceState:hero?.dataset.sequenceState,heroDecoded:Number(hero?.dataset.decoded),state:orbit?.dataset.orbitState,position:Number(orbit?.dataset.orbitPosition),frame:Number(orbit?.dataset.orbitFrame),checkpoint:Number(orbit?.dataset.orbitCheckpoint),decoded:Number(orbit?.dataset.orbitDecoded),buffered:Number(orbit?.dataset.orbitBuffered),bufferTotal:Number(orbit?.dataset.orbitBufferTotal),requiredReady:Number(orbit?.dataset.orbitRequiredReady),requiredTotal:Number(orbit?.dataset.orbitRequiredTotal),decoding:Number(orbit?.dataset.orbitDecoding),ready:orbit?.dataset.orbitReady,target:Number(orbit?.dataset.orbitTarget),mix:Number(orbit?.dataset.orbitFrameMix),heroFrame:Number(hero?.dataset.frame)});},16);
- },{code,props:options.props||{},staticMode:!!options.staticMode,publicMode,twoInstances:!!options.twoInstances,externalOverlay:!!options.externalOverlay,gateDecodeIndices:options.gateDecodeIndices||[],gateFirstNativeDecodes:options.gateFirstNativeDecodes||0,accelerateDecodeWatchdog:!!options.accelerateDecodeWatchdog,useDefaultOrbitStart:!!options.useDefaultOrbitStart,cleanFixture:!!options.cleanFixture,storyOverlays:!!options.storyOverlays,storyAliases:!!options.storyAliases});
+ },{code,props:options.props||{},staticMode:!!options.staticMode,publicMode,twoInstances:!!options.twoInstances,externalOverlay:!!options.externalOverlay,gateDecodeIndices:options.gateDecodeIndices||[],gateFirstNativeDecodes:options.gateFirstNativeDecodes||0,accelerateDecodeWatchdog:!!options.accelerateDecodeWatchdog,useDefaultOrbitStart:!!options.useDefaultOrbitStart,cleanFixture:!!options.cleanFixture,storyOverlays:!!options.storyOverlays,storyAliases:!!options.storyAliases,tallStory:!!options.tallStory,stageScale:options.stageScale,stageWidth:options.stageWidth,stageHeight:options.stageHeight});
  await page.waitForSelector('[data-admiral-homepage]');
  await page.waitForFunction(()=>[...document.images].some(image=>image.naturalWidth>0));
  await page.mouse.move(450,500);
@@ -167,6 +167,53 @@ function assertSamePaint(samples,baseline,message){
  }
 }
 
+async function installFramingCapture(page){
+ await page.evaluate(()=>{
+  window.framingSamples=[];
+  window.readFraming=()=>{
+   const root=document.querySelector('[data-admiral-homepage]'),box=root.getBoundingClientRect(),rootWidth=box.width,rootHeight=box.height,scaleX=box.width/root.clientWidth,scaleY=box.height/root.clientHeight,hero=root.querySelector('[data-admiral-sequence]'),heroCanvas=hero.querySelector('canvas'),orbitCanvas=[...root.querySelectorAll('canvas')].find(canvas=>!canvas.closest('[data-admiral-sequence]'));
+   const stage=root.dataset.homepageStage,canvas=stage==='orbit'?orbitCanvas:heroCanvas,css=getComputedStyle(canvas),width=Number(root.dataset.imageWidth),height=Number(root.dataset.imageHeight),x=Number(root.dataset.imageX),y=Number(root.dataset.imageY),pixels=[];
+   if(canvas.width>1&&canvas.height>1&&[width,height,x,y].every(Number.isFinite)){
+    const context=canvas.getContext('2d');
+    for(const fy of [.3,.5,.7])for(const fx of [.3,.5,.7])pixels.push(...context.getImageData(Math.max(0,Math.min(canvas.width-1,Math.floor((x+width*fx)/rootWidth*canvas.width))),Math.max(0,Math.min(canvas.height-1,Math.floor((y+height*fy)/rootHeight*canvas.height))),1,1).data);
+   }
+   const poster=hero.querySelector('img'),posterBox=poster.getBoundingClientRect();
+   const hitCanvas=(px,py)=>document.elementFromPoint(box.x+px,box.y+py)===canvas;
+   return {stage,sequence:root.dataset.activeSequence,paintedSequence:window.sequenceDraws.at(-1)?.activeSequence,frame:Number(hero.dataset.frame),direction:Number(hero.dataset.direction),progress:Number(hero.dataset.progress),mobile:root.dataset.mobileFraming,visibleWidth:Number(root.dataset.visibleImageWidth),rootWidth,rootHeight,logicalRootWidth:root.clientWidth,logicalRootHeight:root.clientHeight,scaleX,scaleY,x,y,width,height,canvasWidth:canvas.width,canvasHeight:canvas.height,opacity:Number(css.opacity),clip:css.clipPath,pixels,hitInside:hitCanvas(x+width*.5,y+height*.5),hitAbove:hitCanvas(x+width*.5,Math.max(1,y*.5)),hitBelow:hitCanvas(x+width*.5,Math.min(rootHeight-1,y+height+8)),poster:{x:posterBox.x-box.x,y:posterBox.y-box.y,width:posterBox.width,height:posterBox.height,ready:poster.complete&&poster.naturalWidth>0}};
+  };
+  const sample=()=>{window.framingSamples.push(window.readFraming());window.framingRaf=requestAnimationFrame(sample);};sample();
+ });
+}
+async function readFraming(page){return page.evaluate(()=>window.readFraming());}
+function assertFullFraming(frame,message){
+ assert.equal(frame.x,0,message+' begins at the left edge');assert.equal(frame.y,0,message+' begins at the top edge');
+ assert.ok(Math.abs(frame.width-frame.rootWidth)<1,message+' fills the component width');assert.ok(Math.abs(frame.height-frame.rootHeight)<1,message+' fills the component height');
+}
+function assertPhoneFraming(frame,width,top=80,message='Phone orbit',staticPoster=false){
+ assert.equal(frame.mobile,'true',message+' enables the phone layout');assert.ok(Math.abs(frame.width-width)<1,message+' fills phone width');assert.equal(frame.x,0);
+ assert.ok(Math.abs(frame.y-top)<1,message+' clears the header');assert.ok(frame.height<=width*1010/(1920*.8)+1,message+' shows at least 80% of source width');
+ assert.ok(frame.visibleWidth>=79.9&&frame.visibleWidth<=100.1,message+' reports the real horizontal source coverage');
+ assert.ok(frame.height>width*1010/1920-1,message+' keeps a landscape image');
+ if(staticPoster){
+  assert.equal(frame.poster.ready,true,message+' has a loaded static poster');
+  for(const key of ['x','y','width','height'])assert.ok(Math.abs(frame.poster[key]-frame[key])<1,message+' poster uses the same displayed '+key);
+ }else{
+  assert.notEqual(frame.clip,'none',message+' clips the full-size canvas to the displayed image rectangle');
+  assert.equal(frame.hitInside,true,message+' exposes the canvas inside the displayed rectangle');assert.equal(frame.hitAbove,false,message+' actually clips away the area above the image');assert.equal(frame.hitBelow,false,message+' actually clips away the area below the image');
+  assert.ok(frame.pixels.some((value,index)=>index%4!==3&&value>45),message+' contains a painted image, not the dark backing fill');
+ }
+}
+function assertMonotonicFraming(samples,forward){
+ assert.ok(samples.length>8,'The framing transition is sampled across several displayed animation frames');
+ for(let index=1;index<samples.length;index++){
+  const previous=samples[index-1],current=samples[index];
+  assert.ok(forward?current.height<=previous.height+1:current.height>=previous.height-1,'Image height follows displayed sequence progress without jumping backwards');
+  assert.ok(forward?current.y>=previous.y-1:current.y<=previous.y+1,'Image top follows displayed sequence progress without jumping backwards');
+  assert.equal(current.canvasWidth,previous.canvasWidth,'Framing does not reallocate the canvas backing width per frame');assert.equal(current.canvasHeight,previous.canvasHeight,'Framing does not reallocate the canvas backing height per frame');
+  assert.equal(current.opacity,1,'The sequence canvas stays opaque throughout framing');assert.ok(current.pixels.some((value,index)=>index%4!==3&&value>45),'Each displayed frame contains real image pixels');
+ }
+}
+
 
 const storySelector=view=>`[data-orbit-story="${view}"]`;
 async function waitStory(page,view,state='visible'){
@@ -179,6 +226,96 @@ async function assertStoryTarget(page,view){
 }
 
 try{
+ await pass('mobile framing SEQ_02 transforms fullscreen into a wide image and every orbit camera preserves coverage',async()=>{
+  for(const viewport of [{width:390,height:844},{width:375,height:667}]){
+   const f=await fixture({cleanFixture:true,context:{viewport,isMobile:true,hasTouch:true,deviceScaleFactor:2},props:{duration:.6,connectionDuration:1.2,maxSpeed:1,snapDuration:.15,detailsMode:'preview',showViewpoints:false}}),{page}=f;
+   try{
+    await installFramingCapture(page);assertFullFraming(await readFraming(page),'SEQ_01 opening');
+    await coveredClick(page,'Skip approach');await waitStage(page,'building');assertFullFraming(await readFraming(page),'SEQ_01 building arrival');
+    await page.evaluate(()=>window.framingSamples=[]);await coveredClick(page,'Explore building');await waitOrbit(page);await waitDetails(page);
+    const transition=await page.evaluate(()=>window.framingSamples.filter(sample=>sample.stage==='connection'&&sample.sequence==='SEQ_02'&&sample.paintedSequence==='SEQ_02'&&sample.canvasWidth>1));
+    assertMonotonicFraming(transition,true);assert.ok(transition[0].height>viewport.height*.9,'The connector begins with the previous fullscreen presentation');
+    for(let checkpoint=0;checkpoint<8;checkpoint++){
+     await waitFrame(page,checkpoint*15);await page.waitForFunction(()=>Number(getComputedStyle(document.querySelector('[data-apartment-details]')).opacity)>.99);const frame=await readFraming(page);assertPhoneFraming(frame,viewport.width,80,`Phone ${viewport.width} camera ${checkpoint+1}`);
+     const details=await page.locator(detailsSelector).boundingBox();assert.ok(details.y>=frame.y+frame.height+8,'Apartment details remain below the framed building image');assert.ok(details.y+details.height<=viewport.height-31,'Apartment details preserve their bottom inset');
+     if(checkpoint<7)await coveredClick(page,'Next view');
+    }
+    await componentScreenshot(page,`phone-framing-${viewport.width}.png`);
+   }finally{await f.close();}
+  }
+ });
+ await pass('mobile framing reverses with the connector and Overview restores the complete opening image',async()=>{
+  const f=await fixture({cleanFixture:true,context:{viewport:{width:375,height:667},isMobile:true,hasTouch:true,deviceScaleFactor:2},props:{connectionDuration:3,maxSpeed:1}}),{page}=f;
+  try{
+   await installFramingCapture(page);await coveredClick(page,'Skip approach');await waitStage(page,'building');await coveredClick(page,'Explore building');await waitConnectionFrame(page,25,45);
+   const middle=await readFraming(page);assert.ok(middle.y>0&&middle.y<80);assert.ok(middle.height<667&&middle.height>375*1010/(1920*.8));
+   // Capture after the first reverse draw so the direction-change frame is not mistaken for backward geometry.
+   const previousFrame=middle.frame,cdp=await page.context().newCDPSession(page);
+   await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:185,y:180}]});await cdp.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x:185,y:300}]});await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});await page.waitForFunction(previous=>Number(document.querySelector('[data-admiral-sequence]').dataset.frame)<previous,previousFrame);
+   await page.evaluate(()=>window.framingSamples=[]);await waitStage(page,'building');
+   const reversed=await page.evaluate(()=>window.framingSamples.filter(sample=>sample.stage==='connection'&&sample.sequence==='SEQ_02'));assertMonotonicFraming(reversed,false);assertFullFraming(await readFraming(page),'Restored SEQ_01 endpoint');
+   await coveredClick(page,'Explore building');await waitConnectionFrame(page,10,40);await coveredClick(page,'Overview');await waitStage(page,'opening');assertFullFraming(await readFraming(page),'Overview reset');
+  }finally{await f.close();}
+ });
+ await pass('mobile framing preserves desktop and disabled phone fullscreen behavior and matches static previews',async()=>{
+  for(const setting of [{context:{viewport:{width:1200,height:800}},props:{},mobile:false},{context:{viewport:{width:390,height:844},isMobile:true,hasTouch:true},props:{phoneFraming:false},mobile:false}]){
+   const f=await fixture({...setting,props:{startView:'orbit',...setting.props}}),{page}=f;
+   try{await waitOrbit(page);await installFramingCapture(page);const frame=await readFraming(page);assert.equal(frame.mobile,String(setting.mobile));assertFullFraming(frame,'Unframed orbit');}finally{await f.close();}
+  }
+  for(const editorView of ['opening','building','connection','orbit']){
+   const f=await fixture({staticMode:true,cleanFixture:true,context:{viewport:{width:390,height:844},isMobile:true,hasTouch:true},props:{editorView,detailsMode:'preview'}}),{page}=f;
+   try{
+    await installFramingCapture(page);const frame=await readFraming(page);assert.equal(await page.evaluate(()=>window.nativeBitmapCalls),0,'A static framing preview never starts the sequence decoder');
+    if(editorView==='orbit')assertPhoneFraming(frame,390,80,'Static phone orbit',true);
+    else if(editorView==='connection'){assert.ok(frame.y>0&&frame.y<80);assert.ok(frame.height<844&&frame.height>390*1010/(1920*.8),'Static connection previews the midpoint framing');}
+    else assertFullFraming(frame,'Static '+editorView);
+   }finally{await f.close();}
+  }
+ });
+ await pass('mobile framing keeps tall native story eight between image and details during resize and custom framing',async()=>{
+  const f=await fixture({cleanFixture:true,storyOverlays:true,tallStory:true,context:{viewport:{width:375,height:667},isMobile:true,hasTouch:true,deviceScaleFactor:2},props:{startView:'orbit',orbitStartFrame:105,detailsMode:'preview',showControls:false,showViewpoints:false,storyDelay:.01,storyIn:.02,storyOut:.02}}),{page}=f;
+  async function assertStoryRegion(){
+   await waitStory(page,8);await page.waitForFunction(()=>Number(getComputedStyle(document.querySelector('[data-apartment-details]')).opacity)>.99);const frame=await readFraming(page),story=await page.locator(storySelector(8)).evaluate(element=>{const box=element.getBoundingClientRect(),css=getComputedStyle(element);return {top:box.top,bottom:box.bottom,height:box.height,maxHeight:parseFloat(css.maxHeight),overflow:css.overflowY,clientHeight:element.clientHeight,scrollHeight:element.scrollHeight};}),details=await page.locator(detailsSelector).boundingBox();
+   assert.ok(story.top>=frame.y+frame.height+19,'Native story begins below the displayed image');assert.ok(story.bottom<=details.y-19,'Native story ends above the apartment details: '+JSON.stringify({story,details}));assert.ok(story.height>60,'The short phone keeps a usable story region');assert.ok(story.maxHeight>0&&Number.isFinite(story.maxHeight));assert.equal(story.overflow,'auto');assert.ok(story.scrollHeight>story.clientHeight,'Tall native content remains available through its own scroll region');
+  }
+  try{
+   await waitFrame(page,105);await waitDetails(page);await installFramingCapture(page);await assertStoryRegion();
+   await componentScreenshot(page,'phone-framing-story8-375.png');
+   const cdp=await page.context().newCDPSession(page),storyBox=await page.locator(storySelector(8)).boundingBox(),storyTouchY=storyBox.y+storyBox.height-12;
+   await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:120,y:storyTouchY}]});
+   for(const delta of [20,40,60])await cdp.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x:120,y:storyTouchY-delta}]});
+   await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});await page.waitForFunction(()=>document.querySelector('[data-orbit-story="8"]').scrollTop>0);await page.waitForTimeout(250);
+   assert.equal(Number((await orbitData(page)).orbitFrame),105,'A real swipe scrolls the native text without rotating the building');assert.equal(await page.evaluate(()=>scrollY),0,'Scrolling native story content does not move the page');
+   await page.locator(storySelector(8)).evaluate(element=>element.scrollTop=element.scrollHeight);await page.getByRole('button',{name:'Story action 8',exact:true}).click();assert.equal(await page.evaluate(()=>window.storyClicks),1,'The apartment selection CTA is reachable in a tall native group');assert.equal(await page.evaluate(()=>scrollY),0);
+   await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:270,y:180}]});await cdp.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x:160,y:180}]});await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});await waitFrame(page,0);await waitStory(page,1);await page.getByRole('button',{name:'Story action 1',exact:true}).tap();assert.equal(await page.evaluate(()=>window.storyClicks),2,'Swiping the image rotates to the next camera and leaves its native CTA usable');
+   await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:150,y:180}]});await cdp.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x:270,y:180}]});await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});await waitFrame(page,105);await assertStoryRegion();
+   await page.setViewportSize({width:390,height:844});await page.waitForFunction(()=>Number(document.querySelector('[data-admiral-homepage]').dataset.imageWidth)===390);await assertStoryRegion();assertPhoneFraming(await readFraming(page),390);
+   await page.evaluate(()=>{window.props={...window.props,phoneImageWidth:100,phoneImageTop:120};window.renderTrial();});await page.waitForFunction(()=>Math.abs(Number(document.querySelector('[data-admiral-homepage]').dataset.imageY)-120)<1);await waitFrame(page,105);await assertStoryRegion();const custom=await readFraming(page);assertPhoneFraming(custom,390,120,'Custom phone framing');assert.ok(Math.abs(custom.height-390*1010/1920)<1,'100% source-width setting shows the full landscape source');
+   await page.setViewportSize({width:1200,height:800});await page.waitForFunction(()=>document.querySelector('[data-admiral-homepage]').dataset.mobileFraming==='false');await waitFrame(page,105);assertFullFraming(await readFraming(page),'Resized desktop');
+   const restored=await page.locator(storySelector(8)).evaluate(element=>{const css=getComputedStyle(element),box=element.getBoundingClientRect();return {top:box.top,maxHeight:css.maxHeight,overflow:css.overflowY};});assert.ok(Math.abs(restored.top-800*.32)<1,'Desktop restores the native Framer story placement');assert.equal(restored.maxHeight,'none');assert.equal(restored.overflow,'visible');
+  }finally{await f.close();}
+ });
+ await pass('mobile framing reduced motion retains fullscreen building while orbit decode is pending',async()=>{
+  const f=await fixture({cleanFixture:true,gateDecodeIndices:[0],context:{viewport:{width:390,height:844},isMobile:true,hasTouch:true,deviceScaleFactor:2,reducedMotion:'reduce'},props:{detailsMode:'preview'}}),{page}=f;
+  try{
+   await waitStage(page,'building');await installFramingCapture(page);assertFullFraming(await readFraming(page),'Reduced-motion building');
+   await coveredClick(page,'Explore building');await waitStage(page,'handoff');await page.evaluate(()=>window.framingSamples=[]);await page.waitForTimeout(250);
+   const pending=await page.evaluate(()=>window.framingSamples);assert.ok(pending.length>8);for(const frame of pending){assert.equal(frame.stage,'handoff');assertFullFraming(frame,'Pending reduced-motion handoff');assert.equal(frame.opacity,1);assert.ok(frame.pixels.some((value,index)=>index%4!==3&&value>45),'Pending orbit decoding keeps the actual building image');}
+   await page.evaluate(()=>window.releaseDecodeGates());await waitOrbit(page);assertPhoneFraming(await readFraming(page),390,80,'Ready reduced-motion orbit');
+  }finally{await f.close();}
+ });
+ await pass('mobile framing uses logical component dimensions inside scaled Framer ancestors',async()=>{
+  const desktop=await fixture({cleanFixture:true,stageScale:.5,context:{viewport:{width:1200,height:800}},props:{startView:'orbit'}});
+  try{
+   await waitOrbit(desktop.page);await installFramingCapture(desktop.page);const frame=await readFraming(desktop.page);assert.equal(frame.rootWidth,600);assert.equal(frame.logicalRootWidth,1200);assert.equal(frame.mobile,'false','A scaled desktop preview is not mistaken for a phone');assertFullFraming(frame,'Scaled desktop preview');
+  }finally{await desktop.close();}
+  const phone=await fixture({cleanFixture:true,storyOverlays:true,tallStory:true,stageScale:.75,stageWidth:390,stageHeight:844,context:{viewport:{width:1200,height:1000}},props:{startView:'orbit',orbitStartFrame:105,detailsMode:'preview',showControls:false,storyDelay:.01,storyIn:.02,storyOut:.02}}),{page}=phone;
+  try{
+   await waitFrame(page,105);await waitStory(page,8);await page.waitForFunction(()=>Number(getComputedStyle(document.querySelector('[data-apartment-details]')).opacity)>.99);await installFramingCapture(page);const frame=await readFraming(page);assert.equal(frame.rootWidth,292.5);assert.equal(frame.logicalRootWidth,390);
+   const logical={...frame,x:frame.x/frame.scaleX,y:frame.y/frame.scaleY,width:frame.width/frame.scaleX,height:frame.height/frame.scaleY,rootWidth:frame.logicalRootWidth,rootHeight:frame.logicalRootHeight};assertPhoneFraming(logical,390,80,'Scaled phone in a desktop editor');
+   const story=await page.locator(storySelector(8)).boundingBox(),details=await page.locator(detailsSelector).boundingBox();assert.ok(story.y>=frame.y+frame.height+19*.75,'Scaled story remains below the real rendered image');assert.ok(story.y+story.height<=details.y-19*.75,'Scaled native text preserves the gap above details');
+  }finally{await phone.close();}
+ });
  await pass('orbit story selects the eight physical cameras across a complete lap reverse and distant jump',async()=>{
   const f=await fixture({storyOverlays:true,cleanFixture:true,useDefaultOrbitStart:true,externalOverlay:true,props:{startView:'orbit',storyDelay:.01,storyIn:.03,storyOut:.02,snapDuration:.15}}),{page}=f;
   await waitFrame(page,45);await waitStory(page,4);await assertStoryTarget(page,4);
@@ -216,7 +353,7 @@ try{
   const custom=await fixture({storyOverlays:true,cleanFixture:true,props:{startView:'orbit',orbitStartFrame:42,storyDelay:.01,storyIn:.02,storyOut:.02}});await waitFrame(custom.page,42);await custom.page.waitForTimeout(150);assert.equal(await custom.page.locator('[data-story-target="true"]').count(),0,'A custom parked camera is not rounded into a mask or story checkpoint');await coveredClick(custom.page,'Next view');await waitFrame(custom.page,45);await waitStory(custom.page,4);await assertStoryTarget(custom.page,4);await custom.close();
  });
  await pass('orbit story phone gestures pass through native copy while the parked native CTA remains usable',async()=>{
-  const f=await fixture({storyOverlays:true,cleanFixture:true,externalOverlay:true,context:{viewport:{width:390,height:844},isMobile:true,hasTouch:true,deviceScaleFactor:2},props:{startView:'orbit',orbitStartFrame:45,storyDelay:.02,storyIn:.05,storyOut:.15,snapDuration:.6}}),{page}=f;await waitFrame(page,45);await waitStory(page,4);await assertStoryTarget(page,4);const cdp=await page.context().newCDPSession(page),box=await page.locator('[data-story-fixture="4"]').boundingBox(),x=box.x+Math.min(70,box.width/2),y=box.y+box.height/2;
+  const f=await fixture({storyOverlays:true,cleanFixture:true,externalOverlay:true,context:{viewport:{width:390,height:844},isMobile:true,hasTouch:true,deviceScaleFactor:2},props:{startView:'orbit',orbitStartFrame:45,phoneFraming:false,storyDelay:.02,storyIn:.05,storyOut:.15,snapDuration:.6}}),{page}=f;await waitFrame(page,45);await waitStory(page,4);await assertStoryTarget(page,4);const cdp=await page.context().newCDPSession(page),box=await page.locator('[data-story-fixture="4"]').boundingBox(),x=box.x+Math.min(70,box.width/2),y=box.y+box.height/2;
   await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x,y}]});await cdp.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x:x-65,y}]});await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});await page.waitForTimeout(50);assert.equal((await readStory(page,4)).inert,true);await waitFrame(page,60);await waitStory(page,5);await assertStoryTarget(page,5);await page.getByRole('button',{name:'Story action 5',exact:true}).tap();assert.equal(await page.evaluate(()=>window.storyClicks),1);assert.equal(await page.evaluate(()=>scrollY),0);assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'Native content and directional animations stay within the phone viewport');await f.close();
  });
  await pass('building content fades during SEQ_02 departure without hiding restored copy',async()=>{

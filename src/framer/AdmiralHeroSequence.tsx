@@ -239,6 +239,8 @@ interface SequenceOptions {
     /** Keep the previous sequence's painted endpoint until this sequence paints successfully. */
     preservePresentation?: boolean;
     focalX?: number; focalY?: number; timeoutMs?: number;
+    /** Optional image rectangle in CSS pixels; the canvas backing size stays tied to the full bounds. */
+    viewport?: (progress: number, bounds: { width: number; height: number }) => { x: number; y: number; width: number; height: number } | null;
     onUpdate?: (snapshot: SequenceSnapshot) => void;
     inputFilter?: (event: Event) => boolean;
 }
@@ -369,6 +371,7 @@ function createHeroSequence(options: SequenceOptions) {
     let disposed = false, state: SequenceState = options.startAtEnd ? "arrival" : "opening", displayed = initialFrame, clock = options.startAtEnd ? totalDuration : 0;
     let displayedProgress = options.startAtEnd ? 1 : 0;
     let rendered = { index: initialFrame, next: initialFrame, mix: 0 };
+    let renderedGeometry = "";
     // An opaque canvas may belong to the preceding sequence, so this controller must still paint once.
     let hasPainted = false;
     let direction = 1, velocity = 0, boost = 0, held = false, playing = false;
@@ -417,34 +420,47 @@ function createHeroSequence(options: SequenceOptions) {
     function draw(index: number, force = false, nextIndex = index, mix = 0) {
         const bitmap = frames.get(index), next = frames.get(nextIndex);
         if (!context || !bitmap || !next) return false;
-        if (hasPainted && index === rendered.index && nextIndex === rendered.next && mix === rendered.mix && !force && canvas.style.opacity === "1") return true;
         const box = root.getBoundingClientRect();
         if (box.width <= 0 || box.height <= 0) return false;
-        const boxRatio = box.width / box.height;
+        const progress = (index + (nextIndex - index) * mix) / Math.max(1, last);
+        const requestedViewport = options.viewport?.(progress, { width: box.width, height: box.height });
+        const viewport = requestedViewport && [requestedViewport.x, requestedViewport.y, requestedViewport.width, requestedViewport.height].every(Number.isFinite) &&
+            requestedViewport.width > 0 && requestedViewport.height > 0 ? requestedViewport : null;
+        const boxRatio = viewport ? viewport.width / viewport.height : box.width / box.height;
         let sw = bitmap.width, sh = bitmap.height;
         if (sw / sh > boxRatio) sw = sh * boxRatio; else sh = sw / boxRatio;
-        const ratio = Math.min(devicePixelRatio || 1, 2, sw / box.width, sh / box.height);
+        // Mobile framing must not change the backing allocation as its image rectangle shrinks.
+        const ratio = viewport ? Math.min(devicePixelRatio || 1, 2) : Math.min(devicePixelRatio || 1, 2, sw / box.width, sh / box.height);
         const cw = Math.max(1, Math.round(box.width * ratio)), ch = Math.max(1, Math.round(box.height * ratio));
+        const destination = viewport ? { x: viewport.x * cw / box.width, y: viewport.y * ch / box.height,
+            width: viewport.width * cw / box.width, height: viewport.height * ch / box.height } : { x: 0, y: 0, width: cw, height: ch };
+        const geometry = [viewport ? 1 : 0, box.width, box.height, cw, ch, destination.x, destination.y, destination.width, destination.height].join("|");
+        if (hasPainted && index === rendered.index && nextIndex === rendered.next && mix === rendered.mix && geometry === renderedGeometry && !force && canvas.style.opacity === "1") return true;
         if (canvas.width !== cw) canvas.width = cw;
         if (canvas.height !== ch) canvas.height = ch;
         // Fill before drawing: a small alpha channel in exported files cannot accumulate trails.
         context.globalAlpha = 1;
         context.fillStyle = "#101820"; context.fillRect(0, 0, cw, ch);
+        if (viewport) {
+            context.save(); context.beginPath(); context.rect(destination.x, destination.y, destination.width, destination.height); context.clip();
+        }
         function paint(frame: SequenceBitmap) {
             let w = frame.width, h = frame.height;
             if (w / h > boxRatio) w = h * boxRatio; else h = w / boxRatio;
             context!.drawImage(frame.image,
                 (frame.width - w) * sequenceClamp((options.focalX ?? 50) / 100),
                 (frame.height - h) * sequenceClamp((options.focalY ?? 50) / 100),
-                w, h, 0, 0, cw, ch);
+                w, h, destination.x, destination.y, destination.width, destination.height);
         }
         // Keep the lower image opaque to prevent a dark dip during the dissolve.
         paint(bitmap);
         if (nextIndex !== index) { context.globalAlpha = mix; paint(next); context.globalAlpha = 1; }
+        if (viewport) context.restore();
         rendered = { index, next: nextIndex, mix };
+        renderedGeometry = geometry;
         hasPainted = true;
         displayed = mix === 1 ? nextIndex : index;
-        displayedProgress = (index + (nextIndex - index) * mix) / Math.max(1, last);
+        displayedProgress = progress;
         canvas.style.opacity = "1"; poster.style.opacity = "0";
         publish(); return true;
     }
@@ -644,7 +660,7 @@ function createHeroSequence(options: SequenceOptions) {
     publish();
     if (motion.matches) reducedChanged();
     return {
-        start: () => start(1, true), reverse: () => start(-1, true), pause, skip, snapshot,
+        start: () => start(1, true), reverse: () => start(-1, true), pause, skip, snapshot, redraw,
         destroy() {
             if (disposed) return;
             pause("destroy"); disposed = true; abort.abort();

@@ -12,7 +12,8 @@ const HOMEPAGE_ORBIT_VERSION = "15fce8a9d4fe"
 const HOMEPAGE_ASSETS = "https://raw.githubusercontent.com/UnbuiltMarket/admiral-park/main/assets"
 type HomepageStage = "opening" | "approach" | "building" | "connection" | "handoff" | "orbit"
 interface HomepageTiming { openingOut: number; buildingIn: number; buildingFull: number; ctaIn: number; rise: number }
-interface HomepageChannel { snapshot: SequenceSnapshot; timing: HomepageTiming; enabled: boolean; stage: HomepageStage; orbit: OrbitSnapshot; story: OrbitStorySettings; static: boolean }
+interface HomepageMobileLayout { enabled: boolean; storyTop: number; storyMaxHeight: number }
+interface HomepageChannel { snapshot: SequenceSnapshot; timing: HomepageTiming; enabled: boolean; stage: HomepageStage; orbit: OrbitSnapshot; story: OrbitStorySettings; static: boolean; mobile: HomepageMobileLayout | null }
 const homepageChannels = new Map<HTMLElement, HomepageChannel>()
 const homepageSubscribers = new Set<() => void>()
 const notifyHomepage = () => homepageSubscribers.forEach(update => update())
@@ -22,6 +23,7 @@ interface AdmiralHomepageTrialProps {
     duration?: number; connectionDuration?: number; maxSpeed?: number; momentum?: number; triggerDistance?: number
     checkpointCount?: number; motionWidth?: number; orbitMobileWidth?: number; inspectionWidth?: number
     desktopBuffer?: number; phoneBuffer?: number
+    phoneFraming?: boolean; phoneImageWidth?: number; phoneImageTop?: number
     snapDuration?: number; frameBlend?: number
     orbitStories?: boolean; storyIn?: number; storyOut?: number; storyDelay?: number
     storyView1?: OrbitStoryViewMotion; storyView2?: OrbitStoryViewMotion; storyView3?: OrbitStoryViewMotion; storyView4?: OrbitStoryViewMotion
@@ -42,6 +44,17 @@ function homepageBlocked(target: EventTarget | null) {
 }
 function homepageUrls(base: string, names: string[], version = "") {
     return names.map(name => base.trim().replace(/\/+$/, "") + "/" + encodeURIComponent(name) + (version ? "?v=" + version : ""))
+}
+interface HomepageFramingConfig { enabled: boolean; sourceWidth: number; top: number; detailsHeight: number; detailsBottom: number; reserveDetails: boolean }
+function homepageImageRect(progress: number, bounds: { width: number; height: number }, config: HomepageFramingConfig) {
+    if (!config.enabled || bounds.width > 767 || bounds.width <= 0 || bounds.height <= 0) return null
+    const sourceWidth = sequenceClamp(Number.isFinite(config.sourceWidth) ? config.sourceWidth : 80, 80, 100) / 100
+    const reserved = config.reserveDetails ? config.detailsHeight + sequenceClamp(config.detailsBottom, 0, 400) + 32 : 24
+    const available = Math.max(1, bounds.height - reserved)
+    const height = Math.min(bounds.width * 1010 / (1920 * sourceWidth), available)
+    const top = sequenceClamp(Number.isFinite(config.top) ? config.top : 80, 0, Math.max(0, available - height))
+    const amount = sequenceEase(sequenceClamp(progress))
+    return { x: 0, y: top * amount, width: bounds.width, height: bounds.height + (height - bounds.height) * amount }
 }
 
 // Native Framer groups remain responsible for their own content and layout.
@@ -67,7 +80,11 @@ function createOrbitStoryOverlay(Component: ComponentType<any>, viewIndex: numbe
                 translate: element.style.translate, visibility: element.style.visibility,
                 pointerEvents: element.style.pointerEvents, hidden: element.getAttribute("aria-hidden"), inert: element.inert,
                 story: element.getAttribute("data-orbit-story"), target: element.getAttribute("data-story-target"), state: element.getAttribute("data-story-state"),
+                orbitIgnore: element.getAttribute("data-orbit-ignore"),
             }
+            const layoutProperties = ["position", "top", "bottom", "left", "right", "width", "minWidth", "maxWidth", "minHeight", "maxHeight", "boxSizing", "overflowY", "overscrollBehavior", "touchAction"] as const
+            const originalLayout = Object.fromEntries(layoutProperties.map(property => [property, element.style[property]])) as Record<typeof layoutProperties[number], string>
+            let mobileLayout = false
             const computedTranslate = getComputedStyle(element).translate
             const baseTranslate = original.translate || computedTranslate
             const translateParts: string[] = []
@@ -126,6 +143,42 @@ function createOrbitStoryOverlay(Component: ComponentType<any>, viewIndex: numbe
                 }
                 return true
             }
+            function restoreLayout() {
+                if (!mobileLayout) return
+                for (const property of layoutProperties) if (element!.style[property] !== originalLayout[property]) element!.style[property] = originalLayout[property]
+                if (original.orbitIgnore === null) element!.removeAttribute("data-orbit-ignore")
+                else element!.setAttribute("data-orbit-ignore", original.orbitIgnore)
+                mobileLayout = false
+            }
+            function positionForMobile(root: HTMLElement | null, channel: HomepageChannel | null | undefined) {
+                if (!root || !channel?.mobile?.enabled) { restoreLayout(); return }
+                mobileLayout = true
+                const set = (property: typeof layoutProperties[number], value: string) => {
+                    if (element!.style[property] !== value) element!.style[property] = value
+                }
+                // Read the containing block after switching to absolute positioning: its
+                // padding edge is the origin, and its own scrolling moves that origin.
+                set("position", "absolute")
+                const rootBox = root.getBoundingClientRect()
+                const parent = element!.offsetParent as HTMLElement | null
+                const initialBlock = !parent || (parent === document.body && getComputedStyle(parent).position === "static")
+                const parentBox = parent?.getBoundingClientRect()
+                const scaleX = !initialBlock && parentBox && parent!.offsetWidth > 0 ? parentBox.width / parent!.offsetWidth : 1
+                const scaleY = !initialBlock && parentBox && parent!.offsetHeight > 0 ? parentBox.height / parent!.offsetHeight : 1
+                const safeScaleX = Number.isFinite(scaleX) && scaleX > 0 ? scaleX : 1
+                const safeScaleY = Number.isFinite(scaleY) && scaleY > 0 ? scaleY : 1
+                const left = initialBlock ? rootBox.left + window.scrollX + 24 : (rootBox.left + 24 - parentBox!.left) / safeScaleX + parent!.scrollLeft - parent!.clientLeft
+                const top = initialBlock ? rootBox.top + window.scrollY + channel.mobile.storyTop : (rootBox.top + channel.mobile.storyTop - parentBox!.top) / safeScaleY + parent!.scrollTop - parent!.clientTop
+                const pixel = (value: number) => `${Math.round(value * 1000) / 1000}px`
+                set("left", pixel(left)); set("top", pixel(top))
+                set("bottom", "auto"); set("right", "auto")
+                set("boxSizing", "border-box")
+                set("width", pixel(Math.max(0, rootBox.width - 48) / safeScaleX))
+                set("minWidth", "0px"); set("maxWidth", "none"); set("minHeight", "0px")
+                set("maxHeight", pixel(Math.max(0, channel.mobile.storyMaxHeight) / safeScaleY))
+                set("overflowY", "auto"); set("overscrollBehavior", "contain"); set("touchAction", "pan-y")
+                if (!element!.hasAttribute("data-orbit-ignore")) element!.setAttribute("data-orbit-ignore", "")
+            }
             function observeSource(root: HTMLElement | null) {
                 sourceResize?.disconnect(); sourceIntersection?.disconnect(); sourceMutation?.disconnect()
                 sourceResize = null; sourceIntersection = null; sourceMutation = null
@@ -183,6 +236,7 @@ function createOrbitStoryOverlay(Component: ComponentType<any>, viewIndex: numbe
                 const root = resolve()
                 if (selected !== root) { hide(); selected = root; observeSource(root) }
                 const channel = root && homepageChannels.get(root)
+                positionForMobile(root, channel)
                 if (!channel || channel.stage !== "orbit" || !channel.story.enabled) { hide(); return }
                 const settings = channel.story, motion = settings.views[viewIndex] || DEFAULT_ORBIT_STORY_VIEWS[viewIndex]
                 const enterFrom = direction(motion.enterFrom), exitTo = direction(motion.exitTo)
@@ -227,6 +281,7 @@ function createOrbitStoryOverlay(Component: ComponentType<any>, viewIndex: numbe
                 disposed = true; cancel(); observeSource(null); homepageSubscribers.delete(update)
                 reduced.removeEventListener("change", update)
                 window.removeEventListener("resize", update); window.removeEventListener("scroll", update, true)
+                restoreLayout()
                 element.style.opacity = original.opacity; element.style.translate = original.translate; element.style.visibility = original.visibility
                 element.style.pointerEvents = original.pointerEvents; element.inert = original.inert
                 const restore = (name: string, value: string | null) => value === null ? element.removeAttribute(name) : element.setAttribute(name, value)
@@ -260,6 +315,7 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
         useGitHubAssets = true, heroBaseUrl = "", connectionBaseUrl = "", orbitBaseUrl = "", startView = "opening", editorView = "opening", editorOrbitView = "entry", orbitStartFrame = 45,
         duration = 2.5, connectionDuration = 2.5, maxSpeed = 1.8, momentum = .22, triggerDistance = 28, checkpointCount = 8,
         motionWidth = 960, orbitMobileWidth = 640, inspectionWidth = 1920, desktopBuffer = 2, phoneBuffer = 1, snapDuration = 1.5, frameBlend = 0,
+        phoneFraming = true, phoneImageWidth = 80, phoneImageTop = 80,
         orbitStories = true, storyIn = .6, storyOut = .3, storyDelay = .12,
         storyView1, storyView2, storyView3, storyView4, storyView5, storyView6, storyView7, storyView8,
         focalX = 50, focalY = 50, darken = 0,
@@ -301,6 +357,9 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
     const rootRef = React.useRef<HTMLDivElement>(null), heroRootRef = React.useRef<HTMLDivElement>(null)
     const heroCanvasRef = React.useRef<HTMLCanvasElement>(null), orbitCanvasRef = React.useRef<HTMLCanvasElement>(null), posterRef = React.useRef<HTMLImageElement>(null)
     const actions = React.useRef<HomepageActions | null>(null)
+    const framingConfig = React.useRef<HomepageFramingConfig>({ enabled: phoneFraming, sourceWidth: phoneImageWidth, top: phoneImageTop, detailsHeight, detailsBottom, reserveDetails: detailsMode !== "off" })
+    framingConfig.current = { enabled: phoneFraming, sourceWidth: phoneImageWidth, top: phoneImageTop, detailsHeight, detailsBottom, reserveDetails: detailsMode !== "off" }
+    const refreshPresentation = React.useRef<() => void>(() => {})
     const timing = React.useRef<HomepageTiming>({ openingOut, buildingIn, buildingFull, ctaIn, rise })
     timing.current = { openingOut, buildingIn, buildingFull, ctaIn, rise }
     const storySettings = React.useMemo<OrbitStorySettings>(() => ({
@@ -327,6 +386,8 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
         if (!root || !heroRoot || !heroCanvas || !orbitCanvas || !poster || (!staticRenderer && !hostVisible)) return
         let disposed = false, heroGeneration = 0, enterToken = 0
         let currentStage: HomepageStage = previewStage
+        let presentationProgress = previewStage === "orbit" || previewStage === "handoff" ? 1 : previewStage === "connection" ? .5 : 0
+        let mobileLayout: HomepageMobileLayout | null = null
         let hero: ReturnType<typeof createHeroSequence> | null = null
         let activeSequence: "SEQ_01" | "SEQ_02" = "SEQ_01", connectionWarmed = false
         let heroSnapshot: SequenceSnapshot = { state: previewStage === "building" ? "arrival" : "opening", progress: previewStage === "building" ? 1 : 0, frame: previewStage === "building" ? heroUrls.length - 1 : 0, direction: 1, held: false, decoded: 0, downloaded: 0 }
@@ -347,9 +408,42 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
             const box = root!.getBoundingClientRect()
             return box.width > 0 && box.height > 0 && box.bottom > 0 && box.top < innerHeight
         }
+        function viewportFor(progress: number, bounds: { width: number; height: number }) {
+            // Core drawing uses screen bounds; CSS clipping uses unscaled local pixels.
+            const width = root!.clientWidth || bounds.width, height = root!.clientHeight || bounds.height
+            const local = homepageImageRect(progress, { width, height }, framingConfig.current)
+            return local ? { x: local.x * bounds.width / width, y: local.y * bounds.height / height,
+                width: local.width * bounds.width / width, height: local.height * bounds.height / height } : null
+        }
         function publish() {
-            homepageChannels.set(root!, { snapshot: heroSnapshot, timing: timing.current, stage: currentStage, orbit: orbitSnapshot, story: story.current, static: staticRenderer, enabled: currentStage === "opening" || currentStage === "approach" || currentStage === "building" })
+            homepageChannels.set(root!, { snapshot: heroSnapshot, timing: timing.current, stage: currentStage, orbit: orbitSnapshot, story: story.current, static: staticRenderer, mobile: mobileLayout, enabled: currentStage === "opening" || currentStage === "approach" || currentStage === "building" })
             notifyHomepage()
+        }
+        function applyPresentation() {
+            const bounds = root!.getBoundingClientRect()
+            const requested = viewportFor(presentationProgress, bounds)
+            const rect = requested || { x: 0, y: 0, width: bounds.width, height: bounds.height }
+            const setStyle = (name: string, value: string) => { if (root!.style.getPropertyValue(name) !== value) root!.style.setProperty(name, value) }
+            const cssScaleY = bounds.height > 0 ? (root!.clientHeight || bounds.height) / bounds.height : 1
+            setStyle("--admiral-image-y", rect.y * cssScaleY + "px")
+            setStyle("--admiral-image-height", rect.height * cssScaleY + "px")
+            setStyle("--admiral-image-cut", Math.max(0, bounds.height - rect.y - rect.height) * cssScaleY + "px")
+            root!.dataset.mobileFraming = String(!!requested)
+            root!.dataset.imageX = String(rect.x); root!.dataset.imageY = String(rect.y)
+            root!.dataset.imageWidth = String(rect.width); root!.dataset.imageHeight = String(rect.height)
+            root!.dataset.visibleImageWidth = String(Math.min(100, 100 * rect.width / Math.max(1, rect.height) / (1920 / 1010)))
+            if (requested) {
+                const details = root!.querySelector<HTMLElement>("[data-apartment-details]")
+                const config = framingConfig.current
+                // Ignore the strip's entrance translate: its parked position defines the story's space.
+                const detailsBottom = details ? parseFloat(getComputedStyle(details).bottom) : config.detailsBottom
+                const detailsTop = config.reserveDetails ? bounds.height - (Number.isFinite(detailsBottom) ? detailsBottom : config.detailsBottom) / cssScaleY -
+                    (details ? details.getBoundingClientRect().height : config.detailsHeight / cssScaleY) : bounds.height - 16
+                const controls = root!.querySelector<HTMLElement>("[data-homepage-controls]")
+                const controlsTop = controls ? controls.getBoundingClientRect().top - bounds.top : bounds.height
+                const storyTop = rect.y + rect.height + 20
+                mobileLayout = { enabled: true, storyTop, storyMaxHeight: Math.max(0, Math.min(detailsTop, controlsTop) - 20 - storyTop) }
+            } else mobileLayout = null
         }
         function changeStage(next: HomepageStage) {
             currentStage = next; root!.dataset.homepageStage = next; setStage(next); publish()
@@ -359,6 +453,7 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
         const orbit = staticRenderer ? null : createOrbitPlayer({
             root, canvas: orbitCanvas, urls: orbitUrls, startFrame: orbitStartIndex, decodeWidth, inspectionWidth: phone ? Math.min(inspectionWidth, 1280) : inspectionWidth,
             checkpointCount, bufferCheckpoints: phone ? phoneBuffer : desktopBuffer, snapDuration, frameBlend: frameBlend / 100, focalX: focalX / 100, focalY: focalY / 100,
+            viewport: bounds => viewportFor(1, bounds),
             onUpdate(snapshot) {
                 if (disposed) return
                 orbitSnapshot = snapshot; publish()
@@ -394,6 +489,7 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
         function mountHero(atEnd = false) {
             if (disposed) return
             enterToken++; orbit?.deactivate(); destroyHero()
+            presentationProgress = 0; applyPresentation()
             activeSequence = "SEQ_01"; root!.dataset.activeSequence = activeSequence
             changePoster(heroUrls[atEnd ? heroUrls.length - 1 : 0])
             if (atEnd) heroSnapshot = { state: "arrival", progress: 1, frame: heroUrls.length - 1, direction: 1, held: false, decoded: 0, downloaded: 0 }
@@ -424,6 +520,7 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
             try {
                 await orbit.activate()
                 if (disposed || token !== enterToken) return
+                presentationProgress = 1; applyPresentation()
                 changeStage("orbit")
             } catch { /* The orbit reports a visible retry state. The completed sequence remains visible. */ }
         }
@@ -431,6 +528,7 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
             if (disposed || !orbit || !isVisible() || currentStage !== "building") return
             if (reducedMedia.matches) { void activateOrbit(); return }
             enterToken++; destroyHero(); clearApartmentDetails()
+            presentationProgress = 0; applyPresentation()
             activeSequence = "SEQ_02"; root!.dataset.activeSequence = activeSequence
             changePoster(heroUrls[heroUrls.length - 1]); changeStage("connection")
             const generation = ++heroGeneration
@@ -438,11 +536,13 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
             hero = createHeroSequence({
                 root: heroRoot!, canvas: heroCanvas!, poster: poster!, urls: connectionPlaybackUrls,
                 duration: connectionDuration, maxSpeed, momentum, triggerDistance, preservePresentation: true,
+                viewport: (progress, bounds) => viewportFor(progress, bounds),
                 holdScroll: true, preload: true, cacheFrames: phone ? 10 : 14, decodeWidth: phone ? 1280 : 1920, focalX, focalY,
                 inputFilter: event => !homepageBlocked(event.target),
                 onUpdate(snapshot) {
                     if (disposed || generation !== heroGeneration) return
                     heroSnapshot = snapshot; setHeroState(previous => previous === snapshot.state ? previous : snapshot.state)
+                    presentationProgress = snapshot.progress; applyPresentation()
                     publish()
                     const arrived = (snapshot.state === "arrival" || snapshot.state === "reduced") && snapshot.frame === connectionPlaybackUrls.length - 1
                     const returned = snapshot.state === "opening" && snapshot.direction < 0 && snapshot.frame === 0
@@ -468,7 +568,7 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
                 if (disposed || token !== enterToken) return
                 if (currentStage === "handoff") {
                     await orbit.activate()
-                    if (!disposed && token === enterToken) changeStage("orbit")
+                    if (!disposed && token === enterToken) { presentationProgress = 1; applyPresentation(); changeStage("orbit") }
                 }
             } catch { /* The retry control remains available. */ }
         }
@@ -521,6 +621,11 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
         root.addEventListener("admiral:explore", () => { void explore() }, { signal })
         actions.current = { explore: () => { void explore() }, overview, skip: () => { if (activeSequence === "SEQ_02" && reducedMedia.matches) void activateOrbit(); else hero?.skip() }, resumeHero: () => { if (heroSnapshot.direction < 0) hero?.reverse(); else hero?.start() }, orbit }
         ;(root as HTMLElement & { retryOrbit?: () => Promise<void> }).retryOrbit = retry
+        const refresh = () => { if (!disposed) { applyPresentation(); hero?.redraw(); orbit?.redraw(); publish() } }
+        refreshPresentation.current = refresh
+        const presentationResize = new ResizeObserver(refresh)
+        presentationResize.observe(root)
+        applyPresentation()
         if (staticRenderer) { changeStage(previewStage); changePoster(initialPoster) }
         else {
             changeStage("opening")
@@ -533,11 +638,14 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
         publish()
         return () => {
             disposed = true; enterToken++; clearApartmentDetails(); destroyHero(); orbit?.destroy(); abort.abort()
+            presentationResize.disconnect(); refreshPresentation.current = () => {}
             actions.current = null; delete (root as HTMLElement & { retryOrbit?: () => Promise<void> }).retryOrbit
             homepageChannels.delete(root); notifyHomepage()
         }
     }, [heroUrls, connectionUrls, connectionPlaybackUrls, orbitUrls, staticRenderer, hostVisible, startView, editorView, duration, connectionDuration, maxSpeed, momentum, triggerDistance, checkpointCount,
         motionWidth, orbitMobileWidth, inspectionWidth, desktopBuffer, phoneBuffer, orbitStartIndex, editorPreviewFrame, snapDuration, frameBlend, focalX, focalY, showDiagnostics, clearApartmentDetails])
+
+    React.useEffect(() => { refreshPresentation.current() }, [phoneFraming, phoneImageWidth, phoneImageTop, detailsHeight, detailsBottom, detailsMode, showControls, showViewpoints, stage, orbitInfo.state])
 
     React.useEffect(() => {
         const root = rootRef.current, channel = root && homepageChannels.get(root)
@@ -581,12 +689,12 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
             style={{ position: "relative", width: "100%", height: "100%", overflow: "hidden", background, ...style }}>
             <div ref={heroRootRef} data-admiral-sequence="" style={{ position: "absolute", inset: 0, pointerEvents: stage === "orbit" || stage === "handoff" ? "none" : "auto" }}>
                 <img ref={posterRef} src={posterUrl} alt={alt} loading="eager" decoding="async" {...{ fetchpriority: "high" }} crossOrigin="anonymous" draggable={false}
-                    style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", objectPosition: `${focalX}% ${focalY}%`, pointerEvents: "none" }} />
-                <canvas ref={heroCanvasRef} aria-hidden="true" width={1} height={1} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", opacity: 0 }} />
+                    style={{ position: "absolute", top: "var(--admiral-image-y, 0px)", left: 0, width: "100%", height: "var(--admiral-image-height, 100%)", objectFit: "cover", objectPosition: `${focalX}% ${focalY}%`, pointerEvents: "none" }} />
+                <canvas ref={heroCanvasRef} aria-hidden="true" width={1} height={1} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", opacity: 0, clipPath: "inset(var(--admiral-image-y, 0px) 0px var(--admiral-image-cut, 0px) 0px)" }} />
             </div>
-            <canvas ref={orbitCanvasRef} aria-hidden="true" width={1} height={1} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", opacity: orbitVisible ? 1 : 0, transition: reduced ? "none" : "opacity .35s", touchAction: "pan-y pinch-zoom", pointerEvents: orbitVisible ? "auto" : "none" }} />
+            <canvas ref={orbitCanvasRef} aria-hidden="true" width={1} height={1} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", opacity: orbitVisible ? 1 : 0, transition: reduced ? "none" : "opacity .35s", touchAction: "pan-y pinch-zoom", pointerEvents: orbitVisible ? "auto" : "none", clipPath: "inset(var(--admiral-image-y, 0px) 0px var(--admiral-image-cut, 0px) 0px)" }} />
             {orbitStatic && <span style={{ position: "absolute", inset: 0, pointerEvents: "none" }} />}
-            <div aria-hidden="true" style={{ position: "absolute", inset: 0, background: "#000", opacity: darken, pointerEvents: "none" }} />
+            <div aria-hidden="true" style={{ position: "absolute", top: "var(--admiral-image-y, 0px)", left: 0, width: "100%", height: "var(--admiral-image-height, 100%)", background: "#000", opacity: darken, pointerEvents: "none" }} />
             {!staticRenderer && showControls && <div data-homepage-controls="" data-orbit-ignore="" style={{ position: "absolute", bottom: controlsBottom, left: "50%", transform: "translateX(-50%)", display: "flex", alignItems: "center", justifyContent: "center", flexWrap: "wrap", gap: 7, width: "max-content", maxWidth: "94%", zIndex: 3 }}>
                 {(stage === "opening" || stage === "approach") && <button type="button" style={homepageButton} onClick={() => actions.current?.skip()}>Skip approach</button>}
                 {stage === "approach" && (heroState === "paused" || heroState === "error") && <button type="button" style={homepageButton} onClick={() => actions.current?.resumeHero()}>{heroState === "error" ? "Retry approach" : "Continue approach"}</button>}
@@ -734,6 +842,9 @@ addPropertyControls(AdmiralHomepageTrial, {
     checkpointCount: { type: ControlType.Number, title: "Viewpoints", defaultValue: 8, min: 2, max: 16, step: 1, description: "Keep 8 for the eight authored OrbitView story groups. Other counts disable these stories to preserve camera-to-content alignment." },
     motionWidth: { type: ControlType.Number, title: "Orbit decode", defaultValue: 960, min: 480, max: 1920, step: 160, unit: "px" },
     orbitMobileWidth: { type: ControlType.Number, title: "Phone decode", defaultValue: 640, min: 480, max: 1280, step: 160, unit: "px" },
+    phoneFraming: { type: ControlType.Boolean, title: "Phone framing", defaultValue: true, description: "On phones, SEQ_02 opens from fullscreen into a landscape orbit image, with stories and apartment details below." },
+    phoneImageWidth: { type: ControlType.Number, title: "Phone image width", defaultValue: 80, min: 80, max: 100, step: 1, unit: "%", hidden: p => p.phoneFraming === false, description: "How much of the original landscape image remains visible. 80% gives a closer view; 100% shows its full width." },
+    phoneImageTop: { type: ControlType.Number, title: "Phone image top", defaultValue: 80, min: 0, max: 240, step: 4, unit: "px", hidden: p => p.phoneFraming === false, description: "Space above the parked orbit image, for the mobile header. Clamps on short screens to keep the image and details visible." },
     inspectionWidth: { type: ControlType.Number, title: "Stopped detail", defaultValue: 1920, min: 960, max: 1920, step: 160, unit: "px" },
     desktopBuffer: { type: ControlType.Number, title: "Desktop buffer", defaultValue: 2, min: 1, max: 3, step: 1, description: "Checkpoints decoded ahead and behind on desktop. With 8 viewpoints, 2 keeps up to 61 movement frames. All 120 compressed images stay downloaded." },
     phoneBuffer: { type: ControlType.Number, title: "Phone buffer", defaultValue: 1, min: 1, max: 3, step: 1, description: "Checkpoints decoded ahead and behind on phones. With 8 viewpoints, 1 keeps up to 31 movement frames. Increasing this uses more memory." },
@@ -1102,6 +1213,8 @@ interface SequenceOptions {
     /** Keep the previous sequence's painted endpoint until this sequence paints successfully. */
     preservePresentation?: boolean;
     focalX?: number; focalY?: number; timeoutMs?: number;
+    /** Optional image rectangle in CSS pixels; the canvas backing size stays tied to the full bounds. */
+    viewport?: (progress: number, bounds: { width: number; height: number }) => { x: number; y: number; width: number; height: number } | null;
     onUpdate?: (snapshot: SequenceSnapshot) => void;
     inputFilter?: (event: Event) => boolean;
 }
@@ -1232,6 +1345,7 @@ function createHeroSequence(options: SequenceOptions) {
     let disposed = false, state: SequenceState = options.startAtEnd ? "arrival" : "opening", displayed = initialFrame, clock = options.startAtEnd ? totalDuration : 0;
     let displayedProgress = options.startAtEnd ? 1 : 0;
     let rendered = { index: initialFrame, next: initialFrame, mix: 0 };
+    let renderedGeometry = "";
     // An opaque canvas may belong to the preceding sequence, so this controller must still paint once.
     let hasPainted = false;
     let direction = 1, velocity = 0, boost = 0, held = false, playing = false;
@@ -1280,34 +1394,47 @@ function createHeroSequence(options: SequenceOptions) {
     function draw(index: number, force = false, nextIndex = index, mix = 0) {
         const bitmap = frames.get(index), next = frames.get(nextIndex);
         if (!context || !bitmap || !next) return false;
-        if (hasPainted && index === rendered.index && nextIndex === rendered.next && mix === rendered.mix && !force && canvas.style.opacity === "1") return true;
         const box = root.getBoundingClientRect();
         if (box.width <= 0 || box.height <= 0) return false;
-        const boxRatio = box.width / box.height;
+        const progress = (index + (nextIndex - index) * mix) / Math.max(1, last);
+        const requestedViewport = options.viewport?.(progress, { width: box.width, height: box.height });
+        const viewport = requestedViewport && [requestedViewport.x, requestedViewport.y, requestedViewport.width, requestedViewport.height].every(Number.isFinite) &&
+            requestedViewport.width > 0 && requestedViewport.height > 0 ? requestedViewport : null;
+        const boxRatio = viewport ? viewport.width / viewport.height : box.width / box.height;
         let sw = bitmap.width, sh = bitmap.height;
         if (sw / sh > boxRatio) sw = sh * boxRatio; else sh = sw / boxRatio;
-        const ratio = Math.min(devicePixelRatio || 1, 2, sw / box.width, sh / box.height);
+        // Mobile framing must not change the backing allocation as its image rectangle shrinks.
+        const ratio = viewport ? Math.min(devicePixelRatio || 1, 2) : Math.min(devicePixelRatio || 1, 2, sw / box.width, sh / box.height);
         const cw = Math.max(1, Math.round(box.width * ratio)), ch = Math.max(1, Math.round(box.height * ratio));
+        const destination = viewport ? { x: viewport.x * cw / box.width, y: viewport.y * ch / box.height,
+            width: viewport.width * cw / box.width, height: viewport.height * ch / box.height } : { x: 0, y: 0, width: cw, height: ch };
+        const geometry = [viewport ? 1 : 0, box.width, box.height, cw, ch, destination.x, destination.y, destination.width, destination.height].join("|");
+        if (hasPainted && index === rendered.index && nextIndex === rendered.next && mix === rendered.mix && geometry === renderedGeometry && !force && canvas.style.opacity === "1") return true;
         if (canvas.width !== cw) canvas.width = cw;
         if (canvas.height !== ch) canvas.height = ch;
         // Fill before drawing: a small alpha channel in exported files cannot accumulate trails.
         context.globalAlpha = 1;
         context.fillStyle = "#101820"; context.fillRect(0, 0, cw, ch);
+        if (viewport) {
+            context.save(); context.beginPath(); context.rect(destination.x, destination.y, destination.width, destination.height); context.clip();
+        }
         function paint(frame: SequenceBitmap) {
             let w = frame.width, h = frame.height;
             if (w / h > boxRatio) w = h * boxRatio; else h = w / boxRatio;
             context!.drawImage(frame.image,
                 (frame.width - w) * sequenceClamp((options.focalX ?? 50) / 100),
                 (frame.height - h) * sequenceClamp((options.focalY ?? 50) / 100),
-                w, h, 0, 0, cw, ch);
+                w, h, destination.x, destination.y, destination.width, destination.height);
         }
         // Keep the lower image opaque to prevent a dark dip during the dissolve.
         paint(bitmap);
         if (nextIndex !== index) { context.globalAlpha = mix; paint(next); context.globalAlpha = 1; }
+        if (viewport) context.restore();
         rendered = { index, next: nextIndex, mix };
+        renderedGeometry = geometry;
         hasPainted = true;
         displayed = mix === 1 ? nextIndex : index;
-        displayedProgress = (index + (nextIndex - index) * mix) / Math.max(1, last);
+        displayedProgress = progress;
         canvas.style.opacity = "1"; poster.style.opacity = "0";
         publish(); return true;
     }
@@ -1507,7 +1634,7 @@ function createHeroSequence(options: SequenceOptions) {
     publish();
     if (motion.matches) reducedChanged();
     return {
-        start: () => start(1, true), reverse: () => start(-1, true), pause, skip, snapshot,
+        start: () => start(1, true), reverse: () => start(-1, true), pause, skip, snapshot, redraw,
         destroy() {
             if (disposed) return;
             pause("destroy"); disposed = true; abort.abort();
@@ -1530,6 +1657,8 @@ interface OrbitOptions {
     root: HTMLElement; canvas: HTMLCanvasElement; urls: string[];
     decodeWidth?: number; inspectionWidth?: number; checkpointCount?: number; bufferCheckpoints?: number; startFrame?: number;
     snapDuration?: number; frameBlend?: number; focalX?: number; focalY?: number;
+    /** Optional image rectangle in CSS pixels, independent of the full canvas backing size. */
+    viewport?: (bounds: { width: number; height: number }) => { x: number; y: number; width: number; height: number } | null;
     onUpdate?: (snapshot: OrbitSnapshot) => void;
 }
 
@@ -1832,11 +1961,12 @@ function createOrbitPlayer(options: OrbitOptions) {
         }
     }
 
-    function drawImage(bitmap: OrbitBitmap) {
+    function drawImage(bitmap: OrbitBitmap, viewport?: { x: number; y: number; width: number; height: number }) {
         if (!context) return;
-        const scale = Math.max(canvas.width / bitmap.width, canvas.height / bitmap.height);
+        const target = viewport ?? { x: 0, y: 0, width: canvas.width, height: canvas.height };
+        const scale = Math.max(target.width / bitmap.width, target.height / bitmap.height);
         const width = bitmap.width * scale, height = bitmap.height * scale;
-        context.drawImage(bitmap.image, (canvas.width - width) * focalX, (canvas.height - height) * focalY, width, height);
+        context.drawImage(bitmap.image, target.x + (target.width - width) * focalX, target.y + (target.height - height) * focalY, width, height);
     }
 
     function paint(now: number) {
@@ -1855,19 +1985,31 @@ function createOrbitPlayer(options: OrbitOptions) {
         if (!context || !bitmap || !active || destroyed) return;
         const bounds = canvas.getBoundingClientRect();
         if (bounds.width <= 0 || bounds.height <= 0) return;
+        const requestedViewport = options.viewport?.({ width: bounds.width, height: bounds.height });
+        const viewport = requestedViewport && [requestedViewport.x, requestedViewport.y, requestedViewport.width, requestedViewport.height].every(Number.isFinite) &&
+            requestedViewport.width > 0 && requestedViewport.height > 0 ? requestedViewport : null;
         const useful = inspection && inspectionFrame === frame ? inspection : bitmap;
         const usefulDPR = Math.min(useful.width / bounds.width, useful.height / bounds.height);
-        const dpr = Math.min(window.devicePixelRatio || 1, 2, usefulDPR);
+        const dpr = viewport ? Math.min(window.devicePixelRatio || 1, 2) : Math.min(window.devicePixelRatio || 1, 2, usefulDPR);
         const width = Math.max(1, Math.round(bounds.width * dpr)), height = Math.max(1, Math.round(bounds.height * dpr));
         if (canvas.width !== width || canvas.height !== height) { canvas.width = width; canvas.height = height; lastPaint = ""; }
+        const destination = viewport ? { x: viewport.x * width / bounds.width, y: viewport.y * height / bounds.height,
+            width: viewport.width * width / bounds.width, height: viewport.height * height / bounds.height } : undefined;
         const mix = inspection && inspectionFrame === frame ? (reduced() ? 1 : orbitClamp((now - qualityStartedAt) / 120, 0, 1)) : 0;
-        const signature = [from, to, frameMix.toFixed(4), width, height, inspectionFrame, mix.toFixed(4)].join("|");
+        const signature = [from, to, frameMix.toFixed(4), width, height, inspectionFrame, mix.toFixed(4),
+            viewport ? 1 : 0, destination?.x ?? 0, destination?.y ?? 0, destination?.width ?? width, destination?.height ?? height].join("|");
         if (signature === lastPaint) return;
-        context.globalAlpha = 1; drawImage(bitmap);
-        if (next) { context.globalAlpha = frameMix; drawImage(next); context.globalAlpha = 1; }
-        if (inspection && mix > 0 && inspectionFrame === frame) {
-            context.globalAlpha = mix; drawImage(inspection); context.globalAlpha = 1;
+        context.globalAlpha = 1;
+        if (destination) {
+            context.fillStyle = "#101820"; context.fillRect(0, 0, width, height);
+            context.save(); context.beginPath(); context.rect(destination.x, destination.y, destination.width, destination.height); context.clip();
         }
+        drawImage(bitmap, destination);
+        if (next) { context.globalAlpha = frameMix; drawImage(next, destination); context.globalAlpha = 1; }
+        if (inspection && mix > 0 && inspectionFrame === frame) {
+            context.globalAlpha = mix; drawImage(inspection, destination); context.globalAlpha = 1;
+        }
+        if (destination) context.restore();
         root.dataset.orbitFrameFrom = String(from); root.dataset.orbitFrameTo = String(to);
         root.dataset.orbitFrameMix = frameMix.toFixed(4);
         lastPaint = signature;
@@ -2209,7 +2351,7 @@ function createOrbitPlayer(options: OrbitOptions) {
     notify();
 
     return {
-        prepare, activate, deactivate, go, setCheckpoint, pause: () => pauseInternal(false), resume, retry, snapshot,
+        prepare, activate, deactivate, go, setCheckpoint, pause: () => pauseInternal(false), resume, retry, snapshot, redraw: () => paint(performance.now()),
         destroy() {
             if (destroyed) return;
             destroyed = true; deactivate(); cancellation.abort();
