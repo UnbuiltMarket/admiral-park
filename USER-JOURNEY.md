@@ -80,7 +80,9 @@ The animation uses a separate translation, preserving the group's Framer positio
 
 ## Preview one composition without changing live entry
 
-Choose **Editor view → Orbit**, then use **Editor orbit view** to select **Entry camera** or one of the eight camera views. Entry previews the configured Orbit start frame. A numbered choice previews that camera and its matching group on the editor canvas, so its text and graphics can be composed against the correct image.
+Choose **Editor view → Orbit**, then use **Editor orbit view** to select **Entry camera** or one of the eight camera views. Entry previews the configured Orbit start frame. A numbered choice previews that background camera on the editor canvas, so its native text and graphics can be composed against the correct image.
+
+Framer activates code overrides in Preview and on the published page, rather than on the design canvas ([official override documentation](https://www.framer.com/developers/overrides-introduction)). The editor camera selector does not automatically isolate the matching native content group. While composing, temporarily hide the other content groups in Layers. Restore **Visible = Yes** and **opacity = 100%** for every story group before Preview or publishing; the overrides then control which group is visible.
 
 This editor choice does not change the published journey's **Orbit start frame**, which remains 45 unless changed separately. To test real movement, use Framer Preview or the published page. **Start trial → Orbit directly** is useful while tuning the building compositions; **Full journey** checks the complete Balatonfüred and Aranyhíd approach.
 
@@ -93,3 +95,17 @@ Use native button and link children for any CTA so genuine controls retain their
 While composing the building story, **Apartment details → Off** hides the sample apartment strip. Turn it back on to check spacing once the story is placed. The final hover strip and the checkpoint story describe different things: the checkpoint composition describes the building; apartment data appears only for the selected apartment when picking is connected.
 
 Start with a short heading, a brief supporting text and one graphic per view, adding a CTA only where it helps the next action. Check both desktop and mobile compositions in Framer. The eight subjects, finished wording and project facts come from your native Framer content.
+## Agreed content map
+
+| Camera | Content | Override |
+| --- | --- | --- |
+| 1 | Közösségi kert | OrbitView1 |
+| 2 | Saját kertek | OrbitView2 |
+| 3 | 69 otthon | OrbitView3 |
+| 4 | Közösségi terek | OrbitView4 |
+| 5 | Szerkezet és szigetelés | OrbitView5 |
+| 6 | A tervező víziója | OrbitView6 |
+| 7 | Sarokteraszok — a nappali folytatása | OrbitView7 |
+| 8 | Lakásválasztás | OrbitView8 |
+
+Camera 8 may contain a native **Lakások megtekintése** button linked to the actual apartment-selection page through Framer's Link setting. No destination URL is assumed, and the future facade-mask picker is not activated by this setup.
