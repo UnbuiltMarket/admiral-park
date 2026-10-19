@@ -1,14 +1,15 @@
-export type OrbitState = "idle" | "loading" | "moving" | "settling" | "checkpoint" | "paused" | "error";
+export type OrbitState = "idle" | "loading" | "buffering" | "moving" | "settling" | "checkpoint" | "paused" | "error";
 
 export interface OrbitSnapshot {
     state: OrbitState; frame: number; checkpoint: number; direction: number;
     ready: number; total: number; decoded: number; downloaded: number;
+    buffered: number; bufferTotal: number; requiredReady: number; requiredTotal: number;
     position: number; error?: string;
 }
 
 export interface OrbitOptions {
     root: HTMLElement; canvas: HTMLCanvasElement; urls: string[];
-    decodeWidth?: number; inspectionWidth?: number; checkpointCount?: number;
+    decodeWidth?: number; inspectionWidth?: number; checkpointCount?: number; bufferCheckpoints?: number;
     snapDuration?: number; frameBlend?: number; focalX?: number; focalY?: number;
     onUpdate?: (snapshot: OrbitSnapshot) => void;
 }
@@ -20,7 +21,7 @@ interface OrbitBitmap {
 const orbitClamp = (value: number, minimum: number, maximum: number) => Math.min(maximum, Math.max(minimum, value));
 const orbitModulo = (value: number, size: number) => ((value % size) + size) % size;
 
-/** Every moving frame is prepared once. Only the parked view has a second, sharp bitmap. */
+/** Keep every compressed file, a bounded checkpoint window, and one optional sharp parked view. */
 export function createOrbitPlayer(options: OrbitOptions) {
     const { root, canvas } = options;
     const urls = [...options.urls], total = urls.length;
@@ -28,28 +29,36 @@ export function createOrbitPlayer(options: OrbitOptions) {
     const inspectionWidth = Math.round(orbitClamp(options.inspectionWidth ?? 1920, motionWidth, 3840));
     const checkpointCount = Math.round(orbitClamp(options.checkpointCount ?? 8, 1, Math.max(1, total)));
     const checkpoints = Array.from({ length: checkpointCount }, (_, index) => Math.round(index * total / checkpointCount));
+    const bufferCheckpoints = Math.round(orbitClamp(options.bufferCheckpoints ?? 2, 1, Math.max(1, Math.floor(checkpointCount / 2))));
     const snapDuration = orbitClamp(options.snapDuration ?? 1.5, .15, 10);
     const frameBlend = orbitClamp(options.frameBlend ?? 0, 0, 1);
     const focalX = orbitClamp(options.focalX ?? .5, 0, 1), focalY = orbitClamp(options.focalY ?? .5, 0, 1);
     const context = canvas.getContext("2d", { alpha: false });
     const cancellation = new AbortController();
     const blobs = new Map<number, Blob>(), frames = new Map<number, OrbitBitmap>();
-    const fetching = new Set<number>(), decoding = new Set<number>(), failed = new Map<number, string>();
+    const fetching = new Set<number>(), decoding = new Set<number>();
+    const fetchFailed = new Map<number, string>(), decodeFailed = new Map<number, string>(), refresh = new Set<number>();
     const reducedQuery = typeof matchMedia === "function" ? matchMedia("(prefers-reduced-motion: reduce)") : null;
     const originalTouchAction = canvas.style.touchAction;
-    let destroyed = false, preparing = false, active = false, activation = 0, visible = true, automaticPause = false;
+    let destroyed = false, started = false, prepared = false, preparing = false, active = false, activation = 0, visible = true, automaticPause = false;
     let state: OrbitState = "idle", position = 0, direction = 1, error: string | undefined;
     let raf = 0, lastInputAt = -Infinity, lastWheelAt = -Infinity, wheelLatched = false, pausedAt = 0, suppressClickUntil = 0;
     let preparePromise: Promise<void> | null = null, prepareResolve: (() => void) | null = null;
     let prepareReject: ((reason: Error) => void) | null = null;
-    let inspection: OrbitBitmap | null = null, inspectionFrame = -1, inspectionGeneration = 0, qualityStartedAt = 0, inspectionDecoding = false;
+    let inspection: OrbitBitmap | null = null, inspectionFrame = -1, inspectionGeneration = 0, qualityStartedAt = 0, inspectionDecoding = false, inspectionWanted = false;
+    let nativeDecodes = 0;
     let lastPaint = "", lastNotification = "";
     let drag: { id: number; x: number; y: number; moved: boolean; triggered: boolean } | null = null;
     let touchDragging = false;
     let settling: { start: number; target: number; time: number; duration: number } | null = null;
+    let pendingMove: { start: number; target: number; indices: number[] } | null = null;
+    let desired = new Set<number>(), required = new Set<number>(), priority: number[] = [];
+    let preparationRequired: number[] = [], errorWasPaused = false;
+    const waiters: Array<{ indices: number[]; token: number; allDownloads: boolean; resolve: () => void; reject: (reason: Error) => void }> = [];
     const frameAt = () => total ? orbitModulo(Math.round(position), total) : 0;
     const canRun = () => active && !destroyed && visible && !document.hidden && state !== "error";
-    const fullyReady = () => total > 0 && frames.size === total;
+    const inputAvailable = () => active && prepared && !destroyed && visible && !document.hidden;
+    const fullyReady = () => prepared;
     const reduced = () => !!reducedQuery?.matches;
 
     function checkpointAt() {
@@ -59,8 +68,10 @@ export function createOrbitPlayer(options: OrbitOptions) {
     }
 
     function snapshot(): OrbitSnapshot {
-        return { state, frame: frameAt(), checkpoint: checkpointAt(), direction, ready: frames.size, total,
-            decoded: frames.size + (inspection ? 1 : 0), downloaded: blobs.size, position, ...(error ? { error } : {}) };
+        return { state, frame: frameAt(), checkpoint: checkpointAt(), direction, ready: blobs.size, total,
+            decoded: frames.size + (inspection ? 1 : 0), downloaded: blobs.size, buffered: frames.size,
+            bufferTotal: desired.size, requiredReady: [...required].filter(index => frames.has(index)).length,
+            requiredTotal: required.size, position, ...(error ? { error } : {}) };
     }
 
     function notify() {
@@ -70,15 +81,23 @@ export function createOrbitPlayer(options: OrbitOptions) {
         root.dataset.orbitCheckpoint = String(value.checkpoint); root.dataset.orbitReady = String(value.ready);
         root.dataset.orbitDecoded = String(value.decoded); root.dataset.orbitDownloaded = String(value.downloaded);
         root.dataset.orbitPosition = position.toFixed(4); root.dataset.orbitMotionWidth = String(motionWidth);
-        root.dataset.orbitTarget = settling ? settling.target.toFixed(4) : position.toFixed(4);
+        root.dataset.orbitTarget = (pendingMove?.target ?? settling?.target ?? position).toFixed(4);
         root.dataset.orbitFrameBlend = String(frameBlend);
-        root.dataset.orbitLocked = String(!!settling);
-        const signature = [state, value.frame, value.checkpoint, direction, value.ready, value.decoded, value.downloaded, position.toFixed(4), error].join("|");
+        root.dataset.orbitLocked = String(!!settling || !!pendingMove);
+        root.dataset.orbitBuffered = String(value.buffered); root.dataset.orbitBufferTotal = String(value.bufferTotal);
+        root.dataset.orbitRequiredReady = String(value.requiredReady); root.dataset.orbitRequiredTotal = String(value.requiredTotal);
+        root.dataset.orbitDecoding = String(nativeDecodes);
+        root.dataset.orbitCacheLimit = String(desired.size); root.dataset.orbitBufferCheckpoints = String(bufferCheckpoints);
+        root.dataset.orbitResidentFrames = [...frames.keys()].sort((a, b) => a - b).join(",");
+        root.dataset.orbitRequiredFrames = [...required].sort((a, b) => a - b).join(",");
+        const signature = [state, value.frame, value.checkpoint, direction, value.ready, value.decoded, value.bufferTotal,
+            value.requiredReady, value.requiredTotal, position.toFixed(4), error].join("|");
         if (signature !== lastNotification) { lastNotification = signature; options.onUpdate?.(value); }
     }
 
     async function decodeBlob(blob: Blob, width: number): Promise<OrbitBitmap> {
         let expired = false;
+        nativeDecodes++;
         const operation = (async () => {
             if (typeof createImageBitmap === "function") {
                 try {
@@ -111,23 +130,94 @@ export function createOrbitPlayer(options: OrbitOptions) {
                 clearTimeout(timer);
                 if (expired || destroyed) { bitmap.close(); if (!expired) reject(new Error("Orbit disposed")); }
                 else resolve(bitmap);
-            }, reason => { clearTimeout(timer); if (!expired) reject(reason); });
+            }, reason => { clearTimeout(timer); if (!expired) reject(reason); }).finally(() => {
+                // ImageBitmap decoding cannot be cancelled. A watchdog may report
+                // an error, but its native permit stays held until the work settles.
+                nativeDecodes--;
+                if (!destroyed) resourcesChanged();
+            });
         });
     }
 
+    function indicesBetween(start: number, end: number) {
+        const result = new Set<number>();
+        for (let index = Math.floor(Math.min(start, end)); index <= Math.ceil(Math.max(start, end)) && result.size < total; index++) result.add(orbitModulo(index, total));
+        return [...result];
+    }
+
+    function windowIndices(center: number, radius: number) {
+        let left = center, right = center;
+        for (let step = 0; step < radius; step++) { left = nextCheckpoint(left, -1); right = nextCheckpoint(right, 1); }
+        return indicesBetween(left, right);
+    }
+
+    function nearestFirst(indices: number[], center: number) {
+        const wrapped = orbitModulo(center, total);
+        const distance = (index: number) => Math.min(orbitModulo(index - wrapped, total), orbitModulo(wrapped - index, total));
+        return [...indices].sort((a, b) => distance(a) - distance(b) || orbitModulo(a - wrapped, total) - orbitModulo(b - wrapped, total));
+    }
+
+    function setBuffer(wanted: number[], essential: number[], first = essential) {
+        desired = new Set(wanted); required = new Set(essential);
+        priority = [...new Set([...first, ...wanted])].filter(index => desired.has(index));
+        for (const [index, bitmap] of frames) if (!desired.has(index)) { bitmap.close(); frames.delete(index); }
+        resourcesChanged();
+    }
+
+    function setRestBuffer(center: number, initial = false) {
+        const near = nearestFirst(windowIndices(center, 1), center);
+        const wanted = nearestFirst(windowIndices(center, bufferCheckpoints), center);
+        setBuffer(wanted, initial ? near : [orbitModulo(Math.round(center), total)], near);
+    }
+
+    function fail(index: number) {
+        if (state !== "error") errorWasPaused = state === "paused";
+        error = "Could not prepare orbit frame " + index + ". Retry to continue.";
+        state = "error";
+        if (raf) cancelAnimationFrame(raf); raf = 0;
+    }
+
+    function failedIndex(indices: number[]) { return indices.find(index => fetchFailed.has(index) || decodeFailed.has(index)); }
+    function framesReady(indices: number[]) { return indices.every(index => frames.has(index)); }
+
     function finishPreparation() {
         if (destroyed || !preparing) return;
-        if (failed.size) {
-            error = "Could not prepare orbit frame " + [...failed.keys()][0] + ". Retry to continue.";
-            state = "error"; notify();
+        const failure = fetchFailed.size ? [...fetchFailed.keys()][0] : failedIndex(preparationRequired);
+        if (failure !== undefined) {
+            fail(failure);
             const reject = prepareReject; prepareResolve = prepareReject = null;
             reject?.(new Error(error));
-        } else if (fullyReady()) {
-            preparing = false; error = undefined;
+        } else if (blobs.size === total && framesReady(preparationRequired)) {
+            preparing = false; prepared = true; error = undefined;
             const resolve = prepareResolve; prepareResolve = prepareReject = null;
             if (!active) state = "idle";
-            notify(); resolve?.();
+            resolve?.();
         }
+    }
+
+    function finishWaiters() {
+        for (let index = waiters.length - 1; index >= 0; index--) {
+            const waiter = waiters[index], failure = failedIndex(waiter.indices);
+            if (waiter.token !== activation) { waiters.splice(index, 1); waiter.resolve(); }
+            else if (failure !== undefined || (waiter.allDownloads && fetchFailed.size)) {
+                waiters.splice(index, 1); waiter.reject(new Error("Could not prepare orbit frame " + (failure ?? [...fetchFailed.keys()][0])));
+            } else if (framesReady(waiter.indices) && (!waiter.allDownloads || blobs.size === total)) { waiters.splice(index, 1); waiter.resolve(); }
+        }
+    }
+
+    function waitForFrames(indices: number[], token: number, allDownloads = false) {
+        return new Promise<void>((resolve, reject) => { waiters.push({ indices, token, allDownloads, resolve, reject }); resourcesChanged(); });
+    }
+
+    function resourcesChanged() {
+        if (destroyed) return;
+        finishPreparation(); finishWaiters();
+        if (prepared && pendingMove) {
+            const failure = failedIndex(pendingMove.indices);
+            if (failure !== undefined) fail(failure);
+            else tryStartPending();
+        }
+        notify(); pump();
     }
 
     async function fetchFrame(index: number) {
@@ -136,14 +226,14 @@ export function createOrbitPlayer(options: OrbitOptions) {
         const timer = setTimeout(cancel, 10000);
         cancellation.signal.addEventListener("abort", cancel, { once: true });
         try {
-            const response = await fetch(urls[index], { signal: request.signal, mode: "cors", credentials: "omit", cache: "force-cache" });
+            const response = await fetch(urls[index], { signal: request.signal, mode: "cors", credentials: "omit", cache: refresh.has(index) ? "reload" : "force-cache" });
             if (!response.ok) throw new Error("HTTP " + response.status);
             const blob = await response.blob();
-            if (!destroyed) blobs.set(index, blob);
-        } catch (reason) { if (!destroyed) failed.set(index, String(reason)); }
+            if (!destroyed) { blobs.set(index, blob); refresh.delete(index); }
+        } catch (reason) { if (!destroyed) fetchFailed.set(index, String(reason)); }
         finally {
             clearTimeout(timer); cancellation.signal.removeEventListener("abort", cancel); fetching.delete(index);
-            if (!destroyed) { notify(); finishPreparation(); pump(); }
+            if (!destroyed) resourcesChanged();
         }
     }
 
@@ -151,50 +241,65 @@ export function createOrbitPlayer(options: OrbitOptions) {
         decoding.add(index);
         try {
             const bitmap = await decodeBlob(blobs.get(index)!, motionWidth);
-            if (destroyed) bitmap.close(); else frames.set(index, bitmap);
-        } catch (reason) { if (!destroyed) failed.set(index, String(reason)); }
+            if (destroyed || !desired.has(index)) bitmap.close();
+            else { frames.get(index)?.close(); frames.set(index, bitmap); }
+        } catch (reason) { if (!destroyed) decodeFailed.set(index, String(reason)); }
         finally {
             decoding.delete(index);
-            if (!destroyed) { notify(); finishPreparation(); pump(); }
+            if (!destroyed) resourcesChanged();
         }
     }
 
     function pump() {
-        if (destroyed || !preparing) return;
-        for (let index = 0; index < total && fetching.size < 4; index++) {
-            if (!blobs.has(index) && !fetching.has(index) && !failed.has(index)) void fetchFrame(index);
+        if (destroyed || !started) return;
+        const all = nearestFirst(urls.map((_, index) => index), position);
+        const downloads = [...new Set([...required, ...priority, ...all])];
+        for (const index of downloads) {
+            if (fetching.size >= 4) break;
+            if (!blobs.has(index) && !fetching.has(index) && !fetchFailed.has(index)) void fetchFrame(index);
         }
-        for (let index = 0; index < total && decoding.size < 2; index++) {
-            if (blobs.has(index) && !frames.has(index) && !decoding.has(index) && !failed.has(index)) void decodeFrame(index);
+        if (inspectionWanted) void prepareInspection();
+        const allowed = prepared ? priority : preparationRequired;
+        for (const index of allowed) {
+            if (nativeDecodes >= 2 || decoding.size + (inspectionDecoding ? 1 : 0) >= 2) break;
+            if (desired.has(index) && blobs.has(index) && !frames.has(index) && !decoding.has(index) && !decodeFailed.has(index)) void decodeFrame(index);
         }
+        notify();
     }
 
     function prepare(): Promise<void> {
         if (destroyed) return Promise.reject(new Error("Orbit disposed"));
-        if (fullyReady()) return Promise.resolve();
+        if (prepared) return Promise.resolve();
         if (preparePromise) return preparePromise;
         if (!total || !context) {
             state = "error"; error = !total ? "No orbit frames were provided." : "Canvas rendering is unavailable."; notify();
             return Promise.reject(new Error(error));
         }
-        preparing = true; state = "loading"; error = undefined;
+        started = preparing = true; state = "loading"; error = undefined;
         preparePromise = new Promise<void>((resolve, reject) => { prepareResolve = resolve; prepareReject = reject; });
-        notify(); pump(); return preparePromise;
+        preparationRequired = nearestFirst(windowIndices(0, 1), 0);
+        setRestBuffer(0, true); return preparePromise;
     }
 
     function dropInspection() {
         inspectionGeneration++;
+        inspectionWanted = false;
         inspection?.close(); inspection = null; inspectionFrame = -1; qualityStartedAt = 0; lastPaint = "";
     }
 
     async function prepareInspection() {
         const frame = frameAt(), blob = blobs.get(frame);
-        if (!blob || destroyed || !active || state !== "checkpoint" || inspectionWidth <= motionWidth || inspectionDecoding) return;
+        const parked = state === "checkpoint" || state === "buffering" || (state === "paused" && !!pendingMove);
+        if (!blob || destroyed || !active || !parked || inspectionWidth <= motionWidth || inspectionFrame === frame) { inspectionWanted = false; return; }
+        inspectionWanted = true;
+        if (inspectionDecoding || decoding.size >= 2 || nativeDecodes >= 2) return;
+        inspectionWanted = false;
         const generation = ++inspectionGeneration;
         inspectionDecoding = true;
         try {
             const bitmap = await decodeBlob(blob, inspectionWidth);
-            if (destroyed || generation !== inspectionGeneration || !active || state !== "checkpoint" || frameAt() !== frame) bitmap.close();
+            const stillParked = state === "checkpoint" || state === "buffering" || (state === "paused" && !!pendingMove);
+            if (destroyed || generation !== inspectionGeneration || !active || !stillParked || frameAt() !== frame) bitmap.close();
             else {
                 inspection?.close(); inspection = bitmap; inspectionFrame = frame;
                 qualityStartedAt = performance.now(); lastPaint = ""; notify(); requestPaint();
@@ -202,7 +307,8 @@ export function createOrbitPlayer(options: OrbitOptions) {
         } catch { /* Inspection quality is optional; the ready motion image remains selectable. */ }
         finally {
             inspectionDecoding = false;
-            if (!destroyed && generation !== inspectionGeneration && active && state === "checkpoint" && inspectionFrame !== frameAt()) void prepareInspection();
+            if (!destroyed && generation !== inspectionGeneration && active && state === "checkpoint" && inspectionFrame !== frameAt()) inspectionWanted = true;
+            if (!destroyed) resourcesChanged();
         }
     }
 
@@ -259,17 +365,32 @@ export function createOrbitPlayer(options: OrbitOptions) {
     }
 
     function arrive(target: number) {
-        position = target; settling = null; pausedAt = 0; state = "checkpoint";
+        position = target; settling = null; pendingMove = null; pausedAt = 0; state = "checkpoint";
+        setRestBuffer(target);
         paint(performance.now()); notify(); void prepareInspection();
     }
 
     function startSettle(target = nextCheckpoint(position, direction)) {
         if (!canRun() || !fullyReady()) return;
-        dropInspection(); pausedAt = 0;
-        if (reduced() || Math.abs(target - position) < .0001) { arrive(target); return; }
-        const heading = Math.sign(target - position);
-        settling = { start: position, target, time: performance.now(), duration: snapDuration * 1000 };
-        direction = heading; state = "settling"; notify(); requestPaint();
+        if (Math.abs(target - position) < .0001) { arrive(target); return; }
+        direction = Math.sign(target - position); pausedAt = 0;
+        const indices = reduced() ? [...new Set([frameAt(), orbitModulo(Math.round(target), total)])] : indicesBetween(position, target);
+        const adjacent = Math.abs(target - nextCheckpoint(position, direction)) < .0001;
+        // An adjacent target's window already contains the whole committed arc.
+        // A distant numbered jump pins only its route, never route + outer window.
+        const wanted = adjacent ? windowIndices(target, bufferCheckpoints) : indices;
+        pendingMove = { start: position, target, indices }; state = "buffering";
+        setBuffer(wanted, indices, [...indices, ...nearestFirst(wanted, target)]);
+    }
+
+    function tryStartPending() {
+        if (!pendingMove || !canRun() || state === "paused" || blobs.size !== total || !framesReady(pendingMove.indices)) return;
+        const pending = pendingMove;
+        if (failedIndex(pending.indices) !== undefined) return;
+        pendingMove = null; dropInspection(); pausedAt = 0;
+        if (reduced()) { arrive(pending.target); return; }
+        settling = { start: pending.start, target: pending.target, time: performance.now(), duration: snapDuration * 1000 };
+        state = "settling"; notify(); requestPaint();
     }
 
     function tick(now: number) {
@@ -333,7 +454,7 @@ export function createOrbitPlayer(options: OrbitOptions) {
     }
 
     function onWheel(event: WheelEvent) {
-        if (!canRun() || !fullyReady() || event.defaultPrevented || event.ctrlKey || event.metaKey || !insideViewer(event.clientX, event.clientY) || ignored(event.target)) return;
+        if (!inputAvailable() || event.defaultPrevented || event.ctrlKey || event.metaKey || !insideViewer(event.clientX, event.clientY) || ignored(event.target)) return;
         if (nestedScroll(event.target, event.deltaX, event.deltaY)) return;
         const scale = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? Math.max(1, root.clientHeight) : 1;
         const raw = (Math.abs(event.deltaX) > Math.abs(event.deltaY) ? event.deltaX : event.deltaY) * scale;
@@ -346,21 +467,21 @@ export function createOrbitPlayer(options: OrbitOptions) {
         wheelLatched = true;
         // Refresh the latch even for ignored input: a long trackpad tail must not
         // become a second move merely because the camera arrived during that tail.
-        if (consumed || state !== "checkpoint" || settling || drag) return;
+        if (consumed || state !== "checkpoint" || settling || pendingMove || drag) return;
         go(Math.sign(raw));
     }
 
     function onPointerDown(event: PointerEvent) {
         if (event.pointerType === "touch") return;
         if (!event.isPrimary) { if (drag) releaseDrag(); return; }
-        if (!canRun() || !fullyReady() || event.defaultPrevented || event.button !== 0 || !insideViewer(event.clientX, event.clientY) || coveredTrialControl(event.clientX, event.clientY) || ignored(event.target)) return;
+        if (!inputAvailable() || event.defaultPrevented || event.button !== 0 || !insideViewer(event.clientX, event.clientY) || coveredTrialControl(event.clientX, event.clientY) || ignored(event.target)) return;
         if (nestedScroll(event.target, 1, 0) || nestedScroll(event.target, 0, 1)) return;
-        drag = { id: event.pointerId, x: event.clientX, y: event.clientY, moved: false, triggered: state !== "checkpoint" || !!settling };
+        drag = { id: event.pointerId, x: event.clientX, y: event.clientY, moved: false, triggered: state !== "checkpoint" || !!settling || !!pendingMove };
         try { root.setPointerCapture(event.pointerId); } catch { /* Mouse events can still finish through the window listener. */ }
     }
 
     function onPointerMove(event: PointerEvent) {
-        if (!drag || touchDragging || drag.id !== event.pointerId || !canRun()) return;
+        if (!drag || touchDragging || drag.id !== event.pointerId || !inputAvailable()) return;
         const dx = event.clientX - drag.x;
         if (Math.abs(dx) < 8 && !drag.moved) return;
         if (event.cancelable) event.preventDefault();
@@ -395,14 +516,14 @@ export function createOrbitPlayer(options: OrbitOptions) {
             return;
         }
         const touch = event.touches[0];
-        if (!canRun() || !fullyReady() || event.defaultPrevented || !insideViewer(touch.clientX, touch.clientY) || coveredTrialControl(touch.clientX, touch.clientY) || ignored(event.target)) return;
+        if (!inputAvailable() || event.defaultPrevented || !insideViewer(touch.clientX, touch.clientY) || coveredTrialControl(touch.clientX, touch.clientY) || ignored(event.target)) return;
         if (nestedScroll(event.target, 1, 0) || nestedScroll(event.target, 0, 1)) return;
-        drag = { id: touch.identifier, x: touch.clientX, y: touch.clientY, moved: false, triggered: state !== "checkpoint" || !!settling };
+        drag = { id: touch.identifier, x: touch.clientX, y: touch.clientY, moved: false, triggered: state !== "checkpoint" || !!settling || !!pendingMove };
         touchDragging = true;
     }
 
     function onTouchMove(event: TouchEvent) {
-        if (!touchDragging || !drag || !canRun() || event.touches.length !== 1) return;
+        if (!touchDragging || !drag || !inputAvailable() || event.touches.length !== 1) return;
         const touch = event.touches[0];
         const dx = touch.clientX - drag.x, dy = touch.clientY - drag.y;
         // A non-passive touch listener also reaches Framer sibling hit layers;
@@ -427,14 +548,14 @@ export function createOrbitPlayer(options: OrbitOptions) {
     }
 
     function go(heading: number) {
-        if (!canRun() || !fullyReady() || !heading || settling || state !== "checkpoint") return;
+        if (!canRun() || !fullyReady() || !heading || settling || pendingMove || state !== "checkpoint") return;
         automaticPause = false; direction = heading > 0 ? 1 : -1;
         if (drag) drag.triggered = true;
         startSettle(nextCheckpoint(position, direction));
     }
 
     function setCheckpoint(index: number) {
-        if (!canRun() || !fullyReady() || settling || state !== "checkpoint") return;
+        if (!canRun() || !fullyReady() || settling || pendingMove || state !== "checkpoint") return;
         const desired = checkpoints[orbitModulo(Math.round(index), checkpointCount)];
         const current = orbitModulo(position, total);
         let distance = orbitModulo(desired - current + total / 2, total) - total / 2;
@@ -455,6 +576,7 @@ export function createOrbitPlayer(options: OrbitOptions) {
     function resume() {
         if (!active || destroyed || !fullyReady() || !visible || document.hidden || state === "error") return;
         automaticPause = false;
+        if (pendingMove) { pausedAt = 0; state = "buffering"; resourcesChanged(); return; }
         if (settling) {
             if (reduced()) { arrive(settling.target); return; }
             if (pausedAt) settling.time += performance.now() - pausedAt;
@@ -472,7 +594,7 @@ export function createOrbitPlayer(options: OrbitOptions) {
     }
 
     function onKeyDown(event: KeyboardEvent) {
-        if (!canRun() || event.defaultPrevented || event.ctrlKey || event.metaKey || event.altKey || ignored(event.target)) return;
+        if (!inputAvailable() || event.defaultPrevented || event.ctrlKey || event.metaKey || event.altKey || ignored(event.target)) return;
         const heading = ["ArrowRight", "ArrowDown", "PageDown"].includes(event.key) ? 1 :
             ["ArrowLeft", "ArrowUp", "PageUp"].includes(event.key) ? -1 :
             event.key === " " || event.key === "Spacebar" ? (event.shiftKey ? -1 : 1) : 0;
@@ -487,32 +609,56 @@ export function createOrbitPlayer(options: OrbitOptions) {
         const token = ++activation;
         await prepare();
         if (destroyed || token !== activation) return;
-        active = true; automaticPause = false; canvas.style.touchAction = "pinch-zoom";
+        active = false; automaticPause = false;
         position = orbitModulo(Math.round(frame), total); direction = 1;
-        settling = null; pausedAt = 0; dropInspection();
+        settling = null; pendingMove = null; pausedAt = 0; dropInspection();
+        state = "loading";
+        const initial = nearestFirst(windowIndices(position, 1), position);
+        setRestBuffer(position, true);
+        try { await waitForFrames(initial, token); }
+        catch (reason) {
+            if (!destroyed && token === activation) { fail(failedIndex(initial) ?? frameAt()); notify(); }
+            throw reason;
+        }
+        if (destroyed || token !== activation) return;
+        active = true; canvas.style.touchAction = "pinch-zoom";
         // Do not interpret the approach's remaining wheel momentum as an orbit move.
         lastWheelAt = performance.now(); wheelLatched = true;
         state = "checkpoint";
         if (checkpointAt() < 0) { state = "moving"; startSettle(); }
-        else { paint(performance.now()); notify(); void prepareInspection(); }
+        else { setRestBuffer(position); paint(performance.now()); notify(); void prepareInspection(); }
         if (!visible || document.hidden) pauseInternal(true);
     }
 
     function deactivate() {
-        activation++; active = false; automaticPause = false; releaseDrag(); settling = null; pausedAt = 0;
+        activation++; active = false; automaticPause = false; releaseDrag(); settling = null; pendingMove = null; pausedAt = 0;
         if (raf) cancelAnimationFrame(raf); raf = 0; dropInspection();
         canvas.style.touchAction = originalTouchAction;
-        if (state !== "error") state = fullyReady() ? "idle" : preparing ? "loading" : "idle";
-        notify();
+        error = undefined;
+        state = prepared ? "idle" : preparing ? "loading" : "idle";
+        if (started && !destroyed) setRestBuffer(0, true);
+        else { finishWaiters(); notify(); }
     }
 
     async function retry() {
         if (destroyed) return;
-        const wasActive = active;
-        failed.clear(); error = undefined; preparePromise = null;
-        await prepare();
-        if (destroyed) return;
-        if (wasActive) { state = "paused"; resume(); }
+        const token = activation, wasActive = active, remainPaused = errorWasPaused;
+        // A decoder failure may be an invalid cached response. Refresh only those
+        // sources; successful downloads and resident bitmaps remain untouched.
+        for (const index of decodeFailed.keys()) { blobs.delete(index); refresh.add(index); }
+        fetchFailed.clear(); decodeFailed.clear(); error = undefined; errorWasPaused = false;
+        if (!prepared) {
+            preparePromise = null;
+            await prepare();
+        } else {
+            state = wasActive ? (pendingMove ? (remainPaused ? "paused" : "buffering") : "paused") : "loading";
+            try { await waitForFrames([...required], token, true); }
+            catch (reason) { if (!destroyed && token === activation) { fail(failedIndex([...required]) ?? frameAt()); notify(); } throw reason; }
+        }
+        if (destroyed || token !== activation || !wasActive) return;
+        if (remainPaused) { state = "paused"; notify(); }
+        else if (pendingMove) { state = "buffering"; resourcesChanged(); }
+        else { state = "paused"; resume(); }
     }
 
     const resizeObserver = typeof ResizeObserver === "function" ? new ResizeObserver(() => {
@@ -546,8 +692,9 @@ export function createOrbitPlayer(options: OrbitOptions) {
         prepare, activate, deactivate, go, setCheckpoint, pause: () => pauseInternal(false), resume, retry, snapshot,
         destroy() {
             if (destroyed) return;
-            deactivate(); destroyed = true; cancellation.abort();
+            destroyed = true; deactivate(); cancellation.abort();
             const reject = prepareReject; prepareResolve = prepareReject = null; reject?.(new Error("Orbit disposed"));
+            waiters.splice(0).forEach(waiter => waiter.resolve());
             frames.forEach(bitmap => bitmap.close()); frames.clear(); blobs.clear();
             resizeObserver?.disconnect(); intersectionObserver?.disconnect();
             window.removeEventListener("wheel", onWheel, true); window.removeEventListener("pointerdown", onPointerDown, true);

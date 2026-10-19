@@ -18,6 +18,7 @@ interface AdmiralHomepageTrialProps {
     startView?: "opening" | "orbit"; editorView?: "opening" | "building" | "orbit"
     duration?: number; maxSpeed?: number; momentum?: number; triggerDistance?: number
     checkpointCount?: number; motionWidth?: number; orbitMobileWidth?: number; inspectionWidth?: number
+    desktopBuffer?: number; phoneBuffer?: number
     snapDuration?: number; frameBlend?: number
     focalX?: number; focalY?: number; darken?: number; showControls?: boolean; showViewpoints?: boolean; showDiagnostics?: boolean
     openingOut?: number; buildingIn?: number; buildingFull?: number; ctaIn?: number; rise?: number
@@ -45,7 +46,7 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
     const {
         useGitHubAssets = true, heroBaseUrl = "", orbitBaseUrl = "", startView = "opening", editorView = "opening",
         duration = 2.5, maxSpeed = 1.8, momentum = .22, triggerDistance = 28, checkpointCount = 8,
-        motionWidth = 960, orbitMobileWidth = 640, inspectionWidth = 1920, snapDuration = 1.5, frameBlend = 0,
+        motionWidth = 960, orbitMobileWidth = 640, inspectionWidth = 1920, desktopBuffer = 2, phoneBuffer = 1, snapDuration = 1.5, frameBlend = 0,
         focalX = 50, focalY = 50, darken = 0,
         showControls = true, showViewpoints = true, showDiagnostics = false,
         openingOut = 20, buildingIn = 68, buildingFull = 88, ctaIn = 86, rise = 20,
@@ -62,7 +63,7 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
     const [stage, setStage] = React.useState<HomepageStage>(previewStage)
     const [posterUrl, setPosterUrl] = React.useState(initialPoster)
     const [heroState, setHeroState] = React.useState<SequenceState>("opening")
-    const [orbitInfo, setOrbitInfo] = React.useState<OrbitSnapshot>({ state: "idle", frame: 0, checkpoint: -1, direction: 1, ready: 0, total: orbitUrls.length, decoded: 0, downloaded: 0, position: 0 })
+    const [orbitInfo, setOrbitInfo] = React.useState<OrbitSnapshot>({ state: "idle", frame: 0, checkpoint: -1, direction: 1, ready: 0, total: orbitUrls.length, decoded: 0, downloaded: 0, buffered: 0, bufferTotal: 0, requiredReady: 0, requiredTotal: 0, position: 0 })
     const [reduced, setReduced] = React.useState(false)
     const [hostVisible, setHostVisible] = React.useState(false)
     const rootRef = React.useRef<HTMLDivElement>(null), heroRootRef = React.useRef<HTMLDivElement>(null)
@@ -113,11 +114,11 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
         function destroyHero() { heroGeneration++; hero?.destroy(); hero = null }
         const orbit = staticRenderer ? null : createOrbitPlayer({
             root, canvas: orbitCanvas, urls: orbitUrls, decodeWidth, inspectionWidth: phone ? Math.min(inspectionWidth, 1280) : inspectionWidth,
-            checkpointCount, snapDuration, frameBlend: frameBlend / 100, focalX: focalX / 100, focalY: focalY / 100,
+            checkpointCount, bufferCheckpoints: phone ? phoneBuffer : desktopBuffer, snapDuration, frameBlend: frameBlend / 100, focalX: focalX / 100, focalY: focalY / 100,
             onUpdate(snapshot) {
                 if (disposed) return
                 root!.dataset.orbitDownloaded = String(snapshot.downloaded)
-                const key = `${snapshot.state}:${snapshot.checkpoint}:${Math.floor(snapshot.ready / 6)}`
+                const key = `${snapshot.state}:${snapshot.checkpoint}:${Math.floor(snapshot.ready / 6)}:${Math.floor(snapshot.buffered / 6)}:${Math.floor(snapshot.requiredReady / 3)}:${snapshot.buffered === snapshot.bufferTotal}:${snapshot.requiredReady === snapshot.requiredTotal}:${snapshot.decoded > snapshot.buffered}`
                 const now = performance.now()
                 if (key !== lastOrbitUI || (showDiagnostics && now - lastUI > 150)) {
                     lastOrbitUI = key; lastUI = now; setOrbitInfo(snapshot)
@@ -231,7 +232,7 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
             homepageChannels.delete(root); notifyHomepage()
         }
     }, [heroUrls, orbitUrls, staticRenderer, hostVisible, startView, editorView, duration, maxSpeed, momentum, triggerDistance, checkpointCount,
-        motionWidth, orbitMobileWidth, inspectionWidth, snapDuration, frameBlend, focalX, focalY, showDiagnostics])
+        motionWidth, orbitMobileWidth, inspectionWidth, desktopBuffer, phoneBuffer, snapDuration, frameBlend, focalX, focalY, showDiagnostics])
 
     React.useEffect(() => {
         const root = rootRef.current, channel = root && homepageChannels.get(root)
@@ -239,10 +240,12 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
     }, [openingOut, buildingIn, buildingFull, ctaIn, rise])
     const orbitVisible = !staticRenderer && stage === "orbit"
     const orbitStatic = staticRenderer && editorView === "orbit"
-    const percent = Math.round(100 * orbitInfo.ready / Math.max(1, orbitInfo.total))
+    const percent = Math.round(100 * orbitInfo.downloaded / Math.max(1, orbitInfo.total))
+    const requiredPercent = Math.round(100 * orbitInfo.requiredReady / Math.max(1, orbitInfo.requiredTotal))
+    const preparationPercent = Math.min(percent, requiredPercent)
     const checkpoints = Math.round(Math.max(2, Math.min(16, checkpointCount)))
     const paused = orbitInfo.state === "paused"
-    const orbitMoving = orbitInfo.state === "settling" || orbitInfo.state === "moving" || orbitInfo.state === "paused"
+    const orbitMoving = orbitInfo.state !== "checkpoint"
     const orbitButtonStyle: React.CSSProperties = { ...homepageButton, opacity: orbitMoving ? .45 : 1, cursor: orbitMoving ? "default" : "pointer" }
     return (
         <div ref={rootRef} data-admiral-homepage="" data-admiral-orbit="" data-homepage-stage={stage} role="region" aria-label={alt} tabIndex={0}
@@ -259,20 +262,24 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
                 {(stage === "opening" || stage === "approach") && <button type="button" style={homepageButton} onClick={() => actions.current?.skip()}>Skip approach</button>}
                 {stage === "approach" && (heroState === "paused" || heroState === "error") && <button type="button" style={homepageButton} onClick={() => actions.current?.resumeHero()}>{heroState === "error" ? "Retry approach" : "Continue approach"}</button>}
                 {stage === "building" && <button type="button" style={homepageButton} onClick={() => actions.current?.explore()}>Explore building</button>}
-                {stage === "handoff" && orbitInfo.state !== "error" && <span role="status" style={{ ...homepageButton, cursor: "default" }}>Preparing orbit {percent}%</span>}
-                {(stage === "building" || stage === "handoff") && orbitInfo.state === "error" && <button type="button" style={homepageButton} onClick={() => { void (rootRef.current as (HTMLElement & { retryOrbit?: () => Promise<void> }) | null)?.retryOrbit?.() }}>Retry orbit</button>}
+                {stage === "handoff" && orbitInfo.state !== "error" && <span role="status" style={{ ...homepageButton, cursor: "default" }}>Preparing orbit {preparationPercent}%</span>}
+                {(stage === "building" || stage === "handoff" || stage === "orbit") && orbitInfo.state === "error" && <button type="button" style={homepageButton} onClick={() => { void (rootRef.current as (HTMLElement & { retryOrbit?: () => Promise<void> }) | null)?.retryOrbit?.() }}>Retry orbit</button>}
                 {(stage === "building" || stage === "handoff" || stage === "orbit") && <button type="button" style={homepageButton} onClick={() => actions.current?.overview()}>Overview</button>}
                 {stage === "orbit" && <>
                     <button type="button" aria-label="Previous view" disabled={orbitMoving} style={orbitButtonStyle} onClick={() => actions.current?.orbit?.go(-1)}>←</button>
-                    <span aria-live="polite" style={{ ...homepageButton, cursor: "default", minWidth: 65, textAlign: "center" }}>{orbitInfo.checkpoint >= 0 ? `View ${orbitInfo.checkpoint + 1} / ${checkpoints}` : "Looking around"}</span>
+                    <span aria-live="polite" style={{ ...homepageButton, cursor: "default", minWidth: 65, textAlign: "center" }}>{orbitInfo.checkpoint >= 0 ? `View ${orbitInfo.checkpoint + 1} / ${checkpoints}` : orbitInfo.state === "buffering" ? "Preparing view…" : orbitInfo.state === "error" ? "View unavailable" : "Looking around"}</span>
                     <button type="button" aria-label="Next view" disabled={orbitMoving} style={orbitButtonStyle} onClick={() => actions.current?.orbit?.go(1)}>→</button>
-                    <button type="button" style={homepageButton} onClick={() => paused ? actions.current?.orbit?.resume() : actions.current?.orbit?.pause()}>{paused ? "Continue rotation" : "Pause rotation"}</button>
+                    <button type="button" disabled={orbitInfo.state === "error"} style={homepageButton} onClick={() => paused ? actions.current?.orbit?.resume() : actions.current?.orbit?.pause()}>{paused ? "Continue rotation" : "Pause rotation"}</button>
                     {showViewpoints && Array.from({ length: checkpoints }, (_, i) => <button key={i} type="button" aria-label={`View ${i + 1}`} aria-pressed={orbitInfo.checkpoint === i} disabled={orbitMoving}
                         style={{ ...orbitButtonStyle, padding: "7px 9px", background: orbitInfo.checkpoint === i ? "rgba(255,255,255,.9)" : homepageButton.background, color: orbitInfo.checkpoint === i ? "#101820" : "#fff" }} onClick={() => actions.current?.orbit?.setCheckpoint(i)}>{i + 1}</button>)}
                 </>}
             </div>}
+            {!staticRenderer && !showControls && orbitInfo.state === "buffering" && <span role="status" style={{ ...homepageButton, position: "absolute", bottom: 18, left: "50%", transform: "translateX(-50%)", pointerEvents: "none", zIndex: 3 }}>Preparing view…</span>}
+            {!staticRenderer && !showControls && orbitInfo.state === "error" && <div data-homepage-controls="" data-orbit-ignore="" style={{ position: "absolute", bottom: 18, left: "50%", transform: "translateX(-50%)", zIndex: 3 }}>
+                <button type="button" style={homepageButton} onClick={() => { void (rootRef.current as (HTMLElement & { retryOrbit?: () => Promise<void> }) | null)?.retryOrbit?.() }}>Retry orbit</button>
+            </div>}
             {!staticRenderer && showDiagnostics && <output data-homepage-diagnostics="" style={{ position: "absolute", left: 12, bottom: 94, pointerEvents: "none", background: "rgba(0,0,0,.65)", color: "#fff", padding: 8, borderRadius: 4, font: "11px/1.5 monospace", zIndex: 2 }}>
-                {stage} · {orbitInfo.state} · frame {orbitInfo.frame} · ready {orbitInfo.ready}/{orbitInfo.total} · decoded {orbitInfo.decoded}
+                {stage} · {orbitInfo.state} · frame {orbitInfo.frame} · downloaded {orbitInfo.downloaded}/{orbitInfo.total} · buffered {orbitInfo.buffered}/{orbitInfo.bufferTotal} · required {orbitInfo.requiredReady}/{orbitInfo.requiredTotal} · decoded {orbitInfo.decoded}
             </output>}
             <span role="status" aria-live="polite" style={{ position: "absolute", width: 1, height: 1, overflow: "hidden", clipPath: "inset(50%)" }}>{orbitInfo.state === "error" ? "Orbit unavailable. Retry the images or use the navigation." : ""}</span>
         </div>
@@ -347,6 +354,8 @@ addPropertyControls(AdmiralHomepageTrial, {
     motionWidth: { type: ControlType.Number, title: "Orbit decode", defaultValue: 960, min: 480, max: 1920, step: 160, unit: "px" },
     orbitMobileWidth: { type: ControlType.Number, title: "Phone decode", defaultValue: 640, min: 480, max: 1280, step: 160, unit: "px" },
     inspectionWidth: { type: ControlType.Number, title: "Stopped detail", defaultValue: 1920, min: 960, max: 1920, step: 160, unit: "px" },
+    desktopBuffer: { type: ControlType.Number, title: "Desktop buffer", defaultValue: 2, min: 1, max: 3, step: 1, description: "Checkpoints decoded ahead and behind on desktop. With 8 viewpoints, 2 keeps up to 61 movement frames. All 120 compressed images stay downloaded." },
+    phoneBuffer: { type: ControlType.Number, title: "Phone buffer", defaultValue: 1, min: 1, max: 3, step: 1, description: "Checkpoints decoded ahead and behind on phones. With 8 viewpoints, 1 keeps up to 31 movement frames. Increasing this uses more memory." },
     snapDuration: { type: ControlType.Number, title: "Settle time", defaultValue: 1.5, min: .15, max: 10, step: .05, unit: "s", description: "Time for one checkpoint move: slow start, quicker middle, slow arrival. New input is ignored until arrival." },
     frameBlend: { type: ControlType.Number, title: "Frame blend", defaultValue: 0, min: 0, max: 100, step: 5, unit: "%", description: "Crossfade neighbouring orbit frames. 0% keeps frames crisp; 100% blends throughout each frame interval. Strong blending can produce double edges." },
     openingOut: { type: ControlType.Number, title: "Opening out", defaultValue: 20, min: 1, max: 50, unit: "%" },

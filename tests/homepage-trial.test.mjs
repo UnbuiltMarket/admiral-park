@@ -47,9 +47,11 @@ test('paste-in homepage registers its controls and server-renders without loadin
  vm.runInNewContext(compiled,{module,exports:module.exports,require:name=>name==='framer'?stub:requireDev(name)});
  assert.deepEqual(Object.keys(module.exports).sort(),['ArrivalCTA','BuildingContent','OpeningContent','default']);
  assert.equal(registered,module.exports.default);
- for(const key of ['startView','editorView','checkpointCount','motionWidth','orbitMobileWidth','snapDuration','frameBlend'])assert.ok(controls[key],`Framer control ${key}`);
+ for(const key of ['startView','editorView','checkpointCount','motionWidth','orbitMobileWidth','snapDuration','frameBlend','desktopBuffer','phoneBuffer'])assert.ok(controls[key],`Framer control ${key}`);
  assert.equal(controls.snapDuration.title,'Settle time');assert.equal(controls.snapDuration.defaultValue,1.5);assert.equal(controls.snapDuration.max,10);
  assert.equal(controls.frameBlend.defaultValue,0);assert.equal(controls.frameBlend.min,0);assert.equal(controls.frameBlend.max,100);
+ assert.equal(controls.desktopBuffer.title,'Desktop buffer');assert.equal(controls.desktopBuffer.defaultValue,2);assert.equal(controls.desktopBuffer.min,1);assert.equal(controls.desktopBuffer.max,3);
+ assert.equal(controls.phoneBuffer.title,'Phone buffer');assert.equal(controls.phoneBuffer.defaultValue,1);assert.equal(controls.phoneBuffer.min,1);assert.equal(controls.phoneBuffer.max,3);
  for(const removed of ['wheelSensitivity','dragSensitivity','orbitMomentum'])assert.equal(controls[removed],undefined,`Obsolete speed control ${removed} is hidden`);
  const html=requireDev('react-dom/server').renderToStaticMarkup(requireDev('react').createElement(module.exports.default));
  assert.match(html,/raw%20sequence00\.avif/);
