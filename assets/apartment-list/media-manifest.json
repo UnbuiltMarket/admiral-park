@@ -2110,15 +2110,36 @@
     },
     {
       "path": "assets/floorplans/types/A/thumb.webp",
-      "bytes": 39532,
-      "sha256": "b7c9a3dffa2690ba7e29dee4c2e79aed8c177de401bb164119545265f4236d80",
+      "bytes": 88964,
+      "sha256": "c0cb61257c1d517da7977d0a1e032ea96399634725a69f15979a7f83d843d993",
       "role": "floorplan-thumbnail",
       "type": "A",
       "dimensions": [
-        270,
-        360
+        360,
+        301
       ],
-      "lossless": true
+      "lossless": true,
+      "sourceSha256": "3782a48fa425f4e1703d0310d7a3bbfbedbf4d1ad0e72f69761be2375ca60cd2",
+      "sourceDimensions": [
+        1500,
+        2000
+      ],
+      "sourceAlphaBounds": [
+        41,
+        514,
+        1250,
+        1517
+      ],
+      "sourceCropBox": [
+        16,
+        489,
+        1275,
+        1542
+      ],
+      "transparentPaddingPixels": 25,
+      "transparentPaddingFraction": 0.02,
+      "allNonzeroAlphaRetained": true,
+      "cropPolicy": "Only transparent outer margins; padding clamped to original canvas"
     },
     {
       "path": "assets/floorplans/types/B/full.webp",
@@ -2146,15 +2167,36 @@
     },
     {
       "path": "assets/floorplans/types/B/thumb.webp",
-      "bytes": 60522,
-      "sha256": "8c430c4cc25eb4bf75e7a0e24be1401e2e9d201a4d53fdb85deee090bf321ab2",
+      "bytes": 90562,
+      "sha256": "a3655ec0eae7acbbff0706d59d662dcaef366811cc8087a9c40d5bc06acb30e3",
       "role": "floorplan-thumbnail",
       "type": "B",
       "dimensions": [
-        270,
+        318,
         360
       ],
-      "lossless": true
+      "lossless": true,
+      "sourceSha256": "cee3c4f992fb308b8ff74bb8fbec7e1ff64da65aadc0b2057b2c16dc774528af",
+      "sourceDimensions": [
+        1500,
+        2000
+      ],
+      "sourceAlphaBounds": [
+        38,
+        281,
+        1372,
+        1798
+      ],
+      "sourceCropBox": [
+        7,
+        250,
+        1403,
+        1829
+      ],
+      "transparentPaddingPixels": 31,
+      "transparentPaddingFraction": 0.02,
+      "allNonzeroAlphaRetained": true,
+      "cropPolicy": "Only transparent outer margins; padding clamped to original canvas"
     },
     {
       "path": "assets/floorplans/types/C/full.webp",
@@ -2190,7 +2232,28 @@
         254,
         360
       ],
-      "lossless": true
+      "lossless": true,
+      "sourceSha256": "7978207b80ae38bd323576002a7dd3d16ded19c4e1db2868f74fc6af8575ccd7",
+      "sourceDimensions": [
+        1054,
+        1492
+      ],
+      "sourceAlphaBounds": [
+        0,
+        0,
+        1053,
+        1492
+      ],
+      "sourceCropBox": [
+        0,
+        0,
+        1054,
+        1492
+      ],
+      "transparentPaddingPixels": 30,
+      "transparentPaddingFraction": 0.02,
+      "allNonzeroAlphaRetained": true,
+      "cropPolicy": "Only transparent outer margins; padding clamped to original canvas"
     },
     {
       "path": "assets/floorplans/types/D/full.webp",
@@ -2218,15 +2281,36 @@
     },
     {
       "path": "assets/floorplans/types/D/thumb.webp",
-      "bytes": 79674,
-      "sha256": "ba65f7743f1045a2f785b846d0303df38e24ef8a85191c4b71b5a344e7fe5399",
+      "bytes": 86232,
+      "sha256": "b1807e8c2b95fefb54c7b6922360a76fae6bac0c7cc5bb3f0115e0325940056a",
       "role": "floorplan-thumbnail",
       "type": "D",
       "dimensions": [
-        235,
+        247,
         360
       ],
-      "lossless": true
+      "lossless": true,
+      "sourceSha256": "3813789cbe0c5fa876c00a91476bbc10f11fc600f0366eb250ce1e79a71d3f68",
+      "sourceDimensions": [
+        1046,
+        1600
+      ],
+      "sourceAlphaBounds": [
+        18,
+        68,
+        1046,
+        1533
+      ],
+      "sourceCropBox": [
+        0,
+        38,
+        1046,
+        1563
+      ],
+      "transparentPaddingPixels": 30,
+      "transparentPaddingFraction": 0.02,
+      "allNonzeroAlphaRetained": true,
+      "cropPolicy": "Only transparent outer margins; padding clamped to original canvas"
     },
     {
       "path": "assets/floorplans/types/E/full.webp",
@@ -2254,15 +2338,36 @@
     },
     {
       "path": "assets/floorplans/types/E/thumb.webp",
-      "bytes": 67916,
-      "sha256": "2f30801bb32944461c857bf8017afc9e580ff77104a1a93d0e9015bacf54cd53",
+      "bytes": 70164,
+      "sha256": "294bd32f6ccfc277384a4fc66167fd0d58d6ca410af4123ad9b5a5faf8f2f7a0",
       "role": "floorplan-thumbnail",
       "type": "E",
       "dimensions": [
-        200,
+        202,
         360
       ],
-      "lossless": true
+      "lossless": true,
+      "sourceSha256": "aeafa3c1cc2ad11600a840c39c40dabf2c4995b774631978afc0cbb13a3e753e",
+      "sourceDimensions": [
+        889,
+        1600
+      ],
+      "sourceAlphaBounds": [
+        40,
+        46,
+        863,
+        1556
+      ],
+      "sourceCropBox": [
+        9,
+        15,
+        889,
+        1587
+      ],
+      "transparentPaddingPixels": 31,
+      "transparentPaddingFraction": 0.02,
+      "allNonzeroAlphaRetained": true,
+      "cropPolicy": "Only transparent outer margins; padding clamped to original canvas"
     },
     {
       "path": "assets/floorplans/types/E1/full.webp",
@@ -2290,15 +2395,36 @@
     },
     {
       "path": "assets/floorplans/types/E1/thumb.webp",
-      "bytes": 72014,
-      "sha256": "3553f40436ac0d73732c9da14a1faab06595939355e574357a7d01515076baaa",
+      "bytes": 72724,
+      "sha256": "2ee18de483dd7d81e32b91cb7ed54d3110f8f84defc1aeed4e92c9bacfc99b11",
       "role": "floorplan-thumbnail",
       "type": "E1",
       "dimensions": [
-        206,
+        204,
         360
       ],
-      "lossless": true
+      "lossless": true,
+      "sourceSha256": "d0f8a7d428b130861c58efe5221308debee34b841091916278397607d6b4e530",
+      "sourceDimensions": [
+        916,
+        1600
+      ],
+      "sourceAlphaBounds": [
+        40,
+        32,
+        882,
+        1570
+      ],
+      "sourceCropBox": [
+        9,
+        1,
+        913,
+        1600
+      ],
+      "transparentPaddingPixels": 31,
+      "transparentPaddingFraction": 0.02,
+      "allNonzeroAlphaRetained": true,
+      "cropPolicy": "Only transparent outer margins; padding clamped to original canvas"
     },
     {
       "path": "assets/floorplans/types/E2/full.webp",
@@ -2326,15 +2452,36 @@
     },
     {
       "path": "assets/floorplans/types/E2/thumb.webp",
-      "bytes": 62378,
-      "sha256": "0df71dec10d58c9a685ec810efd857c0e904a2cc3ef4d91b8138bb898e5a07b0",
+      "bytes": 62638,
+      "sha256": "83e537ed9e37215bd32c1e8ad23acd9f44e49bd6c6b48cd288d45c7998bb282f",
       "role": "floorplan-thumbnail",
       "type": "E2",
       "dimensions": [
         204,
         360
       ],
-      "lossless": true
+      "lossless": true,
+      "sourceSha256": "50dd36c3e272477ecb147ba5c5b811b8468aa38c4cfec34d55099d7e7c94b8a5",
+      "sourceDimensions": [
+        907,
+        1600
+      ],
+      "sourceAlphaBounds": [
+        33,
+        32,
+        880,
+        1565
+      ],
+      "sourceCropBox": [
+        2,
+        1,
+        907,
+        1596
+      ],
+      "transparentPaddingPixels": 31,
+      "transparentPaddingFraction": 0.02,
+      "allNonzeroAlphaRetained": true,
+      "cropPolicy": "Only transparent outer margins; padding clamped to original canvas"
     },
     {
       "path": "assets/floorplans/types/F/full.webp",
@@ -2362,15 +2509,36 @@
     },
     {
       "path": "assets/floorplans/types/F/thumb.webp",
-      "bytes": 63560,
-      "sha256": "5a0b07645da6f685a3d09fc0396985593746ba2536f53dee5e50b69327867000",
+      "bytes": 65162,
+      "sha256": "92dc88a3769e749d10e0894ab6f608b5b22ee660cac64ca5b12a44877a07ba56",
       "role": "floorplan-thumbnail",
       "type": "F",
       "dimensions": [
-        183,
+        182,
         360
       ],
-      "lossless": true
+      "lossless": true,
+      "sourceSha256": "59bec3b688af21eee2ff7cbbacb9817582d251074b414a903a9ccdf152db67de",
+      "sourceDimensions": [
+        812,
+        1600
+      ],
+      "sourceAlphaBounds": [
+        37,
+        46,
+        773,
+        1565
+      ],
+      "sourceCropBox": [
+        6,
+        15,
+        804,
+        1596
+      ],
+      "transparentPaddingPixels": 31,
+      "transparentPaddingFraction": 0.02,
+      "allNonzeroAlphaRetained": true,
+      "cropPolicy": "Only transparent outer margins; padding clamped to original canvas"
     },
     {
       "path": "assets/floorplans/types/F1/full.webp",
@@ -2398,15 +2566,36 @@
     },
     {
       "path": "assets/floorplans/types/F1/thumb.webp",
-      "bytes": 62986,
-      "sha256": "7b5974b03414c8dfb9792fb9c0d6cd41a4e4a8f90817c9fa107f68c6e4439724",
+      "bytes": 64636,
+      "sha256": "023659c24ad594aa51a1dcd387d570bd5c7ba6933d5b196174b9ba3d9aa4a9ad",
       "role": "floorplan-thumbnail",
       "type": "F1",
       "dimensions": [
-        184,
+        182,
         360
       ],
-      "lossless": true
+      "lossless": true,
+      "sourceSha256": "954086c32fd03fc71df355664bc3c74f44a48cf9ca0664de4c5cde603eab6acc",
+      "sourceDimensions": [
+        816,
+        1600
+      ],
+      "sourceAlphaBounds": [
+        43,
+        46,
+        776,
+        1557
+      ],
+      "sourceCropBox": [
+        12,
+        15,
+        807,
+        1588
+      ],
+      "transparentPaddingPixels": 31,
+      "transparentPaddingFraction": 0.02,
+      "allNonzeroAlphaRetained": true,
+      "cropPolicy": "Only transparent outer margins; padding clamped to original canvas"
     },
     {
       "path": "assets/floorplans/types/F2/full.webp",
@@ -2434,20 +2623,41 @@
     },
     {
       "path": "assets/floorplans/types/F2/thumb.webp",
-      "bytes": 67068,
-      "sha256": "4867ca0c8f4777a76bf62f3d7ecd14a9824f68607c8e17eef88f1ecdb179ceef",
+      "bytes": 67456,
+      "sha256": "916e0df8a105c712dcce2b95ad06e6981a7dbcf1bffc4109a1f282546a28447c",
       "role": "floorplan-thumbnail",
       "type": "F2",
       "dimensions": [
-        182,
+        181,
         360
       ],
-      "lossless": true
+      "lossless": true,
+      "sourceSha256": "eb670cab4da22e77d4d8167577d1647a2aad9535ba3da446336320fe53a7b317",
+      "sourceDimensions": [
+        807,
+        1600
+      ],
+      "sourceAlphaBounds": [
+        30,
+        38,
+        770,
+        1578
+      ],
+      "sourceCropBox": [
+        0,
+        7,
+        801,
+        1600
+      ],
+      "transparentPaddingPixels": 31,
+      "transparentPaddingFraction": 0.02,
+      "allNonzeroAlphaRetained": true,
+      "cropPolicy": "Only transparent outer margins; padding clamped to original canvas"
     }
   ],
   "totals": {
     "files": 48,
-    "bytes": 49474829,
+    "bytes": 49567717,
     "apartments": 69,
     "types": 10,
     "floorLayouts": 4
