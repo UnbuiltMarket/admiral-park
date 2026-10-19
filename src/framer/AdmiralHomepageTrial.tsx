@@ -12,7 +12,7 @@ const HOMEPAGE_ORBIT_VERSION = "15fce8a9d4fe"
 const HOMEPAGE_ASSETS = "https://raw.githubusercontent.com/UnbuiltMarket/admiral-park/main/assets"
 type HomepageStage = "opening" | "approach" | "building" | "connection" | "handoff" | "orbit"
 interface HomepageTiming { openingOut: number; buildingIn: number; buildingFull: number; ctaIn: number; rise: number }
-interface HomepageChannel { snapshot: SequenceSnapshot; timing: HomepageTiming; enabled: boolean }
+interface HomepageChannel { snapshot: SequenceSnapshot; timing: HomepageTiming; enabled: boolean; stage: HomepageStage }
 const homepageChannels = new Map<HTMLElement, HomepageChannel>()
 const homepageSubscribers = new Set<() => void>()
 const notifyHomepage = () => homepageSubscribers.forEach(update => update())
@@ -125,7 +125,7 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
             return box.width > 0 && box.height > 0 && box.bottom > 0 && box.top < innerHeight
         }
         function publish() {
-            homepageChannels.set(root!, { snapshot: heroSnapshot, timing: timing.current, enabled: currentStage === "opening" || currentStage === "approach" || currentStage === "building" })
+            homepageChannels.set(root!, { snapshot: heroSnapshot, timing: timing.current, stage: currentStage, enabled: currentStage === "opening" || currentStage === "approach" || currentStage === "building" })
             notifyHomepage()
         }
         function changeStage(next: HomepageStage) {
@@ -408,6 +408,30 @@ function createHomepageOverlay(Component: React.ComponentType<any>, kind: "openi
             if (!element?.style) return
             const original = { opacity: element.style.opacity, translate: element.style.translate, pointerEvents: element.style.pointerEvents, visibility: element.style.visibility, hidden: element.getAttribute("aria-hidden"), inert: element.inert }
             let selected: HTMLElement | null = null
+            let previousStage: HomepageStage | undefined, lastTiming: HomepageTiming | null = null
+            let fadeFrame = 0, disposed = false
+            let departure: { from: number; started: number; timing: HomepageTiming } | null = null
+            const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)")
+            function stopFade() {
+                if (fadeFrame) cancelAnimationFrame(fadeFrame)
+                fadeFrame = 0; departure = null
+            }
+            function paint(opacity: number, t: HomepageTiming, interactive: boolean) {
+                element!.style.opacity = String(opacity); element!.style.translate = `0px ${kind === "opening" ? -(1 - opacity) * t.rise * .6 : (1 - opacity) * t.rise}px`
+                element!.style.visibility = opacity < .001 ? "hidden" : original.visibility
+                element!.style.pointerEvents = interactive ? original.pointerEvents : "none"; element!.inert = interactive ? original.inert : true
+                if (opacity < .01) element!.setAttribute("aria-hidden", "true")
+                else if (original.hidden === null) element!.removeAttribute("aria-hidden"); else element!.setAttribute("aria-hidden", original.hidden)
+                element!.dataset.heroOverlay = kind
+            }
+            function fadeDeparture(now: number) {
+                fadeFrame = 0
+                if (disposed || !departure) return
+                const progress = sequenceClamp((now - departure.started) / 500)
+                paint(departure.from * (1 - sequenceEase(progress)), departure.timing, false)
+                if (progress < 1) fadeFrame = requestAnimationFrame(fadeDeparture)
+                else departure = null
+            }
             function resolve() {
                 if (selected?.isConnected && homepageChannels.has(selected) && selected.getBoundingClientRect().width > 0) return homepageChannels.get(selected)
                 let parent = element!.parentElement
@@ -419,20 +443,34 @@ function createHomepageOverlay(Component: React.ComponentType<any>, kind: "openi
             }
             function update() {
                 const channel = resolve()
-                if (!channel) return
+                if (!channel) {
+                    stopFade(); previousStage = undefined
+                    if (lastTiming) paint(0, lastTiming, false)
+                    return
+                }
+                const fromStage = previousStage
+                previousStage = channel.stage
                 const { progress } = channel.snapshot, t = channel.timing
+                lastTiming = t
+                if (departure && (channel.enabled || reducedMotion.matches)) stopFade()
+                if (kind !== "opening" && fromStage === "building" && channel.stage === "connection" && !reducedMotion.matches) {
+                    const from = sequenceClamp(parseFloat(getComputedStyle(element!).opacity) || 0)
+                    if (from > .001) {
+                        stopFade(); departure = { from, started: performance.now(), timing: t }
+                        // The text stays visible through the dissolve, but its CTA stops accepting input immediately.
+                        paint(from, t, false); fadeFrame = requestAnimationFrame(fadeDeparture)
+                        return
+                    }
+                }
+                if (departure) return
                 const ramp = (from: number, to: number) => sequenceEase(sequenceClamp((progress * 100 - from) / Math.max(1, to - from)))
                 const opacity = !channel.enabled ? 0 : kind === "opening" ? 1 - ramp(0, t.openingOut) : kind === "building" ? ramp(t.buildingIn, t.buildingFull) : ramp(t.ctaIn, 100)
-                const interactive = opacity >= .98 && (kind !== "cta" || channel.snapshot.state === "arrival" || channel.snapshot.state === "reduced")
-                element!.style.opacity = String(opacity); element!.style.translate = `0px ${kind === "opening" ? -(1 - opacity) * t.rise * .6 : (1 - opacity) * t.rise}px`
-                element!.style.visibility = opacity < .001 ? "hidden" : original.visibility
-                element!.style.pointerEvents = interactive ? original.pointerEvents : "none"; element!.inert = interactive ? original.inert : true
-                if (opacity < .01) element!.setAttribute("aria-hidden", "true")
-                else if (original.hidden === null) element!.removeAttribute("aria-hidden"); else element!.setAttribute("aria-hidden", original.hidden)
-                element!.dataset.heroOverlay = kind
+                const interactive = channel.enabled && opacity >= .98 && (kind !== "cta" || channel.snapshot.state === "arrival" || channel.snapshot.state === "reduced")
+                paint(opacity, t, interactive)
             }
-            homepageSubscribers.add(update); update()
+            homepageSubscribers.add(update); reducedMotion.addEventListener("change", update); update()
             return () => {
+                disposed = true; stopFade(); reducedMotion.removeEventListener("change", update)
                 homepageSubscribers.delete(update); element.style.opacity = original.opacity; element.style.translate = original.translate
                 element.style.pointerEvents = original.pointerEvents; element.style.visibility = original.visibility; element.inert = original.inert
                 if (original.hidden === null) element.removeAttribute("aria-hidden"); else element.setAttribute("aria-hidden", original.hidden)

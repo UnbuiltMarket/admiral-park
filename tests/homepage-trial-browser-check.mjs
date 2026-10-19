@@ -136,6 +136,38 @@ async function apartmentField(page,name){return page.locator(`[data-apartment-fi
 async function componentScreenshot(page,name){const style=await page.addStyleTag({content:'#navbar{visibility:hidden!important}'});try{await page.screenshot({path:fileURLToPath(new URL(name,out))});}finally{await style.evaluate(element=>element.remove());}}
 
 try{
+ await pass('building content fades during SEQ_02 departure without hiding restored copy',async()=>{
+  const readCopy=page=>page.evaluate(()=>Object.fromEntries(['intro','building','cta'].map(id=>{const element=document.getElementById(id),style=getComputedStyle(element);return [id,{opacity:Number(style.opacity),visibility:style.visibility,pointer:style.pointerEvents,inert:element.inert,hidden:element.getAttribute('aria-hidden')}];})));
+  const readableBuilding=page=>page.waitForFunction(()=>['building','cta'].every(id=>Number(getComputedStyle(document.getElementById(id)).opacity)>.99));
+  for(const phone of [false,true]){
+   const f=await fixture({externalOverlay:true,context:phone?{viewport:{width:390,height:844},isMobile:true,hasTouch:true,deviceScaleFactor:2}:{},props:{connectionDuration:3,maxSpeed:1}}),{page}=f;
+   await coveredClick(page,'Skip approach');await waitStage(page,'building');await readableBuilding(page);await page.waitForTimeout(250);
+   const before=await readCopy(page);assert.equal(before.building.visibility,'visible');assert.equal(before.cta.inert,false);
+   if(phone){
+    const box=await page.locator('#building').boundingBox(),x=box.x+Math.min(box.width/2,100),y=box.y+Math.min(box.height/2,40),cdp=await page.context().newCDPSession(page);
+    await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x,y}]});await cdp.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x,y:y-90}]});await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
+   }else await freshWheel(page,120);
+   await waitStage(page,'connection');const early=await readCopy(page);
+   for(const id of ['building','cta']){assert.ok(early[id].opacity>0,'Departing '+id+' remains visible initially');assert.equal(early[id].visibility,'visible');assert.equal(early[id].pointer,'none','Departing copy immediately stops intercepting input');assert.equal(early[id].inert,true);}
+   assert.equal(early.intro.opacity,0,'The opening location text never flashes during SEQ_02');
+   await page.waitForTimeout(170);const middle=await readCopy(page);
+   for(const id of ['building','cta'])assert.ok(middle[id].opacity>0&&middle[id].opacity<early[id].opacity,'Departing '+id+' passes through a visibly intermediate opacity');
+   await page.waitForTimeout(500);const end=await readCopy(page);
+   for(const id of ['building','cta']){assert.equal(end[id].opacity,0,'Ongoing connector frames cannot restart the fade');assert.equal(end[id].visibility,'hidden');assert.equal(end[id].inert,true);}
+   assert.equal(end.intro.opacity,0);assert.equal(await page.evaluate(()=>scrollY),0);
+   if(!phone){
+    await coveredClick(page,'Overview');await waitStage(page,'opening');await coveredClick(page,'Skip approach');await waitStage(page,'building');await readableBuilding(page);
+    await coveredClick(page,'Explore building');await waitStage(page,'connection');await page.waitForTimeout(80);assert.ok((await readCopy(page)).building.opacity>0);
+    await coveredClick(page,'Overview');await waitStage(page,'opening');assert.equal((await readCopy(page)).intro.opacity,1,'Overview restores the opening copy immediately');
+    await coveredClick(page,'Skip approach');await waitStage(page,'building');await readableBuilding(page);await page.waitForTimeout(650);
+    const restored=await readCopy(page);for(const id of ['building','cta']){assert.equal(restored[id].opacity,1,'An obsolete departure cannot hide restored '+id);assert.equal(restored[id].visibility,'visible');assert.equal(restored[id].inert,false);}assert.equal(restored.intro.opacity,0);
+    await coveredClick(page,'Explore building');await waitStage(page,'connection');await page.waitForTimeout(80);assert.ok((await readCopy(page)).building.opacity>0);
+    await page.emulateMedia({reducedMotion:'reduce'});await page.waitForTimeout(80);const reduced=await readCopy(page);
+    for(const id of ['building','cta']){assert.equal(reduced[id].opacity,0,'Reduced motion removes departing copy without waiting for the fade');assert.equal(reduced[id].visibility,'hidden');assert.equal(reduced[id].inert,true);}assert.equal(reduced.intro.opacity,0);
+   }
+   await f.close();
+  }
+ });
  await pass('SEQ_02 full journey waits for a fresh scroll draws the connector endpoint and drains wheel momentum',async()=>{
   const f=await fixture({useDefaultOrbitStart:true,externalOverlay:true,props:{duration:.6,connectionDuration:.8,maxSpeed:1}}),{page}=f;
   await waitStage(page,'opening');assert.equal(await page.evaluate(()=>window.bitmapRecords.filter(record=>record.sequence==='SEQ_02').length),0,'Opening does not decode the connector');
