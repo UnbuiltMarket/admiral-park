@@ -1,0 +1,2455 @@
+{
+  "schemaVersion": "1.0",
+  "source": {
+    "id": "customer-book-r05",
+    "filename": "Admiral-Park-Ugyfelkonyv.pdf",
+    "sha256": "04ffd0fbda44a1a52718f254dcc08a3425a2f6d78a4202a2587904cb053d5857",
+    "pageCount": 21,
+    "revision": "2026-10-08-customer-book-r05"
+  },
+  "mappingSource": {
+    "filename": "Admiral-Park-Apartment-Types.xlsx",
+    "sha256": "28d8cb6630c79908b0cfaed0966917f9f7f0d5f730241b7e48e212f25407a179",
+    "sheet": "Apartments",
+    "join": "Exact provenance.sourceApartmentCode"
+  },
+  "description": "Shared type illustrations and type datasheets. Individual unit geometry, mirroring and outdoor areas may vary; the apartment list retains its original unit-specific areas and prices.",
+  "types": {
+    "A": {
+      "representativeApartmentId": "A003",
+      "floorplan": {
+        "original": "assets/floorplans/types/A/original.png",
+        "thumbnail": "assets/floorplans/types/A/thumb.webp",
+        "full": "assets/floorplans/types/A/full.webp",
+        "label": "A típus · illusztráció",
+        "isIllustrative": true
+      },
+      "datasheet": {
+        "url": "assets/datasheets/types/A.pdf",
+        "filename": "Admiral-Park-A-tipus-adatlap.pdf",
+        "label": "A típus adatlapja",
+        "page": 8
+      }
+    },
+    "B": {
+      "representativeApartmentId": "A001",
+      "floorplan": {
+        "original": "assets/floorplans/types/B/original.png",
+        "thumbnail": "assets/floorplans/types/B/thumb.webp",
+        "full": "assets/floorplans/types/B/full.webp",
+        "label": "B típus · illusztráció",
+        "isIllustrative": true
+      },
+      "datasheet": {
+        "url": "assets/datasheets/types/B.pdf",
+        "filename": "Admiral-Park-B-tipus-adatlap.pdf",
+        "label": "B típus adatlapja",
+        "page": 9
+      }
+    },
+    "C": {
+      "representativeApartmentId": "A103",
+      "floorplan": {
+        "original": "assets/floorplans/types/C/original.png",
+        "thumbnail": "assets/floorplans/types/C/thumb.webp",
+        "full": "assets/floorplans/types/C/full.webp",
+        "label": "C típus · illusztráció",
+        "isIllustrative": true
+      },
+      "datasheet": {
+        "url": "assets/datasheets/types/C.pdf",
+        "filename": "Admiral-Park-C-tipus-adatlap.pdf",
+        "label": "C típus adatlapja",
+        "page": 10
+      }
+    },
+    "D": {
+      "representativeApartmentId": "A104",
+      "floorplan": {
+        "original": "assets/floorplans/types/D/original.png",
+        "thumbnail": "assets/floorplans/types/D/thumb.webp",
+        "full": "assets/floorplans/types/D/full.webp",
+        "label": "D típus · illusztráció",
+        "isIllustrative": true
+      },
+      "datasheet": {
+        "url": "assets/datasheets/types/D.pdf",
+        "filename": "Admiral-Park-D-tipus-adatlap.pdf",
+        "label": "D típus adatlapja",
+        "page": 11
+      }
+    },
+    "E": {
+      "representativeApartmentId": "A304",
+      "floorplan": {
+        "original": "assets/floorplans/types/E/original.png",
+        "thumbnail": "assets/floorplans/types/E/thumb.webp",
+        "full": "assets/floorplans/types/E/full.webp",
+        "label": "E típus · illusztráció",
+        "isIllustrative": true
+      },
+      "datasheet": {
+        "url": "assets/datasheets/types/E.pdf",
+        "filename": "Admiral-Park-E-tipus-adatlap.pdf",
+        "label": "E típus adatlapja",
+        "page": 12
+      }
+    },
+    "E1": {
+      "representativeApartmentId": "A205",
+      "floorplan": {
+        "original": "assets/floorplans/types/E1/original.png",
+        "thumbnail": "assets/floorplans/types/E1/thumb.webp",
+        "full": "assets/floorplans/types/E1/full.webp",
+        "label": "E1 típus · illusztráció",
+        "isIllustrative": true
+      },
+      "datasheet": {
+        "url": "assets/datasheets/types/E1.pdf",
+        "filename": "Admiral-Park-E1-tipus-adatlap.pdf",
+        "label": "E1 típus adatlapja",
+        "page": 13
+      }
+    },
+    "E2": {
+      "representativeApartmentId": "A201",
+      "floorplan": {
+        "original": "assets/floorplans/types/E2/original.png",
+        "thumbnail": "assets/floorplans/types/E2/thumb.webp",
+        "full": "assets/floorplans/types/E2/full.webp",
+        "label": "E2 típus · illusztráció",
+        "isIllustrative": true
+      },
+      "datasheet": {
+        "url": "assets/datasheets/types/E2.pdf",
+        "filename": "Admiral-Park-E2-tipus-adatlap.pdf",
+        "label": "E2 típus adatlapja",
+        "page": 14
+      }
+    },
+    "F": {
+      "representativeApartmentId": "A303",
+      "floorplan": {
+        "original": "assets/floorplans/types/F/original.png",
+        "thumbnail": "assets/floorplans/types/F/thumb.webp",
+        "full": "assets/floorplans/types/F/full.webp",
+        "label": "F típus · illusztráció",
+        "isIllustrative": true
+      },
+      "datasheet": {
+        "url": "assets/datasheets/types/F.pdf",
+        "filename": "Admiral-Park-F-tipus-adatlap.pdf",
+        "label": "F típus adatlapja",
+        "page": 15
+      }
+    },
+    "F1": {
+      "representativeApartmentId": "B302",
+      "floorplan": {
+        "original": "assets/floorplans/types/F1/original.png",
+        "thumbnail": "assets/floorplans/types/F1/thumb.webp",
+        "full": "assets/floorplans/types/F1/full.webp",
+        "label": "F1 típus · illusztráció",
+        "isIllustrative": true
+      },
+      "datasheet": {
+        "url": "assets/datasheets/types/F1.pdf",
+        "filename": "Admiral-Park-F1-tipus-adatlap.pdf",
+        "label": "F1 típus adatlapja",
+        "page": 16
+      }
+    },
+    "F2": {
+      "representativeApartmentId": "A302",
+      "floorplan": {
+        "original": "assets/floorplans/types/F2/original.png",
+        "thumbnail": "assets/floorplans/types/F2/thumb.webp",
+        "full": "assets/floorplans/types/F2/full.webp",
+        "label": "F2 típus · illusztráció",
+        "isIllustrative": true
+      },
+      "datasheet": {
+        "url": "assets/datasheets/types/F2.pdf",
+        "filename": "Admiral-Park-F2-tipus-adatlap.pdf",
+        "label": "F2 típus adatlapja",
+        "page": 17
+      }
+    }
+  },
+  "floors": {
+    "0": {
+      "thumbnail": "assets/floor-layouts/00/thumb.webp",
+      "full": "assets/floor-layouts/00/full.webp",
+      "label": "Földszinti szintrajz · A, B és C épület",
+      "sourcePage": 3,
+      "floorCode": "FSZ",
+      "source": {
+        "filename": "00-plan-art.png",
+        "sha256": "3e184927087fccd92a9cf81a31a189054a45bb74087398373c8e67da32330965",
+        "revision": "2026-10-08-customer-book-r02",
+        "kind": "native-transparent-plan-art",
+        "dimensions": [
+          2560,
+          1600
+        ],
+        "nativeTransparency": true
+      }
+    },
+    "1": {
+      "thumbnail": "assets/floor-layouts/01/thumb.webp",
+      "full": "assets/floor-layouts/01/full.webp",
+      "label": "1. emeleti szintrajz · A, B és C épület",
+      "sourcePage": 4,
+      "floorCode": "01",
+      "source": {
+        "filename": "01-plan-art.png",
+        "sha256": "1beb68541d93374f14ac1a157b2020c8816c70e86bdace19658be358db588503",
+        "revision": "2026-10-08-customer-book-r02",
+        "kind": "native-transparent-plan-art",
+        "dimensions": [
+          2560,
+          1600
+        ],
+        "nativeTransparency": true
+      }
+    },
+    "2": {
+      "thumbnail": "assets/floor-layouts/02/thumb.webp",
+      "full": "assets/floor-layouts/02/full.webp",
+      "label": "2. emeleti szintrajz · A, B és C épület",
+      "sourcePage": 5,
+      "floorCode": "02",
+      "source": {
+        "filename": "02-plan-art.png",
+        "sha256": "57e2245c0db7565386a7b017273258d16016e400168fa467a7bfec1f2923d2ea",
+        "revision": "2026-10-08-customer-book-r02",
+        "kind": "native-transparent-plan-art",
+        "dimensions": [
+          2560,
+          1600
+        ],
+        "nativeTransparency": true
+      }
+    },
+    "3": {
+      "thumbnail": "assets/floor-layouts/03/thumb.webp",
+      "full": "assets/floor-layouts/03/full.webp",
+      "label": "3. emeleti szintrajz · A, B és C épület",
+      "sourcePage": 6,
+      "floorCode": "03",
+      "source": {
+        "filename": "03-plan-art.png",
+        "sha256": "cdf4f1897710ab2664de4213c01caa6f50c4a2d4b954d29e57f1201c7823c68f",
+        "revision": "2026-10-08-customer-book-r02",
+        "kind": "native-transparent-plan-art",
+        "dimensions": [
+          2560,
+          1600
+        ],
+        "nativeTransparency": true
+      }
+    }
+  },
+  "apartments": {
+    "A001": {
+      "apartmentType": "B",
+      "floorplan": "assets/floorplans/types/B/full.webp",
+      "media": {
+        "floorplan": {
+          "thumbnail": "assets/floorplans/types/B/thumb.webp",
+          "full": "assets/floorplans/types/B/full.webp",
+          "label": "B típus · illusztráció",
+          "isIllustrative": true
+        },
+        "floorLayout": {
+          "thumbnail": "assets/floor-layouts/00/thumb.webp",
+          "full": "assets/floor-layouts/00/full.webp",
+          "label": "Földszinti szintrajz · A, B és C épület"
+        },
+        "datasheet": {
+          "url": "assets/datasheets/types/B.pdf",
+          "filename": "Admiral-Park-B-tipus-adatlap.pdf",
+          "label": "B típus adatlapja",
+          "page": 9
+        }
+      }
+    },
+    "A002": {
+      "apartmentType": "B",
+      "floorplan": "assets/floorplans/types/B/full.webp",
+      "media": {
+        "floorplan": {
+          "thumbnail": "assets/floorplans/types/B/thumb.webp",
+          "full": "assets/floorplans/types/B/full.webp",
+          "label": "B típus · illusztráció",
+          "isIllustrative": true
+        },
+        "floorLayout": {
+          "thumbnail": "assets/floor-layouts/00/thumb.webp",
+          "full": "assets/floor-layouts/00/full.webp",
+          "label": "Földszinti szintrajz · A, B és C épület"
+        },
+        "datasheet": {
+          "url": "assets/datasheets/types/B.pdf",
+          "filename": "Admiral-Park-B-tipus-adatlap.pdf",
+          "label": "B típus adatlapja",
+          "page": 9
+        }
+      }
+    },
+    "A003": {
+      "apartmentType": "A",
+      "floorplan": "assets/floorplans/types/A/full.webp",
+      "media": {
+        "floorplan": {
+          "thumbnail": "assets/floorplans/types/A/thumb.webp",
+          "full": "assets/floorplans/types/A/full.webp",
+          "label": "A típus · illusztráció",
+          "isIllustrative": true
+        },
+        "floorLayout": {
+          "thumbnail": "assets/floor-layouts/00/thumb.webp",
+          "full": "assets/floor-layouts/00/full.webp",
+          "label": "Földszinti szintrajz · A, B és C épület"
+        },
+        "datasheet": {
+          "url": "assets/datasheets/types/A.pdf",
+          "filename": "Admiral-Park-A-tipus-adatlap.pdf",
+          "label": "A típus adatlapja",
+          "page": 8
+        }
+      }
+    },
+    "A004": {
+      "apartmentType": "A",
+      "floorplan": "assets/floorplans/types/A/full.webp",
+      "media": {
+        "floorplan": {
+          "thumbnail": "assets/floorplans/types/A/thumb.webp",
+          "full": "assets/floorplans/types/A/full.webp",
+          "label": "A típus · illusztráció",
+          "isIllustrative": true
+        },
+        "floorLayout": {
+          "thumbnail": "assets/floor-layouts/00/thumb.webp",
+          "full": "assets/floor-layouts/00/full.webp",
+          "label": "Földszinti szintrajz · A, B és C épület"
+        },
+        "datasheet": {
+          "url": "assets/datasheets/types/A.pdf",
+          "filename": "Admiral-Park-A-tipus-adatlap.pdf",
+          "label": "A típus adatlapja",
+          "page": 8
+        }
+      }
+    },
+    "A005": {
+      "apartmentType": "B",
+      "floorplan": "assets/floorplans/types/B/full.webp",
+      "media": {
+        "floorplan": {
+          "thumbnail": "assets/floorplans/types/B/thumb.webp",
+          "full": "assets/floorplans/types/B/full.webp",
+          "label": "B típus · illusztráció",
+          "isIllustrative": true
+        },
+        "floorLayout": {
+          "thumbnail": "assets/floor-layouts/00/thumb.webp",
+          "full": "assets/floor-layouts/00/full.webp",
+          "label": "Földszinti szintrajz · A, B és C épület"
+        },
+        "datasheet": {
+          "url": "assets/datasheets/types/B.pdf",
+          "filename": "Admiral-Park-B-tipus-adatlap.pdf",
+          "label": "B típus adatlapja",
+          "page": 9
+        }
+      }
+    },
+    "A006": {
+      "apartmentType": "B",
+      "floorplan": "assets/floorplans/types/B/full.webp",
+      "media": {
+        "floorplan": {
+          "thumbnail": "assets/floorplans/types/B/thumb.webp",
+          "full": "assets/floorplans/types/B/full.webp",
+          "label": "B típus · illusztráció",
+          "isIllustrative": true
+        },
+        "floorLayout": {
+          "thumbnail": "assets/floor-layouts/00/thumb.webp",
+          "full": "assets/floor-layouts/00/full.webp",
+          "label": "Földszinti szintrajz · A, B és C épület"
+        },
+        "datasheet": {
+          "url": "assets/datasheets/types/B.pdf",
+          "filename": "Admiral-Park-B-tipus-adatlap.pdf",
+          "label": "B típus adatlapja",
+          "page": 9
+        }
+      }
+    },
+    "A101": {
+      "apartmentType": "A",
+      "floorplan": "assets/floorplans/types/A/full.webp",
+      "media": {
+        "floorplan": {
+          "thumbnail": "assets/floorplans/types/A/thumb.webp",
+          "full": "assets/floorplans/types/A/full.webp",
+          "label": "A típus · illusztráció",
+          "isIllustrative": true
+        },
+        "floorLayout": {
+          "thumbnail": "assets/floor-layouts/01/thumb.webp",
+          "full": "assets/floor-layouts/01/full.webp",
+          "label": "1. emeleti szintrajz · A, B és C épület"
+        },
+        "datasheet": {
+          "url": "assets/datasheets/types/A.pdf",
+          "filename": "Admiral-Park-A-tipus-adatlap.pdf",
+          "label": "A típus adatlapja",
+          "page": 8
+        }
+      }
+    },
+    "A102": {
+      "apartmentType": "B",
+      "floorplan": "assets/floorplans/types/B/full.webp",
+      "media": {
+        "floorplan": {
+          "thumbnail": "assets/floorplans/types/B/thumb.webp",
+          "full": "assets/floorplans/types/B/full.webp",
+          "label": "B típus · illusztráció",
+          "isIllustrative": true
+        },
+        "floorLayout": {
+          "thumbnail": "assets/floor-layouts/01/thumb.webp",
+          "full": "assets/floor-layouts/01/full.webp",
+          "label": "1. emeleti szintrajz · A, B és C épület"
+        },
+        "datasheet": {
+          "url": "assets/datasheets/types/B.pdf",
+          "filename": "Admiral-Park-B-tipus-adatlap.pdf",
+          "label": "B típus adatlapja",
+          "page": 9
+        }
+      }
+    },
+    "A103": {
+      "apartmentType": "C",
+      "floorplan": "assets/floorplans/types/C/full.webp",
+      "media": {
+        "floorplan": {
+          "thumbnail": "assets/floorplans/types/C/thumb.webp",
+          "full": "assets/floorplans/types/C/full.webp",
+          "label": "C típus · illusztráció",
+          "isIllustrative": true
+        },
+        "floorLayout": {
+          "thumbnail": "assets/floor-layouts/01/thumb.webp",
+          "full": "assets/floor-layouts/01/full.webp",
+          "label": "1. emeleti szintrajz · A, B és C épület"
+        },
+        "datasheet": {
+          "url": "assets/datasheets/types/C.pdf",
+          "filename": "Admiral-Park-C-tipus-adatlap.pdf",
+          "label": "C típus adatlapja",
+          "page": 10
+        }
+      }
+    },
+    "A104": {
+      "apartmentType": "D",
+      "floorplan": "assets/floorplans/types/D/full.webp",
+      "media": {
+        "floorplan": {
+          "thumbnail": "assets/floorplans/types/D/thumb.webp",
+          "full": "assets/floorplans/types/D/full.webp",
+          "label": "D típus · illusztráció",
+          "isIllustrative": true
+        },
+        "floorLayout": {
+          "thumbnail": "assets/floor-layouts/01/thumb.webp",
+          "full": "assets/floor-layouts/01/full.webp",
+          "label": "1. emeleti szintrajz · A, B és C épület"
+        },
+        "datasheet": {
+          "url": "assets/datasheets/types/D.pdf",
+          "filename": "Admiral-Park-D-tipus-adatlap.pdf",
+          "label": "D típus adatlapja",
+          "page": 11
+        }
+      }
+    },
+    "A105": {
+      "apartmentType": "C",
+      "floorplan": "assets/floorplans/types/C/full.webp",
+      "media": {
+        "floorplan": {
+          "thumbnail": "assets/floorplans/types/C/thumb.webp",
+          "full": "assets/floorplans/types/C/full.webp",
+          "label": "C típus · illusztráció",
+          "isIllustrative": true
+        },
+        "floorLayout": {
+          "thumbnail": "assets/floor-layouts/01/thumb.webp",
+          "full": "assets/floor-layouts/01/full.webp",
+          "label": "1. emeleti szintrajz · A, B és C épület"
+        },
+        "datasheet": {
+          "url": "assets/datasheets/types/C.pdf",
+          "filename": "Admiral-Park-C-tipus-adatlap.pdf",
+          "label": "C típus adatlapja",
+          "page": 10
+        }
+      }
+    },
+    "A106": {
+      "apartmentType": "B",
+      "floorplan": "assets/floorplans/types/B/full.webp",
+      "media": {
+        "floorplan": {
+          "thumbnail": "assets/floorplans/types/B/thumb.webp",
+          "full": "assets/floorplans/types/B/full.webp",
+          "label": "B típus · illusztráció",
+          "isIllustrative": true
+        },
+        "floorLayout": {
+          "thumbnail": "assets/floor-layouts/01/thumb.webp",
+          "full": "assets/floor-layouts/01/full.webp",
+          "label": "1. emeleti szintrajz · A, B és C épület"
+        },
+        "datasheet": {
+          "url": "assets/datasheets/types/B.pdf",
+          "filename": "Admiral-Park-B-tipus-adatlap.pdf",
+          "label": "B típus adatlapja",
+          "page": 9
+        }
+      }
+    },
+    "A107": {
+      "apartmentType": "A",
+      "floorplan": "assets/floorplans/types/A/full.webp",
+      "media": {
+        "floorplan": {
+          "thumbnail": "assets/floorplans/types/A/thumb.webp",
+          "full": "assets/floorplans/types/A/full.webp",
+          "label": "A típus · illusztráció",
+          "isIllustrative": true
+        },
+        "floorLayout": {
+          "thumbnail": "assets/floor-layouts/01/thumb.webp",
+          "full": "assets/floor-layouts/01/full.webp",
+          "label": "1. emeleti szintrajz · A, B és C épület"
+        },
+        "datasheet": {
+          "url": "assets/datasheets/types/A.pdf",
+          "filename": "Admiral-Park-A-tipus-adatlap.pdf",
+          "label": "A típus adatlapja",
+          "page": 8
+        }
+      }
+    },
+    "A201": {
+      "apartmentType": "E2",
+      "floorplan": "assets/floorplans/types/E2/full.webp",
+      "media": {
+        "floorplan": {
+          "thumbnail": "assets/floorplans/types/E2/thumb.webp",
+          "full": "assets/floorplans/types/E2/full.webp",
+          "label": "E2 típus · illusztráció",
+          "isIllustrative": true
+        },
+        "floorLayout": {
+          "thumbnail": "assets/floor-layouts/02/thumb.webp",
+          "full": "assets/floor-layouts/02/full.webp",
+          "label": "2. emeleti szintrajz · A, B és C épület"
+        },
+        "datasheet": {
+          "url": "assets/datasheets/types/E2.pdf",
+          "filename": "Admiral-Park-E2-tipus-adatlap.pdf",
+          "label": "E2 típus adatlapja",
+          "page": 14
+        }
+      }
+    },
+    "A202": {
+      "apartmentType": "C",
+      "floorplan": "assets/floorplans/types/C/full.webp",
+      "media": {
+        "floorplan": {
+          "thumbnail": "assets/floorplans/types/C/thumb.webp",
+          "full": "assets/floorplans/types/C/full.webp",
+          "label": "C típus · illusztráció",
+          "isIllustrative": true
+        },
+        "floorLayout": {
+          "thumbnail": "assets/floor-layouts/02/thumb.webp",
+          "full": "assets/floor-layouts/02/full.webp",
+          "label": "2. emeleti szintrajz · A, B és C épület"
+        },
+        "datasheet": {
+          "url": "assets/datasheets/types/C.pdf",
+          "filename": "Admiral-Park-C-tipus-adatlap.pdf",
+          "label": "C típus adatlapja",
+          "page": 10
+        }
+      }
+    },
+    "A203": {
+      "apartmentType": "D",
+      "floorplan": "assets/floorplans/types/D/full.webp",
+      "media": {
+        "floorplan": {
+          "thumbnail": "assets/floorplans/types/D/thumb.webp",
+          "full": "assets/floorplans/types/D/full.webp",
+          "label": "D típus · illusztráció",
+          "isIllustrative": true
+        },
+        "floorLayout": {
+          "thumbnail": "assets/floor-layouts/02/thumb.webp",
+          "full": "assets/floor-layouts/02/full.webp",
+          "label": "2. emeleti szintrajz · A, B és C épület"
+        },
+        "datasheet": {
+          "url": "assets/datasheets/types/D.pdf",
+          "filename": "Admiral-Park-D-tipus-adatlap.pdf",
+          "label": "D típus adatlapja",
+          "page": 11
+        }
+      }
+    },
+    "A204": {
+      "apartmentType": "C",
+      "floorplan": "assets/floorplans/types/C/full.webp",
+      "media": {
+        "floorplan": {
+          "thumbnail": "assets/floorplans/types/C/thumb.webp",
+          "full": "assets/floorplans/types/C/full.webp",
+          "label": "C típus · illusztráció",
+          "isIllustrative": true
+        },
+        "floorLayout": {
+          "thumbnail": "assets/floor-layouts/02/thumb.webp",
+          "full": "assets/floor-layouts/02/full.webp",
+          "label": "2. emeleti szintrajz · A, B és C épület"
+        },
+        "datasheet": {
+          "url": "assets/datasheets/types/C.pdf",
+          "filename": "Admiral-Park-C-tipus-adatlap.pdf",
+          "label": "C típus adatlapja",
+          "page": 10
+        }
+      }
+    },
+    "A205": {
+      "apartmentType": "E1",
+      "floorplan": "assets/floorplans/types/E1/full.webp",
+      "media": {
+        "floorplan": {
+          "thumbnail": "assets/floorplans/types/E1/thumb.webp",
+          "full": "assets/floorplans/types/E1/full.webp",
+          "label": "E1 típus · illusztráció",
+          "isIllustrative": true
+        },
+        "floorLayout": {
+          "thumbnail": "assets/floor-layouts/02/thumb.webp",
+          "full": "assets/floor-layouts/02/full.webp",
+          "label": "2. emeleti szintrajz · A, B és C épület"
+        },
+        "datasheet": {
+          "url": "assets/datasheets/types/E1.pdf",
+          "filename": "Admiral-Park-E1-tipus-adatlap.pdf",
+          "label": "E1 típus adatlapja",
+          "page": 13
+        }
+      }
+    },
+    "A301": {
+      "apartmentType": "E2",
+      "floorplan": "assets/floorplans/types/E2/full.webp",
+      "media": {
+        "floorplan": {
+          "thumbnail": "assets/floorplans/types/E2/thumb.webp",
+          "full": "assets/floorplans/types/E2/full.webp",
+          "label": "E2 típus · illusztráció",
+          "isIllustrative": true
+        },
+        "floorLayout": {
+          "thumbnail": "assets/floor-layouts/03/thumb.webp",
+          "full": "assets/floor-layouts/03/full.webp",
+          "label": "3. emeleti szintrajz · A, B és C épület"
+        },
+        "datasheet": {
+          "url": "assets/datasheets/types/E2.pdf",
+          "filename": "Admiral-Park-E2-tipus-adatlap.pdf",
+          "label": "E2 típus adatlapja",
+          "page": 14
+        }
+      }
+    },
+    "A302": {
+      "apartmentType": "F2",
+      "floorplan": "assets/floorplans/types/F2/full.webp",
+      "media": {
+        "floorplan": {
+          "thumbnail": "assets/floorplans/types/F2/thumb.webp",
+          "full": "assets/floorplans/types/F2/full.webp",
+          "label": "F2 típus · illusztráció",
+          "isIllustrative": true
+        },
+        "floorLayout": {
+          "thumbnail": "assets/floor-layouts/03/thumb.webp",
+          "full": "assets/floor-layouts/03/full.webp",
+          "label": "3. emeleti szintrajz · A, B és C épület"
+        },
+        "datasheet": {
+          "url": "assets/datasheets/types/F2.pdf",
+          "filename": "Admiral-Park-F2-tipus-adatlap.pdf",
+          "label": "F2 típus adatlapja",
+          "page": 17
+        }
+      }
+    },
+    "A303": {
+      "apartmentType": "F",
+      "floorplan": "assets/floorplans/types/F/full.webp",
+      "media": {
+        "floorplan": {
+          "thumbnail": "assets/floorplans/types/F/thumb.webp",
+          "full": "assets/floorplans/types/F/full.webp",
+          "label": "F típus · illusztráció",
+          "isIllustrative": true
+        },
+        "floorLayout": {
+          "thumbnail": "assets/floor-layouts/03/thumb.webp",
+          "full": "assets/floor-layouts/03/full.webp",
+          "label": "3. emeleti szintrajz · A, B és C épület"
+        },
+        "datasheet": {
+          "url": "assets/datasheets/types/F.pdf",
+          "filename": "Admiral-Park-F-tipus-adatlap.pdf",
+          "label": "F típus adatlapja",
+          "page": 15
+        }
+      }
+    },
+    "A304": {
+      "apartmentType": "E",
+      "floorplan": "assets/floorplans/types/E/full.webp",
+      "media": {
+        "floorplan": {
+          "thumbnail": "assets/floorplans/types/E/thumb.webp",
+          "full": "assets/floorplans/types/E/full.webp",
+          "label": "E típus · illusztráció",
+          "isIllustrative": true
+        },
+        "floorLayout": {
+          "thumbnail": "assets/floor-layouts/03/thumb.webp",
+          "full": "assets/floor-layouts/03/full.webp",
+          "label": "3. emeleti szintrajz · A, B és C épület"
+        },
+        "datasheet": {
+          "url": "assets/datasheets/types/E.pdf",
+          "filename": "Admiral-Park-E-tipus-adatlap.pdf",
+          "label": "E típus adatlapja",
+          "page": 12
+        }
+      }
+    },
+    "B001": {
+      "apartmentType": "B",
+      "floorplan": "assets/floorplans/types/B/full.webp",
+      "media": {
+        "floorplan": {
+          "thumbnail": "assets/floorplans/types/B/thumb.webp",
+          "full": "assets/floorplans/types/B/full.webp",
+          "label": "B típus · illusztráció",
+          "isIllustrative": true
+        },
+        "floorLayout": {
+          "thumbnail": "assets/floor-layouts/00/thumb.webp",
+          "full": "assets/floor-layouts/00/full.webp",
+          "label": "Földszinti szintrajz · A, B és C épület"
+        },
+        "datasheet": {
+          "url": "assets/datasheets/types/B.pdf",
+          "filename": "Admiral-Park-B-tipus-adatlap.pdf",
+          "label": "B típus adatlapja",
+          "page": 9
+        }
+      }
+    },
+    "B002": {
+      "apartmentType": "B",
+      "floorplan": "assets/floorplans/types/B/full.webp",
+      "media": {
+        "floorplan": {
+          "thumbnail": "assets/floorplans/types/B/thumb.webp",
+          "full": "assets/floorplans/types/B/full.webp",
+          "label": "B típus · illusztráció",
+          "isIllustrative": true
+        },
+        "floorLayout": {
+          "thumbnail": "assets/floor-layouts/00/thumb.webp",
+          "full": "assets/floor-layouts/00/full.webp",
+          "label": "Földszinti szintrajz · A, B és C épület"
+        },
+        "datasheet": {
+          "url": "assets/datasheets/types/B.pdf",
+          "filename": "Admiral-Park-B-tipus-adatlap.pdf",
+          "label": "B típus adatlapja",
+          "page": 9
+        }
+      }
+    },
+    "B003": {
+      "apartmentType": "A",
+      "floorplan": "assets/floorplans/types/A/full.webp",
+      "media": {
+        "floorplan": {
+          "thumbnail": "assets/floorplans/types/A/thumb.webp",
+          "full": "assets/floorplans/types/A/full.webp",
+          "label": "A típus · illusztráció",
+          "isIllustrative": true
+        },
+        "floorLayout": {
+          "thumbnail": "assets/floor-layouts/00/thumb.webp",
+          "full": "assets/floor-layouts/00/full.webp",
+          "label": "Földszinti szintrajz · A, B és C épület"
+        },
+        "datasheet": {
+          "url": "assets/datasheets/types/A.pdf",
+          "filename": "Admiral-Park-A-tipus-adatlap.pdf",
+          "label": "A típus adatlapja",
+          "page": 8
+        }
+      }
+    },
+    "B004": {
+      "apartmentType": "A",
+      "floorplan": "assets/floorplans/types/A/full.webp",
+      "media": {
+        "floorplan": {
+          "thumbnail": "assets/floorplans/types/A/thumb.webp",
+          "full": "assets/floorplans/types/A/full.webp",
+          "label": "A típus · illusztráció",
+          "isIllustrative": true
+        },
+        "floorLayout": {
+          "thumbnail": "assets/floor-layouts/00/thumb.webp",
+          "full": "assets/floor-layouts/00/full.webp",
+          "label": "Földszinti szintrajz · A, B és C épület"
+        },
+        "datasheet": {
+          "url": "assets/datasheets/types/A.pdf",
+          "filename": "Admiral-Park-A-tipus-adatlap.pdf",
+          "label": "A típus adatlapja",
+          "page": 8
+        }
+      }
+    },
+    "B005": {
+      "apartmentType": "B",
+      "floorplan": "assets/floorplans/types/B/full.webp",
+      "media": {
+        "floorplan": {
+          "thumbnail": "assets/floorplans/types/B/thumb.webp",
+          "full": "assets/floorplans/types/B/full.webp",
+          "label": "B típus · illusztráció",
+          "isIllustrative": true
+        },
+        "floorLayout": {
+          "thumbnail": "assets/floor-layouts/00/thumb.webp",
+          "full": "assets/floor-layouts/00/full.webp",
+          "label": "Földszinti szintrajz · A, B és C épület"
+        },
+        "datasheet": {
+          "url": "assets/datasheets/types/B.pdf",
+          "filename": "Admiral-Park-B-tipus-adatlap.pdf",
+          "label": "B típus adatlapja",
+          "page": 9
+        }
+      }
+    },
+    "B006": {
+      "apartmentType": "B",
+      "floorplan": "assets/floorplans/types/B/full.webp",
+      "media": {
+        "floorplan": {
+          "thumbnail": "assets/floorplans/types/B/thumb.webp",
+          "full": "assets/floorplans/types/B/full.webp",
+          "label": "B típus · illusztráció",
+          "isIllustrative": true
+        },
+        "floorLayout": {
+          "thumbnail": "assets/floor-layouts/00/thumb.webp",
+          "full": "assets/floor-layouts/00/full.webp",
+          "label": "Földszinti szintrajz · A, B és C épület"
+        },
+        "datasheet": {
+          "url": "assets/datasheets/types/B.pdf",
+          "filename": "Admiral-Park-B-tipus-adatlap.pdf",
+          "label": "B típus adatlapja",
+          "page": 9
+        }
+      }
+    },
+    "B101": {
+      "apartmentType": "A",
+      "floorplan": "assets/floorplans/types/A/full.webp",
+      "media": {
+        "floorplan": {
+          "thumbnail": "assets/floorplans/types/A/thumb.webp",
+          "full": "assets/floorplans/types/A/full.webp",
+          "label": "A típus · illusztráció",
+          "isIllustrative": true
+        },
+        "floorLayout": {
+          "thumbnail": "assets/floor-layouts/01/thumb.webp",
+          "full": "assets/floor-layouts/01/full.webp",
+          "label": "1. emeleti szintrajz · A, B és C épület"
+        },
+        "datasheet": {
+          "url": "assets/datasheets/types/A.pdf",
+          "filename": "Admiral-Park-A-tipus-adatlap.pdf",
+          "label": "A típus adatlapja",
+          "page": 8
+        }
+      }
+    },
+    "B102": {
+      "apartmentType": "B",
+      "floorplan": "assets/floorplans/types/B/full.webp",
+      "media": {
+        "floorplan": {
+          "thumbnail": "assets/floorplans/types/B/thumb.webp",
+          "full": "assets/floorplans/types/B/full.webp",
+          "label": "B típus · illusztráció",
+          "isIllustrative": true
+        },
+        "floorLayout": {
+          "thumbnail": "assets/floor-layouts/01/thumb.webp",
+          "full": "assets/floor-layouts/01/full.webp",
+          "label": "1. emeleti szintrajz · A, B és C épület"
+        },
+        "datasheet": {
+          "url": "assets/datasheets/types/B.pdf",
+          "filename": "Admiral-Park-B-tipus-adatlap.pdf",
+          "label": "B típus adatlapja",
+          "page": 9
+        }
+      }
+    },
+    "B103": {
+      "apartmentType": "C",
+      "floorplan": "assets/floorplans/types/C/full.webp",
+      "media": {
+        "floorplan": {
+          "thumbnail": "assets/floorplans/types/C/thumb.webp",
+          "full": "assets/floorplans/types/C/full.webp",
+          "label": "C típus · illusztráció",
+          "isIllustrative": true
+        },
+        "floorLayout": {
+          "thumbnail": "assets/floor-layouts/01/thumb.webp",
+          "full": "assets/floor-layouts/01/full.webp",
+          "label": "1. emeleti szintrajz · A, B és C épület"
+        },
+        "datasheet": {
+          "url": "assets/datasheets/types/C.pdf",
+          "filename": "Admiral-Park-C-tipus-adatlap.pdf",
+          "label": "C típus adatlapja",
+          "page": 10
+        }
+      }
+    },
+    "B104": {
+      "apartmentType": "D",
+      "floorplan": "assets/floorplans/types/D/full.webp",
+      "media": {
+        "floorplan": {
+          "thumbnail": "assets/floorplans/types/D/thumb.webp",
+          "full": "assets/floorplans/types/D/full.webp",
+          "label": "D típus · illusztráció",
+          "isIllustrative": true
+        },
+        "floorLayout": {
+          "thumbnail": "assets/floor-layouts/01/thumb.webp",
+          "full": "assets/floor-layouts/01/full.webp",
+          "label": "1. emeleti szintrajz · A, B és C épület"
+        },
+        "datasheet": {
+          "url": "assets/datasheets/types/D.pdf",
+          "filename": "Admiral-Park-D-tipus-adatlap.pdf",
+          "label": "D típus adatlapja",
+          "page": 11
+        }
+      }
+    },
+    "B105": {
+      "apartmentType": "C",
+      "floorplan": "assets/floorplans/types/C/full.webp",
+      "media": {
+        "floorplan": {
+          "thumbnail": "assets/floorplans/types/C/thumb.webp",
+          "full": "assets/floorplans/types/C/full.webp",
+          "label": "C típus · illusztráció",
+          "isIllustrative": true
+        },
+        "floorLayout": {
+          "thumbnail": "assets/floor-layouts/01/thumb.webp",
+          "full": "assets/floor-layouts/01/full.webp",
+          "label": "1. emeleti szintrajz · A, B és C épület"
+        },
+        "datasheet": {
+          "url": "assets/datasheets/types/C.pdf",
+          "filename": "Admiral-Park-C-tipus-adatlap.pdf",
+          "label": "C típus adatlapja",
+          "page": 10
+        }
+      }
+    },
+    "B106": {
+      "apartmentType": "B",
+      "floorplan": "assets/floorplans/types/B/full.webp",
+      "media": {
+        "floorplan": {
+          "thumbnail": "assets/floorplans/types/B/thumb.webp",
+          "full": "assets/floorplans/types/B/full.webp",
+          "label": "B típus · illusztráció",
+          "isIllustrative": true
+        },
+        "floorLayout": {
+          "thumbnail": "assets/floor-layouts/01/thumb.webp",
+          "full": "assets/floor-layouts/01/full.webp",
+          "label": "1. emeleti szintrajz · A, B és C épület"
+        },
+        "datasheet": {
+          "url": "assets/datasheets/types/B.pdf",
+          "filename": "Admiral-Park-B-tipus-adatlap.pdf",
+          "label": "B típus adatlapja",
+          "page": 9
+        }
+      }
+    },
+    "B107": {
+      "apartmentType": "A",
+      "floorplan": "assets/floorplans/types/A/full.webp",
+      "media": {
+        "floorplan": {
+          "thumbnail": "assets/floorplans/types/A/thumb.webp",
+          "full": "assets/floorplans/types/A/full.webp",
+          "label": "A típus · illusztráció",
+          "isIllustrative": true
+        },
+        "floorLayout": {
+          "thumbnail": "assets/floor-layouts/01/thumb.webp",
+          "full": "assets/floor-layouts/01/full.webp",
+          "label": "1. emeleti szintrajz · A, B és C épület"
+        },
+        "datasheet": {
+          "url": "assets/datasheets/types/A.pdf",
+          "filename": "Admiral-Park-A-tipus-adatlap.pdf",
+          "label": "A típus adatlapja",
+          "page": 8
+        }
+      }
+    },
+    "B201": {
+      "apartmentType": "A",
+      "floorplan": "assets/floorplans/types/A/full.webp",
+      "media": {
+        "floorplan": {
+          "thumbnail": "assets/floorplans/types/A/thumb.webp",
+          "full": "assets/floorplans/types/A/full.webp",
+          "label": "A típus · illusztráció",
+          "isIllustrative": true
+        },
+        "floorLayout": {
+          "thumbnail": "assets/floor-layouts/02/thumb.webp",
+          "full": "assets/floor-layouts/02/full.webp",
+          "label": "2. emeleti szintrajz · A, B és C épület"
+        },
+        "datasheet": {
+          "url": "assets/datasheets/types/A.pdf",
+          "filename": "Admiral-Park-A-tipus-adatlap.pdf",
+          "label": "A típus adatlapja",
+          "page": 8
+        }
+      }
+    },
+    "B202": {
+      "apartmentType": "B",
+      "floorplan": "assets/floorplans/types/B/full.webp",
+      "media": {
+        "floorplan": {
+          "thumbnail": "assets/floorplans/types/B/thumb.webp",
+          "full": "assets/floorplans/types/B/full.webp",
+          "label": "B típus · illusztráció",
+          "isIllustrative": true
+        },
+        "floorLayout": {
+          "thumbnail": "assets/floor-layouts/02/thumb.webp",
+          "full": "assets/floor-layouts/02/full.webp",
+          "label": "2. emeleti szintrajz · A, B és C épület"
+        },
+        "datasheet": {
+          "url": "assets/datasheets/types/B.pdf",
+          "filename": "Admiral-Park-B-tipus-adatlap.pdf",
+          "label": "B típus adatlapja",
+          "page": 9
+        }
+      }
+    },
+    "B203": {
+      "apartmentType": "C",
+      "floorplan": "assets/floorplans/types/C/full.webp",
+      "media": {
+        "floorplan": {
+          "thumbnail": "assets/floorplans/types/C/thumb.webp",
+          "full": "assets/floorplans/types/C/full.webp",
+          "label": "C típus · illusztráció",
+          "isIllustrative": true
+        },
+        "floorLayout": {
+          "thumbnail": "assets/floor-layouts/02/thumb.webp",
+          "full": "assets/floor-layouts/02/full.webp",
+          "label": "2. emeleti szintrajz · A, B és C épület"
+        },
+        "datasheet": {
+          "url": "assets/datasheets/types/C.pdf",
+          "filename": "Admiral-Park-C-tipus-adatlap.pdf",
+          "label": "C típus adatlapja",
+          "page": 10
+        }
+      }
+    },
+    "B204": {
+      "apartmentType": "D",
+      "floorplan": "assets/floorplans/types/D/full.webp",
+      "media": {
+        "floorplan": {
+          "thumbnail": "assets/floorplans/types/D/thumb.webp",
+          "full": "assets/floorplans/types/D/full.webp",
+          "label": "D típus · illusztráció",
+          "isIllustrative": true
+        },
+        "floorLayout": {
+          "thumbnail": "assets/floor-layouts/02/thumb.webp",
+          "full": "assets/floor-layouts/02/full.webp",
+          "label": "2. emeleti szintrajz · A, B és C épület"
+        },
+        "datasheet": {
+          "url": "assets/datasheets/types/D.pdf",
+          "filename": "Admiral-Park-D-tipus-adatlap.pdf",
+          "label": "D típus adatlapja",
+          "page": 11
+        }
+      }
+    },
+    "B205": {
+      "apartmentType": "C",
+      "floorplan": "assets/floorplans/types/C/full.webp",
+      "media": {
+        "floorplan": {
+          "thumbnail": "assets/floorplans/types/C/thumb.webp",
+          "full": "assets/floorplans/types/C/full.webp",
+          "label": "C típus · illusztráció",
+          "isIllustrative": true
+        },
+        "floorLayout": {
+          "thumbnail": "assets/floor-layouts/02/thumb.webp",
+          "full": "assets/floor-layouts/02/full.webp",
+          "label": "2. emeleti szintrajz · A, B és C épület"
+        },
+        "datasheet": {
+          "url": "assets/datasheets/types/C.pdf",
+          "filename": "Admiral-Park-C-tipus-adatlap.pdf",
+          "label": "C típus adatlapja",
+          "page": 10
+        }
+      }
+    },
+    "B206": {
+      "apartmentType": "B",
+      "floorplan": "assets/floorplans/types/B/full.webp",
+      "media": {
+        "floorplan": {
+          "thumbnail": "assets/floorplans/types/B/thumb.webp",
+          "full": "assets/floorplans/types/B/full.webp",
+          "label": "B típus · illusztráció",
+          "isIllustrative": true
+        },
+        "floorLayout": {
+          "thumbnail": "assets/floor-layouts/02/thumb.webp",
+          "full": "assets/floor-layouts/02/full.webp",
+          "label": "2. emeleti szintrajz · A, B és C épület"
+        },
+        "datasheet": {
+          "url": "assets/datasheets/types/B.pdf",
+          "filename": "Admiral-Park-B-tipus-adatlap.pdf",
+          "label": "B típus adatlapja",
+          "page": 9
+        }
+      }
+    },
+    "B207": {
+      "apartmentType": "A",
+      "floorplan": "assets/floorplans/types/A/full.webp",
+      "media": {
+        "floorplan": {
+          "thumbnail": "assets/floorplans/types/A/thumb.webp",
+          "full": "assets/floorplans/types/A/full.webp",
+          "label": "A típus · illusztráció",
+          "isIllustrative": true
+        },
+        "floorLayout": {
+          "thumbnail": "assets/floor-layouts/02/thumb.webp",
+          "full": "assets/floor-layouts/02/full.webp",
+          "label": "2. emeleti szintrajz · A, B és C épület"
+        },
+        "datasheet": {
+          "url": "assets/datasheets/types/A.pdf",
+          "filename": "Admiral-Park-A-tipus-adatlap.pdf",
+          "label": "A típus adatlapja",
+          "page": 8
+        }
+      }
+    },
+    "B301": {
+      "apartmentType": "E2",
+      "floorplan": "assets/floorplans/types/E2/full.webp",
+      "media": {
+        "floorplan": {
+          "thumbnail": "assets/floorplans/types/E2/thumb.webp",
+          "full": "assets/floorplans/types/E2/full.webp",
+          "label": "E2 típus · illusztráció",
+          "isIllustrative": true
+        },
+        "floorLayout": {
+          "thumbnail": "assets/floor-layouts/03/thumb.webp",
+          "full": "assets/floor-layouts/03/full.webp",
+          "label": "3. emeleti szintrajz · A, B és C épület"
+        },
+        "datasheet": {
+          "url": "assets/datasheets/types/E2.pdf",
+          "filename": "Admiral-Park-E2-tipus-adatlap.pdf",
+          "label": "E2 típus adatlapja",
+          "page": 14
+        }
+      }
+    },
+    "B302": {
+      "apartmentType": "F1",
+      "floorplan": "assets/floorplans/types/F1/full.webp",
+      "media": {
+        "floorplan": {
+          "thumbnail": "assets/floorplans/types/F1/thumb.webp",
+          "full": "assets/floorplans/types/F1/full.webp",
+          "label": "F1 típus · illusztráció",
+          "isIllustrative": true
+        },
+        "floorLayout": {
+          "thumbnail": "assets/floor-layouts/03/thumb.webp",
+          "full": "assets/floor-layouts/03/full.webp",
+          "label": "3. emeleti szintrajz · A, B és C épület"
+        },
+        "datasheet": {
+          "url": "assets/datasheets/types/F1.pdf",
+          "filename": "Admiral-Park-F1-tipus-adatlap.pdf",
+          "label": "F1 típus adatlapja",
+          "page": 16
+        }
+      }
+    },
+    "B303": {
+      "apartmentType": "F",
+      "floorplan": "assets/floorplans/types/F/full.webp",
+      "media": {
+        "floorplan": {
+          "thumbnail": "assets/floorplans/types/F/thumb.webp",
+          "full": "assets/floorplans/types/F/full.webp",
+          "label": "F típus · illusztráció",
+          "isIllustrative": true
+        },
+        "floorLayout": {
+          "thumbnail": "assets/floor-layouts/03/thumb.webp",
+          "full": "assets/floor-layouts/03/full.webp",
+          "label": "3. emeleti szintrajz · A, B és C épület"
+        },
+        "datasheet": {
+          "url": "assets/datasheets/types/F.pdf",
+          "filename": "Admiral-Park-F-tipus-adatlap.pdf",
+          "label": "F típus adatlapja",
+          "page": 15
+        }
+      }
+    },
+    "B304": {
+      "apartmentType": "E2",
+      "floorplan": "assets/floorplans/types/E2/full.webp",
+      "media": {
+        "floorplan": {
+          "thumbnail": "assets/floorplans/types/E2/thumb.webp",
+          "full": "assets/floorplans/types/E2/full.webp",
+          "label": "E2 típus · illusztráció",
+          "isIllustrative": true
+        },
+        "floorLayout": {
+          "thumbnail": "assets/floor-layouts/03/thumb.webp",
+          "full": "assets/floor-layouts/03/full.webp",
+          "label": "3. emeleti szintrajz · A, B és C épület"
+        },
+        "datasheet": {
+          "url": "assets/datasheets/types/E2.pdf",
+          "filename": "Admiral-Park-E2-tipus-adatlap.pdf",
+          "label": "E2 típus adatlapja",
+          "page": 14
+        }
+      }
+    },
+    "C001": {
+      "apartmentType": "A",
+      "floorplan": "assets/floorplans/types/A/full.webp",
+      "media": {
+        "floorplan": {
+          "thumbnail": "assets/floorplans/types/A/thumb.webp",
+          "full": "assets/floorplans/types/A/full.webp",
+          "label": "A típus · illusztráció",
+          "isIllustrative": true
+        },
+        "floorLayout": {
+          "thumbnail": "assets/floor-layouts/00/thumb.webp",
+          "full": "assets/floor-layouts/00/full.webp",
+          "label": "Földszinti szintrajz · A, B és C épület"
+        },
+        "datasheet": {
+          "url": "assets/datasheets/types/A.pdf",
+          "filename": "Admiral-Park-A-tipus-adatlap.pdf",
+          "label": "A típus adatlapja",
+          "page": 8
+        }
+      }
+    },
+    "C002": {
+      "apartmentType": "B",
+      "floorplan": "assets/floorplans/types/B/full.webp",
+      "media": {
+        "floorplan": {
+          "thumbnail": "assets/floorplans/types/B/thumb.webp",
+          "full": "assets/floorplans/types/B/full.webp",
+          "label": "B típus · illusztráció",
+          "isIllustrative": true
+        },
+        "floorLayout": {
+          "thumbnail": "assets/floor-layouts/00/thumb.webp",
+          "full": "assets/floor-layouts/00/full.webp",
+          "label": "Földszinti szintrajz · A, B és C épület"
+        },
+        "datasheet": {
+          "url": "assets/datasheets/types/B.pdf",
+          "filename": "Admiral-Park-B-tipus-adatlap.pdf",
+          "label": "B típus adatlapja",
+          "page": 9
+        }
+      }
+    },
+    "C003": {
+      "apartmentType": "B",
+      "floorplan": "assets/floorplans/types/B/full.webp",
+      "media": {
+        "floorplan": {
+          "thumbnail": "assets/floorplans/types/B/thumb.webp",
+          "full": "assets/floorplans/types/B/full.webp",
+          "label": "B típus · illusztráció",
+          "isIllustrative": true
+        },
+        "floorLayout": {
+          "thumbnail": "assets/floor-layouts/00/thumb.webp",
+          "full": "assets/floor-layouts/00/full.webp",
+          "label": "Földszinti szintrajz · A, B és C épület"
+        },
+        "datasheet": {
+          "url": "assets/datasheets/types/B.pdf",
+          "filename": "Admiral-Park-B-tipus-adatlap.pdf",
+          "label": "B típus adatlapja",
+          "page": 9
+        }
+      }
+    },
+    "C004": {
+      "apartmentType": "A",
+      "floorplan": "assets/floorplans/types/A/full.webp",
+      "media": {
+        "floorplan": {
+          "thumbnail": "assets/floorplans/types/A/thumb.webp",
+          "full": "assets/floorplans/types/A/full.webp",
+          "label": "A típus · illusztráció",
+          "isIllustrative": true
+        },
+        "floorLayout": {
+          "thumbnail": "assets/floor-layouts/00/thumb.webp",
+          "full": "assets/floor-layouts/00/full.webp",
+          "label": "Földszinti szintrajz · A, B és C épület"
+        },
+        "datasheet": {
+          "url": "assets/datasheets/types/A.pdf",
+          "filename": "Admiral-Park-A-tipus-adatlap.pdf",
+          "label": "A típus adatlapja",
+          "page": 8
+        }
+      }
+    },
+    "C005": {
+      "apartmentType": "A",
+      "floorplan": "assets/floorplans/types/A/full.webp",
+      "media": {
+        "floorplan": {
+          "thumbnail": "assets/floorplans/types/A/thumb.webp",
+          "full": "assets/floorplans/types/A/full.webp",
+          "label": "A típus · illusztráció",
+          "isIllustrative": true
+        },
+        "floorLayout": {
+          "thumbnail": "assets/floor-layouts/00/thumb.webp",
+          "full": "assets/floor-layouts/00/full.webp",
+          "label": "Földszinti szintrajz · A, B és C épület"
+        },
+        "datasheet": {
+          "url": "assets/datasheets/types/A.pdf",
+          "filename": "Admiral-Park-A-tipus-adatlap.pdf",
+          "label": "A típus adatlapja",
+          "page": 8
+        }
+      }
+    },
+    "C006": {
+      "apartmentType": "B",
+      "floorplan": "assets/floorplans/types/B/full.webp",
+      "media": {
+        "floorplan": {
+          "thumbnail": "assets/floorplans/types/B/thumb.webp",
+          "full": "assets/floorplans/types/B/full.webp",
+          "label": "B típus · illusztráció",
+          "isIllustrative": true
+        },
+        "floorLayout": {
+          "thumbnail": "assets/floor-layouts/00/thumb.webp",
+          "full": "assets/floor-layouts/00/full.webp",
+          "label": "Földszinti szintrajz · A, B és C épület"
+        },
+        "datasheet": {
+          "url": "assets/datasheets/types/B.pdf",
+          "filename": "Admiral-Park-B-tipus-adatlap.pdf",
+          "label": "B típus adatlapja",
+          "page": 9
+        }
+      }
+    },
+    "C007": {
+      "apartmentType": "B",
+      "floorplan": "assets/floorplans/types/B/full.webp",
+      "media": {
+        "floorplan": {
+          "thumbnail": "assets/floorplans/types/B/thumb.webp",
+          "full": "assets/floorplans/types/B/full.webp",
+          "label": "B típus · illusztráció",
+          "isIllustrative": true
+        },
+        "floorLayout": {
+          "thumbnail": "assets/floor-layouts/00/thumb.webp",
+          "full": "assets/floor-layouts/00/full.webp",
+          "label": "Földszinti szintrajz · A, B és C épület"
+        },
+        "datasheet": {
+          "url": "assets/datasheets/types/B.pdf",
+          "filename": "Admiral-Park-B-tipus-adatlap.pdf",
+          "label": "B típus adatlapja",
+          "page": 9
+        }
+      }
+    },
+    "C008": {
+      "apartmentType": "A",
+      "floorplan": "assets/floorplans/types/A/full.webp",
+      "media": {
+        "floorplan": {
+          "thumbnail": "assets/floorplans/types/A/thumb.webp",
+          "full": "assets/floorplans/types/A/full.webp",
+          "label": "A típus · illusztráció",
+          "isIllustrative": true
+        },
+        "floorLayout": {
+          "thumbnail": "assets/floor-layouts/00/thumb.webp",
+          "full": "assets/floor-layouts/00/full.webp",
+          "label": "Földszinti szintrajz · A, B és C épület"
+        },
+        "datasheet": {
+          "url": "assets/datasheets/types/A.pdf",
+          "filename": "Admiral-Park-A-tipus-adatlap.pdf",
+          "label": "A típus adatlapja",
+          "page": 8
+        }
+      }
+    },
+    "C101": {
+      "apartmentType": "E1",
+      "floorplan": "assets/floorplans/types/E1/full.webp",
+      "media": {
+        "floorplan": {
+          "thumbnail": "assets/floorplans/types/E1/thumb.webp",
+          "full": "assets/floorplans/types/E1/full.webp",
+          "label": "E1 típus · illusztráció",
+          "isIllustrative": true
+        },
+        "floorLayout": {
+          "thumbnail": "assets/floor-layouts/01/thumb.webp",
+          "full": "assets/floor-layouts/01/full.webp",
+          "label": "1. emeleti szintrajz · A, B és C épület"
+        },
+        "datasheet": {
+          "url": "assets/datasheets/types/E1.pdf",
+          "filename": "Admiral-Park-E1-tipus-adatlap.pdf",
+          "label": "E1 típus adatlapja",
+          "page": 13
+        }
+      }
+    },
+    "C102": {
+      "apartmentType": "C",
+      "floorplan": "assets/floorplans/types/C/full.webp",
+      "media": {
+        "floorplan": {
+          "thumbnail": "assets/floorplans/types/C/thumb.webp",
+          "full": "assets/floorplans/types/C/full.webp",
+          "label": "C típus · illusztráció",
+          "isIllustrative": true
+        },
+        "floorLayout": {
+          "thumbnail": "assets/floor-layouts/01/thumb.webp",
+          "full": "assets/floor-layouts/01/full.webp",
+          "label": "1. emeleti szintrajz · A, B és C épület"
+        },
+        "datasheet": {
+          "url": "assets/datasheets/types/C.pdf",
+          "filename": "Admiral-Park-C-tipus-adatlap.pdf",
+          "label": "C típus adatlapja",
+          "page": 10
+        }
+      }
+    },
+    "C103": {
+      "apartmentType": "D",
+      "floorplan": "assets/floorplans/types/D/full.webp",
+      "media": {
+        "floorplan": {
+          "thumbnail": "assets/floorplans/types/D/thumb.webp",
+          "full": "assets/floorplans/types/D/full.webp",
+          "label": "D típus · illusztráció",
+          "isIllustrative": true
+        },
+        "floorLayout": {
+          "thumbnail": "assets/floor-layouts/01/thumb.webp",
+          "full": "assets/floor-layouts/01/full.webp",
+          "label": "1. emeleti szintrajz · A, B és C épület"
+        },
+        "datasheet": {
+          "url": "assets/datasheets/types/D.pdf",
+          "filename": "Admiral-Park-D-tipus-adatlap.pdf",
+          "label": "D típus adatlapja",
+          "page": 11
+        }
+      }
+    },
+    "C104": {
+      "apartmentType": "C",
+      "floorplan": "assets/floorplans/types/C/full.webp",
+      "media": {
+        "floorplan": {
+          "thumbnail": "assets/floorplans/types/C/thumb.webp",
+          "full": "assets/floorplans/types/C/full.webp",
+          "label": "C típus · illusztráció",
+          "isIllustrative": true
+        },
+        "floorLayout": {
+          "thumbnail": "assets/floor-layouts/01/thumb.webp",
+          "full": "assets/floor-layouts/01/full.webp",
+          "label": "1. emeleti szintrajz · A, B és C épület"
+        },
+        "datasheet": {
+          "url": "assets/datasheets/types/C.pdf",
+          "filename": "Admiral-Park-C-tipus-adatlap.pdf",
+          "label": "C típus adatlapja",
+          "page": 10
+        }
+      }
+    },
+    "C105": {
+      "apartmentType": "B",
+      "floorplan": "assets/floorplans/types/B/full.webp",
+      "media": {
+        "floorplan": {
+          "thumbnail": "assets/floorplans/types/B/thumb.webp",
+          "full": "assets/floorplans/types/B/full.webp",
+          "label": "B típus · illusztráció",
+          "isIllustrative": true
+        },
+        "floorLayout": {
+          "thumbnail": "assets/floor-layouts/01/thumb.webp",
+          "full": "assets/floor-layouts/01/full.webp",
+          "label": "1. emeleti szintrajz · A, B és C épület"
+        },
+        "datasheet": {
+          "url": "assets/datasheets/types/B.pdf",
+          "filename": "Admiral-Park-B-tipus-adatlap.pdf",
+          "label": "B típus adatlapja",
+          "page": 9
+        }
+      }
+    },
+    "C106": {
+      "apartmentType": "A",
+      "floorplan": "assets/floorplans/types/A/full.webp",
+      "media": {
+        "floorplan": {
+          "thumbnail": "assets/floorplans/types/A/thumb.webp",
+          "full": "assets/floorplans/types/A/full.webp",
+          "label": "A típus · illusztráció",
+          "isIllustrative": true
+        },
+        "floorLayout": {
+          "thumbnail": "assets/floor-layouts/01/thumb.webp",
+          "full": "assets/floor-layouts/01/full.webp",
+          "label": "1. emeleti szintrajz · A, B és C épület"
+        },
+        "datasheet": {
+          "url": "assets/datasheets/types/A.pdf",
+          "filename": "Admiral-Park-A-tipus-adatlap.pdf",
+          "label": "A típus adatlapja",
+          "page": 8
+        }
+      }
+    },
+    "C201": {
+      "apartmentType": "E1",
+      "floorplan": "assets/floorplans/types/E1/full.webp",
+      "media": {
+        "floorplan": {
+          "thumbnail": "assets/floorplans/types/E1/thumb.webp",
+          "full": "assets/floorplans/types/E1/full.webp",
+          "label": "E1 típus · illusztráció",
+          "isIllustrative": true
+        },
+        "floorLayout": {
+          "thumbnail": "assets/floor-layouts/02/thumb.webp",
+          "full": "assets/floor-layouts/02/full.webp",
+          "label": "2. emeleti szintrajz · A, B és C épület"
+        },
+        "datasheet": {
+          "url": "assets/datasheets/types/E1.pdf",
+          "filename": "Admiral-Park-E1-tipus-adatlap.pdf",
+          "label": "E1 típus adatlapja",
+          "page": 13
+        }
+      }
+    },
+    "C202": {
+      "apartmentType": "C",
+      "floorplan": "assets/floorplans/types/C/full.webp",
+      "media": {
+        "floorplan": {
+          "thumbnail": "assets/floorplans/types/C/thumb.webp",
+          "full": "assets/floorplans/types/C/full.webp",
+          "label": "C típus · illusztráció",
+          "isIllustrative": true
+        },
+        "floorLayout": {
+          "thumbnail": "assets/floor-layouts/02/thumb.webp",
+          "full": "assets/floor-layouts/02/full.webp",
+          "label": "2. emeleti szintrajz · A, B és C épület"
+        },
+        "datasheet": {
+          "url": "assets/datasheets/types/C.pdf",
+          "filename": "Admiral-Park-C-tipus-adatlap.pdf",
+          "label": "C típus adatlapja",
+          "page": 10
+        }
+      }
+    },
+    "C203": {
+      "apartmentType": "D",
+      "floorplan": "assets/floorplans/types/D/full.webp",
+      "media": {
+        "floorplan": {
+          "thumbnail": "assets/floorplans/types/D/thumb.webp",
+          "full": "assets/floorplans/types/D/full.webp",
+          "label": "D típus · illusztráció",
+          "isIllustrative": true
+        },
+        "floorLayout": {
+          "thumbnail": "assets/floor-layouts/02/thumb.webp",
+          "full": "assets/floor-layouts/02/full.webp",
+          "label": "2. emeleti szintrajz · A, B és C épület"
+        },
+        "datasheet": {
+          "url": "assets/datasheets/types/D.pdf",
+          "filename": "Admiral-Park-D-tipus-adatlap.pdf",
+          "label": "D típus adatlapja",
+          "page": 11
+        }
+      }
+    },
+    "C204": {
+      "apartmentType": "C",
+      "floorplan": "assets/floorplans/types/C/full.webp",
+      "media": {
+        "floorplan": {
+          "thumbnail": "assets/floorplans/types/C/thumb.webp",
+          "full": "assets/floorplans/types/C/full.webp",
+          "label": "C típus · illusztráció",
+          "isIllustrative": true
+        },
+        "floorLayout": {
+          "thumbnail": "assets/floor-layouts/02/thumb.webp",
+          "full": "assets/floor-layouts/02/full.webp",
+          "label": "2. emeleti szintrajz · A, B és C épület"
+        },
+        "datasheet": {
+          "url": "assets/datasheets/types/C.pdf",
+          "filename": "Admiral-Park-C-tipus-adatlap.pdf",
+          "label": "C típus adatlapja",
+          "page": 10
+        }
+      }
+    },
+    "C205": {
+      "apartmentType": "E2",
+      "floorplan": "assets/floorplans/types/E2/full.webp",
+      "media": {
+        "floorplan": {
+          "thumbnail": "assets/floorplans/types/E2/thumb.webp",
+          "full": "assets/floorplans/types/E2/full.webp",
+          "label": "E2 típus · illusztráció",
+          "isIllustrative": true
+        },
+        "floorLayout": {
+          "thumbnail": "assets/floor-layouts/02/thumb.webp",
+          "full": "assets/floor-layouts/02/full.webp",
+          "label": "2. emeleti szintrajz · A, B és C épület"
+        },
+        "datasheet": {
+          "url": "assets/datasheets/types/E2.pdf",
+          "filename": "Admiral-Park-E2-tipus-adatlap.pdf",
+          "label": "E2 típus adatlapja",
+          "page": 14
+        }
+      }
+    },
+    "C301": {
+      "apartmentType": "E",
+      "floorplan": "assets/floorplans/types/E/full.webp",
+      "media": {
+        "floorplan": {
+          "thumbnail": "assets/floorplans/types/E/thumb.webp",
+          "full": "assets/floorplans/types/E/full.webp",
+          "label": "E típus · illusztráció",
+          "isIllustrative": true
+        },
+        "floorLayout": {
+          "thumbnail": "assets/floor-layouts/03/thumb.webp",
+          "full": "assets/floor-layouts/03/full.webp",
+          "label": "3. emeleti szintrajz · A, B és C épület"
+        },
+        "datasheet": {
+          "url": "assets/datasheets/types/E.pdf",
+          "filename": "Admiral-Park-E-tipus-adatlap.pdf",
+          "label": "E típus adatlapja",
+          "page": 12
+        }
+      }
+    },
+    "C302": {
+      "apartmentType": "F",
+      "floorplan": "assets/floorplans/types/F/full.webp",
+      "media": {
+        "floorplan": {
+          "thumbnail": "assets/floorplans/types/F/thumb.webp",
+          "full": "assets/floorplans/types/F/full.webp",
+          "label": "F típus · illusztráció",
+          "isIllustrative": true
+        },
+        "floorLayout": {
+          "thumbnail": "assets/floor-layouts/03/thumb.webp",
+          "full": "assets/floor-layouts/03/full.webp",
+          "label": "3. emeleti szintrajz · A, B és C épület"
+        },
+        "datasheet": {
+          "url": "assets/datasheets/types/F.pdf",
+          "filename": "Admiral-Park-F-tipus-adatlap.pdf",
+          "label": "F típus adatlapja",
+          "page": 15
+        }
+      }
+    },
+    "C303": {
+      "apartmentType": "F2",
+      "floorplan": "assets/floorplans/types/F2/full.webp",
+      "media": {
+        "floorplan": {
+          "thumbnail": "assets/floorplans/types/F2/thumb.webp",
+          "full": "assets/floorplans/types/F2/full.webp",
+          "label": "F2 típus · illusztráció",
+          "isIllustrative": true
+        },
+        "floorLayout": {
+          "thumbnail": "assets/floor-layouts/03/thumb.webp",
+          "full": "assets/floor-layouts/03/full.webp",
+          "label": "3. emeleti szintrajz · A, B és C épület"
+        },
+        "datasheet": {
+          "url": "assets/datasheets/types/F2.pdf",
+          "filename": "Admiral-Park-F2-tipus-adatlap.pdf",
+          "label": "F2 típus adatlapja",
+          "page": 17
+        }
+      }
+    },
+    "C304": {
+      "apartmentType": "E2",
+      "floorplan": "assets/floorplans/types/E2/full.webp",
+      "media": {
+        "floorplan": {
+          "thumbnail": "assets/floorplans/types/E2/thumb.webp",
+          "full": "assets/floorplans/types/E2/full.webp",
+          "label": "E2 típus · illusztráció",
+          "isIllustrative": true
+        },
+        "floorLayout": {
+          "thumbnail": "assets/floor-layouts/03/thumb.webp",
+          "full": "assets/floor-layouts/03/full.webp",
+          "label": "3. emeleti szintrajz · A, B és C épület"
+        },
+        "datasheet": {
+          "url": "assets/datasheets/types/E2.pdf",
+          "filename": "Admiral-Park-E2-tipus-adatlap.pdf",
+          "label": "E2 típus adatlapja",
+          "page": 14
+        }
+      }
+    }
+  },
+  "files": [
+    {
+      "path": "assets/datasheets/types/A.pdf",
+      "bytes": 1699668,
+      "sha256": "e975bd717637ecf101a028e904d92f24022031a973ed928ce8f8b01d78db76d4",
+      "role": "type-datasheet",
+      "type": "A",
+      "sourceBookPage": 8,
+      "pageCount": 1,
+      "internalLinksRemoved": 0
+    },
+    {
+      "path": "assets/datasheets/types/B.pdf",
+      "bytes": 1889624,
+      "sha256": "e674d586207f25eeab348dd38e95db34309061a460dcbc585b7b56e70ac23177",
+      "role": "type-datasheet",
+      "type": "B",
+      "sourceBookPage": 9,
+      "pageCount": 1,
+      "internalLinksRemoved": 0
+    },
+    {
+      "path": "assets/datasheets/types/C.pdf",
+      "bytes": 1556204,
+      "sha256": "2500499ead607bedfcad9204c69d6856719ac288e33c3a1343d775679e127989",
+      "role": "type-datasheet",
+      "type": "C",
+      "sourceBookPage": 10,
+      "pageCount": 1,
+      "internalLinksRemoved": 0
+    },
+    {
+      "path": "assets/datasheets/types/D.pdf",
+      "bytes": 1796568,
+      "sha256": "6760cada13e18401f39280bba501f55be4de87d4b3d8755acf13a9f05ba12bd8",
+      "role": "type-datasheet",
+      "type": "D",
+      "sourceBookPage": 11,
+      "pageCount": 1,
+      "internalLinksRemoved": 0
+    },
+    {
+      "path": "assets/datasheets/types/E.pdf",
+      "bytes": 1670694,
+      "sha256": "5e42a2627455bf56f650647fbb80c67a45dfc549f1795e3024138db7c48dada6",
+      "role": "type-datasheet",
+      "type": "E",
+      "sourceBookPage": 12,
+      "pageCount": 1,
+      "internalLinksRemoved": 0
+    },
+    {
+      "path": "assets/datasheets/types/E1.pdf",
+      "bytes": 1647868,
+      "sha256": "fbb3c7fa211828a2456344a91ddcb1026db6536e89fb5233085b22ccac197689",
+      "role": "type-datasheet",
+      "type": "E1",
+      "sourceBookPage": 13,
+      "pageCount": 1,
+      "internalLinksRemoved": 0
+    },
+    {
+      "path": "assets/datasheets/types/E2.pdf",
+      "bytes": 1547707,
+      "sha256": "79ee397d5901f780b569548632ee9d40318a9cfa28b5f439241c0403273d10bd",
+      "role": "type-datasheet",
+      "type": "E2",
+      "sourceBookPage": 14,
+      "pageCount": 1,
+      "internalLinksRemoved": 0
+    },
+    {
+      "path": "assets/datasheets/types/F.pdf",
+      "bytes": 1619655,
+      "sha256": "39e288857613909e85b3fe5231dccc5dead279b8b36890bbab22474b755f9c7d",
+      "role": "type-datasheet",
+      "type": "F",
+      "sourceBookPage": 15,
+      "pageCount": 1,
+      "internalLinksRemoved": 0
+    },
+    {
+      "path": "assets/datasheets/types/F1.pdf",
+      "bytes": 1627224,
+      "sha256": "285e5f009f415e26af70126187287b2de603577121a90379c23cface270a0d2b",
+      "role": "type-datasheet",
+      "type": "F1",
+      "sourceBookPage": 16,
+      "pageCount": 1,
+      "internalLinksRemoved": 0
+    },
+    {
+      "path": "assets/datasheets/types/F2.pdf",
+      "bytes": 1646290,
+      "sha256": "0471df4fda817b895d0eff12f3a6a068e40c0919e74e378ddd890d729044e532",
+      "role": "type-datasheet",
+      "type": "F2",
+      "sourceBookPage": 17,
+      "pageCount": 1,
+      "internalLinksRemoved": 0
+    },
+    {
+      "path": "assets/floor-layouts/00/full.webp",
+      "bytes": 253540,
+      "sha256": "e71f8f9148581b5ad5bb283ae6b3b9b6b0d516ebab9ee463ec94d189096290f1",
+      "role": "floor-layout-full",
+      "floor": 0,
+      "dimensions": [
+        2560,
+        1600
+      ],
+      "lossless": true,
+      "hasAlpha": true,
+      "sourceFile": "00-plan-art.png",
+      "sourceSha256": "3e184927087fccd92a9cf81a31a189054a45bb74087398373c8e67da32330965",
+      "sourceRevision": "2026-10-08-customer-book-r02",
+      "sourceKind": "native-transparent-plan-art",
+      "sourceBookPage": 3
+    },
+    {
+      "path": "assets/floor-layouts/00/thumb.webp",
+      "bytes": 32230,
+      "sha256": "a648257d566e08229869cc97abae4942bb494fe89561811b1057b0ed6e7f54de",
+      "role": "floor-layout-thumbnail",
+      "floor": 0,
+      "dimensions": [
+        360,
+        225
+      ],
+      "lossless": true,
+      "hasAlpha": true,
+      "sourceFile": "00-plan-art.png",
+      "sourceSha256": "3e184927087fccd92a9cf81a31a189054a45bb74087398373c8e67da32330965",
+      "sourceRevision": "2026-10-08-customer-book-r02",
+      "sourceKind": "native-transparent-plan-art",
+      "sourceBookPage": 3
+    },
+    {
+      "path": "assets/floor-layouts/01/full.webp",
+      "bytes": 339702,
+      "sha256": "61dc4b603c90f3a12da7fd63477b8d29f9e20fd34b61aca52d78756de040aff7",
+      "role": "floor-layout-full",
+      "floor": 1,
+      "dimensions": [
+        2560,
+        1600
+      ],
+      "lossless": true,
+      "hasAlpha": true,
+      "sourceFile": "01-plan-art.png",
+      "sourceSha256": "1beb68541d93374f14ac1a157b2020c8816c70e86bdace19658be358db588503",
+      "sourceRevision": "2026-10-08-customer-book-r02",
+      "sourceKind": "native-transparent-plan-art",
+      "sourceBookPage": 4
+    },
+    {
+      "path": "assets/floor-layouts/01/thumb.webp",
+      "bytes": 32134,
+      "sha256": "e744f0d7ee51c8441bce571e5c09a58bab1a599744b6c162f915f63491a72aca",
+      "role": "floor-layout-thumbnail",
+      "floor": 1,
+      "dimensions": [
+        360,
+        225
+      ],
+      "lossless": true,
+      "hasAlpha": true,
+      "sourceFile": "01-plan-art.png",
+      "sourceSha256": "1beb68541d93374f14ac1a157b2020c8816c70e86bdace19658be358db588503",
+      "sourceRevision": "2026-10-08-customer-book-r02",
+      "sourceKind": "native-transparent-plan-art",
+      "sourceBookPage": 4
+    },
+    {
+      "path": "assets/floor-layouts/02/full.webp",
+      "bytes": 339400,
+      "sha256": "c0324d07bc56e3de33b1331aede7ccc1d8d4c53c0fd5b1fc3bc62f7506b5fbc0",
+      "role": "floor-layout-full",
+      "floor": 2,
+      "dimensions": [
+        2560,
+        1600
+      ],
+      "lossless": true,
+      "hasAlpha": true,
+      "sourceFile": "02-plan-art.png",
+      "sourceSha256": "57e2245c0db7565386a7b017273258d16016e400168fa467a7bfec1f2923d2ea",
+      "sourceRevision": "2026-10-08-customer-book-r02",
+      "sourceKind": "native-transparent-plan-art",
+      "sourceBookPage": 5
+    },
+    {
+      "path": "assets/floor-layouts/02/thumb.webp",
+      "bytes": 31070,
+      "sha256": "1c53f259996f0fce91c8b660b3205d5edad74853e7ab9f7bb6570ba797dca95c",
+      "role": "floor-layout-thumbnail",
+      "floor": 2,
+      "dimensions": [
+        360,
+        225
+      ],
+      "lossless": true,
+      "hasAlpha": true,
+      "sourceFile": "02-plan-art.png",
+      "sourceSha256": "57e2245c0db7565386a7b017273258d16016e400168fa467a7bfec1f2923d2ea",
+      "sourceRevision": "2026-10-08-customer-book-r02",
+      "sourceKind": "native-transparent-plan-art",
+      "sourceBookPage": 5
+    },
+    {
+      "path": "assets/floor-layouts/03/full.webp",
+      "bytes": 354102,
+      "sha256": "e3da4528f3080102e8e20792cedd4ab24626d5593ba43378f2434752c0fcf4f2",
+      "role": "floor-layout-full",
+      "floor": 3,
+      "dimensions": [
+        2560,
+        1600
+      ],
+      "lossless": true,
+      "hasAlpha": true,
+      "sourceFile": "03-plan-art.png",
+      "sourceSha256": "cdf4f1897710ab2664de4213c01caa6f50c4a2d4b954d29e57f1201c7823c68f",
+      "sourceRevision": "2026-10-08-customer-book-r02",
+      "sourceKind": "native-transparent-plan-art",
+      "sourceBookPage": 6
+    },
+    {
+      "path": "assets/floor-layouts/03/thumb.webp",
+      "bytes": 28700,
+      "sha256": "8a3a06d628c83cd01ae04f7e38641f01cfdfaa15e1cfa2688221db7655e3ec9d",
+      "role": "floor-layout-thumbnail",
+      "floor": 3,
+      "dimensions": [
+        360,
+        225
+      ],
+      "lossless": true,
+      "hasAlpha": true,
+      "sourceFile": "03-plan-art.png",
+      "sourceSha256": "cdf4f1897710ab2664de4213c01caa6f50c4a2d4b954d29e57f1201c7823c68f",
+      "sourceRevision": "2026-10-08-customer-book-r02",
+      "sourceKind": "native-transparent-plan-art",
+      "sourceBookPage": 6
+    },
+    {
+      "path": "assets/floorplans/types/A/full.webp",
+      "bytes": 1167582,
+      "sha256": "d60539773c19d00e0d6e8ae49ae2ed41834ef2b6eb15690c015e652d31fbb900",
+      "role": "floorplan-full",
+      "type": "A",
+      "dimensions": [
+        1500,
+        2000
+      ],
+      "lossless": true
+    },
+    {
+      "path": "assets/floorplans/types/A/original.png",
+      "bytes": 1966073,
+      "sha256": "3782a48fa425f4e1703d0310d7a3bbfbedbf4d1ad0e72f69761be2375ca60cd2",
+      "role": "floorplan-original",
+      "type": "A",
+      "dimensions": [
+        1500,
+        2000
+      ],
+      "sourceSha256": "3782a48fa425f4e1703d0310d7a3bbfbedbf4d1ad0e72f69761be2375ca60cd2"
+    },
+    {
+      "path": "assets/floorplans/types/A/thumb.webp",
+      "bytes": 39532,
+      "sha256": "b7c9a3dffa2690ba7e29dee4c2e79aed8c177de401bb164119545265f4236d80",
+      "role": "floorplan-thumbnail",
+      "type": "A",
+      "dimensions": [
+        270,
+        360
+      ],
+      "lossless": true
+    },
+    {
+      "path": "assets/floorplans/types/B/full.webp",
+      "bytes": 1661826,
+      "sha256": "00ab3e0eb14f619735a4adbe6db4b9e51d9f164212aa807e2e77dc6e18ad745e",
+      "role": "floorplan-full",
+      "type": "B",
+      "dimensions": [
+        1500,
+        2000
+      ],
+      "lossless": true
+    },
+    {
+      "path": "assets/floorplans/types/B/original.png",
+      "bytes": 2652726,
+      "sha256": "cee3c4f992fb308b8ff74bb8fbec7e1ff64da65aadc0b2057b2c16dc774528af",
+      "role": "floorplan-original",
+      "type": "B",
+      "dimensions": [
+        1500,
+        2000
+      ],
+      "sourceSha256": "cee3c4f992fb308b8ff74bb8fbec7e1ff64da65aadc0b2057b2c16dc774528af"
+    },
+    {
+      "path": "assets/floorplans/types/B/thumb.webp",
+      "bytes": 60522,
+      "sha256": "8c430c4cc25eb4bf75e7a0e24be1401e2e9d201a4d53fdb85deee090bf321ab2",
+      "role": "floorplan-thumbnail",
+      "type": "B",
+      "dimensions": [
+        270,
+        360
+      ],
+      "lossless": true
+    },
+    {
+      "path": "assets/floorplans/types/C/full.webp",
+      "bytes": 1036616,
+      "sha256": "776c81f678867e4b5869b0813c2bbc43c52721edff73ae739e0f1987e813c140",
+      "role": "floorplan-full",
+      "type": "C",
+      "dimensions": [
+        1054,
+        1492
+      ],
+      "lossless": true
+    },
+    {
+      "path": "assets/floorplans/types/C/original.png",
+      "bytes": 1632608,
+      "sha256": "7978207b80ae38bd323576002a7dd3d16ded19c4e1db2868f74fc6af8575ccd7",
+      "role": "floorplan-original",
+      "type": "C",
+      "dimensions": [
+        1054,
+        1492
+      ],
+      "sourceSha256": "7978207b80ae38bd323576002a7dd3d16ded19c4e1db2868f74fc6af8575ccd7"
+    },
+    {
+      "path": "assets/floorplans/types/C/thumb.webp",
+      "bytes": 72900,
+      "sha256": "0fdb62394b8e7609623c674d78490819b17d6fa8f35247a9b9a221b98ddaf2a7",
+      "role": "floorplan-thumbnail",
+      "type": "C",
+      "dimensions": [
+        254,
+        360
+      ],
+      "lossless": true
+    },
+    {
+      "path": "assets/floorplans/types/D/full.webp",
+      "bytes": 1463606,
+      "sha256": "23e5d10dec91a57d15c8dcf7694ff0ed74a8f6efcd6d53e2039a5e769630d73c",
+      "role": "floorplan-full",
+      "type": "D",
+      "dimensions": [
+        1046,
+        1600
+      ],
+      "lossless": true
+    },
+    {
+      "path": "assets/floorplans/types/D/original.png",
+      "bytes": 2131899,
+      "sha256": "3813789cbe0c5fa876c00a91476bbc10f11fc600f0366eb250ce1e79a71d3f68",
+      "role": "floorplan-original",
+      "type": "D",
+      "dimensions": [
+        1046,
+        1600
+      ],
+      "sourceSha256": "3813789cbe0c5fa876c00a91476bbc10f11fc600f0366eb250ce1e79a71d3f68"
+    },
+    {
+      "path": "assets/floorplans/types/D/thumb.webp",
+      "bytes": 79674,
+      "sha256": "ba65f7743f1045a2f785b846d0303df38e24ef8a85191c4b71b5a344e7fe5399",
+      "role": "floorplan-thumbnail",
+      "type": "D",
+      "dimensions": [
+        235,
+        360
+      ],
+      "lossless": true
+    },
+    {
+      "path": "assets/floorplans/types/E/full.webp",
+      "bytes": 1217988,
+      "sha256": "dcfc7adca4ac130db90c9788cfe7cbdb959c9dd9a8cd9d6141b6d30044961318",
+      "role": "floorplan-full",
+      "type": "E",
+      "dimensions": [
+        889,
+        1600
+      ],
+      "lossless": true
+    },
+    {
+      "path": "assets/floorplans/types/E/original.png",
+      "bytes": 1724499,
+      "sha256": "aeafa3c1cc2ad11600a840c39c40dabf2c4995b774631978afc0cbb13a3e753e",
+      "role": "floorplan-original",
+      "type": "E",
+      "dimensions": [
+        889,
+        1600
+      ],
+      "sourceSha256": "aeafa3c1cc2ad11600a840c39c40dabf2c4995b774631978afc0cbb13a3e753e"
+    },
+    {
+      "path": "assets/floorplans/types/E/thumb.webp",
+      "bytes": 67916,
+      "sha256": "2f30801bb32944461c857bf8017afc9e580ff77104a1a93d0e9015bacf54cd53",
+      "role": "floorplan-thumbnail",
+      "type": "E",
+      "dimensions": [
+        200,
+        360
+      ],
+      "lossless": true
+    },
+    {
+      "path": "assets/floorplans/types/E1/full.webp",
+      "bytes": 1316150,
+      "sha256": "460af2a6eee018d5fc8b3f174b658724fb823536245a11635051181aadfde899",
+      "role": "floorplan-full",
+      "type": "E1",
+      "dimensions": [
+        916,
+        1600
+      ],
+      "lossless": true
+    },
+    {
+      "path": "assets/floorplans/types/E1/original.png",
+      "bytes": 1838708,
+      "sha256": "d0f8a7d428b130861c58efe5221308debee34b841091916278397607d6b4e530",
+      "role": "floorplan-original",
+      "type": "E1",
+      "dimensions": [
+        916,
+        1600
+      ],
+      "sourceSha256": "d0f8a7d428b130861c58efe5221308debee34b841091916278397607d6b4e530"
+    },
+    {
+      "path": "assets/floorplans/types/E1/thumb.webp",
+      "bytes": 72014,
+      "sha256": "3553f40436ac0d73732c9da14a1faab06595939355e574357a7d01515076baaa",
+      "role": "floorplan-thumbnail",
+      "type": "E1",
+      "dimensions": [
+        206,
+        360
+      ],
+      "lossless": true
+    },
+    {
+      "path": "assets/floorplans/types/E2/full.webp",
+      "bytes": 1015260,
+      "sha256": "97ac2cce2fe1782020f8d6a6e5e8003031a66ecece2eee1ed480acdf2011f658",
+      "role": "floorplan-full",
+      "type": "E2",
+      "dimensions": [
+        907,
+        1600
+      ],
+      "lossless": true
+    },
+    {
+      "path": "assets/floorplans/types/E2/original.png",
+      "bytes": 1553303,
+      "sha256": "50dd36c3e272477ecb147ba5c5b811b8468aa38c4cfec34d55099d7e7c94b8a5",
+      "role": "floorplan-original",
+      "type": "E2",
+      "dimensions": [
+        907,
+        1600
+      ],
+      "sourceSha256": "50dd36c3e272477ecb147ba5c5b811b8468aa38c4cfec34d55099d7e7c94b8a5"
+    },
+    {
+      "path": "assets/floorplans/types/E2/thumb.webp",
+      "bytes": 62378,
+      "sha256": "0df71dec10d58c9a685ec810efd857c0e904a2cc3ef4d91b8138bb898e5a07b0",
+      "role": "floorplan-thumbnail",
+      "type": "E2",
+      "dimensions": [
+        204,
+        360
+      ],
+      "lossless": true
+    },
+    {
+      "path": "assets/floorplans/types/F/full.webp",
+      "bytes": 1190706,
+      "sha256": "fe7945a2b1be0ed169047cb56dbe9dffec7392caa1865b3f9e90518dcf2b5e6a",
+      "role": "floorplan-full",
+      "type": "F",
+      "dimensions": [
+        812,
+        1600
+      ],
+      "lossless": true
+    },
+    {
+      "path": "assets/floorplans/types/F/original.png",
+      "bytes": 1677654,
+      "sha256": "59bec3b688af21eee2ff7cbbacb9817582d251074b414a903a9ccdf152db67de",
+      "role": "floorplan-original",
+      "type": "F",
+      "dimensions": [
+        812,
+        1600
+      ],
+      "sourceSha256": "59bec3b688af21eee2ff7cbbacb9817582d251074b414a903a9ccdf152db67de"
+    },
+    {
+      "path": "assets/floorplans/types/F/thumb.webp",
+      "bytes": 63560,
+      "sha256": "5a0b07645da6f685a3d09fc0396985593746ba2536f53dee5e50b69327867000",
+      "role": "floorplan-thumbnail",
+      "type": "F",
+      "dimensions": [
+        183,
+        360
+      ],
+      "lossless": true
+    },
+    {
+      "path": "assets/floorplans/types/F1/full.webp",
+      "bytes": 1105208,
+      "sha256": "cf92f49acd801450a0e48bb1eb002396b1e07894ae2cb6113a4b6fe2161f8cd2",
+      "role": "floorplan-full",
+      "type": "F1",
+      "dimensions": [
+        816,
+        1600
+      ],
+      "lossless": true
+    },
+    {
+      "path": "assets/floorplans/types/F1/original.png",
+      "bytes": 1557964,
+      "sha256": "954086c32fd03fc71df355664bc3c74f44a48cf9ca0664de4c5cde603eab6acc",
+      "role": "floorplan-original",
+      "type": "F1",
+      "dimensions": [
+        816,
+        1600
+      ],
+      "sourceSha256": "954086c32fd03fc71df355664bc3c74f44a48cf9ca0664de4c5cde603eab6acc"
+    },
+    {
+      "path": "assets/floorplans/types/F1/thumb.webp",
+      "bytes": 62986,
+      "sha256": "7b5974b03414c8dfb9792fb9c0d6cd41a4e4a8f90817c9fa107f68c6e4439724",
+      "role": "floorplan-thumbnail",
+      "type": "F1",
+      "dimensions": [
+        184,
+        360
+      ],
+      "lossless": true
+    },
+    {
+      "path": "assets/floorplans/types/F2/full.webp",
+      "bytes": 1150704,
+      "sha256": "55816f61d7d74fca20a8f9cbda83ecd27bb7f43af67a924e536d68263e310072",
+      "role": "floorplan-full",
+      "type": "F2",
+      "dimensions": [
+        807,
+        1600
+      ],
+      "lossless": true
+    },
+    {
+      "path": "assets/floorplans/types/F2/original.png",
+      "bytes": 1652819,
+      "sha256": "eb670cab4da22e77d4d8167577d1647a2aad9535ba3da446336320fe53a7b317",
+      "role": "floorplan-original",
+      "type": "F2",
+      "dimensions": [
+        807,
+        1600
+      ],
+      "sourceSha256": "eb670cab4da22e77d4d8167577d1647a2aad9535ba3da446336320fe53a7b317"
+    },
+    {
+      "path": "assets/floorplans/types/F2/thumb.webp",
+      "bytes": 67068,
+      "sha256": "4867ca0c8f4777a76bf62f3d7ecd14a9824f68607c8e17eef88f1ecdb179ceef",
+      "role": "floorplan-thumbnail",
+      "type": "F2",
+      "dimensions": [
+        182,
+        360
+      ],
+      "lossless": true
+    }
+  ],
+  "totals": {
+    "files": 48,
+    "bytes": 49474829,
+    "apartments": 69,
+    "types": 10,
+    "floorLayouts": 4
+  }
+}
