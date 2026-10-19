@@ -61,9 +61,9 @@ test('paste-in homepage registers its controls and server-renders without loadin
  const stub={addPropertyControls:(component,props)=>{registered=component;controls=props;},ControlType:new Proxy({},{get:(_,name)=>name}),useIsStaticRenderer:()=>true,RenderTarget:{canvas:'canvas',current:()=> 'canvas'}};
  const module={exports:{}};
  vm.runInNewContext(compiled,{module,exports:module.exports,require:name=>name==='framer'?stub:requireDev(name)});
- assert.deepEqual(Object.keys(module.exports).sort(),['ArrivalCTA','BuildingContent','OpeningContent','default']);
+ assert.deepEqual(Object.keys(module.exports).sort(),['AranyhidContent','ArrivalCTA','BalatonfuredContent','BuildingContent','OpeningContent',...Array.from({length:8},(_,i)=>`OrbitView${i+1}`),'default'].sort());
  assert.equal(registered,module.exports.default);
- for(const key of ['startView','editorView','connectionBaseUrl','connectionDuration','checkpointCount','motionWidth','orbitMobileWidth','snapDuration','frameBlend','desktopBuffer','phoneBuffer','orbitStartFrame','detailsMode','detailsLanguage','detailsBottom','detailsInset','apartmentPreview'])assert.ok(controls[key],`Framer control ${key}`);
+ for(const key of ['startView','editorView','connectionBaseUrl','connectionDuration','checkpointCount','motionWidth','orbitMobileWidth','snapDuration','frameBlend','desktopBuffer','phoneBuffer','orbitStartFrame','detailsMode','detailsLanguage','detailsBottom','detailsInset','apartmentPreview','editorOrbitView','orbitStories','storyIn','storyOut','storyDelay',...Array.from({length:8},(_,i)=>`storyView${i+1}`)])assert.ok(controls[key],`Framer control ${key}`);
  assert.equal(controls.duration.title,'SEQ_01 duration');assert.equal(controls.connectionDuration.title,'SEQ_02 duration');assert.equal(controls.connectionDuration.defaultValue,2.5);assert.equal(controls.connectionBaseUrl.defaultValue,'');
  assert.ok(Array.from(controls.editorView.options).includes('connection'),'Editor exposes a static connection preview');
  assert.equal(controls.snapDuration.title,'Settle time');assert.equal(controls.snapDuration.defaultValue,1.5);assert.equal(controls.snapDuration.max,10);
@@ -74,16 +74,24 @@ test('paste-in homepage registers its controls and server-renders without loadin
  assert.equal(controls.detailsMode.defaultValue,'preview');assert.deepEqual(Array.from(controls.detailsMode.options),['preview','hover','off']);assert.equal(controls.detailsLanguage.defaultValue,'hu');assert.deepEqual(Array.from(controls.detailsLanguage.options),['hu','en']);
  assert.equal(controls.detailsBottom.defaultValue,32);assert.equal(controls.detailsInset.defaultValue,48);assert.equal(controls.apartmentPreview.type,'Object');
  for(const field of ['number','area','terrace','garden','rooms','availability','floorplan'])assert.ok(controls.apartmentPreview.controls[field],`Apartment preview control ${field}`);
+ assert.equal(controls.editorOrbitView.defaultValue,'entry');assert.deepEqual(Array.from(controls.editorOrbitView.options),['entry',...Array.from({length:8},(_,i)=>String(i+1))]);
+ assert.equal(controls.orbitStories.defaultValue,true);assert.equal(controls.storyIn.defaultValue,.6);assert.equal(controls.storyOut.defaultValue,.3);assert.equal(controls.storyDelay.defaultValue,.12);
+ for(let view=1;view<=8;view++){
+  const control=controls[`storyView${view}`];assert.equal(control.type,'Object',`View ${view} groups its independent motion settings`);
+  for(const key of ['enterFrom','exitTo'])assert.deepEqual(Array.from(control.controls[key].options),['left','right','top','bottom','none'],`View ${view} ${key} directions`);
+  assert.equal(control.controls.enterFrom.defaultValue,'bottom');assert.equal(control.controls.exitTo.defaultValue,'bottom');assert.equal(control.controls.distance.defaultValue,24);
+ }
  for(const removed of ['wheelSensitivity','dragSensitivity','orbitMomentum'])assert.equal(controls[removed],undefined,`Obsolete speed control ${removed} is hidden`);
  const html=requireDev('react-dom/server').renderToStaticMarkup(requireDev('react').createElement(module.exports.default));
  assert.match(html,/raw%20sequence00\.avif/);
- assert.doesNotMatch(html,/<script|<iframe|<nav|<video/);
+ assert.doesNotMatch(html,/<script|<iframe|<nav|<video/);assert.doesNotMatch(html,/data-orbit-story=/,'The component does not invent or duplicate the eight native Framer content groups');
  assert.doesNotMatch(source,/hero-manifest\.json|__admiralHeroFactoriesV1|AdmiralHeroLoader/);
  const connectionPreview=requireDev('react-dom/server').renderToStaticMarkup(requireDev('react').createElement(module.exports.default,{editorView:'connection'}));
  assert.match(connectionPreview,/02%20sequence36%20copy\.avif/,'Connection editor displays its middle frame');assert.match(connectionPreview,/data-homepage-stage="connection"/);
  const orbitPreview=requireDev('react-dom/server').renderToStaticMarkup(requireDev('react').createElement(module.exports.default,{editorView:'orbit'}));
  assert.match(orbitPreview,/adjusted%20sequence0045%20copy\.avif/,'Editor orbit preview uses the new default fourth camera');
  assert.match(orbitPreview,/data-apartment-details/);assert.match(orbitPreview,/MINTA/);assert.match(orbitPreview,/A\.204/);
+ const authoredView=requireDev('react-dom/server').renderToStaticMarkup(requireDev('react').createElement(module.exports.default,{editorView:'orbit',editorOrbitView:'2',orbitStartFrame:45}));assert.match(authoredView,/adjusted%20sequence0015%20copy\.avif/,'Static story editing can select camera 2 independently of the live entry camera');
  const englishPreview=requireDev('react-dom/server').renderToStaticMarkup(requireDev('react').createElement(module.exports.default,{editorView:'orbit',detailsLanguage:'en'}));assert.match(englishPreview,/SAMPLE/);assert.match(englishPreview,/Available/);
  const hiddenDetails=requireDev('react-dom/server').renderToStaticMarkup(requireDev('react').createElement(module.exports.default,{editorView:'orbit',detailsMode:'off'}));assert.doesNotMatch(hiddenDetails,/data-apartment-details/);
  for(const [input,expected] of [[42.7,43],[-2,0],[125,119],[NaN,45],[Infinity,45]]){

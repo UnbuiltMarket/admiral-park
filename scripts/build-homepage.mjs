@@ -27,10 +27,11 @@ export async function buildHomepage() {
  const orbit = await readFile(new URL('src/core/orbit-player.ts',root),'utf8');
  const template = await readFile(new URL('src/framer/AdmiralHomepageTrial.source.tsx',root),'utf8');
  const apartmentDetails = await readFile(new URL('src/framer/ApartmentDetails.source.tsx',root),'utf8');
+ const orbitStories = await readFile(new URL('src/framer/OrbitStoryOverlays.source.tsx',root),'utf8');
  const source = '// Generated complete Framer homepage trial. Paste this entire file into Framer.\n'+template
   .replace('__HERO_NAMES__',JSON.stringify(heroNames)).replace('__CONNECTION_NAMES__',JSON.stringify(connectionNames)).replace('__ORBIT_NAMES__',JSON.stringify(orbitNames))
   .replace('__HERO_VERSION__',heroHash.digest('hex').slice(0,12)).replace('__CONNECTION_VERSION__',connectionHash.digest('hex').slice(0,12)).replace('__ORBIT_VERSION__',orbitHash.digest('hex').slice(0,12))
-  .replace('// @APARTMENT_DETAILS_INSERT',apartmentDetails).replace('// @HERO_CORE_INSERT',inlineCore(hero)).replace('// @ORBIT_CORE_INSERT',inlineCore(orbit)).trimEnd()+'\n';
+  .replace('// @ORBIT_STORY_INSERT',orbitStories).replace('// @APARTMENT_DETAILS_INSERT',apartmentDetails).replace('// @HERO_CORE_INSERT',inlineCore(hero)).replace('// @ORBIT_CORE_INSERT',inlineCore(orbit)).trimEnd()+'\n';
  compileTS(source,'AdmiralHomepageTrial.tsx');
  await writeFile(new URL('src/framer/AdmiralHomepageTrial.tsx',root),source);
  await writeFile(new URL('src/core/orbit-player.js',root),'// Generated from orbit-player.ts.\n'+compileTS(orbit,'orbit-player.ts'));
