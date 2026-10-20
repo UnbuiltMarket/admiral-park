@@ -80,19 +80,21 @@ The animation uses a separate translation, preserving the group's Framer positio
 
 ## Try the mobile framing
 
-The new **Phone orbit → Turn for fullscreen** option is the default for phones. To keep the earlier shrinking-image trial below, choose **Phone orbit → Inline portrait**.
+**Phone orbit → Turn during SEQ02** is the default phone experience. To retain the earlier upright, smaller image trial below, choose **Phone orbit → Inline portrait**.
 
-### Turn for fullscreen
+### Automatic scene turn
 
-The opening SEQ_01 experience stays as authored. When a phone visitor requests SEQ_02 in portrait, a prompt asks them to turn the phone. The camera remains still. Once landscape dimensions have settled for 0.5 seconds and all fingers are released, **Tovább az épülethez / Continue to orbit** becomes available. Its deliberate tap starts SEQ_02 and the fullscreen landscape orbit. Entering from an already stable landscape view proceeds directly.
+SEQ_01 stays upright and fullscreen. The next scroll starts SEQ_02 directly. As its displayed frames advance, the scene gradually turns clockwise from 0° to 90°. The orbit ends as a fullscreen sideways landscape view. There is no rotation question, Continue button, portrait gate or document-level cover. The visitor can simply turn the phone to read the horizontal view naturally.
 
-Turning the phone during a flight or orbit move freezes its timing and clears the unfinished swipe. The same frame and committed destination are retained. When landscape settles, a move paused by the rotation guard continues toward that same destination; an explicit user pause stays paused. Rotation never requests the next camera. Returning to portrait shows the prompt again. **Maradok álló nézetben / Keep portrait view** offers the inline layout when rotation is inconvenient or the phone's rotation lock is enabled.
+The turn follows the actually drawn SEQ_02 progress, including reversal. Loading holds the current image and angle together. Overview restores the upright opening scene. The scene grows during the turn to cover all screen corners, then finishes with its logical width and height swapped. Apartment details, trial controls and checkpoint stories follow the same orientation; their click and drag coordinates are adjusted to match.
 
-This uses the phone's actual landscape orientation and fills the browser viewport. It does not rotate the page with a CSS transform or require the browser's Fullscreen API. Browser address bars may remain visible. The prompt text follows **Details language**. Phones keep the phone decode and memory-buffer settings even when landscape width exceeds the Phone breakpoint.
+If the visitor physically rotates the phone into landscape, the scene becomes upright within that landscape viewport. A brief guard freezes camera movement while the viewport settles and releases unfinished gestures, without showing a question or confirmation. The camera position and committed destination stay the same. Manual pause stays paused. A landscape-to-landscape turn is guarded the same way.
 
-Keep the **same camera component, assets, Orbit start frame and Phone orbit setting across Phone and Tablet breakpoints**. Use a viewer parent that fills the viewport on both. Framer may choose its Tablet layout when a phone turns sideways. The code guards its own camera and controls; the navbar and other native sibling layouts still follow your Framer breakpoint styling. A short-lived scene handoff also retains the camera and destination if Framer swaps the code-component instance during rotation. It expires after 10 seconds and does not store image bitmaps or create a returning-visitor progress preference.
+Keep the same component, assets, Orbit start frame and Phone orbit setting across Phone and Tablet breakpoints. Framer may switch breakpoint layouts when the phone turns. The code preserves its own scene across a short component handoff; the external navbar remains governed by its native Framer layout.
 
-For the first test, choose **Start trial → Orbit directly**, **Phone orbit → Turn for fullscreen**, and **Trial controls → Off**. Then test the full journey on a physical phone, including turning it during movement, returning to portrait, and landscape-to-landscape turns. No repository update publishes the Framer page automatically.
+The phone keeps its existing decode and cache limits in either orientation. The automatic turn uses a fixed square canvas backing capped at 1280 × 1280 pixels (about 6.6 MB per canvas) instead of reallocating it on every frame. No new image sequence or video is downloaded for the turn.
+
+For the trial, paste the updated component, select **Phone orbit → Turn during SEQ02**, and test on a physical phone. **Start trial → Orbit directly** checks the final sideways view; **Full journey** checks the gradual turn. **Trial controls → Off** gives the clean presentation. Use **Inline portrait** to compare with the earlier layout. Pushing GitHub does not publish the Framer page.
 
 Replace the contents of the existing Framer code file with the updated **AdmiralHomepageTrial.tsx**. Keep the existing camera instance and native content overrides. No permanent loader is needed.
 

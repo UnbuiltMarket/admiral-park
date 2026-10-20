@@ -383,10 +383,19 @@ export function createOrbitPlayer(options) {
                 resourcesChanged();
         }
     }
-    function drawImage(bitmap, viewport) {
+    function drawImage(bitmap, viewport, logicalRatio) {
         if (!context)
             return;
         const target = viewport ?? { x: 0, y: 0, width: canvas.width, height: canvas.height };
+        if (logicalRatio) {
+            let width = bitmap.width, height = bitmap.height;
+            if (width / height > logicalRatio)
+                width = height * logicalRatio;
+            else
+                height = width / logicalRatio;
+            context.drawImage(bitmap.image, (bitmap.width - width) * focalX, (bitmap.height - height) * focalY, width, height, target.x, target.y, target.width, target.height);
+            return;
+        }
         const scale = Math.max(target.width / bitmap.width, target.height / bitmap.height);
         const width = bitmap.width * scale, height = bitmap.height * scale;
         context.drawImage(bitmap.image, target.x + (target.width - width) * focalX, target.y + (target.height - height) * focalY, width, height);
@@ -411,7 +420,9 @@ export function createOrbitPlayer(options) {
         const bitmap = frames.get(from), next = frameMix > 0 ? frames.get(to) : undefined;
         if (!context || !bitmap || !active || destroyed)
             return;
-        const bounds = canvas.getBoundingClientRect();
+        const requestedBounds = options.renderBounds?.();
+        const bounds = requestedBounds && [requestedBounds.width, requestedBounds.height].every(Number.isFinite) &&
+            requestedBounds.width > 0 && requestedBounds.height > 0 ? requestedBounds : canvas.getBoundingClientRect();
         if (bounds.width <= 0 || bounds.height <= 0)
             return;
         const requestedViewport = options.viewport?.({ width: bounds.width, height: bounds.height });
@@ -420,7 +431,10 @@ export function createOrbitPlayer(options) {
         const useful = inspection && inspectionFrame === frame ? inspection : bitmap;
         const usefulDPR = Math.min(useful.width / bounds.width, useful.height / bounds.height);
         const dpr = viewport ? Math.min(window.devicePixelRatio || 1, 2) : Math.min(window.devicePixelRatio || 1, 2, usefulDPR);
-        const width = Math.max(1, Math.round(bounds.width * dpr)), height = Math.max(1, Math.round(bounds.height * dpr));
+        const requestedBacking = options.backingSize?.();
+        const backing = requestedBacking && [requestedBacking.width, requestedBacking.height].every(Number.isFinite) &&
+            requestedBacking.width > 0 && requestedBacking.height > 0 ? requestedBacking : null;
+        const width = Math.max(1, Math.round(backing?.width ?? bounds.width * dpr)), height = Math.max(1, Math.round(backing?.height ?? bounds.height * dpr));
         if (canvas.width !== width || canvas.height !== height) {
             canvas.width = width;
             canvas.height = height;
@@ -429,7 +443,8 @@ export function createOrbitPlayer(options) {
         const destination = viewport ? { x: viewport.x * width / bounds.width, y: viewport.y * height / bounds.height,
             width: viewport.width * width / bounds.width, height: viewport.height * height / bounds.height } : undefined;
         const mix = inspection && inspectionFrame === frame ? (reduced() ? 1 : orbitClamp((now - qualityStartedAt) / 120, 0, 1)) : 0;
-        const signature = [from, to, frameMix.toFixed(4), width, height, inspectionFrame, mix.toFixed(4),
+        const logicalRatio = backing ? viewport ? viewport.width / viewport.height : bounds.width / bounds.height : undefined;
+        const signature = [from, to, frameMix.toFixed(4), width, height, inspectionFrame, mix.toFixed(4), logicalRatio ?? "",
             viewport ? 1 : 0, destination?.x ?? 0, destination?.y ?? 0, destination?.width ?? width, destination?.height ?? height].join("|");
         if (signature === lastPaint)
             return;
@@ -442,15 +457,15 @@ export function createOrbitPlayer(options) {
             context.rect(destination.x, destination.y, destination.width, destination.height);
             context.clip();
         }
-        drawImage(bitmap, destination);
+        drawImage(bitmap, destination, logicalRatio);
         if (next) {
             context.globalAlpha = frameMix;
-            drawImage(next, destination);
+            drawImage(next, destination, logicalRatio);
             context.globalAlpha = 1;
         }
         if (inspection && mix > 0 && inspectionFrame === frame) {
             context.globalAlpha = mix;
-            drawImage(inspection, destination);
+            drawImage(inspection, destination, logicalRatio);
             context.globalAlpha = 1;
         }
         if (destination)
@@ -569,6 +584,10 @@ export function createOrbitPlayer(options) {
         const box = root.getBoundingClientRect();
         return box.width > 0 && box.height > 0 && x >= box.left && x <= box.right && y >= box.top && y <= box.bottom;
     }
+    function inputPoint(clientX, clientY) {
+        const point = options.inputPoint?.(clientX, clientY);
+        return point && Number.isFinite(point.x) && Number.isFinite(point.y) ? point : { x: clientX, y: clientY };
+    }
     function coveredTrialControl(x, y) {
         return Array.from(root.querySelectorAll("[data-homepage-controls] button")).some(button => {
             const box = button.getBoundingClientRect();
@@ -668,7 +687,8 @@ export function createOrbitPlayer(options) {
             return;
         if (nestedScroll(event.target, 1, 0) || nestedScroll(event.target, 0, 1))
             return;
-        drag = { id: event.pointerId, x: event.clientX, y: event.clientY, moved: false, triggered: state !== "checkpoint" || !!settling || !!pendingMove };
+        const point = inputPoint(event.clientX, event.clientY);
+        drag = { id: event.pointerId, x: point.x, y: point.y, moved: false, triggered: state !== "checkpoint" || !!settling || !!pendingMove };
         try {
             root.setPointerCapture(event.pointerId);
         }
@@ -677,7 +697,7 @@ export function createOrbitPlayer(options) {
     function onPointerMove(event) {
         if (!drag || touchDragging || drag.id !== event.pointerId || !inputAvailable())
             return;
-        const dx = event.clientX - drag.x;
+        const dx = inputPoint(event.clientX, event.clientY).x - drag.x;
         if (Math.abs(dx) < 8 && !drag.moved)
             return;
         if (event.cancelable)
@@ -730,7 +750,8 @@ export function createOrbitPlayer(options) {
             return;
         if (nestedScroll(event.target, 1, 0) || nestedScroll(event.target, 0, 1))
             return;
-        drag = { id: touch.identifier, x: touch.clientX, y: touch.clientY, moved: false, triggered: state !== "checkpoint" || !!settling || !!pendingMove };
+        const point = inputPoint(touch.clientX, touch.clientY);
+        drag = { id: touch.identifier, x: point.x, y: point.y, moved: false, triggered: state !== "checkpoint" || !!settling || !!pendingMove };
         touchDragging = true;
     }
     function onTouchMove(event) {
@@ -742,7 +763,8 @@ export function createOrbitPlayer(options) {
         if (!touchDragging || !drag || !inputAvailable() || event.touches.length !== 1)
             return;
         const touch = event.touches[0];
-        const dx = touch.clientX - drag.x, dy = touch.clientY - drag.y;
+        const point = inputPoint(touch.clientX, touch.clientY);
+        const dx = point.x - drag.x, dy = point.y - drag.y;
         // A non-passive touch listener also reaches Framer sibling hit layers;
         // changing the canvas touch-action alone cannot prevent their page pan.
         if (event.cancelable)

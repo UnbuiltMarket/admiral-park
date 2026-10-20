@@ -12,7 +12,8 @@ const HOMEPAGE_ASSETS = "https://raw.githubusercontent.com/UnbuiltMarket/admiral
 type HomepageStage = "opening" | "approach" | "building" | "connection" | "handoff" | "orbit"
 interface HomepageTiming { openingOut: number; buildingIn: number; buildingFull: number; ctaIn: number; rise: number }
 interface HomepageMobileLayout { enabled: boolean; storyTop: number; storyMaxHeight: number }
-interface HomepageChannel { snapshot: SequenceSnapshot; timing: HomepageTiming; enabled: boolean; stage: HomepageStage; orbit: OrbitSnapshot; story: OrbitStorySettings; static: boolean; mobile: HomepageMobileLayout | null; rotationBlocked?: boolean }
+interface HomepageSceneLayout { angle: number; width: number; height: number; storyMaxHeight?: number }
+interface HomepageChannel { snapshot: SequenceSnapshot; timing: HomepageTiming; enabled: boolean; stage: HomepageStage; orbit: OrbitSnapshot; story: OrbitStorySettings; static: boolean; mobile: HomepageMobileLayout | null; rotationBlocked?: boolean; scene?: HomepageSceneLayout | null }
 const homepageChannels = new Map<HTMLElement, HomepageChannel>()
 const homepageSubscribers = new Set<() => void>()
 const notifyHomepage = () => homepageSubscribers.forEach(update => update())
@@ -33,9 +34,9 @@ interface AdmiralHomepageTrialProps {
     detailsBottom?: number; detailsInset?: number; apartmentPreview?: ApartmentDetailsPreview
     background?: string; alt?: string; style?: React.CSSProperties
 }
-interface HomepageActions { explore: () => void; overview: () => void; skip: () => void; resumeHero: () => void; continuePhone: () => void; portraitPhone: () => void; orbit: ReturnType<typeof createOrbitPlayer> | null }
+interface HomepageActions { explore: () => void; overview: () => void; skip: () => void; resumeHero: () => void; orbit: ReturnType<typeof createOrbitPlayer> | null }
 interface HomepagePhoneView { phone: boolean; enabled: boolean; state: "off" | "portrait" | "turning" | "ready"; blocked: boolean }
-interface HomepagePhoneScene { owner: HTMLElement; at: number; stage: HomepageStage; orbit: OrbitSnapshot; hero: SequenceSnapshot; pending: "connection" | "orbit" | null; portrait: boolean }
+interface HomepagePhoneScene { owner: HTMLElement; at: number; stage: HomepageStage; orbit: OrbitSnapshot; hero: SequenceSnapshot }
 const homepagePhoneScenes = new Map<string, HomepagePhoneScene>()
 const homepagePhoneSceneTimers = new Map<string, number>()
 function expireHomepagePhoneScene(key: string) {
@@ -50,25 +51,6 @@ function expireHomepagePhoneScene(key: string) {
         else homepagePhoneSceneTimers.set(key, window.setTimeout(check, remaining))
     }
     homepagePhoneSceneTimers.set(key, window.setTimeout(check, 10000))
-}
-// A temporary document-level cover survives Framer swapping hidden breakpoint instances.
-let homepageTurnCover: { element: HTMLDivElement; owner: HTMLElement; timer: number } | null = null
-function showHomepageTurnCover(owner: HTMLElement, english: boolean) {
-    if (!homepageTurnCover) {
-        const element = document.createElement("div")
-        element.dataset.phoneTurnCover = ""; element.setAttribute("role", "status")
-        Object.assign(element.style, { position: "fixed", inset: "0", zIndex: "2147483000", background: "#101820", color: "white", display: "grid", placeItems: "center", font: "16px/1.5 system-ui,sans-serif", touchAction: "none" })
-        document.body.appendChild(element)
-        homepageTurnCover = { element, owner, timer: 0 }
-    }
-    const cover = homepageTurnCover
-    cover.owner = owner; cover.element.textContent = english ? "Adjusting your view…" : "Nézet igazítása…"
-    clearTimeout(cover.timer)
-    cover.timer = window.setTimeout(() => { if (homepageTurnCover === cover) { cover.element.remove(); homepageTurnCover = null } }, 10000)
-}
-function hideHomepageTurnCover(owner: HTMLElement) {
-    if (!homepageTurnCover || homepageTurnCover.owner !== owner) return
-    clearTimeout(homepageTurnCover.timer); homepageTurnCover.element.remove(); homepageTurnCover = null
 }
 const homepageButton: React.CSSProperties = {
     appearance: "none", border: "1px solid rgba(255,255,255,.45)", borderRadius: 6,
@@ -140,9 +122,7 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
     const [hoveredApartment, setHoveredApartment] = React.useState<ApartmentDetailsData | null>(null)
     const [detailsHeight, setDetailsHeight] = React.useState(140)
     const [phoneView, setPhoneView] = React.useState<HomepagePhoneView>({ phone: false, enabled: false, state: "off", blocked: false })
-    const [pendingPhoneEntry, setPendingPhoneEntry] = React.useState<"connection" | "orbit" | null>(null)
-    const [portraitPhone, setPortraitPhone] = React.useState(false)
-    const phoneViewRef = React.useRef(phoneView), pendingPhoneRef = React.useRef(pendingPhoneEntry), portraitPhoneRef = React.useRef(portraitPhone)
+    const phoneViewRef = React.useRef(phoneView)
     const stageRef = React.useRef<HomepageStage>(previewStage)
     const rotationRefresh = React.useRef<() => void>(() => {})
     const suspendPlayers = React.useRef<(blocked: boolean) => void>(() => {})
@@ -154,9 +134,9 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
     const sampleApartment = React.useMemo(() => createApartmentPreview(apartmentPreview), [apartmentPreview])
     const rootRef = React.useRef<HTMLDivElement>(null), heroRootRef = React.useRef<HTMLDivElement>(null)
     const heroCanvasRef = React.useRef<HTMLCanvasElement>(null), orbitCanvasRef = React.useRef<HTMLCanvasElement>(null), posterRef = React.useRef<HTMLImageElement>(null)
-    const rotationDialogRef = React.useRef<HTMLDivElement>(null)
+    const sceneRef = React.useRef<HTMLDivElement>(null)
     const actions = React.useRef<HomepageActions | null>(null)
-    const inlineFraming = phoneFraming && !(phoneOrbitMode === "landscape" && phoneView.phone && !portraitPhone)
+    const inlineFraming = phoneFraming && !(phoneOrbitMode === "landscape" && phoneView.phone)
     const framingConfig = React.useRef<HomepageFramingConfig>({ enabled: inlineFraming, sourceWidth: phoneImageWidth, top: phoneImageTop, detailsHeight, detailsBottom, reserveDetails: detailsMode !== "off" })
     framingConfig.current = { enabled: inlineFraming, sourceWidth: phoneImageWidth, top: phoneImageTop, detailsHeight, detailsBottom, reserveDetails: detailsMode !== "off" }
     const refreshPresentation = React.useRef<() => void>(() => {})
@@ -176,17 +156,15 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
         let phone = false, turning = false, timer = 0, fingers = 0, releasedAt = -Infinity
         let width = innerWidth, height = innerHeight, axis = width > height
         function publishPhone() {
-            const enabled = phone && phoneMode.current === "landscape" && !portraitPhoneRef.current
-            const engaged = !!pendingPhoneRef.current || ["connection", "handoff", "orbit"].includes(stageRef.current)
-            const state: HomepagePhoneView["state"] = !enabled ? "off" : turning ? "turning" : axis ? "ready" : "portrait"
-            const next = { phone, enabled, state, blocked: enabled && engaged && (state !== "ready" || !!pendingPhoneRef.current) }
+            const enabled = phone && phoneMode.current === "landscape"
+            const engaged = ["connection", "handoff", "orbit"].includes(stageRef.current)
+            const state: HomepagePhoneView["state"] = !enabled ? "off" : turning ? "turning" : "ready"
+            const next = { phone, enabled, state, blocked: enabled && engaged && turning }
             const previous = phoneViewRef.current
             phoneViewRef.current = next
             root!.dataset.phoneDevice = String(phone); root!.dataset.phoneOrbitMode = enabled ? "landscape" : "inline"
             root!.dataset.phoneRotation = state; root!.dataset.phoneRotationBlocked = String(next.blocked)
             if (next.blocked !== previous.blocked) suspendPlayers.current(next.blocked)
-            if (next.blocked && state === "turning") showHomepageTurnCover(root!, detailsLanguage === "en")
-            else if (state !== "turning" && (["opening", "approach", "building"].includes(stageRef.current) || pendingPhoneRef.current)) hideHomepageTurnCover(root!)
             if (Object.keys(next).some(key => next[key as keyof HomepagePhoneView] !== previous[key as keyof HomepagePhoneView])) setPhoneView(next)
         }
         function identify() {
@@ -230,14 +208,7 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
         identify(); if (phone && axis) { turning = true; settle() }; publishPhone()
         return () => { clearTimeout(timer); controller.abort(); rotationRefresh.current = () => {} }
     }, [staticRenderer, detailsLanguage])
-    React.useEffect(() => { rotationRefresh.current() }, [phoneOrbitMode, portraitPhone])
-    React.useEffect(() => {
-        if (!phoneView.blocked) return
-        const previous = document.activeElement as HTMLElement | null
-        rotationDialogRef.current?.querySelector<HTMLButtonElement>("button:not(:disabled)")?.focus({ preventScroll: true })
-        return () => { if (previous?.isConnected && !previous.closest("[inert]")) previous.focus({ preventScroll: true }) }
-    }, [phoneView.blocked])
-
+    React.useEffect(() => { rotationRefresh.current() }, [phoneOrbitMode])
     React.useEffect(() => {
         const root = rootRef.current
         if (!root || staticRenderer) return
@@ -262,6 +233,7 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
         let currentStage: HomepageStage = previewStage
         let presentationProgress = previewStage === "orbit" || previewStage === "handoff" ? 1 : previewStage === "connection" ? .5 : 0
         let mobileLayout: HomepageMobileLayout | null = null
+        let sceneLayout: HomepageSceneLayout | null = null
         let hero: ReturnType<typeof createHeroSequence> | null = null
         let activeSequence: "SEQ_01" | "SEQ_02" = "SEQ_01", connectionWarmed = false
         let heroSnapshot: SequenceSnapshot = { state: previewStage === "building" ? "arrival" : "opening", progress: previewStage === "building" ? 1 : 0, frame: previewStage === "building" ? heroUrls.length - 1 : 0, direction: 1, held: false, decoded: 0, downloaded: 0 }
@@ -274,11 +246,6 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
         const priorScene = homepagePhoneScenes.get(sessionKey)
         const restoreScene = !staticRenderer && phoneViewRef.current.phone && phoneMode.current === "landscape" && priorScene &&
             (Date.now() - priorScene.at < 10000 || priorScene.owner.isConnected) ? priorScene : null
-        if (restoreScene) {
-            portraitPhoneRef.current = restoreScene.portrait; setPortraitPhone(restoreScene.portrait)
-            pendingPhoneRef.current = restoreScene.pending; setPendingPhoneEntry(restoreScene.pending)
-            if (homepageTurnCover) homepageTurnCover.owner = root
-        }
         let arrivedAt = -Infinity, lastWheelAt = -Infinity, wheelIntent = 0, lastUI = 0, lastOrbitUI = ""
         const abort = new AbortController(), signal = abort.signal
         const phone = phoneViewRef.current.phone || window.matchMedia("(max-width: 767px)").matches
@@ -291,7 +258,27 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
             const box = root!.getBoundingClientRect()
             return box.width > 0 && box.height > 0 && box.bottom > 0 && box.top < innerHeight
         }
+        function sceneFor(progress: number) {
+            const width = root!.clientWidth, height = root!.clientHeight
+            const automatic = phoneViewRef.current.enabled || (staticRenderer && phoneMode.current === "landscape" && width <= 767)
+            const angle = automatic && height > width ? 90 * sequenceEase(sequenceClamp(progress)) : 0
+            const radians = angle * Math.PI / 180, cosine = Math.abs(Math.cos(radians)), sine = Math.abs(Math.sin(radians))
+            return { automatic, angle, width: width * cosine + height * sine, height: width * sine + height * cosine }
+        }
+        function backingSize() {
+            if (!phoneViewRef.current.enabled) return null
+            const side = Math.max(1, Math.min(1280, Math.ceil(Math.hypot(root!.clientWidth, root!.clientHeight) * Math.min(devicePixelRatio || 1, 2))))
+            return { width: side, height: side }
+        }
+        function inputPoint(clientX: number, clientY: number) {
+            const bounds = root!.getBoundingClientRect(), scene = sceneFor(1), radians = scene.angle * Math.PI / 180
+            const dx = (clientX - bounds.left - bounds.width / 2) * root!.clientWidth / Math.max(1, bounds.width)
+            const dy = (clientY - bounds.top - bounds.height / 2) * root!.clientHeight / Math.max(1, bounds.height)
+            return { x: scene.width / 2 + Math.cos(radians) * dx + Math.sin(radians) * dy,
+                y: scene.height / 2 - Math.sin(radians) * dx + Math.cos(radians) * dy }
+        }
         function viewportFor(progress: number, bounds: { width: number; height: number }) {
+            if (sceneFor(progress).automatic) return null
             // Core drawing uses screen bounds; CSS clipping uses unscaled local pixels.
             const width = root!.clientWidth || bounds.width, height = root!.clientHeight || bounds.height
             const local = homepageImageRect(progress, { width, height }, framingConfig.current)
@@ -300,9 +287,8 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
         }
         function publish() {
             root!.querySelectorAll<HTMLElement>("[data-homepage-controls]").forEach(control => { control.inert = phoneViewRef.current.blocked })
-            homepageChannels.set(root!, { snapshot: heroSnapshot, timing: timing.current, stage: currentStage, orbit: orbitSnapshot, story: story.current, static: staticRenderer, mobile: mobileLayout, rotationBlocked: phoneViewRef.current.blocked, enabled: !phoneViewRef.current.blocked && (currentStage === "opening" || currentStage === "approach" || currentStage === "building") })
+            homepageChannels.set(root!, { snapshot: heroSnapshot, timing: timing.current, stage: currentStage, orbit: orbitSnapshot, story: story.current, static: staticRenderer, mobile: mobileLayout, scene: sceneLayout, rotationBlocked: phoneViewRef.current.blocked, enabled: !phoneViewRef.current.blocked && (currentStage === "opening" || currentStage === "approach" || currentStage === "building") })
             savePhoneScene()
-            if (!phoneViewRef.current.blocked && currentStage === "connection" && heroCanvas!.width > 1 && heroCanvas!.style.opacity === "1") hideHomepageTurnCover(root!)
             notifyHomepage()
         }
         function savePhoneScene() {
@@ -311,19 +297,22 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
             if (!["building", "connection", "handoff", "orbit"].includes(currentStage)) { homepagePhoneScenes.delete(sessionKey); return }
             const owner = homepagePhoneScenes.get(sessionKey)?.owner
             if (owner && owner !== root && owner.isConnected) { const box = owner.getBoundingClientRect(); if (box.width > 0 && box.height > 0) return }
-            homepagePhoneScenes.set(sessionKey, { owner: root!, at: Date.now(), stage: currentStage, orbit: orbitSnapshot, hero: heroSnapshot,
-                pending: pendingPhoneRef.current, portrait: portraitPhoneRef.current })
+            homepagePhoneScenes.set(sessionKey, { owner: root!, at: Date.now(), stage: currentStage, orbit: orbitSnapshot, hero: heroSnapshot })
             expireHomepagePhoneScene(sessionKey)
         }
         function applyPresentation() {
             const bounds = root!.getBoundingClientRect()
+            const scene = sceneFor(presentationProgress)
             const requested = viewportFor(presentationProgress, bounds)
-            const rect = requested || { x: 0, y: 0, width: bounds.width, height: bounds.height }
+            const rect = requested || { x: 0, y: 0, width: scene.automatic ? scene.width : bounds.width, height: scene.automatic ? scene.height : bounds.height }
             const setStyle = (name: string, value: string) => { if (root!.style.getPropertyValue(name) !== value) root!.style.setProperty(name, value) }
-            const cssScaleY = bounds.height > 0 ? (root!.clientHeight || bounds.height) / bounds.height : 1
+            setStyle("--admiral-scene-width", scene.width + "px"); setStyle("--admiral-scene-height", scene.height + "px")
+            setStyle("--admiral-scene-angle", scene.angle + "deg")
+            root!.dataset.sceneAngle = String(scene.angle); root!.dataset.sceneWidth = String(scene.width); root!.dataset.sceneHeight = String(scene.height)
+            const cssScaleY = !scene.automatic && bounds.height > 0 ? (root!.clientHeight || bounds.height) / bounds.height : 1
             setStyle("--admiral-image-y", rect.y * cssScaleY + "px")
             setStyle("--admiral-image-height", rect.height * cssScaleY + "px")
-            setStyle("--admiral-image-cut", Math.max(0, bounds.height - rect.y - rect.height) * cssScaleY + "px")
+            setStyle("--admiral-image-cut", Math.max(0, (scene.automatic ? scene.height : bounds.height) - rect.y - rect.height) * cssScaleY + "px")
             root!.dataset.mobileFraming = String(!!requested)
             root!.dataset.imageX = String(rect.x); root!.dataset.imageY = String(rect.y)
             root!.dataset.imageWidth = String(rect.width); root!.dataset.imageHeight = String(rect.height)
@@ -340,6 +329,12 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
                 const storyTop = rect.y + rect.height + 20
                 mobileLayout = { enabled: true, storyTop, storyMaxHeight: Math.max(0, Math.min(detailsTop, controlsTop) - 20 - storyTop) }
             } else mobileLayout = null
+            if (scene.automatic) {
+                const details = framingConfig.current.reserveDetails ? root!.querySelector<HTMLElement>("[data-apartment-details]") : null
+                const controls = root!.querySelector<HTMLElement>("[data-homepage-controls]")
+                const limit = Math.min(details ? details.offsetTop : scene.height - 4, controls ? controls.offsetTop : scene.height - 4)
+                sceneLayout = { angle: scene.angle, width: scene.width, height: scene.height, storyMaxHeight: Math.max(0, limit - 44) }
+            } else sceneLayout = null
         }
         function changeStage(next: HomepageStage) {
             currentStage = next; stageRef.current = next; root!.dataset.homepageStage = next; setStage(next); rotationRefresh.current(); publish()
@@ -350,6 +345,8 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
             root, canvas: orbitCanvas, urls: orbitUrls, startFrame: orbitStartIndex, decodeWidth, inspectionWidth: phone ? Math.min(inspectionWidth, 1280) : inspectionWidth,
             checkpointCount, bufferCheckpoints: phone ? phoneBuffer : desktopBuffer, snapDuration, frameBlend: frameBlend / 100, focalX: focalX / 100, focalY: focalY / 100,
             viewport: bounds => viewportFor(1, bounds),
+            renderBounds: () => phoneViewRef.current.enabled ? sceneFor(1) : null, backingSize,
+            inputPoint: (x, y) => phoneViewRef.current.enabled ? inputPoint(x, y) : { x, y },
             onUpdate(snapshot) {
                 if (disposed) return
                 orbitSnapshot = snapshot; publish()
@@ -393,7 +390,7 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
             if (atEnd) arrivedAt = performance.now()
             const generation = ++heroGeneration
             hero = createHeroSequence({
-                root: heroRoot!, canvas: heroCanvas!, poster: poster!, urls: heroUrls, duration, maxSpeed, momentum, triggerDistance, startAtEnd: atEnd,
+                root: heroRoot!, inputRoot: root!, canvas: heroCanvas!, poster: poster!, urls: heroUrls, duration, maxSpeed, momentum, triggerDistance, startAtEnd: atEnd,
                 preservePresentation: atEnd, holdScroll: true, preload: true, cacheFrames: phone ? 10 : 14, decodeWidth: phone ? 1280 : 1920, focalX, focalY,
                 inputFilter: event => !homepageBlocked(event.target),
                 onUpdate(snapshot) {
@@ -419,12 +416,10 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
                 if (disposed || token !== enterToken) return
                 presentationProgress = 1; applyPresentation()
                 changeStage("orbit")
-                hideHomepageTurnCover(root!)
             } catch { /* The orbit reports a visible retry state. The completed sequence remains visible. */ }
         }
         function explore(restoration?: SequenceSnapshot) {
             if (disposed || !orbit || !isVisible() || (!restoration && currentStage !== "building")) return
-            if (!restoration && requirePhoneTurn("connection")) return
             if (reducedMedia.matches) { void activateOrbit(); return }
             enterToken++; destroyHero(); clearApartmentDetails()
             presentationProgress = restoration?.progress ?? 0; applyPresentation()
@@ -433,11 +428,12 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
             const generation = ++heroGeneration
             let completed = false
             hero = createHeroSequence({
-                root: heroRoot!, canvas: heroCanvas!, poster: poster!, urls: connectionPlaybackUrls,
+                root: heroRoot!, inputRoot: root!, canvas: heroCanvas!, poster: poster!, urls: connectionPlaybackUrls,
                 duration: connectionDuration, maxSpeed, momentum, triggerDistance, preservePresentation: true,
                 restoration: restoration?.time === undefined ? undefined : { time: restoration.time, direction: restoration.direction, playing: restoration.playing, frame: restoration.frame, progress: restoration.progress },
                 suspended: phoneViewRef.current.blocked,
                 viewport: (progress, bounds) => viewportFor(progress, bounds),
+                renderBounds: progress => phoneViewRef.current.enabled ? sceneFor(progress) : null, backingSize,
                 holdScroll: true, preload: true, cacheFrames: phone ? 10 : 14, decodeWidth: phone ? 1280 : 1920, focalX, focalY,
                 inputFilter: event => !homepageBlocked(event.target),
                 onUpdate(snapshot) {
@@ -460,29 +456,9 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
             })
             if (!restoration) hero.start()
         }
-        function setPendingPhone(kind: "connection" | "orbit" | null) {
-            pendingPhoneRef.current = kind; setPendingPhoneEntry(kind); rotationRefresh.current(); savePhoneScene()
-        }
-        function requirePhoneTurn(kind: "connection" | "orbit") {
-            const view = phoneViewRef.current
-            if (!view.enabled || (view.state === "ready" && !pendingPhoneRef.current)) return false
-            setPendingPhone(kind); return true
-        }
-        function continuePhone() {
-            if (phoneViewRef.current.enabled && phoneViewRef.current.state !== "ready") return
-            const pending = pendingPhoneRef.current
-            setPendingPhone(null)
-            if (pending === "connection") explore()
-            else if (pending === "orbit") void activateOrbit(restoreScene?.stage === "orbit" ? restoreScene.orbit : undefined)
-        }
-        function usePortraitPhone() {
-            portraitPhoneRef.current = true; setPortraitPhone(true); rotationRefresh.current()
-            continuePhone()
-        }
         function overview(fromNavigation = false) {
             if (phoneViewRef.current.blocked && !fromNavigation) return
-            setPendingPhone(null); portraitPhoneRef.current = false; setPortraitPhone(false)
-            homepagePhoneScenes.delete(sessionKey); hideHomepageTurnCover(root!); mountHero(false)
+            homepagePhoneScenes.delete(sessionKey); mountHero(false)
         }
         const retry = async () => {
             if (!orbit) return
@@ -547,7 +523,7 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
         root.addEventListener("admiral:overview", () => overview(true), { signal })
         window.addEventListener("admiral:overview", event => { if (event.target === window && root!.getBoundingClientRect().width > 0) overview(true) }, { signal })
         root.addEventListener("admiral:explore", () => { void explore() }, { signal })
-        actions.current = { explore: () => { void explore() }, overview, continuePhone, portraitPhone: usePortraitPhone, skip: () => { if (activeSequence === "SEQ_02" && reducedMedia.matches) void activateOrbit(); else hero?.skip() }, resumeHero: () => { if (heroSnapshot.direction < 0) hero?.reverse(); else hero?.start() }, orbit }
+        actions.current = { explore: () => { void explore() }, overview, skip: () => { if (activeSequence === "SEQ_02" && reducedMedia.matches) void activateOrbit(); else hero?.skip() }, resumeHero: () => { if (heroSnapshot.direction < 0) hero?.reverse(); else hero?.start() }, orbit }
         suspendPlayers.current = blocked => { hero?.setSuspended(blocked); orbit?.setSuspended(blocked); publish() }
         orbit?.setSuspended(phoneViewRef.current.blocked)
         ;(root as HTMLElement & { retryOrbit?: () => Promise<void> }).retryOrbit = retry
@@ -563,10 +539,10 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
                 orbitSnapshot = restoreScene.orbit; presentationProgress = 1
                 changePoster(orbitUrls[restoreScene.orbit.frame]); void activateOrbit(restoreScene.orbit)
             } else if (restoreScene?.stage === "connection") explore(restoreScene.hero)
-            else if (restoreScene?.stage === "building" || restoreScene?.pending === "connection") mountHero(true)
+            else if (restoreScene?.stage === "building") mountHero(true)
             else if (startView === "orbit" || restoreScene?.stage === "handoff") {
                 changePoster(orbitPoster); changeStage("handoff")
-                if (!requirePhoneTurn("orbit")) void activateOrbit()
+                void activateOrbit()
             } else mountHero()
             // The opening picture wins the first network requests; preload the entire orbit behind it.
             const warm = window.setTimeout(() => { if (!disposed && isVisible()) void orbit!.prepare().catch(() => {}) }, 300)
@@ -584,7 +560,7 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
     }, [heroUrls, connectionUrls, connectionPlaybackUrls, orbitUrls, staticRenderer, hostVisible, startView, editorView, duration, connectionDuration, maxSpeed, momentum, triggerDistance, checkpointCount,
         motionWidth, orbitMobileWidth, inspectionWidth, desktopBuffer, phoneBuffer, orbitStartIndex, editorPreviewFrame, snapDuration, frameBlend, focalX, focalY, showDiagnostics, clearApartmentDetails])
 
-    React.useEffect(() => { refreshPresentation.current() }, [phoneOrbitMode, phoneView, portraitPhone, phoneFraming, phoneImageWidth, phoneImageTop, detailsHeight, detailsBottom, detailsMode, showControls, showViewpoints, stage, orbitInfo.state])
+    React.useEffect(() => { refreshPresentation.current() }, [phoneOrbitMode, phoneView, phoneFraming, phoneImageWidth, phoneImageTop, detailsHeight, detailsBottom, detailsMode, showControls, showViewpoints, stage, orbitInfo.state])
 
     React.useEffect(() => {
         const root = rootRef.current, channel = root && homepageChannels.get(root)
@@ -623,12 +599,12 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
     const detailsData = detailsMode === "preview" ? sampleApartment : hoveredApartment
     const controlsBottom = detailsVisible ? `calc(${detailsBottom + detailsHeight + 20}px + env(safe-area-inset-bottom, 0px))` : "18px"
     const diagnosticBottom = detailsVisible ? detailsBottom + detailsHeight + (showControls ? 112 : 20) : 94
-    const phoneFullscreen = !staticRenderer && phoneView.enabled && (!!pendingPhoneEntry || ["connection", "handoff", "orbit"].includes(stage))
-    const english = detailsLanguage === "en"
+    const phoneFullscreen = !staticRenderer && phoneView.enabled && ["connection", "handoff", "orbit"].includes(stage)
     return (
         <div ref={rootRef} data-admiral-homepage="" data-admiral-orbit="" data-homepage-stage={stage} role="region" aria-label={alt} tabIndex={0}
             style={{ position: "relative", width: "100%", height: "100%", overflow: "hidden", background, ...style,
                 ...(phoneFullscreen ? { width: "100vw", maxWidth: "none", height: "100dvh" } : {}) }}>
+            <div ref={sceneRef} data-homepage-scene="" style={{ position: "absolute", left: "50%", top: "50%", width: "var(--admiral-scene-width, 100%)", height: "var(--admiral-scene-height, 100%)", transform: "translate(-50%, -50%) rotate(var(--admiral-scene-angle, 0deg))", transformOrigin: "50% 50%", overflow: "hidden" }}>
             <div ref={heroRootRef} data-admiral-sequence="" style={{ position: "absolute", inset: 0, pointerEvents: stage === "orbit" || stage === "handoff" ? "none" : "auto" }}>
                 <img ref={posterRef} src={posterUrl} alt={alt} loading="eager" decoding="async" {...{ fetchpriority: "high" }} crossOrigin="anonymous" draggable={false}
                     style={{ position: "absolute", top: "var(--admiral-image-y, 0px)", left: 0, width: "100%", height: "var(--admiral-image-height, 100%)", objectFit: "cover", objectPosition: `${focalX}% ${focalY}%`, pointerEvents: "none" }} />
@@ -668,26 +644,8 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
             {!staticRenderer && showDiagnostics && <output data-homepage-diagnostics="" style={{ position: "absolute", left: 12, bottom: diagnosticBottom, pointerEvents: "none", background: "rgba(0,0,0,.65)", color: "#fff", padding: 8, borderRadius: 4, font: "11px/1.5 monospace", zIndex: 2 }}>
                 {stage} · {orbitInfo.state} · frame {orbitInfo.frame} · downloaded {orbitInfo.downloaded}/{orbitInfo.total} · buffered {orbitInfo.buffered}/{orbitInfo.bufferTotal} · required {orbitInfo.requiredReady}/{orbitInfo.requiredTotal} · decoded {orbitInfo.decoded}
             </output>}
-            {!staticRenderer && phoneView.blocked && <div ref={rotationDialogRef} data-phone-rotation="" data-rotation-state={phoneView.state} data-orbit-ignore="" role="dialog" aria-modal="true" aria-label={english ? "Landscape building view" : "Fekvő épületnézet"}
-                onKeyDown={event => {
-                    if (event.key === "Escape") { event.preventDefault(); actions.current?.portraitPhone(); return }
-                    if (event.key !== "Tab") return
-                    const buttons = Array.from(event.currentTarget.querySelectorAll<HTMLButtonElement>("button:not(:disabled)"))
-                    const first = buttons[0], last = buttons[buttons.length - 1]
-                    if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus() }
-                    else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus() }
-                }}
-                style={{ position: "absolute", inset: 0, zIndex: 100, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 18,
-                    padding: "max(24px, env(safe-area-inset-top, 0px)) max(24px, env(safe-area-inset-right, 0px)) max(24px, env(safe-area-inset-bottom, 0px)) max(24px, env(safe-area-inset-left, 0px))", boxSizing: "border-box", background, color: "white", textAlign: "center", overflowY: "auto", fontFamily: "inherit", touchAction: "pan-y pinch-zoom" }}>
-                <svg width="76" height="64" viewBox="0 0 76 64" fill="none" aria-hidden="true"><rect x="22" y="7" width="29" height="50" rx="5" stroke="currentColor" strokeWidth="2" transform="rotate(-25 36.5 32)" /><path d="M59 21A24 24 0 0 1 56 50m0 0 1-12m-1 12 11-5M17 43A24 24 0 0 1 20 14m0 0-1 12m1-12L9 19" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
-                <div style={{ maxWidth: 430 }}>
-                    <div style={{ fontSize: "clamp(22px, 4vw, 30px)", lineHeight: 1.2, fontWeight: 500 }}>{phoneView.state === "ready" ? (english ? "Your wider view is ready" : "A teljes nézet készen áll") : phoneView.state === "turning" ? (english ? "Adjusting your view…" : "Nézet igazítása…") : (english ? "Turn your phone for the full view" : "A teljes nézetért fordítsa el a telefont")}</div>
-                    <p style={{ fontSize: 14, lineHeight: 1.5, opacity: .78, margin: "14px 0 0" }}>{english ? "Explore the building in landscape. If the screen does not turn, switch off your phone’s rotation lock." : "Fedezze fel az épületet fekvő nézetben. Ha a képernyő nem fordul el, kapcsolja ki a telefon elforgatási zárját."}</p>
-                </div>
-                {!!pendingPhoneEntry && <button data-phone-rotation-continue="" type="button" disabled={phoneView.state !== "ready"} style={{ ...homepageButton, opacity: phoneView.state === "ready" ? 1 : .4, padding: "12px 22px" }} onClick={() => actions.current?.continuePhone()}>{english ? "Continue to orbit" : "Tovább az épülethez"}</button>}
-                <button data-phone-rotation-portrait="" type="button" style={{ ...homepageButton, background: "transparent", borderColor: "transparent", opacity: .75 }} onClick={() => actions.current?.portraitPhone()}>{english ? "Keep portrait view" : "Maradok álló nézetben"}</button>
-            </div>}
             <span role="status" aria-live="polite" style={{ position: "absolute", width: 1, height: 1, overflow: "hidden", clipPath: "inset(50%)" }}>{orbitInfo.state === "error" ? "Orbit unavailable. Retry the images or use the navigation." : ""}</span>
+            </div>
         </div>
     )
 }
@@ -803,7 +761,7 @@ addPropertyControls(AdmiralHomepageTrial, {
     checkpointCount: { type: ControlType.Number, title: "Viewpoints", defaultValue: 8, min: 2, max: 16, step: 1, description: "Keep 8 for the eight authored OrbitView story groups. Other counts disable these stories to preserve camera-to-content alignment." },
     motionWidth: { type: ControlType.Number, title: "Orbit decode", defaultValue: 960, min: 480, max: 1920, step: 160, unit: "px" },
     orbitMobileWidth: { type: ControlType.Number, title: "Phone decode", defaultValue: 640, min: 480, max: 1280, step: 160, unit: "px" },
-    phoneOrbitMode: { type: ControlType.Enum, title: "Phone orbit", options: ["landscape", "inline"], optionTitles: ["Turn for fullscreen", "Inline portrait"], defaultValue: "landscape", description: "Ask phone visitors to rotate before SEQ_02. Camera input is held while turning, and the landscape orbit fills the viewer. Keep the same setting across Framer breakpoints." },
+    phoneOrbitMode: { type: ControlType.Enum, title: "Phone orbit", options: ["landscape", "inline"], optionTitles: ["Turn during SEQ02", "Inline portrait"], defaultValue: "landscape", description: "Gradually turn the scene sideways during SEQ_02, then keep a fullscreen horizontal orbit. No prompt or confirmation. Keep the same setting across Framer breakpoints." },
     phoneFraming: { type: ControlType.Boolean, title: "Phone framing", defaultValue: true, description: "On phones, SEQ_02 opens from fullscreen into a landscape orbit image, with stories and apartment details below." },
     phoneImageWidth: { type: ControlType.Number, title: "Phone image width", defaultValue: 80, min: 80, max: 100, step: 1, unit: "%", hidden: p => p.phoneFraming === false, description: "How much of the original landscape image remains visible. 80% gives a closer view; 100% shows its full width." },
     phoneImageTop: { type: ControlType.Number, title: "Phone image top", defaultValue: 80, min: 0, max: 240, step: 4, unit: "px", hidden: p => p.phoneFraming === false, description: "Space above the parked orbit image, for the mobile header. Clamps on short screens to keep the image and details visible." },

@@ -225,7 +225,7 @@ function ApartmentDetailsStrip({ apartment, language, visible, preview, bottom, 
         const element = root.current
         if (!element) return
         const measure = () => {
-            const height = Math.ceil(element.getBoundingClientRect().height)
+            const height = element.offsetHeight
             if (height !== measuredHeight.current) { measuredHeight.current = height; heightCallback.current?.(height) }
         }
         measure()

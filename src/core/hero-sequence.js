@@ -153,6 +153,7 @@ function createSequenceFrames(urls, width, limit, notify) {
 /** A two-endpoint journey: scroll starts/boosts/reverses; release still completes the flight. */
 export function createHeroSequence(options) {
     const { root, canvas, poster, urls } = options;
+    const inputRoot = options.inputRoot ?? root;
     const last = urls.length - 1;
     const duration = sequenceClamp(options.duration ?? 2.5, .6, 10);
     // Only the opening and final image transitions dissolve, for 0.8s each.
@@ -207,11 +208,11 @@ export function createHeroSequence(options) {
         options.onUpdate?.(snapshot());
     }
     function visible() {
-        const rect = root.getBoundingClientRect();
+        const rect = inputRoot.getBoundingClientRect();
         return rect.width > 0 && rect.height > 0 && rect.bottom > 0 && rect.top < innerHeight;
     }
     function atHero() {
-        const rect = root.getBoundingClientRect();
+        const rect = inputRoot.getBoundingClientRect();
         return visible() && rect.top >= -3 && rect.top <= innerHeight * .15 && rect.bottom >= innerHeight * .6;
     }
     function release(reason) {
@@ -238,10 +239,12 @@ export function createHeroSequence(options) {
         const bitmap = frames.get(index), next = frames.get(nextIndex);
         if (!context || !bitmap || !next)
             return false;
-        const box = root.getBoundingClientRect();
+        const progress = (index + (nextIndex - index) * mix) / Math.max(1, last);
+        const requestedBounds = options.renderBounds?.(progress);
+        const box = requestedBounds && [requestedBounds.width, requestedBounds.height].every(Number.isFinite) &&
+            requestedBounds.width > 0 && requestedBounds.height > 0 ? requestedBounds : root.getBoundingClientRect();
         if (box.width <= 0 || box.height <= 0)
             return false;
-        const progress = (index + (nextIndex - index) * mix) / Math.max(1, last);
         const requestedViewport = options.viewport?.(progress, { width: box.width, height: box.height });
         const viewport = requestedViewport && [requestedViewport.x, requestedViewport.y, requestedViewport.width, requestedViewport.height].every(Number.isFinite) &&
             requestedViewport.width > 0 && requestedViewport.height > 0 ? requestedViewport : null;
@@ -253,7 +256,10 @@ export function createHeroSequence(options) {
             sh = sw / boxRatio;
         // Mobile framing must not change the backing allocation as its image rectangle shrinks.
         const ratio = viewport ? Math.min(devicePixelRatio || 1, 2) : Math.min(devicePixelRatio || 1, 2, sw / box.width, sh / box.height);
-        const cw = Math.max(1, Math.round(box.width * ratio)), ch = Math.max(1, Math.round(box.height * ratio));
+        const requestedBacking = options.backingSize?.();
+        const backing = requestedBacking && [requestedBacking.width, requestedBacking.height].every(Number.isFinite) &&
+            requestedBacking.width > 0 && requestedBacking.height > 0 ? requestedBacking : null;
+        const cw = Math.max(1, Math.round(backing?.width ?? box.width * ratio)), ch = Math.max(1, Math.round(backing?.height ?? box.height * ratio));
         const destination = viewport ? { x: viewport.x * cw / box.width, y: viewport.y * ch / box.height,
             width: viewport.width * cw / box.width, height: viewport.height * ch / box.height } : { x: 0, y: 0, width: cw, height: ch };
         const geometry = [viewport ? 1 : 0, box.width, box.height, cw, ch, destination.x, destination.y, destination.width, destination.height].join("|");
@@ -591,7 +597,7 @@ export function createHeroSequence(options) {
             return false;
         if (event.target instanceof Element && event.target.closest('nav,header,input,textarea,select,button,a,[contenteditable="true"],[role="slider"],[role="button"],[role="link"],[data-orbit-ignore]'))
             return false;
-        const box = root.getBoundingClientRect();
+        const box = inputRoot.getBoundingClientRect();
         if (x !== undefined && y !== undefined && (x < box.left || x > box.right || y < box.top || y > box.bottom))
             return false;
         if (event.cancelable)
@@ -662,7 +668,7 @@ export function createHeroSequence(options) {
     }
     const resize = new ResizeObserver(() => { if (active && !disposed)
         redraw(); });
-    resize.observe(root);
+    resize.observe(inputRoot);
     const intersection = new IntersectionObserver(entries => {
         if (entries[0]?.isIntersecting) {
             if (poster.complete)
@@ -671,7 +677,7 @@ export function createHeroSequence(options) {
         else if (playing && !suspended)
             pause("offscreen");
     });
-    intersection.observe(root);
+    intersection.observe(inputRoot);
     window.addEventListener("wheel", wheel, { passive: false, signal });
     window.addEventListener("keydown", key, { signal });
     window.addEventListener("touchstart", event => {

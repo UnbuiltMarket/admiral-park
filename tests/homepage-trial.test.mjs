@@ -73,7 +73,7 @@ test('paste-in homepage registers its controls and server-renders without loadin
  assert.equal(controls.orbitStartFrame.title,'Orbit start frame');assert.equal(controls.orbitStartFrame.defaultValue,45);assert.equal(controls.orbitStartFrame.min,0);assert.equal(controls.orbitStartFrame.max,119);assert.equal(controls.orbitStartFrame.step,1);
  assert.equal(controls.detailsMode.defaultValue,'preview');assert.deepEqual(Array.from(controls.detailsMode.options),['preview','hover','off']);assert.equal(controls.detailsLanguage.defaultValue,'hu');assert.deepEqual(Array.from(controls.detailsLanguage.options),['hu','en']);
  assert.equal(controls.phoneFraming.defaultValue,true);assert.equal(controls.phoneImageWidth.defaultValue,80);assert.equal(controls.phoneImageWidth.min,80);assert.equal(controls.phoneImageWidth.max,100);assert.equal(controls.phoneImageTop.defaultValue,80);
- assert.equal(controls.phoneOrbitMode.defaultValue,'landscape');assert.deepEqual(Array.from(controls.phoneOrbitMode.options),['landscape','inline']);
+ assert.equal(controls.phoneOrbitMode.defaultValue,'landscape');assert.deepEqual(Array.from(controls.phoneOrbitMode.options),['landscape','inline']);assert.equal(controls.phoneOrbitMode.optionTitles[0],'Turn during SEQ02');
  assert.equal(controls.detailsBottom.defaultValue,32);assert.equal(controls.detailsInset.defaultValue,48);assert.equal(controls.apartmentPreview.type,'Object');
  for(const field of ['number','area','terrace','garden','rooms','availability','floorplan'])assert.ok(controls.apartmentPreview.controls[field],`Apartment preview control ${field}`);
  assert.equal(controls.editorOrbitView.defaultValue,'entry');assert.deepEqual(Array.from(controls.editorOrbitView.options),['entry',...Array.from({length:8},(_,i)=>String(i+1))]);
@@ -88,6 +88,8 @@ test('paste-in homepage registers its controls and server-renders without loadin
  assert.match(html,/raw%20sequence00\.avif/);
  assert.doesNotMatch(html,/<script|<iframe|<nav|<video/);assert.doesNotMatch(html,/data-orbit-story=/,'The component does not invent or duplicate the eight native Framer content groups');
  assert.doesNotMatch(source,/hero-manifest\.json|__admiralHeroFactoriesV1|AdmiralHeroLoader/);
+ assert.doesNotMatch(source,/data-phone-rotation-continue|data-phone-rotation-portrait|aria-modal="true"/,'Automatic image turning does not require a confirmation dialog');
+ assert.match(source,/data-homepage-scene/,'The image and its controls share one rotating scene');
  const connectionPreview=requireDev('react-dom/server').renderToStaticMarkup(requireDev('react').createElement(module.exports.default,{editorView:'connection'}));
  assert.match(connectionPreview,/02%20sequence36%20copy\.avif/,'Connection editor displays its middle frame');assert.match(connectionPreview,/data-homepage-stage="connection"/);
  const orbitPreview=requireDev('react-dom/server').renderToStaticMarkup(requireDev('react').createElement(module.exports.default,{editorView:'orbit'}));

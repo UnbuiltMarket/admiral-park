@@ -186,9 +186,31 @@ async function installFramingCapture(page){
 }
 async function readFraming(page){return page.evaluate(()=>window.readFraming());}
 async function rotationData(page){return page.locator('[data-admiral-homepage]').evaluate(root=>({...root.dataset}));}
-async function sequenceMotion(page){return page.locator('[data-admiral-sequence]').evaluate(root=>({frame:root.dataset.frame,direction:root.dataset.direction,progress:root.dataset.progress,time:root.dataset.sequenceTime,playing:root.dataset.sequencePlaying}));}
-async function waitRotation(page,state,timeout=12000){await page.waitForFunction(state=>document.querySelector('[data-admiral-homepage]')?.dataset.phoneRotation===state,state,{timeout});}
-async function continueLandscape(page){const button=page.locator('[data-phone-rotation-continue]');await button.waitFor({state:'visible'});await page.waitForFunction(()=>{const button=document.querySelector('[data-phone-rotation-continue]');return button&&!button.disabled;});await button.tap();}
+async function waitRotationBlocked(page,blocked){await page.waitForFunction(blocked=>document.querySelector('[data-admiral-homepage]')?.dataset.phoneRotationBlocked===String(blocked),blocked,{timeout:12000});}
+async function assertNoRotationQuestion(page){assert.equal(await page.locator('[data-phone-rotation][data-rotation-state], [data-phone-rotation-continue], [data-phone-rotation-portrait], [role="dialog"][aria-modal="true"]').count(),0,'Turning the scene has no question, Continue button or blocking cover');}
+async function tapButton(page,name){const box=await page.getByRole('button',{name,exact:true}).boundingBox();assert.ok(box,name);await page.touchscreen.tap(box.x+box.width/2,box.y+box.height/2);}
+async function installSceneCapture(page){
+ await page.evaluate(()=>{
+  window.sceneSamples=[];window.readScene=()=>{
+   const root=document.querySelector('[data-admiral-homepage]'),hero=root.querySelector('[data-admiral-sequence]'),canvas=root.dataset.homepageStage==='orbit'?[...root.querySelectorAll('canvas')].find(canvas=>!canvas.closest('[data-admiral-sequence]')):hero.querySelector('canvas');
+   return {stage:root.dataset.homepageStage,angle:Number(root.dataset.sceneAngle),width:Number(root.dataset.sceneWidth),height:Number(root.dataset.sceneHeight),progress:Number(hero.dataset.progress),frame:Number(hero.dataset.frame),paintedSequence:window.sequenceDraws.at(-1)?.activeSequence,canvasWidth:canvas.width,canvasHeight:canvas.height};
+  };
+  const sample=()=>{window.sceneSamples.push(window.readScene());window.sceneRaf=requestAnimationFrame(sample);};sample();
+ });
+}
+async function readScene(page){return page.evaluate(()=>window.readScene());}
+function assertAutomaticLandscape(scene,width,height,message){assert.equal(scene.angle,90,message+' ends at a full quarter turn');assert.ok(Math.abs(scene.width-height)<1,message+' has a landscape logical width');assert.ok(Math.abs(scene.height-width)<1,message+' has a landscape logical height');}
+async function assertScreenCovered(page,name){
+ const navStyle=await page.addStyleTag({content:'#navbar{visibility:hidden!important}'});
+ try{
+  const screenshot=await page.screenshot({path:fileURLToPath(new URL(name,out))});
+  const pixels=await page.evaluate(async base64=>{
+   const image=new Image();image.src='data:image/png;base64,'+base64;await image.decode();const canvas=document.createElement('canvas');canvas.width=image.width;canvas.height=image.height;const context=canvas.getContext('2d');context.drawImage(image,0,0);
+   const output=[];for(const y of [.03,.5,.97])for(const x of [.03,.5,.97])output.push([...context.getImageData(Math.floor(image.width*x),Math.floor(image.height*y),1,1).data]);return output;
+  },screenshot.toString('base64'));
+  assert.equal(pixels.length,9);for(const pixel of pixels){assert.equal(pixel[3],255,'Every sampled screen region is opaque');assert.ok(![[16,24,32],[14,23,32],[0,0,0]].some(background=>background.every((value,index)=>Math.abs(pixel[index]-value)<=2)),'The displayed picture covers the viewport corners and center during the turn: '+pixel);}
+ }finally{await navStyle.evaluate(element=>element.remove());}
+}
 const phoneTouchSessions=new WeakMap();
 async function phoneTouch(page,type,x=180,y=300){let cdp=phoneTouchSessions.get(page);if(!cdp){cdp=await page.context().newCDPSession(page);phoneTouchSessions.set(page,cdp);}await cdp.send('Input.dispatchTouchEvent',{type,touchPoints:type==='touchEnd'||type==='touchCancel'?[]:[{x,y}]});}
 function assertHeldOrbit(data,expected,message){assert.ok(Math.abs(Number(data.orbitPosition)-expected.position)<.001,message+' preserves its exact camera position');assert.equal(Number(data.orbitTarget),expected.target,message+' preserves the original checkpoint target');}
@@ -233,77 +255,73 @@ async function assertStoryTarget(page,view){
 }
 
 try{
- await pass('phone rotation entry waits for a stable released landscape and retains the complete building image',async()=>{
-  const f=await fixture({cleanFixture:true,externalOverlay:true,context:{viewport:{width:390,height:844},isMobile:true,hasTouch:true,deviceScaleFactor:2},props:{phoneOrbitMode:'landscape',connectionDuration:.7,maxSpeed:1}}),{page}=f;
+ await pass('phone automatic turn gradually fills portrait through SEQ_02 without prompts and keeps a fixed canvas backing',async()=>{
+  const f=await fixture({cleanFixture:true,externalOverlay:true,context:{viewport:{width:390,height:844},isMobile:true,hasTouch:true,deviceScaleFactor:2},props:{phoneOrbitMode:'landscape',connectionDuration:3,maxSpeed:1,showViewpoints:false}}),{page}=f;
   try{
-   await installFramingCapture(page);await coveredClick(page,'Skip approach');await waitStage(page,'building');const before=await readFraming(page);assertFullFraming(before,'Portrait building before orbit');
-   await coveredClick(page,'Explore building');await waitRotation(page,'portrait');assert.equal((await rotationData(page)).phoneDevice,'true');assert.equal((await rotationData(page)).phoneRotationBlocked,'true');await waitStage(page,'building');
-   const frame=await readFraming(page);assertFullFraming(frame,'Rotation request retains the complete building frame');assert.equal(frame.frame,before.frame,'A request to turn the phone does not advance the camera');
-   await phoneTouch(page,'touchStart',180,450);await page.setViewportSize({width:700,height:450});await page.waitForTimeout(80);await page.setViewportSize({width:844,height:390});await page.waitForTimeout(650);
-   assert.equal((await rotationData(page)).phoneRotationBlocked,'true','Holding a finger keeps rotation input blocked after viewport resize');assert.equal(await page.locator('[data-phone-rotation-continue]').isDisabled(),true,'The visitor cannot continue while a finger is held');await waitStage(page,'building');
-   await phoneTouch(page,'touchEnd');await waitRotation(page,'ready');await page.waitForTimeout(300);await waitStage(page,'building');assertFullFraming(await readFraming(page),'Stable landscape still waits for a deliberate Continue');
-   await continueLandscape(page);await waitOrbit(page);await waitBuffer(page,31);assertFullFraming(await readFraming(page),'Landscape orbit');const data=await orbitData(page);assert.equal(Number(data.orbitMotionWidth),640,'Landscape phone keeps the smaller motion decode profile');assert.ok(Number(data.orbitDecoded)<=32,'Landscape phone keeps the phone decode budget');assert.equal((await rotationData(page)).phoneDevice,'true');
-   await page.waitForTimeout(400);assert.equal(Number((await orbitData(page)).orbitPosition),0,'The turn gesture cannot leak into a pending checkpoint movement');
-   await phoneTouch(page,'touchStart',650,220);await phoneTouch(page,'touchMove',560,220);await phoneTouch(page,'touchEnd');await waitFrame(page,15);assert.equal(await page.evaluate(()=>scrollY),0);
-   await page.evaluate(()=>{window.componentKey=(window.componentKey||0)+1;window.renderTrial();});await waitFrame(page,15);await waitBuffer(page,31);await page.waitForTimeout(350);assert.equal(Number((await orbitData(page)).orbitPosition),15,'A landscape breakpoint remount preserves the visited camera instead of returning to the entry camera');
-   await phoneTouch(page,'touchStart',650,220);await page.evaluate(()=>window.dispatchEvent(new Event('orientationchange')));await waitRotation(page,'turning');await page.waitForTimeout(600);assert.equal((await rotationData(page)).phoneRotationBlocked,'true','A same-landscape orientation event remains guarded while a finger is held');assert.equal(Number((await orbitData(page)).orbitPosition),15);await phoneTouch(page,'touchEnd');await waitRotation(page,'ready');await waitFrame(page,15);await page.waitForTimeout(300);assert.equal(Number((await orbitData(page)).orbitPosition),15,'Turning between two landscape orientations does not move the camera');await componentScreenshot(page,'phone-orbit-landscape.png');
+   await installSceneCapture(page);await coveredClick(page,'Skip approach');await waitStage(page,'building');assert.equal((await readScene(page)).angle,0,'The approach still arrives fullscreen and upright');
+   await assertNoRotationQuestion(page);await assertScreenCovered(page,'phone-auto-turn-start.png');await page.evaluate(()=>window.sceneSamples=[]);await coveredClick(page,'Explore building');
+   await page.waitForFunction(()=>{const root=document.querySelector('[data-admiral-homepage]');return root?.dataset.homepageStage==='connection'&&Number(root.dataset.sceneAngle)>30&&Number(root.dataset.sceneAngle)<65;});
+   const middle=await readScene(page);assert.ok(middle.progress>0&&middle.progress<1);await assertScreenCovered(page,'phone-auto-turn-middle.png');await assertNoRotationQuestion(page);
+   await waitOrbit(page);await assertScreenCovered(page,'phone-auto-turn-end.png');const final=await readScene(page);assertAutomaticLandscape(final,390,844,'Portrait orbit');
+   const samples=await page.evaluate(()=>window.sceneSamples.filter(sample=>sample.stage==='connection'&&sample.paintedSequence==='SEQ_02'&&sample.canvasWidth>1));
+   assert.ok(samples.length>12,'The transition is sampled over multiple compositor frames');assert.ok(samples.some(sample=>sample.angle<10));assert.ok(samples.some(sample=>sample.angle>80));
+   for(let index=1;index<samples.length;index++){
+    const previous=samples[index-1],current=samples[index];assert.ok(current.angle>=previous.angle-.01,'The scene angle never runs backwards during a forward connector');assert.ok(current.angle-previous.angle<20,'The scene turns gradually rather than snapping');
+    assert.equal(current.canvasWidth,previous.canvasWidth,'Turning does not reallocate canvas backing width each frame');assert.equal(current.canvasHeight,previous.canvasHeight,'Turning does not reallocate canvas backing height each frame');
+    if(current.progress===previous.progress)assert.equal(current.angle,previous.angle,'The turn is tied to the actual painted sequence progress');
+   }
+   assert.equal((await rotationData(page)).phoneRotationBlocked,'false');assert.equal(await page.evaluate(()=>scrollY),0);
   }finally{await f.close();}
  });
- await pass('phone rotation freezes an active transition through resize bursts and resumes only its original checkpoint',async()=>{
-  const f=await fixture({cleanFixture:true,externalOverlay:true,context:{viewport:{width:844,height:390},isMobile:true,hasTouch:true,deviceScaleFactor:2},props:{phoneOrbitMode:'landscape',startView:'orbit',snapDuration:2}}),{page}=f;
+ await pass('phone automatic turn direct orbit rotates details and keeps transformed controls touchable',async()=>{
+  const f=await fixture({cleanFixture:true,externalOverlay:true,storyOverlays:true,context:{viewport:{width:390,height:844},isMobile:true,hasTouch:true,deviceScaleFactor:2},props:{phoneOrbitMode:'landscape',startView:'orbit',orbitStartFrame:45,detailsMode:'preview',showViewpoints:false,snapDuration:.35,storyDelay:.01,storyIn:.02,storyOut:.02}}),{page}=f;
   try{
-   await waitRotation(page,'ready');if(await page.locator('[data-phone-rotation-continue]').isVisible())await continueLandscape(page);await waitOrbit(page);await waitBuffer(page,31);
-   await coveredClick(page,'Next view');await page.waitForFunction(()=>{const root=document.querySelector('[data-admiral-orbit]');return Number(root?.dataset.orbitPosition)>1&&Number(root?.dataset.orbitPosition)<10;});
-   await page.setViewportSize({width:390,height:844});await waitRotation(page,'portrait');const data=await orbitData(page),held={position:Number(data.orbitPosition),target:Number(data.orbitTarget)};assert.equal(held.target,15);
-   await phoneTouch(page,'touchStart',180,430);await phoneTouch(page,'touchMove',80,430);await page.mouse.wheel(0,-900);await page.waitForTimeout(150);assertHeldOrbit(await orbitData(page),held,'Stale portrait input');
-   for(const viewport of [{width:700,height:440},{width:450,height:700},{width:932,height:430},{width:844,height:390}]){await page.setViewportSize(viewport);await page.waitForTimeout(70);assertHeldOrbit(await orbitData(page),held,'Each orientation resize');}
-   await page.waitForTimeout(600);assertHeldOrbit(await orbitData(page),held,'Held touch after landscape settles');assert.equal((await rotationData(page)).phoneRotationBlocked,'true');
-   await phoneTouch(page,'touchEnd');await waitRotation(page,'ready');await waitFrame(page,15);await page.waitForTimeout(500);assert.equal(Number((await orbitData(page)).orbitPosition),15,'Resume reaches exactly the original adjacent checkpoint without queued commands');assert.equal(Number((await orbitData(page)).orbitMotionWidth),640);await waitBuffer(page,31);
+   await installSceneCapture(page);await waitFrame(page,45);await waitDetails(page);assertAutomaticLandscape(await readScene(page),390,844,'Direct orbit entry');await assertNoRotationQuestion(page);
+   assert.equal(await page.locator(detailsSelector).evaluate(element=>!!element.closest('[data-homepage-scene]')),true,'Apartment details turn with the image');
+   assert.equal(await page.locator('[data-homepage-controls]').evaluate(element=>!!element.closest('[data-homepage-scene]')),true,'Trial controls turn with the image');
+   const details=await page.locator(detailsSelector).boundingBox();assert.ok(details.x>=-1&&details.y>=-1&&details.x+details.width<=391&&details.y+details.height<=845,'Rotated detail fields remain inside the physical viewport');
+   await waitStory(page,4);await assertStoryTarget(page,4);const native=await page.locator(storySelector(4)).evaluate(element=>{const box=element.getBoundingClientRect();return {inScene:!!element.closest('[data-homepage-scene]'),rotate:parseFloat(getComputedStyle(element).rotate),left:box.left,top:box.top,right:box.right,bottom:box.bottom};});
+   assert.equal(native.inScene,false,'The editable native Framer group remains outside the code scene');assert.equal(native.rotate,90,'Its override turns the native group to match the parked image');assert.ok(native.left>=-1&&native.top>=-1&&native.right<=391&&native.bottom<=845,'The rotated native text group stays inside the physical viewport');
+   await tapButton(page,'Story action 4');assert.equal(await page.evaluate(()=>window.storyClicks),1,'The rotated native Framer CTA remains touchable');assert.equal(Number((await orbitData(page)).orbitPosition),45,'Tapping the native CTA does not move the camera');
+   await tapButton(page,'Next view');await waitFrame(page,60);await tapButton(page,'Previous view');await waitFrame(page,45);
+   await tapButton(page,'Pause rotation');await waitOrbit(page,'paused');await tapButton(page,'Continue rotation');await waitFrame(page,45);
+   await waitBuffer(page,31);const orbit=await orbitData(page);assert.equal(Number(orbit.orbitMotionWidth),640,'A rotated phone retains the phone decode profile');assert.ok(Number(orbit.orbitDecoded)<=32,'The phone decode memory budget is retained');
+   await page.waitForFunction(()=>Number(getComputedStyle(document.querySelector('[data-apartment-details]')).opacity)>.99);await componentScreenshot(page,'phone-auto-turn-details-controls.png');
   }finally{await f.close();}
  });
- await pass('phone rotation preserves a manual pause and parked camera across hidden breakpoints and component remounts',async()=>{
-  const f=await fixture({cleanFixture:true,context:{viewport:{width:844,height:390},isMobile:true,hasTouch:true,deviceScaleFactor:2},props:{phoneOrbitMode:'landscape',startView:'orbit',orbitStartFrame:45,snapDuration:1.8}}),{page}=f;
+ await pass('phone automatic turn guards physical resize gestures and preserves the active checkpoint target',async()=>{
+  const f=await fixture({cleanFixture:true,externalOverlay:true,context:{viewport:{width:390,height:844},isMobile:true,hasTouch:true,deviceScaleFactor:2},props:{phoneOrbitMode:'landscape',startView:'orbit',snapDuration:2,showViewpoints:false}}),{page}=f;
   try{
-   await waitRotation(page,'ready');if(await page.locator('[data-phone-rotation-continue]').isVisible())await continueLandscape(page);await waitFrame(page,45);await coveredClick(page,'Next view');await page.waitForTimeout(300);await coveredClick(page,'Pause rotation');await waitOrbit(page,'paused');const current=await orbitData(page),held={position:Number(current.orbitPosition),target:Number(current.orbitTarget)};
-   await page.setViewportSize({width:390,height:844});await waitRotation(page,'portrait');await page.setViewportSize({width:844,height:390});await waitRotation(page,'ready');await page.waitForTimeout(500);assertHeldOrbit(await orbitData(page),held,'Manual pause after turning');assert.equal((await orbitData(page)).orbitState,'paused','Orientation stabilization does not resume a manually paused camera');
-   await page.evaluate(()=>document.querySelector('#stage').style.display='none');await page.waitForTimeout(700);await page.evaluate(()=>document.querySelector('#stage').style.display='');await page.waitForTimeout(650);assertHeldOrbit(await orbitData(page),held,'Visible breakpoint after the player visibility teardown');assert.equal((await orbitData(page)).orbitState,'paused');
-   await page.evaluate(()=>{window.componentKey=(window.componentKey||0)+1;window.renderTrial();});await page.waitForFunction(()=>document.querySelector('[data-admiral-orbit]')?.dataset.orbitState==='paused');await page.waitForTimeout(650);assertHeldOrbit(await orbitData(page),held,'Framer breakpoint remount');
-   await coveredClick(page,'Continue rotation');await waitFrame(page,60);assert.equal(Number((await orbitData(page)).orbitPosition),60,'A deliberate resume still reaches the original destination');
+   await installSceneCapture(page);await waitFrame(page,0);await waitBuffer(page,31);await tapButton(page,'Next view');await page.waitForFunction(()=>{const orbit=document.querySelector('[data-admiral-orbit]');return Number(orbit?.dataset.orbitPosition)>1&&Number(orbit?.dataset.orbitPosition)<9;});
+   await phoneTouch(page,'touchStart',180,430);await page.setViewportSize({width:844,height:390});await waitRotationBlocked(page,true);const current=await orbitData(page),held={position:Number(current.orbitPosition),target:Number(current.orbitTarget)};assert.equal(held.target,15);
+   await phoneTouch(page,'touchMove',80,240);await page.mouse.wheel(0,-900);await page.waitForTimeout(650);assertHeldOrbit(await orbitData(page),held,'A gesture held through the physical turn');await assertNoRotationQuestion(page);
+   await phoneTouch(page,'touchEnd');await waitRotationBlocked(page,false);await waitFrame(page,15);await page.waitForTimeout(350);assert.equal(Number((await orbitData(page)).orbitPosition),15,'Stale input does not queue another checkpoint');assert.equal((await readScene(page)).angle,0,'A physically landscape phone does not also rotate the content');
+   await page.setViewportSize({width:390,height:844});await waitRotationBlocked(page,true);await waitRotationBlocked(page,false);assertAutomaticLandscape(await readScene(page),390,844,'Returning portrait');await page.waitForTimeout(350);await waitFrame(page,15);
+   await tapButton(page,'Next view');await page.waitForFunction(()=>Number(document.querySelector('[data-admiral-orbit]')?.dataset.orbitPosition)>16);await tapButton(page,'Pause rotation');await waitOrbit(page,'paused');const paused=await orbitData(page),manual={position:Number(paused.orbitPosition),target:Number(paused.orbitTarget)};
+   for(const viewport of [{width:844,height:390},{width:390,height:844}]){await page.setViewportSize(viewport);await waitRotationBlocked(page,true);await waitRotationBlocked(page,false);await page.waitForTimeout(250);assertHeldOrbit(await orbitData(page),manual,'A manually paused camera after physical rotation');assert.equal((await orbitData(page)).orbitState,'paused');}
+   await tapButton(page,'Continue rotation');await waitFrame(page,30);
   }finally{await f.close();}
  });
- await pass('phone rotation portrait fallback uses the original inline framing and stays usable after later turns',async()=>{
-  const f=await fixture({cleanFixture:true,context:{viewport:{width:390,height:844},isMobile:true,hasTouch:true,deviceScaleFactor:2},props:{phoneOrbitMode:'landscape',connectionDuration:.6,detailsMode:'preview',showViewpoints:false}}),{page}=f;
+ await pass('phone automatic turn reverses with SEQ_02 and Overview resets the upright opening',async()=>{
+  const f=await fixture({cleanFixture:true,context:{viewport:{width:390,height:844},isMobile:true,hasTouch:true,deviceScaleFactor:2},props:{phoneOrbitMode:'landscape',connectionDuration:4,maxSpeed:1,showViewpoints:false}}),{page}=f;
   try{
-   await installFramingCapture(page);await coveredClick(page,'Skip approach');await waitStage(page,'building');await coveredClick(page,'Explore building');await waitRotation(page,'portrait');await page.locator('[data-phone-rotation-portrait]').tap();await waitOrbit(page);await waitDetails(page);assertPhoneFraming(await readFraming(page),390,80,'Portrait fallback');assert.equal((await rotationData(page)).phoneRotationBlocked,'false');
-   const details=await page.locator(detailsSelector).boundingBox(),frame=await readFraming(page);assert.ok(details.y>frame.y+frame.height,'Fallback keeps apartment details below the image');await coveredClick(page,'Next view');await waitFrame(page,15);
-   await page.setViewportSize({width:844,height:390});await page.waitForTimeout(700);await page.setViewportSize({width:390,height:844});await page.waitForTimeout(700);assert.equal(await page.locator('[data-phone-rotation][data-rotation-state]').isVisible(),false,'A visitor who chose portrait is not prompted again by ordinary resizing');assertPhoneFraming(await readFraming(page),390,80,'Returning portrait fallback');await coveredClick(page,'Previous view');await waitFrame(page,0);
+   await installSceneCapture(page);await coveredClick(page,'Skip approach');await waitStage(page,'building');await coveredClick(page,'Explore building');await page.waitForFunction(()=>Number(document.querySelector('[data-admiral-homepage]')?.dataset.sceneAngle)>40);
+   const beforeReverse=(await readScene(page)).angle;await page.mouse.move(190,400);await page.mouse.wheel(0,-200);await page.waitForFunction(angle=>Number(document.querySelector('[data-admiral-homepage]')?.dataset.sceneAngle)<angle-1,beforeReverse);await page.evaluate(()=>window.sceneSamples=[]);await waitStage(page,'building');
+   const samples=await page.evaluate(()=>window.sceneSamples.filter(sample=>sample.stage==='connection'&&sample.paintedSequence==='SEQ_02'));
+   assert.ok(samples.length>8,'Reverse playback exposes multiple intermediate rotation angles');for(let index=1;index<samples.length;index++)assert.ok(samples[index].angle<=samples[index-1].angle+.01,'The frame turns back with the reverse camera movement');
+   assert.equal((await readScene(page)).angle,0,'Returning to the building restores its original upright fullscreen image');await coveredClick(page,'Explore building');await waitOrbit(page);assert.equal((await readScene(page)).angle,90);
+   await tapButton(page,'Overview');await waitStage(page,'opening');assert.equal((await readScene(page)).angle,0);await assertNoRotationQuestion(page);await assertScreenCovered(page,'phone-auto-turn-overview.png');
   }finally{await f.close();}
  });
- await pass('phone rotation leaves desktop resizing and explicit inline phone behavior unchanged',async()=>{
-  for(const settings of [{context:{viewport:{width:1200,height:800}},props:{phoneOrbitMode:'landscape'},desktop:true},{context:{viewport:{width:390,height:844},isMobile:true,hasTouch:true},props:{phoneOrbitMode:'inline'},desktop:false}]){
-   const f=await fixture({cleanFixture:true,...settings,props:{startView:'orbit',...settings.props}}),{page}=f;
+ await pass('phone automatic turn leaves desktop and explicit inline phone framing unchanged',async()=>{
+  for(const setting of [{context:{viewport:{width:1200,height:800}},props:{phoneOrbitMode:'landscape'},desktop:true},{context:{viewport:{width:390,height:844},isMobile:true,hasTouch:true},props:{phoneOrbitMode:'inline'},desktop:false}]){
+   const f=await fixture({cleanFixture:true,...setting,props:{startView:'orbit',...setting.props}}),{page}=f;
    try{
-    await installFramingCapture(page);await waitOrbit(page);assert.equal(await page.locator('[data-phone-rotation][data-rotation-state]').isVisible(),false);assert.equal((await rotationData(page)).phoneRotationBlocked,'false');
-    if(settings.desktop){assert.equal((await rotationData(page)).phoneDevice,'false');await page.setViewportSize({width:600,height:900});await page.waitForTimeout(650);assert.equal((await rotationData(page)).phoneDevice,'false','A narrow desktop browser is not reclassified as a phone');assert.equal(await page.locator('[data-phone-rotation][data-rotation-state]').isVisible(),false);}else assertPhoneFraming(await readFraming(page),390,80,'Explicit inline mode');
+    await installSceneCapture(page);await installFramingCapture(page);await waitOrbit(page);await assertNoRotationQuestion(page);assert.equal((await readScene(page)).angle,0);assert.equal((await rotationData(page)).phoneRotationBlocked,'false');
+    if(setting.desktop){assert.equal((await rotationData(page)).phoneDevice,'false');assertFullFraming(await readFraming(page),'Desktop orbit');await page.setViewportSize({width:600,height:900});await page.waitForTimeout(650);assert.equal((await rotationData(page)).phoneDevice,'false','A narrow desktop remains a desktop');assert.equal((await readScene(page)).angle,0);}else assertPhoneFraming(await readFraming(page),390,80,'Explicit inline mode');
     await coveredClick(page,'Next view');await waitFrame(page,15);
    }finally{await f.close();}
   }
- });
- await pass('phone rotation protects direct portrait orbit entry and a connector interrupted by a physical turn',async()=>{
-  const direct=await fixture({cleanFixture:true,context:{viewport:{width:390,height:844},isMobile:true,hasTouch:true,deviceScaleFactor:2},props:{phoneOrbitMode:'landscape',startView:'orbit',orbitStartFrame:45}});
-  try{
-   await waitStage(direct.page,'handoff');await waitRotation(direct.page,'portrait');await direct.page.waitForTimeout(600);await waitStage(direct.page,'handoff');assert.equal(await direct.page.locator('[data-phone-rotation-continue]').isDisabled(),true,'Direct orbit entry waits for landscape instead of animating behind the portrait prompt');
-   await direct.page.setViewportSize({width:844,height:390});await waitRotation(direct.page,'ready');await continueLandscape(direct.page);await waitFrame(direct.page,45);await direct.page.waitForTimeout(400);assert.equal(Number((await orbitData(direct.page)).orbitPosition),45,'Direct entry parks at the authored camera');
-  }finally{await direct.close();}
-  const f=await fixture({cleanFixture:true,context:{viewport:{width:844,height:390},isMobile:true,hasTouch:true,deviceScaleFactor:2},props:{phoneOrbitMode:'landscape',connectionDuration:3,maxSpeed:1}}),{page}=f;
-  try{
-   await waitRotation(page,'ready');await coveredClick(page,'Skip approach');await waitStage(page,'building');await coveredClick(page,'Explore building');await waitConnectionFrame(page,20,40);const overview=page.locator('[data-homepage-controls] button').filter({hasText:/^Overview$/});await overview.focus();await page.setViewportSize({width:390,height:844});await waitRotation(page,'portrait');
-   const held=await sequenceMotion(page);assert.ok(Number(held.time)>0,'Sequence diagnostics expose its running clock');await phoneTouch(page,'touchStart',180,450);await phoneTouch(page,'touchMove',180,600);await phoneTouch(page,'touchEnd');await page.mouse.wheel(0,-900);await page.waitForTimeout(500);
-   assert.deepEqual(await sequenceMotion(page),held,'SEQ02 ignores portrait input and holds its exact frame, clock and forward direction');await waitStage(page,'connection');
-   assert.equal(await overview.evaluate(button=>button.disabled||!!button.closest('[inert]')),true,'The previously focused trial control is inert or disabled while the turn prompt is active');assert.equal(await overview.evaluate(button=>{button.focus();return document.activeElement===button;}),false,'An inert trial button cannot regain keyboard focus');await overview.evaluate(button=>button.click());await page.waitForTimeout(100);await waitStage(page,'connection');
-   await page.evaluate(()=>{window.componentKey=(window.componentKey||0)+1;window.renderTrial();});await waitRotation(page,'portrait');await waitStage(page,'connection');await page.waitForTimeout(300);assert.deepEqual(await sequenceMotion(page),held,'A portrait breakpoint remount restores the exact SEQ02 camera, clock and direction instead of resetting to SEQ01');
-   await page.setViewportSize({width:844,height:390});await waitRotation(page,'ready');await waitFrame(page,0);await page.waitForTimeout(350);assert.equal(Number((await orbitData(page)).orbitPosition),0,'The resumed connector reaches orbit without forwarding stale reverse input');
-  }finally{await f.close();}
  });
  await pass('mobile framing SEQ_02 transforms fullscreen into a wide image and every orbit camera preserves coverage',async()=>{
   for(const viewport of [{width:390,height:844},{width:375,height:667}]){

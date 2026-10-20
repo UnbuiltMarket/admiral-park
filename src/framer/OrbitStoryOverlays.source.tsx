@@ -23,9 +23,9 @@ function createOrbitStoryOverlay(Component: ComponentType<any>, viewIndex: numbe
                 story: element.getAttribute("data-orbit-story"), target: element.getAttribute("data-story-target"), state: element.getAttribute("data-story-state"),
                 orbitIgnore: element.getAttribute("data-orbit-ignore"),
             }
-            const layoutProperties = ["position", "top", "bottom", "left", "right", "width", "minWidth", "maxWidth", "minHeight", "maxHeight", "boxSizing", "overflowY", "overscrollBehavior", "touchAction"] as const
+            const layoutProperties = ["position", "top", "bottom", "left", "right", "width", "minWidth", "maxWidth", "minHeight", "maxHeight", "boxSizing", "overflowY", "overscrollBehavior", "touchAction", "rotate", "transformOrigin"] as const
             const originalLayout = Object.fromEntries(layoutProperties.map(property => [property, element.style[property]])) as Record<typeof layoutProperties[number], string>
-            let mobileLayout = false
+            let mobileLayout = false, turnedLayout = false, sceneAngle = 0, motionScaleX = 1, motionScaleY = 1
             const computedTranslate = getComputedStyle(element).translate
             const baseTranslate = original.translate || computedTranslate
             const translateParts: string[] = []
@@ -56,8 +56,11 @@ function createOrbitStoryOverlay(Component: ComponentType<any>, viewIndex: numbe
             }
             function paint(interactive = false) {
                 element!.style.opacity = String(opacity)
+                const cosine = Math.cos(sceneAngle), sine = Math.sin(sceneAngle)
+                const offsetX = (cosine * x - sine * y) * motionScaleX
+                const offsetY = (sine * x + cosine * y) * motionScaleY
                 element!.style.translate = Math.abs(x) < .001 && Math.abs(y) < .001 ? original.translate :
-                    `calc(${translateParts[0] || "0px"} + ${x}px) calc(${translateParts[1] || "0px"} + ${y}px)${translateParts[2] ? " " + translateParts[2] : ""}`
+                    `calc(${translateParts[0] || "0px"} + ${offsetX}px) calc(${translateParts[1] || "0px"} + ${offsetY}px)${translateParts[2] ? " " + translateParts[2] : ""}`
                 element!.style.visibility = opacity <= .001 ? "hidden" : original.visibility
                 element!.style.pointerEvents = interactive ? original.pointerEvents : "none"
                 element!.inert = interactive ? original.inert : true
@@ -89,11 +92,15 @@ function createOrbitStoryOverlay(Component: ComponentType<any>, viewIndex: numbe
                 for (const property of layoutProperties) if (element!.style[property] !== originalLayout[property]) element!.style[property] = originalLayout[property]
                 if (original.orbitIgnore === null) element!.removeAttribute("data-orbit-ignore")
                 else element!.setAttribute("data-orbit-ignore", original.orbitIgnore)
-                mobileLayout = false
+                mobileLayout = false; turnedLayout = false; sceneAngle = 0; motionScaleX = motionScaleY = 1
             }
             function positionForMobile(root: HTMLElement | null, channel: HomepageChannel | null | undefined) {
-                if (!root || !channel?.mobile?.enabled) { restoreLayout(); return }
+                const scene = channel?.scene
+                const turned = !!scene && Number.isFinite(scene.angle) && Math.abs(scene.angle) > .001
+                if (!root || (!turned && !channel?.mobile?.enabled)) { restoreLayout(); return }
+                if (mobileLayout && turnedLayout !== turned) restoreLayout()
                 mobileLayout = true
+                turnedLayout = turned
                 const set = (property: typeof layoutProperties[number], value: string) => {
                     if (element!.style[property] !== value) element!.style[property] = value
                 }
@@ -108,15 +115,38 @@ function createOrbitStoryOverlay(Component: ComponentType<any>, viewIndex: numbe
                 const scaleY = !initialBlock && parentBox && parent!.offsetHeight > 0 ? parentBox.height / parent!.offsetHeight : 1
                 const safeScaleX = Number.isFinite(scaleX) && scaleX > 0 ? scaleX : 1
                 const safeScaleY = Number.isFinite(scaleY) && scaleY > 0 ? scaleY : 1
-                const left = initialBlock ? rootBox.left + window.scrollX + 24 : (rootBox.left + 24 - parentBox!.left) / safeScaleX + parent!.scrollLeft - parent!.clientLeft
-                const top = initialBlock ? rootBox.top + window.scrollY + channel.mobile.storyTop : (rootBox.top + channel.mobile.storyTop - parentBox!.top) / safeScaleY + parent!.scrollTop - parent!.clientTop
+                const rootWidth = root.clientWidth || rootBox.width, rootHeight = root.clientHeight || rootBox.height
+                const rootScaleX = rootBox.width / rootWidth, rootScaleY = rootBox.height / rootHeight
+                let clientX = rootBox.left + 24, clientY = rootBox.top + (channel?.mobile?.storyTop ?? 24)
+                let width = Math.max(0, rootBox.width - 48) / safeScaleX
+                let maxHeight = Math.max(0, channel?.mobile?.storyMaxHeight ?? rootBox.height - 48) / safeScaleY
+                if (turned && scene) {
+                    sceneAngle = scene.angle * Math.PI / 180
+                    const cosine = Math.cos(sceneAngle), sine = Math.sin(sceneAngle)
+                    const logicalX = 24 - scene.width / 2, logicalY = 24 - scene.height / 2
+                    clientX = rootBox.left + (rootWidth / 2 + cosine * logicalX - sine * logicalY) * rootScaleX
+                    clientY = rootBox.top + (rootHeight / 2 + sine * logicalX + cosine * logicalY) * rootScaleY
+                    motionScaleX = rootScaleX / safeScaleX; motionScaleY = rootScaleY / safeScaleY
+                    const widthScale = Math.hypot(cosine * motionScaleX, sine * motionScaleY)
+                    const heightScale = Math.hypot(sine * motionScaleX, cosine * motionScaleY)
+                    width = Math.max(0, Math.min(360, scene.width - 48)) * widthScale
+                    const available = Math.max(0, scene.height - 48)
+                    maxHeight = Math.min(available, Math.max(0, Number.isFinite(scene.storyMaxHeight) ? scene.storyMaxHeight! : available)) * heightScale
+                    set("rotate", `${Math.atan2(sine * motionScaleY, cosine * motionScaleX) * 180 / Math.PI}deg`)
+                    set("transformOrigin", "0px 0px")
+                } else {
+                    sceneAngle = 0; motionScaleX = motionScaleY = 1
+                    set("rotate", originalLayout.rotate); set("transformOrigin", originalLayout.transformOrigin)
+                }
+                const left = initialBlock ? clientX + window.scrollX : (clientX - parentBox!.left) / safeScaleX + parent!.scrollLeft - parent!.clientLeft
+                const top = initialBlock ? clientY + window.scrollY : (clientY - parentBox!.top) / safeScaleY + parent!.scrollTop - parent!.clientTop
                 const pixel = (value: number) => `${Math.round(value * 1000) / 1000}px`
                 set("left", pixel(left)); set("top", pixel(top))
                 set("bottom", "auto"); set("right", "auto")
                 set("boxSizing", "border-box")
-                set("width", pixel(Math.max(0, rootBox.width - 48) / safeScaleX))
+                set("width", pixel(width))
                 set("minWidth", "0px"); set("maxWidth", "none"); set("minHeight", "0px")
-                set("maxHeight", pixel(Math.max(0, channel.mobile.storyMaxHeight) / safeScaleY))
+                set("maxHeight", pixel(maxHeight))
                 set("overflowY", "auto"); set("overscrollBehavior", "contain"); set("touchAction", "pan-y")
                 if (!element!.hasAttribute("data-orbit-ignore")) element!.setAttribute("data-orbit-ignore", "")
             }
@@ -178,6 +208,9 @@ function createOrbitStoryOverlay(Component: ComponentType<any>, viewIndex: numbe
                 if (selected !== root) { hide(); selected = root; observeSource(root) }
                 const channel = root && homepageChannels.get(root)
                 positionForMobile(root, channel)
+                // Individual CSS translation is outside the rotation. Repaint the
+                // animated offset after a turn so its direction follows the scene.
+                paint(target && opacity >= .98 && state !== "leaving")
                 if (!channel || channel.rotationBlocked || channel.stage !== "orbit" || !channel.story.enabled) { hide(); return }
                 const settings = channel.story, motion = settings.views[viewIndex] || DEFAULT_ORBIT_STORY_VIEWS[viewIndex]
                 const enterFrom = direction(motion.enterFrom), exitTo = direction(motion.exitTo)
