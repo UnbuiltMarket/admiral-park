@@ -581,15 +581,15 @@ export function createOrbitPlayer(options) {
         return false;
     }
     function insideViewer(x, y) {
-        const box = root.getBoundingClientRect();
-        return box.width > 0 && box.height > 0 && x >= box.left && x <= box.right && y >= box.top && y <= box.bottom;
+        const box = options.inputBounds?.() || root.getBoundingClientRect();
+        return box.width > 0 && box.height > 0 && x >= box.left && x <= box.left + box.width && y >= box.top && y <= box.top + box.height;
     }
     function inputPoint(clientX, clientY) {
         const point = options.inputPoint?.(clientX, clientY);
         return point && Number.isFinite(point.x) && Number.isFinite(point.y) ? point : { x: clientX, y: clientY };
     }
     function coveredTrialControl(x, y) {
-        return Array.from(root.querySelectorAll("[data-homepage-controls] button, button[data-apartment-open], button[data-orbit-detail-link]")).some(button => {
+        return Array.from(root.querySelectorAll("[data-homepage-controls] button, button[data-apartment-open], button[data-orbit-detail-link], button[data-orbit-fullscreen-open], button[data-orbit-fullscreen-close]")).some(button => {
             if (button.disabled || button.getAttribute("aria-disabled") === "true" || button.closest("[inert], [hidden], [aria-hidden='true']"))
                 return false;
             const css = getComputedStyle(button);

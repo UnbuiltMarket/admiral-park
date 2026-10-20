@@ -110,6 +110,7 @@ function pinHomepagePage(): () => void {
 // @ORBIT_STORY_INSERT
 // @ORBIT_APARTMENT_DATA_INSERT
 // @ORBIT_APARTMENT_STUDIO_INSERT
+// @ORBIT_FULLSCREEN_INSERT
 
 /**
  * @framerSupportedLayoutWidth any-prefer-fixed
@@ -200,6 +201,14 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
     const framingConfig = React.useRef<HomepageFramingConfig>({ enabled: phoneFraming, sourceWidth: phoneImageWidth, top: phoneImageTop, detailsHeight, detailsBottom, reserveDetails: detailsMode !== "off" })
     framingConfig.current = { enabled: phoneFraming, sourceWidth: phoneImageWidth, top: phoneImageTop, detailsHeight, detailsBottom, reserveDetails: detailsMode !== "off" }
     const refreshPresentation = React.useRef<() => void>(() => {})
+    const refreshFullscreenLayout = React.useCallback(() => {
+        // Cancel a finger gesture across a mode/size change, retaining the
+        // current camera, compressed downloads and bounded decoded cache.
+        actions.current?.orbit?.setSuspended(true)
+        refreshPresentation.current()
+        actions.current?.orbit?.setSuspended(detailOpen.current)
+    }, [])
+    const fullscreen = useOrbitFullscreen(refreshFullscreenLayout, detailOpen)
     const setStudioViewport = React.useCallback((element: HTMLDivElement | null) => { studioViewportRef.current = element; queueMicrotask(() => refreshPresentation.current()) }, [])
     const refreshStudioLayout = React.useCallback(() => { refreshPresentation.current() }, [])
     const timing = React.useRef<HomepageTiming>({ openingOut, buildingIn, buildingFull, ctaIn, rise })
@@ -273,6 +282,9 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
     React.useEffect(() => {
         if (!hostVisible && detailApartmentId) closeApartmentDetails()
     }, [hostVisible, detailApartmentId, closeApartmentDetails])
+    React.useEffect(() => {
+        if (fullscreen.active && (!hostVisible || stage !== "orbit")) fullscreen.close()
+    }, [hostVisible, stage, fullscreen.active, fullscreen.close])
 
     React.useEffect(() => {
         const root = rootRef.current, heroRoot = heroRootRef.current, heroCanvas = heroCanvasRef.current, orbitCanvas = orbitCanvasRef.current, poster = posterRef.current
@@ -291,7 +303,9 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
             buffered: 0, bufferTotal: 0, requiredReady: 0, requiredTotal: 0, position: editorPreviewFrame, userPaused: false, suspended: false }
         let arrivedAt = -Infinity, lastWheelAt = -Infinity, wheelIntent = 0, lastUI = 0, lastOrbitUI = ""
         const abort = new AbortController(), signal = abort.signal
-        const phone = window.matchMedia("(max-width: 767px)").matches
+        // A phone entering in landscape still uses the phone decode budget.
+        // Read logical component sizes so scaled Framer previews stay desktop.
+        const phone = root.clientWidth <= 767 || window.matchMedia("(pointer: coarse)").matches && Math.min(root.clientWidth, root.clientHeight) <= 767
         const reducedMedia = window.matchMedia("(prefers-reduced-motion: reduce)")
         setReduced(reducedMedia.matches)
         reducedMedia.addEventListener("change", () => setReduced(reducedMedia.matches), { signal })
@@ -367,7 +381,17 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
         const orbit = staticRenderer ? null : createOrbitPlayer({
             root, canvas: orbitCanvas, urls: orbitUrls, startFrame: orbitStartIndex, decodeWidth, inspectionWidth: phone ? Math.min(inspectionWidth, 1280) : inspectionWidth,
             checkpointCount, bufferCheckpoints: phone ? phoneBuffer : desktopBuffer, snapDuration, frameBlend: frameBlend / 100, focalX: focalX / 100, focalY: focalY / 100,
-            viewport: bounds => viewportFor(1, bounds),
+            renderBounds: () => fullscreen.geometryRef.current,
+            inputBounds: () => fullscreen.geometryRef.current?.physical || null,
+            inputPoint: (clientX, clientY) => {
+                const geometry = fullscreen.geometryRef.current
+                if (!geometry) return { x: clientX, y: clientY }
+                const { physical, width, height, rotated } = geometry
+                const x = clientX - physical.left, y = clientY - physical.top
+                return rotated ? { x: y * width / physical.height, y: height - x * height / physical.width } :
+                    { x: x * width / physical.width, y: y * height / physical.height }
+            },
+            viewport: bounds => fullscreen.geometryRef.current ? null : viewportFor(1, bounds),
             onUpdate(snapshot) {
                 if (disposed) return
                 orbitSnapshot = snapshot; publish()
@@ -491,7 +515,7 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
             if (event.defaultPrevented || detailOpen.current || !isVisible() || root!.contains(event.target as Node) || homepageBlocked(event.target)) return
             // Passive Framer overlay frames can cover the viewport. Relay only a click
             // over one of our visible controls; genuine links and buttons above stay native.
-            for (const button of Array.from(root!.querySelectorAll<HTMLButtonElement>("[data-homepage-controls] button, button[data-apartment-open], button[data-orbit-detail-link]"))) {
+            for (const button of Array.from(root!.querySelectorAll<HTMLButtonElement>("[data-homepage-controls] button, button[data-apartment-open], button[data-orbit-detail-link], button[data-orbit-fullscreen-open], button[data-orbit-fullscreen-close]"))) {
                 if (button.disabled || button.getAttribute("aria-disabled") === "true" || button.closest("[inert], [hidden], [aria-hidden='true']")) continue
                 let visible = true
                 for (let element: HTMLElement | null = button; element; element = element.parentElement) {
@@ -602,11 +626,17 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
             const detail = (event as CustomEvent<unknown>).detail
             const values = detail && typeof detail === "object" ? detail as { id?: unknown; apartmentId?: unknown; number?: unknown } : null
             const id = typeof detail === "string" ? detail : values?.id ?? values?.apartmentId ?? values?.number
-            if (typeof id === "string") openApartmentDetails(id)
+            if (typeof id !== "string") return
+            if (mobilePresentation) {
+                // Touch selects first; the explicit Details action opens the
+                // shared card. Desktop facade clicks retain their direct action.
+                if (jsonDetails && root!.dataset.homepageStage === "orbit" && root!.dataset.orbitState === "checkpoint" && Number(root!.dataset.orbitCheckpoint) >= 0 &&
+                    apartmentData.dataset?.apartments.some(apartment => apartment.id === id)) setSelectedApartmentId(id)
+            } else openApartmentDetails(id)
         }
         root.addEventListener("admiral:apartment-click", click)
         return () => root.removeEventListener("admiral:apartment-click", click)
-    }, [openApartmentDetails, staticRenderer])
+    }, [openApartmentDetails, staticRenderer, mobilePresentation, jsonDetails, apartmentData.dataset])
     React.useEffect(() => { if (stage !== "orbit" && detailApartmentId) closeApartmentDetails() }, [stage, detailApartmentId, closeApartmentDetails])
 
     React.useEffect(() => {
@@ -623,9 +653,10 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
         clearApartmentDetails()
         // Keep the last valid facade hover readable while the pointer moves to
         // its floorplan. A camera move or leaving this viewer clears Hover mode.
-        root.addEventListener("pointerleave", clearApartmentDetails)
-        return () => root.removeEventListener("pointerleave", clearApartmentDetails)
-    }, [detailsMode, staticRenderer, clearApartmentDetails])
+        const leave = () => { if (!mobilePresentation) clearApartmentDetails() }
+        root.addEventListener("pointerleave", leave)
+        return () => root.removeEventListener("pointerleave", leave)
+    }, [detailsMode, staticRenderer, clearApartmentDetails, mobilePresentation])
     const orbitVisible = !staticRenderer && stage === "orbit"
     const orbitStatic = staticRenderer && editorView === "orbit"
     const percent = Math.round(100 * orbitInfo.downloaded / Math.max(1, orbitInfo.total))
@@ -643,10 +674,10 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
     const studioControls = useStudio && (stage === "orbit" || stage === "handoff")
     const imageClip = "inset(var(--admiral-image-y, 0px) var(--admiral-image-right, 0px) var(--admiral-image-cut, 0px) var(--admiral-image-x, 0px))"
     return (
-        <div ref={rootRef} data-admiral-homepage="" data-admiral-orbit="" data-homepage-stage={stage} role="region" aria-label={alt} tabIndex={0}
+        <div ref={rootRef} data-admiral-homepage="" data-admiral-orbit="" data-homepage-stage={stage} data-orbit-fullscreen={String(fullscreen.active)} role="region" aria-label={alt} tabIndex={0}
             style={{ position: "relative", width: "100%", height: "100%", overflow: "hidden", background, "--admiral-orbit-background": orbitBackground, ...style } as React.CSSProperties}>
             <div aria-hidden="true" style={{ position: "absolute", inset: 0, background: orbitBackground, opacity: "var(--admiral-studio-light, 0)" as unknown as number, pointerEvents: "none" }} />
-            {useStudio && <OrbitApartmentStudio active={orbitVisible || orbitStatic} mode={detailsMode} dataset={apartmentData.dataset} dataStatus={apartmentData.status} error={apartmentData.error}
+            {useStudio && <OrbitApartmentStudio active={!fullscreen.active && (orbitVisible || orbitStatic)} mobile={mobilePresentation} mode={detailsMode} dataset={apartmentData.dataset} dataStatus={apartmentData.status} error={apartmentData.error}
                 onRetry={apartmentData.retry} apartment={selectedApartment} onSelect={setSelectedApartmentId} assetBase={apartmentAssetBase} detailsUrl={detailPageUrl} inquiryUrl={inquiryUrl}
                 onViewport={setStudioViewport} language={detailsLanguage} onLayout={refreshStudioLayout} onOpenDetails={() => openApartmentDetails()} />}
             <div ref={heroRootRef} data-admiral-sequence="" style={{ position: "absolute", inset: 0, zIndex: 2, pointerEvents: stage === "orbit" || stage === "handoff" ? "none" : "auto", clipPath: imageClip }}>
@@ -654,10 +685,22 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
                     style={{ position: "absolute", top: "var(--admiral-image-y, 0px)", left: "var(--admiral-image-x, 0px)", width: "var(--admiral-image-width, 100%)", height: "var(--admiral-image-height, 100%)", objectFit: "cover", objectPosition: `${focalX}% ${focalY}%`, pointerEvents: "none" }} />
                 <canvas ref={heroCanvasRef} aria-hidden="true" width={1} height={1} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", opacity: 0, clipPath: "inset(var(--admiral-image-y, 0px) 0px var(--admiral-image-cut, 0px) 0px)" }} />
             </div>
-            <canvas ref={orbitCanvasRef} aria-hidden="true" width={1} height={1} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", zIndex: 2, opacity: orbitVisible ? 1 : 0, transition: reduced ? "none" : "opacity .35s", touchAction: "pan-y pinch-zoom", pointerEvents: orbitVisible ? "auto" : "none", clipPath: imageClip }} />
+            <div ref={fullscreen.surfaceRef} data-orbit-fullscreen-surface="" data-active={String(fullscreen.active)} role={fullscreen.active ? "dialog" : undefined}
+                aria-label={fullscreen.active ? detailsLanguage === "hu" ? "Teljes képernyős épületnézet" : "Fullscreen building view" : undefined} aria-modal={fullscreen.active ? true : undefined} style={fullscreen.surfaceStyle}>
+                <div data-orbit-fullscreen-plane="" data-rotated={String(!!fullscreen.geometryRef.current?.rotated)} style={fullscreen.planeStyle}>
+                    <canvas ref={orbitCanvasRef} aria-hidden="true" width={1} height={1} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", zIndex: 2, opacity: orbitVisible ? 1 : 0, transition: reduced ? "none" : "opacity .35s", touchAction: fullscreen.active ? "none" : "pan-y pinch-zoom", pointerEvents: orbitVisible ? "auto" : "none", clipPath: fullscreen.active ? "none" : imageClip }} />
+                    {fullscreen.active && <OrbitFullscreenDetails apartment={selectedApartment} assetBase={apartmentAssetBase} language={detailsLanguage}
+                        onOpenDetails={() => openApartmentDetails()} moving={orbitMoving} onPrevious={() => actions.current?.orbit?.go(-1)} onNext={() => actions.current?.orbit?.go(1)}
+                        onClose={fullscreen.close} checkpoint={orbitInfo.checkpoint} count={checkpoints} />}
+                </div>
+            </div>
+            {mobilePresentation && useStudio && orbitVisible && !fullscreen.active && <button type="button" data-orbit-fullscreen-open="" data-orbit-ignore="" onClick={fullscreen.open}
+                style={{ position: "absolute", zIndex: 4, left: "calc(var(--admiral-image-x, 0px) + var(--admiral-image-width, 100%) - 10px)", top: "calc(var(--admiral-image-y, 0px) + var(--admiral-image-height, 100%) - 8px)", transform: "translate(-100%,-100%)", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 7, width: "max-content", whiteSpace: "nowrap", minHeight: 44, padding: "7px 10px", border: "1px solid rgba(36,40,36,.25)", borderRadius: 0, color: "#242824", background: "rgba(253,251,251,.94)", font: "500 10px/1.3 Montserrat,Arial,sans-serif", cursor: "pointer", touchAction: "manipulation" }}>
+                <span aria-hidden="true" style={{ fontSize: 19, lineHeight: 1 }}>⛶</span>{detailsLanguage === "hu" ? "Teljes képernyő" : "Fullscreen view"}
+            </button>}
             {orbitStatic && <span style={{ position: "absolute", inset: 0, pointerEvents: "none" }} />}
             <div aria-hidden="true" style={{ position: "absolute", top: "var(--admiral-image-y, 0px)", left: "var(--admiral-image-x, 0px)", width: "var(--admiral-image-width, 100%)", height: "var(--admiral-image-height, 100%)", background: "#000", opacity: darken, pointerEvents: "none", zIndex: 2 }} />
-            {!staticRenderer && showControls && <div data-homepage-controls="" data-orbit-ignore="" style={{ position: "absolute", bottom: studioControls ? "auto" : controlsBottom, top: studioControls ? "var(--admiral-controls-top)" : "auto", left: studioControls ? "var(--admiral-controls-left)" : "50%", transform: "translateX(-50%)", display: "flex", alignItems: "center", justifyContent: "center", flexWrap: "wrap", gap: 7, width: "max-content", maxWidth: studioControls ? "var(--admiral-controls-width)" : "94%", zIndex: 3 }}>
+            {!staticRenderer && showControls && !fullscreen.active && <div data-homepage-controls="" data-orbit-ignore="" style={{ position: "absolute", bottom: studioControls ? "auto" : controlsBottom, top: studioControls ? "var(--admiral-controls-top)" : "auto", left: studioControls ? "var(--admiral-controls-left)" : "50%", transform: "translateX(-50%)", display: "flex", alignItems: "center", justifyContent: "center", flexWrap: "wrap", gap: 7, width: "max-content", maxWidth: studioControls ? "var(--admiral-controls-width)" : "94%", zIndex: 3 }}>
                 {(stage === "opening" || stage === "approach") && <button type="button" style={homepageButton} onClick={() => actions.current?.skip()}>Skip approach</button>}
                 {stage === "approach" && (heroState === "paused" || heroState === "error") && <button type="button" style={homepageButton} onClick={() => actions.current?.resumeHero()}>{heroState === "error" ? "Retry approach" : "Continue approach"}</button>}
                 {stage === "connection" && <button type="button" style={homepageButton} onClick={() => actions.current?.skip()}>Skip connection</button>}
@@ -684,7 +727,7 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
             {!staticRenderer && !showControls && orbitInfo.state === "error" && <div data-homepage-controls="" data-orbit-ignore="" style={{ position: "absolute", bottom: 18, left: "50%", transform: "translateX(-50%)", zIndex: 3 }}>
                 <button type="button" style={homepageButton} onClick={() => { void (rootRef.current as (HTMLElement & { retryOrbit?: () => Promise<void> }) | null)?.retryOrbit?.() }}>Retry orbit</button>
             </div>}
-            {!useStudio && detailsMode !== "off" && <ApartmentDetailsStrip apartment={detailsData} language={detailsLanguage} visible={detailsVisible} preview={false}
+            {!useStudio && !fullscreen.active && detailsMode !== "off" && <ApartmentDetailsStrip apartment={detailsData} language={detailsLanguage} visible={detailsVisible} preview={false}
                 bottom={detailsBottom} inset={detailsInset} onHeightChange={setDetailsHeight} onOpen={jsonDetails && selectedApartment ? () => openApartmentDetails() : undefined} />}
             {!staticRenderer && <AdmiralApartmentDetailCard openId={detailApartmentId} dataUrl={detailDataUrl} assetBase={apartmentAssetBase} inquiryUrl={inquiryUrl} pageUrl={detailPageUrl}
                 onOpenChange={reportDetailOpen} onClosed={closeApartmentDetails} />}

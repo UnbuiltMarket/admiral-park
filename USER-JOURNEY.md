@@ -78,33 +78,19 @@ The entrance and exit directions are independent. For a composition on the left,
 
 The animation uses a separate translation, preserving the group's Framer position and layout on desktop. With **Phone framing** enabled, mobile orbit stories are placed below the image and above the apartment details. Long compositions can scroll inside that area.
 
-## Try the mobile framing
+## Mobile apartment overview and horizontal viewer
 
-The mobile layout is upright again. SEQ_01 remains fullscreen; SEQ_02 opens into a normal, full-width landscape image with the story and apartment data below it. There is no automatic sideways turn, rotation prompt, confirmation or browser orientation lock.
+Keep **Orbit layout → Mobile** for the default split: desktop stays fullscreen, while phones receive the light apartment workspace. The outer viewer stays fixed and the workspace occupies its lower 90%, leaving the header space above. Keep the Framer component at the full available screen height; use **Trial controls → Off** for the finished composition.
 
-**Phone image width** now defaults to **100%**, so the entire source-image width is visible. Existing Framer instances may keep the previous 80% property value after replacing the code: select the camera component and set **Phone image width → 100%** once. The old Phone orbit setting is removed and any saved sideways-mode value is ignored.
+The phone workspace fits its height without an internal scroll area. A centred Admiral Park logo sits above the left-aligned apartment number and availability. The orbit is followed by the area figures and compact building/floor/type/room facts. The floorplan takes the remaining height; gross price and **Részletek** remain at the bottom. Short landscape phones use two columns to retain a useful image and drawing size. The room list, PDF/share links and floor-layout tabs remain in the shared full detail card rather than occupying this overview.
 
-Browser orientation locking is not reliable for an ordinary webpage across phones and commonly requires fullscreen ([MDN: ScreenOrientation.lock](https://developer.mozilla.org/en-US/docs/Web/API/ScreenOrientation/lock)). The website therefore follows the normal browser orientation and responsive layout, without asking the visitor to turn the phone.
+**Teljes képernyő** explicitly opens a horizontal orbit viewer. In portrait the scene and its controls rotate together; in landscape the scene uses the normal horizontal screen. It never automatically asks for or locks the phone orientation. Physical rotation preserves the same camera and selected apartment. The X or Escape returns to the compact workspace. This fills the webpage's available viewport; it does not require the browser to hide its own interface.
 
-Keep **AdmiralApartmentDetailCard.tsx** installed beside the homepage file, then replace the contents of the existing homepage file with **AdmiralHomepageTrial.tsx**. Keep the existing camera instance and native content overrides. No permanent loader is needed.
+The fullscreen viewer reuses the same canvas, player, downloaded AVIF bytes and bounded decoded window. It presents a centred white logo, a fading dark bottom gradient, a centred floorplan thumbnail and a horizontal apartment-data bar. Camera arrows are available as an alternative to dragging. On supported browsers a manual popover places this viewer above Framer's clipping and navigation layers, with a fixed-position fallback elsewhere. Opening the shared detail card pauses that same player; closing it returns to the same fullscreen camera.
 
-On the Phone breakpoint, keep the outer viewer at the full screen height. The code manages the image inside that fixed area:
+On a phone, the future mask picker's **admiral:apartment-click** event selects the canonical apartment and updates the overview, without immediately opening a card. **Részletek** then opens **AdmiralApartmentDetailCard.tsx**, exactly as the apartment list does. Desktop apartment clicks keep opening that card directly. The façade colour masks and their visible highlight still need to be connected; these controls do not invent clickable apartment regions. **Apartment details → Sample** and its temporary apartment selector remain useful for previewing the design before those masks exist.
 
-| Framer control | Trial value | Effect |
-| --- | ---: | --- |
-| **Phone framing** | On | SEQ_01 stays fullscreen. SEQ_02 gradually opens into a landscape image, and the orbit keeps that framing. Applies to component widths of 767 px or less. |
-| **Phone image width** | 100% | Shows the full source-image width in the upright mobile viewer. Reducing it to 80% crops the sides for a closer view. This is source-image coverage, not the component's CSS width. |
-| **Phone image top** | 80 px | Leaves room above the parked image for the navbar. Adjust to the actual mobile header. |
-| **Apartment details** | Sample | Shows the example strip below the image while testing the layout. Use Hover only when apartment picking is connected. |
-| **Trial controls** | Off for content layout | Leaves the available phone space for the story and apartment strip. Enable temporarily when checking camera buttons. |
-
-At a 390 px screen width, the default parked image is approximately 390 × 205 px. At 80% source coverage it becomes approximately 390 × 256 px. The outer viewer height does not change, so the transition does not move the page. On short screens the image height and top inset are constrained to leave room for the details.
-
-Test **Start trial → Orbit directly** first to tune the phone layout. Then choose **Full journey** to inspect the fullscreen-to-landscape change during SEQ_02. The image framing follows the displayed frames, including reversal. Overview restores the fullscreen opening picture. Desktop framing stays as authored; turning Phone framing off restores the previous fullscreen phone layout.
-
-The eight native OrbitView groups remain editable in Framer. On phones their overridden parent is positioned 20 px below the image and given the available height above the details and trial controls. Keep mobile text and graphics concise. If a group is taller than its available area, it can scroll without turning the camera. On desktop the original native placement is restored. Framer design-canvas overrides do not run; use Preview to check this final placement.
-
-The existing AVIF files and bounded decode buffers are reused. The canvas backing allocation stays fixed throughout SEQ_02 rather than resizing every frame. The future apartment-mask picker must use this same displayed image rectangle when mapping a phone tap to source-image coordinates. Actual apartment tap selection is not part of this layout trial.
+Replace the existing Framer homepage file with the latest **AdmiralHomepageTrial.tsx** and keep **AdmiralApartmentDetailCard.tsx** beside it. No shared-card or list replacement is needed for this mobile update. The original fullscreen SEQ_01 and SEQ_02 journey remains; SEQ_02 still reframes toward the mobile orbit slot. The classic layout's **Phone image width**, **Phone image top** and **Phone framing** controls remain available when choosing that layout.
 
 ## Preview one composition without changing live entry
 

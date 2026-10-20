@@ -21,6 +21,7 @@ export interface OrbitOptions {
     backingSize?: () => { width: number; height: number } | null;
     /** Map physical pointer coordinates into the transformed scene's logical space. */
     inputPoint?: (clientX: number, clientY: number) => { x: number; y: number };
+    inputBounds?: () => { left: number; top: number; width: number; height: number } | null;
     /** Optional image rectangle in CSS pixels, independent of the full canvas backing size. */
     viewport?: (bounds: { width: number; height: number }) => { x: number; y: number; width: number; height: number } | null;
     onUpdate?: (snapshot: OrbitSnapshot) => void;
@@ -469,8 +470,8 @@ export function createOrbitPlayer(options: OrbitOptions) {
     }
 
     function insideViewer(x: number, y: number) {
-        const box = root.getBoundingClientRect();
-        return box.width > 0 && box.height > 0 && x >= box.left && x <= box.right && y >= box.top && y <= box.bottom;
+        const box = options.inputBounds?.() || root.getBoundingClientRect();
+        return box.width > 0 && box.height > 0 && x >= box.left && x <= box.left + box.width && y >= box.top && y <= box.top + box.height;
     }
 
     function inputPoint(clientX: number, clientY: number) {
@@ -479,7 +480,7 @@ export function createOrbitPlayer(options: OrbitOptions) {
     }
 
     function coveredTrialControl(x: number, y: number) {
-        return Array.from(root.querySelectorAll<HTMLButtonElement>("[data-homepage-controls] button, button[data-apartment-open], button[data-orbit-detail-link]")).some(button => {
+        return Array.from(root.querySelectorAll<HTMLButtonElement>("[data-homepage-controls] button, button[data-apartment-open], button[data-orbit-detail-link], button[data-orbit-fullscreen-open], button[data-orbit-fullscreen-close]")).some(button => {
             if (button.disabled || button.getAttribute("aria-disabled") === "true" || button.closest("[inert], [hidden], [aria-hidden='true']")) return false;
             const css = getComputedStyle(button);
             if (css.display === "none" || css.visibility === "hidden" || css.visibility === "collapse" || Number(css.opacity) === 0) return false;

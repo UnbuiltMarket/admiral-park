@@ -290,6 +290,28 @@ function assertStudioViewport(geometry){
  assert.equal(geometry.bodyOverflow,0,'The studio has no horizontal page overflow');
 }
 async function studioField(page,name){return page.locator('[data-orbit-field="'+name+'"]').first().innerText();}
+async function compactStudioGeometry(page){
+ await page.evaluate(()=>document.fonts.ready);
+ return page.locator(studioSelector).evaluate(studio=>{
+  const bounds=element=>{if(!element)return null;const rect=element.getBoundingClientRect();return {x:rect.x,y:rect.y,width:rect.width,height:rect.height,right:rect.right,bottom:rect.bottom};};
+  const visible=element=>!!element&&element.getClientRects().length>0&&getComputedStyle(element).visibility!=='hidden';
+  const root=studio.closest('[data-admiral-homepage]'),details=studio.querySelector('[data-orbit-studio-details]');
+  const fields=[...studio.querySelectorAll('[data-orbit-field]')].filter(visible).map(element=>({name:element.dataset.orbitField,...bounds(element),align:getComputedStyle(element).textAlign,fontSize:getComputedStyle(element).fontSize,fontWeight:getComputedStyle(element).fontWeight}));
+  const action=[...studio.querySelectorAll('[data-orbit-detail-link]')].find(visible),brand=studio.querySelector('.orbit-studio-brand');
+  return {root:bounds(root),studio:bounds(studio),details:bounds(details),plan:bounds(studio.querySelector('[data-orbit-plan-crop]')),viewport:bounds(studio.querySelector('[data-orbit-viewport]')),brand:bounds(brand),action:bounds(action),fields,detailsScroll:{height:details?.scrollHeight,client:details?.clientHeight,top:details?.scrollTop},pageScroll:{x:scrollX,y:scrollY,width:document.documentElement.scrollWidth,viewport:innerWidth},heading:bounds(studio.querySelector('.orbit-studio-id')),headingFont:parseFloat(getComputedStyle(studio.querySelector('.orbit-studio-id')).fontSize)};
+ });
+}
+function assertCompactStudioFit(geometry,viewport,message){
+ const within=(box,label)=>{assert.ok(box&&box.width>0&&box.height>0,message+' '+label+' is present');assert.ok(box.x>=geometry.root.x-1&&box.right<=geometry.root.right+1&&box.y>=geometry.root.y-1&&box.bottom<=geometry.root.bottom+1,message+' '+label+' is wholly inside the viewport: '+JSON.stringify(box));};
+ within(geometry.viewport,'orbit');within(geometry.plan,'floorplan');within(geometry.action,'details button');within(geometry.brand,'brand');
+ assert.ok(geometry.detailsScroll.height<=geometry.detailsScroll.client+1,message+' has no hidden detail content or scrolling: '+JSON.stringify(geometry.detailsScroll));
+ assert.equal(geometry.detailsScroll.top,0,message+' starts with the complete fixed detail view');
+ assert.equal(geometry.pageScroll.width,geometry.pageScroll.viewport,message+' has no horizontal page overflow');
+ assert.ok(Math.abs(geometry.brand.x+geometry.brand.width/2-(geometry.root.x+geometry.root.width/2))<2,message+' centres the brand independently from apartment information');
+ assert.ok(geometry.plan.height>=(viewport.width<viewport.height?140:100),message+' gives the floorplan a useful reading size: '+JSON.stringify(geometry.plan));
+ for(const name of ['area','terrace','garden','price','status']){const field=geometry.fields.find(item=>item.name===name);within(field,name);assert.ok(['left','start'].includes(field.align),message+' '+name+' is left aligned');}
+ assert.ok(geometry.headingFont>=20,message+' keeps the apartment number stronger than supporting labels');
+}
 async function apartmentSelect(page,id){await page.locator('[data-orbit-apartment-select]').selectOption(id);await waitStudio(page,id);}
 async function hoverStudioId(page,id){await page.locator('[data-admiral-homepage]').evaluate((root,id)=>root.dispatchEvent(new CustomEvent('admiral:apartment-hover',{detail:{id}})),id);await waitStudio(page,id);}
 
@@ -489,23 +511,62 @@ try{
    }finally{await f.close();}
   }
  });
- await pass('studio phone keeps the upright full-width orbit above a large independently scrollable plan',async()=>{
-  for(const viewport of [{width:390,height:844},{width:375,height:667}]){
-   const f=await fixture({cleanFixture:true,context:{viewport,isMobile:true,hasTouch:true,deviceScaleFactor:2},props:{...studioProps,phoneImageWidth:100}}),{page}=f;
+ await pass('compact mobile orbit fits the floorplan facts and details action without scrolling',async()=>{
+  for(const viewport of [{width:320,height:568},{width:390,height:844},{width:430,height:932},{width:844,height:390}]){
+   const f=await fixture({cleanFixture:true,useDefaultOrbitLayout:true,context:{viewport,isMobile:true,hasTouch:true,deviceScaleFactor:2},props:{...studioProps,phoneImageWidth:100}}),{page}=f;
    try{
     await waitStudio(page);const geometry=await studioGeometry(page);assertStudioViewport(geometry);
-    assert.equal(geometry.transform,'none','The phone layout does not rotate the scene');assert.ok(Math.abs(geometry.image.width-viewport.width)<2,'The phone image uses its entire available width');
-    assert.ok(Math.abs(geometry.image.height-viewport.width*1010/1920)<2,'The complete landscape source stays upright');assert.ok(geometry.plan.height>=279,'The phone floorplan retains a readable size inside the detail scroller: '+JSON.stringify(geometry.plan));
-    assert.ok(geometry.details.y>=geometry.viewport.bottom-2,'Apartment details start below the orbit image');
-    const scroller=page.locator('[data-orbit-studio-details]');assert.ok(await scroller.evaluate(element=>element.scrollHeight>element.clientHeight),'Details have an independent vertical scroll area on a short phone');
-    const before=await orbitData(page);await scroller.evaluate(element=>{element.scrollTop=element.scrollHeight;});await page.waitForTimeout(100);
-    const after=await orbitData(page);assert.equal(after.orbitFrame,before.orbitFrame,'Reading apartment details does not turn the orbit');
-    await page.getByRole('button',{name:'Alaprajz nagyítása',exact:true}).click();await page.locator('[data-orbit-plan-dialog]').waitFor({state:'visible'});await page.keyboard.press('Escape');
+    assert.equal(geometry.transform,'none','The ordinary mobile layout remains upright');
+    const compact=await compactStudioGeometry(page);assertCompactStudioFit(compact,viewport,'Phone '+viewport.width+'×'+viewport.height);
+    if(viewport.height>viewport.width){assert.ok(geometry.image.width>=viewport.width*.75,'The portrait orbit keeps a useful image width while making room for the complete plan');assert.ok(compact.plan.y>=compact.viewport.bottom-2,'The readable floorplan sits below the portrait orbit');}
+    const before=await orbitData(page);await page.locator('[data-orbit-studio-details]').evaluate(element=>{element.scrollTop=element.scrollHeight;});await page.waitForTimeout(100);
+    assert.equal(await page.locator('[data-orbit-studio-details]').evaluate(element=>element.scrollTop),0,'The phone details cannot scroll into a hidden continuation');assertSameCamera(before,await orbitData(page),'Reading the complete mobile card');
+    await clickApartment(page,'A101');await waitStudio(page,'A101');assert.equal(await page.locator('#detail-dialog[open]').count(),0,'A mobile apartment tap selects and highlights it without opening the full card');assert.equal(f.detailRequests.length,0,'Selecting an apartment does not download its full detail-card data');
+    await clickApartment(page,'NOT_A_REAL_APARTMENT');await page.waitForTimeout(80);assert.equal(await page.locator(studioSelector).getAttribute('data-apartment-id'),'A101','An unknown future mask colour cannot replace the canonical apartment selection');
+    await page.locator('[data-orbit-detail-link]:visible').tap();await waitApartmentCard(page,'A101');await closeApartmentCard(page);await waitStudio(page,'A101');assertSameCamera(before,await orbitData(page),'Closing details after mobile tap selection');
     const cdp=await page.context().newCDPSession(page),x=geometry.viewport.x+geometry.viewport.width*.8,y=geometry.viewport.y+geometry.viewport.height*.5;
     await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x,y}]});await cdp.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x:x-180,y}]});await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});await waitFrame(page,15);
-    await componentScreenshot(page,'studio-phone-'+viewport.width+'.png');
+    await componentScreenshot(page,'compact-mobile-orbit-'+viewport.width+'x'+viewport.height+'.png');
    }finally{await f.close();}
   }
+ });
+ await pass('mobile horizontal fullscreen keeps one orbit player and supports tap details rotated gestures and close',async()=>{
+  for(const viewport of [{width:320,height:568},{width:390,height:844},{width:844,height:390}]){
+   const f=await fixture({pageOverflow:true,cleanFixture:true,useDefaultOrbitLayout:true,context:{viewport,isMobile:true,hasTouch:true,deviceScaleFactor:2},props:studioProps}),{page}=f;
+   try{
+    await waitStudio(page);await page.waitForFunction(()=>{const orbit=document.querySelector('[data-admiral-orbit]');return Number(orbit?.dataset.orbitBufferTotal)>0&&orbit.dataset.orbitBuffered===orbit.dataset.orbitBufferTotal&&orbit.dataset.orbitDecoding==='0'&&Number(orbit.dataset.orbitDownloaded)===120;});const phoneCache=await orbitData(page);assert.equal(Number(phoneCache.orbitMotionWidth),640,'A physical phone keeps the smaller motion decode size in either orientation');assert.equal(Number(phoneCache.orbitCacheLimit),31,'A physical phone uses its bounded phone cache in either orientation');await clickApartment(page,'A101');await waitStudio(page,'A101');
+    await page.evaluate(()=>{window.orbitCanvasBeforeFullscreen=document.querySelector('canvas[data-orbit-canvas]')||[...document.querySelectorAll('[data-admiral-orbit] canvas')].find(item=>!item.closest('[data-admiral-sequence]'));});
+    const parked=await orbitData(page),downloadCount=f.orbitRequests.length,pinned=await pagePosition(page);
+    await page.locator('[data-orbit-fullscreen-open]:visible').tap();
+    await page.waitForFunction(()=>document.querySelector('[data-admiral-homepage]')?.dataset.orbitFullscreen==='true');
+    const surface=page.locator('[data-orbit-fullscreen-surface][data-active="true"]'),plane=page.locator('[data-orbit-fullscreen-plane]'),hud=page.locator('[data-orbit-fullscreen-details]');
+    await surface.waitFor({state:'visible'});await hud.waitFor({state:'visible'});assertSameCamera(parked,await orbitData(page),'Entering horizontal phone fullscreen');
+    const geometry=await plane.evaluate(element=>{const surface=element.closest('[data-orbit-fullscreen-surface]'),rect=surface.getBoundingClientRect();return {width:element.clientWidth,height:element.clientHeight,x:rect.x,y:rect.y,right:rect.right,bottom:rect.bottom,rotated:element.closest('[data-orbit-fullscreen-surface]').dataset.orbitFullscreenRotated,popover:surface.matches(':popover-open'),native:!!document.fullscreenElement};});
+    assert.ok(geometry.width>=geometry.height,'The fullscreen scene uses a horizontal logical viewport');assert.ok(Math.abs(geometry.width-Math.max(viewport.width,viewport.height))<2&&Math.abs(geometry.height-Math.min(viewport.width,viewport.height))<2,'The landscape plane uses the whole available phone screen');
+    assert.ok(geometry.x>=-1&&geometry.y>=-1&&Math.abs(geometry.right-viewport.width)<2&&Math.abs(geometry.bottom-viewport.height)<2,'The fullscreen surface fills the physical viewport');assert.equal(geometry.native,false,'The horizontal fallback works without requiring native Fullscreen API or orientation lock');
+    assert.equal(geometry.popover,true,'The fullscreen fallback escapes enclosing Framer clipping in the browser top layer');assert.equal(await page.locator('[data-admiral-orbit]').count(),1,'Fullscreen retains a single orbit controller');assert.equal(await page.evaluate(()=>{const canvas=document.querySelector('canvas[data-orbit-canvas]')||[...document.querySelectorAll('[data-admiral-orbit] canvas')].find(item=>!item.closest('[data-admiral-sequence]'));return !!canvas&&window.orbitCanvasBeforeFullscreen===canvas;}),true,'Fullscreen moves the existing canvas rather than replacing its player');assert.equal(f.orbitRequests.length,downloadCount,'Fullscreen does not download the orbit sequence again');assert.match(await hud.innerText(),/A101/);
+    for(const selector of ['[data-orbit-fullscreen-close]','[data-orbit-fullscreen-details] [data-orbit-detail-link]']){const box=await page.locator(selector+':visible').boundingBox();assert.ok(box&&box.x>=-1&&box.y>=-1&&box.x+box.width<=viewport.width+1&&box.y+box.height<=viewport.height+1,'Fullscreen '+selector+' stays inside the physical screen');}
+    const readable=await hud.evaluate(element=>{const box=target=>{const rect=target.getBoundingClientRect();return {x:rect.x,y:rect.y,right:rect.right,bottom:rect.bottom};},names=['area','terrace','garden','price'];return names.map(name=>{const field=element.querySelector('[data-orbit-fullscreen-field="'+name+'"]'),value=field.querySelector('dd')||field,range=document.createRange();range.selectNodeContents(value);return {name,field:box(value),text:box(range)};});});for(const item of readable){assert.ok(item.text.x>=item.field.x-1&&item.text.right<=item.field.right+1&&item.text.y>=item.field.y-1&&item.text.bottom<=item.field.bottom+1,'Fullscreen '+item.name+' text fits its column without overlapping adjacent data: '+JSON.stringify(item));}
+    await componentScreenshot(page,'compact-mobile-fullscreen-'+viewport.width+'x'+viewport.height+'.png');await clickApartment(page,'A001');await page.waitForFunction(()=>document.querySelector('[data-orbit-fullscreen-details]')?.textContent.includes('A001'));assert.equal(await page.locator('#detail-dialog[open]').count(),0,'Tapping an apartment in fullscreen only changes the selection');
+    await page.locator('[data-orbit-fullscreen-details] [data-orbit-detail-link]:visible').tap();await waitApartmentCard(page,'A001');assert.equal((await orbitData(page)).orbitSuspended,'true','The shared card suspends the same fullscreen orbit');await closeApartmentCard(page);assert.equal(await page.locator('[data-admiral-homepage]').getAttribute('data-orbit-fullscreen'),'true','Closing details returns to the horizontal orbit');assertSameCamera(parked,await orbitData(page),'Returning from shared details to fullscreen');
+    const logical={x:geometry.width*.65,y:geometry.height*.4},physical=viewport.height>viewport.width?{x:geometry.height-logical.y,y:logical.x}:{x:logical.x,y:logical.y};
+    await phoneSwipe(page,{...physical,...(viewport.height>viewport.width?{dy:-150}:{dx:-150,dy:0})});await waitFrame(page,15);await assertPageHeld(page,pinned,'Horizontal orbit drag in fullscreen');
+    const moved=await orbitData(page),turned={width:viewport.height,height:viewport.width};await page.setViewportSize(turned);await page.waitForTimeout(350);assertSameCamera(moved,await orbitData(page),'Turning the phone inside horizontal fullscreen');assert.equal(await page.locator('[data-admiral-homepage]').getAttribute('data-orbit-fullscreen'),'true','A physical rotation does not accidentally leave the extended view');assert.match(await hud.innerText(),/A001/,'The selected apartment remains visible through physical rotation');const turnedBox=await surface.boundingBox();assert.ok(Math.abs(turnedBox.width-turned.width)<2&&Math.abs(turnedBox.height-turned.height)<2,'The fullscreen surface adapts to the turned phone screen');await page.setViewportSize(viewport);await page.waitForTimeout(350);
+    await page.locator('[data-orbit-fullscreen-close]:visible').tap();await waitStudio(page,'A001');assertSameCamera(moved,await orbitData(page),'Closing horizontal fullscreen');assert.equal(await page.locator('[data-admiral-homepage]').getAttribute('data-orbit-fullscreen'),'false');assert.equal(await page.locator('[data-orbit-fullscreen-open]').evaluate(element=>document.activeElement===element),true,'Close returns focus to the fullscreen opener');assert.equal(f.orbitRequests.length,downloadCount,'Returning to the compact card reuses the downloaded sequence');
+    await page.locator('[data-orbit-fullscreen-open]:visible').tap();await page.waitForFunction(()=>document.querySelector('[data-admiral-homepage]')?.dataset.orbitFullscreen==='true');await page.keyboard.press('Escape');await waitStudio(page,'A001');assert.equal(await page.locator('[data-admiral-homepage]').getAttribute('data-orbit-fullscreen'),'false','Escape exits the horizontal view');assertSameCamera(moved,await orbitData(page),'Escape keeps the current camera');
+    await componentScreenshot(page,'compact-mobile-fullscreen-restored-'+viewport.width+'x'+viewport.height+'.png');
+   }finally{await f.close();}
+  }
+ });
+ await pass('mobile horizontal fullscreen fixed fallback works without Popover API and cleans up on unmount',async()=>{
+  const f=await fixture({pageOverflow:true,cleanFixture:true,useDefaultOrbitLayout:true,context:{viewport:{width:390,height:844},isMobile:true,hasTouch:true,deviceScaleFactor:2},props:studioProps}),{page}=f;
+  try{
+   await waitStudio(page);const pinned=await pagePosition(page);await page.evaluate(()=>{Object.defineProperty(HTMLElement.prototype,'showPopover',{configurable:true,value:undefined});Object.defineProperty(HTMLElement.prototype,'hidePopover',{configurable:true,value:undefined});});
+   await page.locator('[data-orbit-fullscreen-open]:visible').tap();await page.waitForFunction(()=>document.querySelector('[data-admiral-homepage]')?.dataset.orbitFullscreen==='true');const surface=page.locator('[data-orbit-fullscreen-surface][data-active="true"]');await surface.waitFor({state:'visible'});assert.equal(await surface.getAttribute('popover'),null,'Unsupported Popover API falls back to a visible fixed surface');const box=await surface.boundingBox();assert.ok(Math.abs(box.width-390)<2&&Math.abs(box.height-844)<2,'The fallback still covers the available phone viewport');
+   await page.locator('[data-orbit-fullscreen-step="next"]').tap();await waitFrame(page,15);await assertPageHeld(page,pinned,'Fallback fullscreen controls');
+   await page.evaluate(()=>{clearInterval(window.sampleTimer);window.root.unmount();});assert.equal(await page.locator('[data-orbit-fullscreen-surface]').count(),0,'Unmount removes every fullscreen surface');assert.equal(await page.evaluate(()=>getComputedStyle(document.body).position==='fixed'),false,'Unmount releases the page pin from fullscreen');
+   await phoneSwipe(page,{x:195,y:600,dy:-180});await page.waitForTimeout(180);assert.ok(await page.evaluate(()=>scrollY)>0,'Normal page touch scrolling returns after fullscreen unmount');
+  }finally{await f.close();}
  });
  await pass('studio short landscape phone preserves the image and readable details through rotation',async()=>{
   for(const beginPortrait of [false,true]){
@@ -513,13 +574,11 @@ try{
    try{
     await waitStudio(page);if(beginPortrait){await page.setViewportSize({width:844,height:390});await page.waitForTimeout(280);}
     await page.waitForFunction(()=>{const viewport=document.querySelector('[data-orbit-viewport]')?.getBoundingClientRect();return viewport?.width>100&&viewport?.height>100;});
-    const geometry=await studioGeometry(page);assertStudioViewport(geometry);assert.ok(geometry.plan.height>=279,'The landscape phone keeps a readable plan inside the detail scroller');
-    const details=page.locator('[data-orbit-studio-details]');assert.ok(await details.evaluate(element=>element.scrollHeight>element.clientHeight&&/auto|scroll/.test(getComputedStyle(element).overflowY)),'Facts and large plan share a native scroller on a short landscape phone');
-    await page.getByRole('button',{name:'Alaprajz nagyítása',exact:true}).click();await page.locator('[data-orbit-plan-dialog]').waitFor({state:'visible'});await page.keyboard.press('Escape');
+    const geometry=await studioGeometry(page);assertStudioViewport(geometry);assertCompactStudioFit(await compactStudioGeometry(page),{width:844,height:390},'Rotated landscape phone');
     const cdp=await page.context().newCDPSession(page),x=geometry.viewport.x+geometry.viewport.width*.8,y=geometry.viewport.y+geometry.viewport.height*.5;
     await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x,y}]});await cdp.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x:x-150,y}]});await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});await waitFrame(page,15);
     await componentScreenshot(page,'studio-landscape-phone-844.png');await page.setViewportSize({width:390,height:844});await page.waitForTimeout(280);await waitStudio(page);
-    const portrait=await studioGeometry(page);assertStudioViewport(portrait);assert.ok(Math.abs(portrait.image.width-390)<2);assert.equal(Number((await orbitData(page)).orbitFrame),15,'Returning to portrait retains the camera viewpoint');assert.equal(await page.locator(studioSelector).getAttribute('data-apartment-id'),'A001','Rotation retains the selected apartment details');
+    const portrait=await studioGeometry(page);assertStudioViewport(portrait);assertCompactStudioFit(await compactStudioGeometry(page),{width:390,height:844},'Restored portrait phone');assert.equal(Number((await orbitData(page)).orbitFrame),15,'Returning to portrait retains the camera viewpoint');assert.equal(await page.locator(studioSelector).getAttribute('data-apartment-id'),'A001','Rotation retains the selected apartment details');
    }finally{await f.close();}
   }
  });
@@ -1036,15 +1095,15 @@ try{
    await waitOrbit(page);const beforeCard=await orbitData(page);await page.locator('[data-apartment-open]').click();const card=await waitApartmentCard(page);await page.mouse.move(500,420);await page.mouse.wheel(0,420);await assertPageHeld(page,pinned,'Shared detail card wheel');await card.getByRole('button',{name:'Bezárás',exact:true}).click();await card.waitFor({state:'hidden'});await waitOrbit(page);await assertPageHeld(page,pinned,'Closing the shared card retains the page pin');assertSameCamera(beforeCard,await orbitData(page),'Closing the shared card after nested scrolling');
   }finally{await f.close();}
  });
- await pass('whole homepage page pin holds the default mobile studio gaps controls and detail scroll boundaries',async()=>{
+ await pass('whole homepage page pin holds the compact mobile orbit and its fixed details',async()=>{
   const f=await fixture({pageOverflow:true,cleanFixture:true,useDefaultOrbitLayout:true,context:{viewport:{width:390,height:667},isMobile:true,hasTouch:true,deviceScaleFactor:2},props:studioProps}),{page}=f;
   try{
    await waitStudio(page);const pinned=await pagePosition(page);assert.ok(pinned.bodyHeight>1334,'The mobile test page has real page overflow');
    for(const point of [{x:195,y:72},{x:190,y:20},{x:360,y:653}]){await phoneSwipe(page,{...point,dy:point.y<90?100:-100});await assertPageHeld(page,pinned,'Phone swipe over the header or studio space at '+JSON.stringify(point));await waitOrbit(page);}
    const parked=await orbitData(page);
-   const details=page.locator('[data-orbit-studio-details]'),box=await details.boundingBox();assert.ok(await details.evaluate(element=>element.scrollHeight>element.clientHeight),'The short phone has independently scrollable apartment details');await details.evaluate(element=>element.scrollTop=0);await phoneSwipe(page,{x:box.x+box.width*.7,y:Math.min(box.y+box.height-15,640),dy:-70});await page.waitForFunction(()=>document.querySelector('[data-orbit-studio-details]').scrollTop>0);await assertPageHeld(page,pinned,'Native studio detail scrolling');assertSameCamera(parked,await orbitData(page),'Native studio details scrolling');
-   for(const [edge,dy] of [['bottom',-70],['top',70]]){await details.evaluate((element,edge)=>element.scrollTop=edge==='bottom'?element.scrollHeight:0,edge);await phoneSwipe(page,{x:box.x+box.width*.7,y:box.y+Math.min(box.height/2,110),dy});await assertPageHeld(page,pinned,'Mobile detail '+edge+' scroll boundary');}
-   await details.evaluate(element=>element.scrollTop=element.scrollHeight);await details.locator('[data-orbit-detail-link]').tap();const card=await waitApartmentCard(page);await phoneSwipe(page,{x:320,y:420,dy:-100});await assertPageHeld(page,pinned,'Touch scrolling the shared mobile card');await card.getByRole('button',{name:'Bezárás',exact:true}).tap();await card.waitFor({state:'hidden'});await waitStudio(page);await assertPageHeld(page,pinned,'Closing the mobile shared card');assertSameCamera(parked,await orbitData(page),'Mobile card touch and close');
+   const details=page.locator('[data-orbit-studio-details]'),box=await details.boundingBox();assert.ok(await details.evaluate(element=>element.scrollHeight<=element.clientHeight+1),'All short-phone details are visible without an internal scroller');
+   for(const dy of [-70,70]){await phoneSwipe(page,{x:box.x+box.width*.7,y:box.y+Math.min(box.height/2,110),dy});await assertPageHeld(page,pinned,'Touch over the compact apartment details');assert.equal(await details.evaluate(element=>element.scrollTop),0,'A touch cannot reveal additional hidden detail content');assertSameCamera(parked,await orbitData(page),'Touching the fixed apartment details');}
+   await details.locator('[data-orbit-detail-link]').tap();const card=await waitApartmentCard(page);await phoneSwipe(page,{x:320,y:420,dy:-100});await assertPageHeld(page,pinned,'Touch scrolling the shared mobile card');await card.getByRole('button',{name:'Bezárás',exact:true}).tap();await card.waitFor({state:'hidden'});await waitStudio(page);await assertPageHeld(page,pinned,'Closing the mobile shared card');assertSameCamera(parked,await orbitData(page),'Mobile card touch and close');
    const pinch=await page.evaluate(()=>{const target=document.querySelector('[data-orbit-studio]'),touches=[new Touch({identifier:101,target,clientX:120,clientY:350}),new Touch({identifier:102,target,clientX:250,clientY:350})];const start=new TouchEvent('touchstart',{touches,targetTouches:touches,changedTouches:touches,bubbles:true,cancelable:true});target.dispatchEvent(start);const move=new TouchEvent('touchmove',{touches,targetTouches:touches,changedTouches:touches,bubbles:true,cancelable:true});target.dispatchEvent(move);target.dispatchEvent(new TouchEvent('touchend',{touches:[],targetTouches:[],changedTouches:touches,bubbles:true,cancelable:true}));return {start:start.defaultPrevented,move:move.defaultPrevented};});assert.deepEqual(pinch,{start:false,move:false},'Page pin leaves two-finger browser zoom available');
   }finally{await f.close();}
  });

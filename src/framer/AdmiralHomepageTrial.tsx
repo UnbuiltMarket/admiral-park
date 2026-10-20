@@ -560,6 +560,7 @@ interface OrbitApartmentStudioProps {
     language: "hu" | "en"
     onLayout?: () => void
     onOpenDetails?: () => void
+    mobile?: boolean
 }
 
 const orbitApartmentStudioStyles = `
@@ -713,10 +714,60 @@ const orbitApartmentStudioStyles = `
     [data-orbit-studio] .orbit-studio-plan-stage { flex: none; height: 300px; }
     [data-orbit-studio] .orbit-studio-details .orbit-studio-facts { margin-top: 18px; }
 }
+/* The phone workspace fits its parent in either orientation. The orbit and plan
+   share the available height; only the separate detail card can scroll. */
+[data-orbit-studio][data-mobile="true"] {
+    container-name: orbit-studio-mobile; container-type: size; overflow: hidden;
+    padding: 8px 12px max(8px,env(safe-area-inset-bottom,0px)); gap: 6px;
+    grid-template-rows: 62px minmax(0,1fr); text-align: left;
+}
+[data-orbit-studio][data-mobile="true"] .orbit-studio-header { position: relative; display: grid; grid-template-rows: 32px 24px; justify-content: stretch; justify-items: center; gap: 6px; min-height: 0; }
+[data-orbit-studio][data-mobile="true"] .orbit-studio-brand { width: auto; height: 32px; max-width: 120px; justify-self: center; }
+[data-orbit-studio][data-mobile="true"] .orbit-studio-header-end { display: contents; }
+[data-orbit-studio][data-mobile="true"] .orbit-studio-heading { width: 100%; justify-content: flex-start; align-items: center; flex-wrap: nowrap; gap: 12px; }
+[data-orbit-studio][data-mobile="true"] .orbit-studio-id { font-size: 24px; line-height: 24px; font-weight: 600; letter-spacing: -.045em; }
+[data-orbit-studio][data-mobile="true"] .orbit-studio-status { font-size: 10px; line-height: 1.35; font-weight: 500; gap: 6px; }
+[data-orbit-studio][data-mobile="true"] .orbit-studio-preview { position: absolute; top: 0; left: 0; }
+[data-orbit-studio][data-mobile="true"] .orbit-studio-preview label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+[data-orbit-studio][data-mobile="true"] .orbit-studio-preview select { width: 70px; min-height: 32px; font-size: 10px; padding: 4px 16px 4px 6px; }
+[data-orbit-studio][data-mobile="true"] .orbit-studio-body { display: grid; grid-template-columns: minmax(0,1fr); grid-template-rows: clamp(88px,27cqh,226px) auto minmax(0,1fr); gap: 6px; overflow: hidden; }
+[data-orbit-studio][data-mobile="true"] .orbit-studio-scene { display: contents; }
+[data-orbit-studio][data-mobile="true"] .orbit-studio-image-slot { position: relative; order: 0; width: calc(100% + 24px); height: 100%; margin-inline: -12px; aspect-ratio: auto; container-type: size; }
+[data-orbit-studio][data-mobile="true"] [data-orbit-viewport] { width: min(100cqw,calc(100cqh * 1920 / 1010)); height: auto; max-height: 100%; }
+[data-orbit-studio][data-mobile="true"] .orbit-studio-facts { order: 1; min-height: 0; margin: 0; padding-top: 6px; }
+[data-orbit-studio][data-mobile="true"] .orbit-studio-areas { gap: 10px; margin: 0; }
+[data-orbit-studio][data-mobile="true"] .orbit-studio-areas dt { margin-bottom: 3px; font-size: 9px; font-weight: 400; line-height: 1.3; }
+[data-orbit-studio][data-mobile="true"] .orbit-studio-areas dd { font-size: clamp(21px,2.9cqh,26px); font-weight: 600; line-height: 1.1; letter-spacing: -.04em; }
+[data-orbit-studio][data-mobile="true"] .orbit-studio-areas small { margin-left: 3px; font-size: 10px; font-weight: 400; }
+[data-orbit-studio][data-mobile="true"] .orbit-studio-facts > .orbit-studio-meta,
+[data-orbit-studio][data-mobile="true"] .orbit-studio-facts > .orbit-studio-bottom,
+[data-orbit-studio][data-mobile="true"] .orbit-studio-facts > .orbit-studio-secondary { display: none; }
+[data-orbit-studio][data-mobile="true"] .orbit-studio-details { order: 2; display: grid; grid-template-rows: auto minmax(0,1fr) auto; gap: 6px; overflow: hidden; padding: 0; touch-action: auto; overscroll-behavior: auto; }
+[data-orbit-studio][data-mobile="true"] .orbit-studio-drawing-toolbar { display: none; }
+[data-orbit-studio][data-mobile="true"] .orbit-studio-mobile-meta { display: flex; align-items: baseline; justify-content: flex-start; flex-wrap: wrap; gap: 2px 10px; margin: 0; font-size: 10px; line-height: 1.4; text-align: left; }
+[data-orbit-studio][data-mobile="true"] .orbit-studio-mobile-meta strong { font-weight: 600; }
+[data-orbit-studio][data-mobile="true"] .orbit-studio-plan-section { display: flex; height: auto; min-height: 0; flex: 1; overflow: hidden; }
+[data-orbit-studio][data-mobile="true"] .orbit-studio-plan-stage { flex: 1; min-height: 0; height: auto; }
+[data-orbit-studio][data-mobile="true"] .orbit-studio-plan-note { margin: 4px 0 0; font-size: 8px; line-height: 1.4; text-align: left; }
+[data-orbit-studio][data-mobile="true"] .orbit-studio-mobile-actions { display: block; margin: 0; padding-top: 6px; border-top: 1px solid var(--studio-line); }
+[data-orbit-studio][data-mobile="true"] .orbit-studio-mobile-actions .orbit-studio-bottom { display: flex; flex-direction: row; justify-content: space-between; align-items: center; margin: 0; gap: 10px; }
+[data-orbit-studio][data-mobile="true"] .orbit-studio-mobile-actions .orbit-studio-secondary { display: none; }
+[data-orbit-studio][data-mobile="true"] .orbit-studio-label { margin-bottom: 3px; font-size: 9px; line-height: 1.3; }
+[data-orbit-studio][data-mobile="true"] .orbit-studio-price-value { font-size: 23px; line-height: 1.05; font-weight: 500; letter-spacing: -.045em; }
+[data-orbit-studio][data-mobile="true"] .orbit-studio-price-value small { font-size: 10px; }
+[data-orbit-studio][data-mobile="true"] .orbit-studio-primary { min-height: 44px; padding: 9px 15px; gap: 15px; font-size: 11px; font-weight: 600; }
+@container orbit-studio-mobile (max-height: 480px) and (min-aspect-ratio: 4/3) {
+    [data-orbit-studio][data-mobile="true"] .orbit-studio-body { grid-template-columns: minmax(0,1.1fr) minmax(0,1fr); grid-template-rows: minmax(0,1fr) auto; column-gap: 16px; }
+    [data-orbit-studio][data-mobile="true"] .orbit-studio-image-slot { grid-column: 1; grid-row: 1; width: 100%; margin: 0; }
+    [data-orbit-studio][data-mobile="true"] .orbit-studio-facts { grid-column: 1; grid-row: 2; }
+    [data-orbit-studio][data-mobile="true"] .orbit-studio-details { grid-column: 2; grid-row: 1 / 3; }
+    [data-orbit-studio][data-mobile="true"] .orbit-studio-areas dd { font-size: 21px; }
+    [data-orbit-studio][data-mobile="true"] .orbit-studio-primary { padding-inline: 10px; }
+}
 `
 
 function OrbitApartmentStudio(props: OrbitApartmentStudioProps): React.JSX.Element {
-    const { active, mode, dataset, dataStatus, error, onRetry, apartment, onSelect, assetBase, detailsUrl, inquiryUrl, onViewport, language, onLayout, onOpenDetails } = props
+    const { active, mode, dataset, dataStatus, error, onRetry, apartment, onSelect, assetBase, detailsUrl, inquiryUrl, onViewport, language, onLayout, onOpenDetails, mobile = false } = props
     const hu = language !== "en"
     const [view, setView] = React.useState<"floorplan" | "floorLayout">("floorplan")
     const [expanded, setExpanded] = React.useState(false), [zoom, setZoom] = React.useState(1)
@@ -741,6 +792,7 @@ function OrbitApartmentStudio(props: OrbitApartmentStudioProps): React.JSX.Eleme
     const fontStyles = `@font-face{font-family:Montserrat;src:url("${cssUrl(fontLatin)}") format("woff2");font-style:normal;font-weight:100 900;font-display:swap;unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}@font-face{font-family:Montserrat;src:url("${cssUrl(fontExtended)}") format("woff2");font-style:normal;font-weight:100 900;font-display:swap;unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C4,U+2113,U+2C60-2C7F,U+A720-A7FF}`
     React.useEffect(() => { mounted.current = true; return () => { mounted.current = false; shareGeneration.current++ } }, [])
     React.useEffect(() => { setView("floorplan"); setFailedImage(""); setExpanded(false); setShareMessage(""); shareGeneration.current++ }, [apartment?.id])
+    React.useEffect(() => { if (mobile) setView("floorplan") }, [mobile])
     React.useEffect(() => { setZoom(1); setPan({ x: 0, y: 0 }); setFailedImage("") }, [view, expanded])
     React.useEffect(() => { if (!active) setExpanded(false) }, [active])
     React.useEffect(() => {
@@ -755,7 +807,7 @@ function OrbitApartmentStudio(props: OrbitApartmentStudioProps): React.JSX.Eleme
         update(); query.addEventListener("change", update)
         return () => query.removeEventListener("change", update)
     }, [])
-    React.useEffect(() => { onLayout?.() }, [active, apartment?.id, dataStatus, view, shortLandscape, onLayout])
+    React.useEffect(() => { onLayout?.() }, [active, apartment?.id, dataStatus, view, shortLandscape, mobile, onLayout])
     const positive = (value: unknown): value is number => typeof value === "number" && Number.isFinite(value) && value >= 0
     const linkFor = (source: string) => {
         if (!source || !apartment) return ""
@@ -800,7 +852,7 @@ function OrbitApartmentStudio(props: OrbitApartmentStudioProps): React.JSX.Eleme
             <div className="orbit-studio-price"><p className="orbit-studio-label">{apartment?.priceIncludesVat === false ? hu ? "Nettó vételár" : "Net purchase price" : labels.gross}</p><p className="orbit-studio-price-value" data-orbit-apartment-price="" data-orbit-field="price">
                 {positive(apartment?.price) ? <>{number.format(apartment!.price! / 1000000)}<small>M Ft</small></> : availability === "sold" ? hu ? "Nincs megadva" : "Not provided" : hu ? "Ár kérésre" : "Price on request"}
             </p></div>
-            {!inquiryLink && onOpenDetails ? <button type="button" className="orbit-studio-primary" data-orbit-apartment-action="" data-orbit-detail-link="" aria-haspopup="dialog" onClick={onOpenDetails}><span>{labels.details}</span><span aria-hidden="true">↗</span></button> : actionLink && <a className="orbit-studio-primary" href={actionLink} data-orbit-apartment-action="" {...(inquiryLink ? { "data-orbit-inquiry": "" } : { "data-orbit-detail-link": "" })}><span>{inquiryLink ? labels.inquire : labels.details}</span><span aria-hidden="true">↗</span></a>}
+            {(mobile || !inquiryLink) && onOpenDetails ? <button type="button" className="orbit-studio-primary" data-orbit-apartment-action="" data-orbit-detail-link="" aria-haspopup="dialog" onClick={onOpenDetails}><span>{mobile ? hu ? "Részletek" : "Details" : labels.details}</span><span aria-hidden="true">↗</span></button> : (mobile ? detailLink : actionLink) && <a className="orbit-studio-primary" href={mobile ? detailLink : actionLink} data-orbit-apartment-action="" {...(!mobile && inquiryLink ? { "data-orbit-inquiry": "" } : { "data-orbit-detail-link": "" })}><span>{mobile ? hu ? "Részletek" : "Details" : inquiryLink ? labels.inquire : labels.details}</span><span aria-hidden="true">↗</span></a>}
         </div>
         <div className="orbit-studio-secondary">
             {download && <a href={download} className="orbit-studio-text-button" target="_blank" rel="noopener noreferrer" download={record?.media?.datasheet?.filename || undefined} data-orbit-apartment-download="" data-orbit-download=""><span aria-hidden="true">↓</span>{labels.download}</a>}
@@ -825,7 +877,7 @@ function OrbitApartmentStudio(props: OrbitApartmentStudioProps): React.JSX.Eleme
         {meta()}{conversion()}
     </div>
     return <>
-        <section data-orbit-studio="" data-active={active ? "true" : "false"} data-mode={mode} data-status={dataStatus} data-apartment-id={apartment?.id || ""} aria-hidden={!active} {...(!active ? { inert: "" as any } : {})} aria-labelledby={headingId}>
+        <section data-orbit-studio="" data-active={active ? "true" : "false"} data-mobile={mobile ? "true" : "false"} data-mode={mode} data-status={dataStatus} data-apartment-id={apartment?.id || ""} aria-hidden={!active} {...(!active ? { inert: "" as any } : {})} aria-labelledby={headingId}>
             <style>{fontStyles + orbitApartmentStudioStyles}</style>
             <header className="orbit-studio-header" data-orbit-ignore="">
                 {logo && <img className="orbit-studio-brand" src={logo} alt="Admiral Park" width={184} height={78} draggable={false} />}
@@ -841,7 +893,7 @@ function OrbitApartmentStudio(props: OrbitApartmentStudioProps): React.JSX.Eleme
             <div className="orbit-studio-body">
                 <div className="orbit-studio-scene">
                     <div className="orbit-studio-image-slot"><div ref={viewportCallback} data-orbit-viewport="" aria-hidden="true" /></div>
-                    {!shortLandscape && facts}
+                    {(!shortLandscape || mobile) && facts}
                 </div>
                 <div className="orbit-studio-details" data-orbit-studio-details="" data-orbit-ignore="">
                     {dataStatus === "error" ? <div className="orbit-studio-empty" role="status"><p>{hu ? "A lakásadatok most nem tölthetők be." : "Apartment information could not be loaded."}</p>{error && <p>{error}</p>}<button type="button" className="orbit-studio-text-button" onClick={onRetry}>{hu ? "Újrapróbálom" : "Try again"}</button></div> : !apartment ? <div className="orbit-studio-empty" role="status"><p>{dataStatus === "loading" || dataStatus === "idle" ? hu ? "Lakásadatok betöltése…" : "Loading apartment information…" : hu ? "A lakás adatai a kijelölt otthonnál jelennek meg." : "Point to an apartment to see its details."}</p></div> : <>
@@ -853,7 +905,7 @@ function OrbitApartmentStudio(props: OrbitApartmentStudioProps): React.JSX.Eleme
                             </div>
                             <p className="orbit-studio-plan-note">{note}</p>
                         </section>
-                        {shortLandscape && facts}
+                        {shortLandscape && !mobile && facts}
                         <div className="orbit-studio-mobile-actions">{conversion()}</div>
                     </>}
                 </div>
@@ -877,6 +929,230 @@ function OrbitApartmentStudio(props: OrbitApartmentStudioProps): React.JSX.Eleme
             </div>
         </dialog>
     </>
+}
+
+interface OrbitFullscreenGeometry {
+    width: number
+    height: number
+    rotated: boolean
+    physical: { left: number; top: number; width: number; height: number }
+}
+
+/** Changes presentation only: the same scene, canvas and player remain mounted. */
+function useOrbitFullscreen(onLayout: () => void, modalOpen: React.MutableRefObject<boolean>) {
+    const surfaceRef = React.useRef<HTMLDivElement>(null)
+    const geometryRef = React.useRef<OrbitFullscreenGeometry | null>(null)
+    const [active, setActive] = React.useState(false)
+    const [geometry, setGeometry] = React.useState<OrbitFullscreenGeometry | null>(null)
+    const activeRef = React.useRef(false)
+    const callbackRef = React.useRef(onLayout)
+    callbackRef.current = onLayout
+    const previousFocus = React.useRef<HTMLElement | null>(null)
+    const focusFrame = React.useRef<number | null>(null)
+
+    const readGeometry = React.useCallback((): OrbitFullscreenGeometry => {
+        const viewport = window.visualViewport
+        const width = Math.max(1, viewport?.width || window.innerWidth)
+        const height = Math.max(1, viewport?.height || window.innerHeight)
+        const rotated = height > width
+        return { width: rotated ? height : width, height: rotated ? width : height, rotated,
+            physical: { left: viewport?.offsetLeft || 0, top: viewport?.offsetTop || 0, width, height } }
+    }, [])
+    const open = React.useCallback(() => {
+        if (typeof window === "undefined" || activeRef.current) return
+        if (focusFrame.current !== null) cancelAnimationFrame(focusFrame.current)
+        previousFocus.current = document.activeElement instanceof HTMLElement ? document.activeElement : null
+        const next = readGeometry()
+        activeRef.current = true; geometryRef.current = next
+        setGeometry(next); setActive(true)
+    }, [readGeometry])
+    const close = React.useCallback(() => {
+        if (!activeRef.current) return
+        activeRef.current = false; geometryRef.current = null
+        const surface = surfaceRef.current as (HTMLDivElement & { hidePopover?: () => void }) | null
+        if (surface) {
+            try { surface.hidePopover?.() } catch { /* Fixed positioning is the browser fallback. */ }
+            surface.removeAttribute("popover")
+        }
+        setActive(false); setGeometry(null)
+        if (focusFrame.current !== null) cancelAnimationFrame(focusFrame.current)
+        focusFrame.current = requestAnimationFrame(() => {
+            focusFrame.current = null
+            const previous = previousFocus.current
+            const root = surfaceRef.current?.closest<HTMLElement>("[data-admiral-homepage]")
+            const fallback = root?.querySelector<HTMLButtonElement>("[data-orbit-fullscreen-open]") || null
+            const target = previous && previous !== document.body && previous !== document.documentElement && previous.isConnected ? previous : fallback
+            if (target?.isConnected && !modalOpen.current) target.focus({ preventScroll: true })
+            previousFocus.current = null
+        })
+    }, [modalOpen])
+
+    React.useEffect(() => {
+        const surface = surfaceRef.current
+        if (!active || !surface) return
+        surface.setAttribute("popover", "manual")
+        surface.dataset.orbitFullscreen = "true"
+        try {
+            const show = (surface as HTMLDivElement & { showPopover?: () => void }).showPopover
+            if (show) show.call(surface)
+            else surface.removeAttribute("popover")
+        } catch { surface.removeAttribute("popover") /* Retain the fixed fullscreen fallback. */ }
+        if (focusFrame.current !== null) cancelAnimationFrame(focusFrame.current)
+        focusFrame.current = requestAnimationFrame(() => {
+            focusFrame.current = null
+            if (activeRef.current && !modalOpen.current) surface.querySelector<HTMLButtonElement>("[data-orbit-fullscreen-close]")?.focus({ preventScroll: true })
+        })
+        const update = () => {
+            if (!activeRef.current) return
+            const next = readGeometry(), old = geometryRef.current
+            if (old && old.rotated === next.rotated && old.width === next.width && old.height === next.height && old.physical.left === next.physical.left && old.physical.top === next.physical.top) return
+            geometryRef.current = next; setGeometry(next)
+        }
+        const keyboard = (event: KeyboardEvent) => {
+            // The shared apartment dialog is above this scene and owns its keys.
+            if (!activeRef.current || modalOpen.current || event.defaultPrevented) return
+            if (event.key === "Escape") { event.preventDefault(); event.stopPropagation(); close(); return }
+            if (event.key !== "Tab") return
+            const candidates = Array.from(surface.querySelectorAll<HTMLElement>("button:not(:disabled),a[href],input:not(:disabled),select:not(:disabled),textarea:not(:disabled),[tabindex]:not([tabindex='-1'])"))
+                .filter(element => !element.closest("[inert],[hidden],[aria-hidden='true']") && element.getClientRects().length > 0 && getComputedStyle(element).visibility !== "hidden")
+            if (!candidates.length) { event.preventDefault(); surface.focus({ preventScroll: true }); return }
+            const first = candidates[0], last = candidates[candidates.length - 1], focused = document.activeElement
+            if (event.shiftKey && (focused === first || !surface.contains(focused))) { event.preventDefault(); last.focus({ preventScroll: true }) }
+            else if (!event.shiftKey && (focused === last || !surface.contains(focused))) { event.preventDefault(); first.focus({ preventScroll: true }) }
+        }
+        window.addEventListener("resize", update)
+        window.visualViewport?.addEventListener("resize", update)
+        window.visualViewport?.addEventListener("scroll", update)
+        window.addEventListener("keydown", keyboard, true)
+        return () => {
+            window.removeEventListener("resize", update)
+            window.visualViewport?.removeEventListener("resize", update)
+            window.visualViewport?.removeEventListener("scroll", update)
+            window.removeEventListener("keydown", keyboard, true)
+            try { (surface as HTMLDivElement & { hidePopover?: () => void }).hidePopover?.() } catch { /* Already closed. */ }
+            surface.removeAttribute("popover")
+            surface.dataset.orbitFullscreen = "false"
+        }
+    }, [active, close, modalOpen, readGeometry])
+
+    React.useEffect(() => {
+        const surface = surfaceRef.current
+        if (surface) {
+            surface.setAttribute("data-orbit-fullscreen-surface", "")
+            surface.dataset.active = active ? "true" : "false"
+            surface.dataset.orbitFullscreen = active ? "true" : "false"
+            surface.dataset.orbitFullscreenRotated = geometry?.rotated ? "true" : "false"
+            if (geometry) { surface.dataset.orbitFullscreenWidth = String(geometry.width); surface.dataset.orbitFullscreenHeight = String(geometry.height) }
+            else { delete surface.dataset.orbitFullscreenWidth; delete surface.dataset.orbitFullscreenHeight }
+        }
+        // Layout callbacks run after the mode and dimensions have been committed.
+        const frame = requestAnimationFrame(() => callbackRef.current())
+        return () => cancelAnimationFrame(frame)
+    }, [active, geometry])
+    React.useEffect(() => () => {
+        if (focusFrame.current !== null) cancelAnimationFrame(focusFrame.current)
+        activeRef.current = false; geometryRef.current = null
+    }, [])
+
+    const surfaceStyle: React.CSSProperties = active && geometry ? {
+        position: "fixed", display: "block", left: geometry.physical.left, top: geometry.physical.top,
+        width: geometry.physical.width, height: geometry.physical.height, margin: 0, padding: 0, border: 0,
+        maxWidth: "none", maxHeight: "none", overflow: "hidden", boxSizing: "border-box", background: "#101820",
+        zIndex: 2147483500, isolation: "isolate", outline: "none", overscrollBehavior: "none",
+    } : { display: "contents" }
+    const planeStyle: React.CSSProperties = active && geometry ? {
+        position: "absolute", display: "block", left: "50%", top: "50%", width: geometry.width, height: geometry.height,
+        transform: `translate(-50%, -50%)${geometry.rotated ? " rotate(90deg)" : ""}`,
+        transformOrigin: "center", overflow: "hidden", isolation: "isolate", background: "#101820",
+    } : { display: "contents" }
+    return { active, open, close, geometryRef, surfaceRef, surfaceStyle, planeStyle }
+}
+
+interface OrbitFullscreenDetailsProps {
+    apartment: OrbitApartmentRecord | null
+    assetBase: string
+    language: "hu" | "en"
+    onOpenDetails: () => void
+    moving: boolean
+    onPrevious: () => void
+    onNext: () => void
+    onClose: () => void
+    checkpoint: number
+    count: number
+}
+
+const orbitFullscreenStyles = `
+[data-orbit-fullscreen-details] { position:absolute; inset:0; z-index:8; color:#fff; font-family:Montserrat,Arial,Helvetica,sans-serif; pointer-events:none; -webkit-font-smoothing:antialiased; }
+[data-orbit-fullscreen-details] * { box-sizing:border-box; }
+[data-orbit-fullscreen-details] button { font:inherit; color:inherit; cursor:pointer; -webkit-tap-highlight-color:transparent; touch-action:manipulation; }
+[data-orbit-fullscreen-details] button:disabled { cursor:default; opacity:.4; }
+[data-orbit-fullscreen-details] button:focus-visible { outline:2px solid white; outline-offset:4px; }
+[data-orbit-fullscreen-details] .orbit-fullscreen-brand { position:absolute; top:14px; left:50%; transform:translateX(-50%); width:100px; height:43px; background:white; -webkit-mask-image:var(--orbit-fullscreen-logo); mask-image:var(--orbit-fullscreen-logo); -webkit-mask-size:contain; mask-size:contain; -webkit-mask-position:center; mask-position:center; -webkit-mask-repeat:no-repeat; mask-repeat:no-repeat; filter:drop-shadow(0 1px 4px rgba(0,0,0,.2)); }
+[data-orbit-fullscreen-details] .orbit-fullscreen-close { position:absolute; top:10px; right:12px; display:grid; place-items:center; width:44px; height:44px; padding:0; border:1px solid rgba(255,255,255,.45); border-radius:50%; background:rgba(16,24,32,.28); pointer-events:auto; }
+[data-orbit-fullscreen-details] .orbit-fullscreen-close svg { width:19px; height:19px; }
+[data-orbit-fullscreen-details] .orbit-fullscreen-nav { position:absolute; inset:45% 16px auto; display:flex; justify-content:space-between; align-items:center; pointer-events:none; }
+[data-orbit-fullscreen-details] .orbit-fullscreen-nav button { display:grid; place-items:center; width:42px; height:42px; padding:0; border:1px solid rgba(255,255,255,.45); border-radius:50%; background:rgba(16,24,32,.28); pointer-events:auto; font-size:22px; line-height:1; }
+[data-orbit-fullscreen-details] .orbit-fullscreen-bar { position:absolute; inset:auto 0 0; display:grid; grid-template-columns:minmax(0,1fr) 96px minmax(0,1fr); align-items:end; gap:18px; min-width:0; padding:35px 28px 16px; background:linear-gradient(0deg,rgba(7,16,24,.85) 0%,rgba(7,16,24,.65) 55%,rgba(7,16,24,0) 100%); }
+[data-orbit-fullscreen-details] .orbit-fullscreen-left,[data-orbit-fullscreen-details] .orbit-fullscreen-right { min-width:0; text-align:left; }
+[data-orbit-fullscreen-details] .orbit-fullscreen-identity { display:flex; align-items:baseline; flex-wrap:wrap; gap:6px 12px; margin-bottom:10px; }
+[data-orbit-fullscreen-details] .orbit-fullscreen-id { margin:0; font-size:24px; font-weight:600; line-height:1; letter-spacing:-.04em; }
+[data-orbit-fullscreen-details] .orbit-fullscreen-status { margin:0; font-size:10px; font-weight:400; line-height:1.3; }
+[data-orbit-fullscreen-details] .orbit-fullscreen-stats { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; margin:0; }
+[data-orbit-fullscreen-details] .orbit-fullscreen-stats>div { min-width:0; text-align:left; }
+[data-orbit-fullscreen-details] dt { margin:0 0 5px; font-size:9px; font-weight:400; line-height:1.3; opacity:.8; }
+[data-orbit-fullscreen-details] dd { margin:0; font-size:17px; font-weight:500; line-height:1.1; letter-spacing:-.025em; white-space:nowrap; }
+[data-orbit-fullscreen-details] dd small { margin-left:3px; font-size:10px; font-weight:400; }
+[data-orbit-fullscreen-details] .orbit-fullscreen-plan { display:flex; flex-direction:column; align-items:center; justify-content:flex-end; gap:5px; min-width:0; margin:0; }
+[data-orbit-fullscreen-details] .orbit-fullscreen-plan img { display:block; width:82px; height:82px; max-width:100%; object-fit:contain; }
+[data-orbit-fullscreen-details] .orbit-fullscreen-plan figcaption { font-size:8px; font-weight:400; opacity:.8; line-height:1.2; }
+[data-orbit-fullscreen-details] .orbit-fullscreen-right { display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:end; column-gap:12px; row-gap:9px; }
+[data-orbit-fullscreen-details] .orbit-fullscreen-meta { grid-column:1/-1; margin:0; font-size:10px; font-weight:400; line-height:1.5; }
+[data-orbit-fullscreen-details] .orbit-fullscreen-price { margin:0; font-size:19px; font-weight:500; line-height:1.15; letter-spacing:-.035em; white-space:nowrap; }
+[data-orbit-fullscreen-details] .orbit-fullscreen-price small { margin-left:3px; font-size:11px; font-weight:400; }
+[data-orbit-fullscreen-details] .orbit-fullscreen-detail { display:inline-flex; align-items:center; justify-content:center; gap:12px; min-height:38px; padding:8px 13px; border:1px solid rgba(255,255,255,.8); border-radius:0; background:transparent; font-size:10px; white-space:nowrap; pointer-events:auto; }
+[data-orbit-fullscreen-details] .orbit-fullscreen-empty { grid-column:1/-1; margin:0; padding:8px 0; text-align:center; font-size:12px; line-height:1.5; }
+[data-orbit-fullscreen-details][data-compact="true"] .orbit-fullscreen-bar { grid-template-columns:minmax(0,1fr) 74px minmax(0,1fr); padding:28px 18px 12px; gap:12px; }
+[data-orbit-fullscreen-details][data-compact="true"] .orbit-fullscreen-stats { gap:6px; }
+[data-orbit-fullscreen-details][data-compact="true"] .orbit-fullscreen-plan img { width:68px; height:68px; }
+[data-orbit-fullscreen-details][data-compact="true"] .orbit-fullscreen-right { column-gap:8px; }
+[data-orbit-fullscreen-details][data-compact="true"] .orbit-fullscreen-id { font-size:21px; }
+[data-orbit-fullscreen-details][data-compact="true"] .orbit-fullscreen-price { font-size:16px; }
+[data-orbit-fullscreen-details][data-compact="true"] .orbit-fullscreen-detail { min-height:36px; padding:7px 9px; }
+`
+
+function OrbitFullscreenDetails({ apartment, assetBase, language, onOpenDetails, moving, onPrevious, onNext, onClose, checkpoint, count }: OrbitFullscreenDetailsProps) {
+    const hu = language !== "en"
+    const rootRef = React.useRef<HTMLDivElement>(null)
+    const [compact, setCompact] = React.useState(false)
+    React.useEffect(() => {
+        const root = rootRef.current
+        if (!root) return
+        const update = () => setCompact(root.clientWidth < 740 || root.clientHeight < 360)
+        const observer = new ResizeObserver(update); observer.observe(root); update()
+        return () => observer.disconnect()
+    }, [])
+    const number = new Intl.NumberFormat(hu ? "hu-HU" : "en-GB", { maximumFractionDigits: 2 })
+    const known = (value: number | null | undefined) => typeof value === "number" && Number.isFinite(value)
+    const area = (value: number | null | undefined) => known(value) ? <>{number.format(value!)}<small>m²</small></> : "—"
+    const floorplan = apartment && orbitApartmentAssetUrl(apartment.media?.floorplan?.thumbnail || apartment.media?.floorplan?.full || apartment.floorplan, assetBase)
+    const logo = orbitApartmentAssetUrl("assets/brand/admiral-park-full-logo-no-location.svg", assetBase)
+    const state = apartment?.status
+    const status = state === "available" ? hu ? "Szabad" : "Available" : state === "sold" ? hu ? "Eladva" : "Sold" : state === "under_negotiation" ? hu ? "Tárgyalás alatt" : "In negotiation" : state === "reserved" ? hu ? "Foglalt" : "Reserved" : apartment?.statusLabel || ""
+    const meta = apartment ? [apartment.building && `${apartment.building} ${hu ? "épület" : "building"}`, apartment.floorLabel, known(apartment.rooms) && `${number.format(apartment.rooms!)} ${hu ? "szoba" : "rooms"}`, apartment.orientation].filter(Boolean).join(" · ") : ""
+    return <div ref={rootRef} data-orbit-fullscreen-details="" data-compact={compact ? "true" : "false"} data-apartment-id={apartment?.id || ""}>
+        <style>{orbitFullscreenStyles}</style>
+        {logo && <span className="orbit-fullscreen-brand" role="img" aria-label="Admiral Park" style={{ "--orbit-fullscreen-logo": `url("${logo.replace(/["\\]/g, "\\// @ORBIT_FULLSCREEN_INSERT")}")` } as React.CSSProperties} />}
+        <button type="button" data-orbit-ignore="" data-orbit-fullscreen-close="" className="orbit-fullscreen-close" aria-label={hu ? "Teljes képernyő bezárása" : "Close fullscreen"} onClick={onClose}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true"><path d="m5 5 14 14M19 5 5 19" /></svg></button>
+        <div className="orbit-fullscreen-nav" data-orbit-ignore=""><button type="button" data-orbit-fullscreen-step="previous" disabled={moving} aria-label={hu ? "Előző nézet" : "Previous view"} onClick={onPrevious}>←</button><button type="button" data-orbit-fullscreen-step="next" disabled={moving} aria-label={hu ? "Következő nézet" : "Next view"} onClick={onNext}>→</button></div>
+        <div className="orbit-fullscreen-bar" data-orbit-ignore="" aria-live="polite">
+            {apartment ? <>
+                <div className="orbit-fullscreen-left"><div className="orbit-fullscreen-identity"><p className="orbit-fullscreen-id" data-orbit-fullscreen-field="number">{apartment.id}</p><p className="orbit-fullscreen-status" data-status={state} data-orbit-fullscreen-field="status">{status}</p></div><dl className="orbit-fullscreen-stats"><div data-orbit-fullscreen-field="area"><dt>{hu ? "Lakótér" : "Interior"}</dt><dd>{area(apartment.areaInterior)}</dd></div><div data-orbit-fullscreen-field="terrace"><dt>{hu ? "Terasz" : "Terrace"}</dt><dd>{area(apartment.areaTerrace)}</dd></div><div data-orbit-fullscreen-field="garden"><dt>{hu ? "Kert" : "Garden"}</dt><dd>{area(apartment.areaGarden)}</dd></div></dl></div>
+                <figure className="orbit-fullscreen-plan" data-orbit-fullscreen-field="floorplan">{floorplan && <img src={floorplan} alt={`${apartment.id} · ${hu ? "alaprajz" : "floorplan"}`} decoding="async" draggable={false} />}<figcaption>{hu ? "Alaprajz · illusztráció" : "Illustrative floorplan"}</figcaption></figure>
+                <div className="orbit-fullscreen-right"><p className="orbit-fullscreen-meta" data-orbit-fullscreen-field="meta">{meta}</p><div><p className="orbit-fullscreen-price" data-orbit-fullscreen-field="price">{known(apartment.price) ? apartment.currency === "HUF" ? <>{number.format(apartment.price! / 1000000)}<small>M Ft</small></> : number.format(apartment.price!) + " " + apartment.currency : hu ? "Ár kérésre" : "Price on request"}</p></div><button type="button" className="orbit-fullscreen-detail" data-orbit-detail-link="" disabled={moving} onClick={onOpenDetails}>{hu ? "Részletek" : "Details"}<span aria-hidden="true">↗</span></button></div>
+            </> : <p className="orbit-fullscreen-empty">{hu ? "Koppintson egy lakásra a részletekhez." : "Tap an apartment to see its details."}</p>}
+        </div>
+        <span style={{ position: "absolute", width: 1, height: 1, overflow: "hidden", clipPath: "inset(50%)" }} role="status">{checkpoint >= 0 ? `${hu ? "Nézet" : "View"} ${checkpoint + 1} / ${count}` : hu ? "Nézetváltás" : "Moving to next view"}</span>
+    </div>
 }
 
 
@@ -969,6 +1245,14 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
     const framingConfig = React.useRef<HomepageFramingConfig>({ enabled: phoneFraming, sourceWidth: phoneImageWidth, top: phoneImageTop, detailsHeight, detailsBottom, reserveDetails: detailsMode !== "off" })
     framingConfig.current = { enabled: phoneFraming, sourceWidth: phoneImageWidth, top: phoneImageTop, detailsHeight, detailsBottom, reserveDetails: detailsMode !== "off" }
     const refreshPresentation = React.useRef<() => void>(() => {})
+    const refreshFullscreenLayout = React.useCallback(() => {
+        // Cancel a finger gesture across a mode/size change, retaining the
+        // current camera, compressed downloads and bounded decoded cache.
+        actions.current?.orbit?.setSuspended(true)
+        refreshPresentation.current()
+        actions.current?.orbit?.setSuspended(detailOpen.current)
+    }, [])
+    const fullscreen = useOrbitFullscreen(refreshFullscreenLayout, detailOpen)
     const setStudioViewport = React.useCallback((element: HTMLDivElement | null) => { studioViewportRef.current = element; queueMicrotask(() => refreshPresentation.current()) }, [])
     const refreshStudioLayout = React.useCallback(() => { refreshPresentation.current() }, [])
     const timing = React.useRef<HomepageTiming>({ openingOut, buildingIn, buildingFull, ctaIn, rise })
@@ -1042,6 +1326,9 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
     React.useEffect(() => {
         if (!hostVisible && detailApartmentId) closeApartmentDetails()
     }, [hostVisible, detailApartmentId, closeApartmentDetails])
+    React.useEffect(() => {
+        if (fullscreen.active && (!hostVisible || stage !== "orbit")) fullscreen.close()
+    }, [hostVisible, stage, fullscreen.active, fullscreen.close])
 
     React.useEffect(() => {
         const root = rootRef.current, heroRoot = heroRootRef.current, heroCanvas = heroCanvasRef.current, orbitCanvas = orbitCanvasRef.current, poster = posterRef.current
@@ -1060,7 +1347,9 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
             buffered: 0, bufferTotal: 0, requiredReady: 0, requiredTotal: 0, position: editorPreviewFrame, userPaused: false, suspended: false }
         let arrivedAt = -Infinity, lastWheelAt = -Infinity, wheelIntent = 0, lastUI = 0, lastOrbitUI = ""
         const abort = new AbortController(), signal = abort.signal
-        const phone = window.matchMedia("(max-width: 767px)").matches
+        // A phone entering in landscape still uses the phone decode budget.
+        // Read logical component sizes so scaled Framer previews stay desktop.
+        const phone = root.clientWidth <= 767 || window.matchMedia("(pointer: coarse)").matches && Math.min(root.clientWidth, root.clientHeight) <= 767
         const reducedMedia = window.matchMedia("(prefers-reduced-motion: reduce)")
         setReduced(reducedMedia.matches)
         reducedMedia.addEventListener("change", () => setReduced(reducedMedia.matches), { signal })
@@ -1136,7 +1425,17 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
         const orbit = staticRenderer ? null : createOrbitPlayer({
             root, canvas: orbitCanvas, urls: orbitUrls, startFrame: orbitStartIndex, decodeWidth, inspectionWidth: phone ? Math.min(inspectionWidth, 1280) : inspectionWidth,
             checkpointCount, bufferCheckpoints: phone ? phoneBuffer : desktopBuffer, snapDuration, frameBlend: frameBlend / 100, focalX: focalX / 100, focalY: focalY / 100,
-            viewport: bounds => viewportFor(1, bounds),
+            renderBounds: () => fullscreen.geometryRef.current,
+            inputBounds: () => fullscreen.geometryRef.current?.physical || null,
+            inputPoint: (clientX, clientY) => {
+                const geometry = fullscreen.geometryRef.current
+                if (!geometry) return { x: clientX, y: clientY }
+                const { physical, width, height, rotated } = geometry
+                const x = clientX - physical.left, y = clientY - physical.top
+                return rotated ? { x: y * width / physical.height, y: height - x * height / physical.width } :
+                    { x: x * width / physical.width, y: y * height / physical.height }
+            },
+            viewport: bounds => fullscreen.geometryRef.current ? null : viewportFor(1, bounds),
             onUpdate(snapshot) {
                 if (disposed) return
                 orbitSnapshot = snapshot; publish()
@@ -1260,7 +1559,7 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
             if (event.defaultPrevented || detailOpen.current || !isVisible() || root!.contains(event.target as Node) || homepageBlocked(event.target)) return
             // Passive Framer overlay frames can cover the viewport. Relay only a click
             // over one of our visible controls; genuine links and buttons above stay native.
-            for (const button of Array.from(root!.querySelectorAll<HTMLButtonElement>("[data-homepage-controls] button, button[data-apartment-open], button[data-orbit-detail-link]"))) {
+            for (const button of Array.from(root!.querySelectorAll<HTMLButtonElement>("[data-homepage-controls] button, button[data-apartment-open], button[data-orbit-detail-link], button[data-orbit-fullscreen-open], button[data-orbit-fullscreen-close]"))) {
                 if (button.disabled || button.getAttribute("aria-disabled") === "true" || button.closest("[inert], [hidden], [aria-hidden='true']")) continue
                 let visible = true
                 for (let element: HTMLElement | null = button; element; element = element.parentElement) {
@@ -1371,11 +1670,17 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
             const detail = (event as CustomEvent<unknown>).detail
             const values = detail && typeof detail === "object" ? detail as { id?: unknown; apartmentId?: unknown; number?: unknown } : null
             const id = typeof detail === "string" ? detail : values?.id ?? values?.apartmentId ?? values?.number
-            if (typeof id === "string") openApartmentDetails(id)
+            if (typeof id !== "string") return
+            if (mobilePresentation) {
+                // Touch selects first; the explicit Details action opens the
+                // shared card. Desktop facade clicks retain their direct action.
+                if (jsonDetails && root!.dataset.homepageStage === "orbit" && root!.dataset.orbitState === "checkpoint" && Number(root!.dataset.orbitCheckpoint) >= 0 &&
+                    apartmentData.dataset?.apartments.some(apartment => apartment.id === id)) setSelectedApartmentId(id)
+            } else openApartmentDetails(id)
         }
         root.addEventListener("admiral:apartment-click", click)
         return () => root.removeEventListener("admiral:apartment-click", click)
-    }, [openApartmentDetails, staticRenderer])
+    }, [openApartmentDetails, staticRenderer, mobilePresentation, jsonDetails, apartmentData.dataset])
     React.useEffect(() => { if (stage !== "orbit" && detailApartmentId) closeApartmentDetails() }, [stage, detailApartmentId, closeApartmentDetails])
 
     React.useEffect(() => {
@@ -1392,9 +1697,10 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
         clearApartmentDetails()
         // Keep the last valid facade hover readable while the pointer moves to
         // its floorplan. A camera move or leaving this viewer clears Hover mode.
-        root.addEventListener("pointerleave", clearApartmentDetails)
-        return () => root.removeEventListener("pointerleave", clearApartmentDetails)
-    }, [detailsMode, staticRenderer, clearApartmentDetails])
+        const leave = () => { if (!mobilePresentation) clearApartmentDetails() }
+        root.addEventListener("pointerleave", leave)
+        return () => root.removeEventListener("pointerleave", leave)
+    }, [detailsMode, staticRenderer, clearApartmentDetails, mobilePresentation])
     const orbitVisible = !staticRenderer && stage === "orbit"
     const orbitStatic = staticRenderer && editorView === "orbit"
     const percent = Math.round(100 * orbitInfo.downloaded / Math.max(1, orbitInfo.total))
@@ -1412,10 +1718,10 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
     const studioControls = useStudio && (stage === "orbit" || stage === "handoff")
     const imageClip = "inset(var(--admiral-image-y, 0px) var(--admiral-image-right, 0px) var(--admiral-image-cut, 0px) var(--admiral-image-x, 0px))"
     return (
-        <div ref={rootRef} data-admiral-homepage="" data-admiral-orbit="" data-homepage-stage={stage} role="region" aria-label={alt} tabIndex={0}
+        <div ref={rootRef} data-admiral-homepage="" data-admiral-orbit="" data-homepage-stage={stage} data-orbit-fullscreen={String(fullscreen.active)} role="region" aria-label={alt} tabIndex={0}
             style={{ position: "relative", width: "100%", height: "100%", overflow: "hidden", background, "--admiral-orbit-background": orbitBackground, ...style } as React.CSSProperties}>
             <div aria-hidden="true" style={{ position: "absolute", inset: 0, background: orbitBackground, opacity: "var(--admiral-studio-light, 0)" as unknown as number, pointerEvents: "none" }} />
-            {useStudio && <OrbitApartmentStudio active={orbitVisible || orbitStatic} mode={detailsMode} dataset={apartmentData.dataset} dataStatus={apartmentData.status} error={apartmentData.error}
+            {useStudio && <OrbitApartmentStudio active={!fullscreen.active && (orbitVisible || orbitStatic)} mobile={mobilePresentation} mode={detailsMode} dataset={apartmentData.dataset} dataStatus={apartmentData.status} error={apartmentData.error}
                 onRetry={apartmentData.retry} apartment={selectedApartment} onSelect={setSelectedApartmentId} assetBase={apartmentAssetBase} detailsUrl={detailPageUrl} inquiryUrl={inquiryUrl}
                 onViewport={setStudioViewport} language={detailsLanguage} onLayout={refreshStudioLayout} onOpenDetails={() => openApartmentDetails()} />}
             <div ref={heroRootRef} data-admiral-sequence="" style={{ position: "absolute", inset: 0, zIndex: 2, pointerEvents: stage === "orbit" || stage === "handoff" ? "none" : "auto", clipPath: imageClip }}>
@@ -1423,10 +1729,22 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
                     style={{ position: "absolute", top: "var(--admiral-image-y, 0px)", left: "var(--admiral-image-x, 0px)", width: "var(--admiral-image-width, 100%)", height: "var(--admiral-image-height, 100%)", objectFit: "cover", objectPosition: `${focalX}% ${focalY}%`, pointerEvents: "none" }} />
                 <canvas ref={heroCanvasRef} aria-hidden="true" width={1} height={1} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", opacity: 0, clipPath: "inset(var(--admiral-image-y, 0px) 0px var(--admiral-image-cut, 0px) 0px)" }} />
             </div>
-            <canvas ref={orbitCanvasRef} aria-hidden="true" width={1} height={1} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", zIndex: 2, opacity: orbitVisible ? 1 : 0, transition: reduced ? "none" : "opacity .35s", touchAction: "pan-y pinch-zoom", pointerEvents: orbitVisible ? "auto" : "none", clipPath: imageClip }} />
+            <div ref={fullscreen.surfaceRef} data-orbit-fullscreen-surface="" data-active={String(fullscreen.active)} role={fullscreen.active ? "dialog" : undefined}
+                aria-label={fullscreen.active ? detailsLanguage === "hu" ? "Teljes képernyős épületnézet" : "Fullscreen building view" : undefined} aria-modal={fullscreen.active ? true : undefined} style={fullscreen.surfaceStyle}>
+                <div data-orbit-fullscreen-plane="" data-rotated={String(!!fullscreen.geometryRef.current?.rotated)} style={fullscreen.planeStyle}>
+                    <canvas ref={orbitCanvasRef} aria-hidden="true" width={1} height={1} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", zIndex: 2, opacity: orbitVisible ? 1 : 0, transition: reduced ? "none" : "opacity .35s", touchAction: fullscreen.active ? "none" : "pan-y pinch-zoom", pointerEvents: orbitVisible ? "auto" : "none", clipPath: fullscreen.active ? "none" : imageClip }} />
+                    {fullscreen.active && <OrbitFullscreenDetails apartment={selectedApartment} assetBase={apartmentAssetBase} language={detailsLanguage}
+                        onOpenDetails={() => openApartmentDetails()} moving={orbitMoving} onPrevious={() => actions.current?.orbit?.go(-1)} onNext={() => actions.current?.orbit?.go(1)}
+                        onClose={fullscreen.close} checkpoint={orbitInfo.checkpoint} count={checkpoints} />}
+                </div>
+            </div>
+            {mobilePresentation && useStudio && orbitVisible && !fullscreen.active && <button type="button" data-orbit-fullscreen-open="" data-orbit-ignore="" onClick={fullscreen.open}
+                style={{ position: "absolute", zIndex: 4, left: "calc(var(--admiral-image-x, 0px) + var(--admiral-image-width, 100%) - 10px)", top: "calc(var(--admiral-image-y, 0px) + var(--admiral-image-height, 100%) - 8px)", transform: "translate(-100%,-100%)", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 7, width: "max-content", whiteSpace: "nowrap", minHeight: 44, padding: "7px 10px", border: "1px solid rgba(36,40,36,.25)", borderRadius: 0, color: "#242824", background: "rgba(253,251,251,.94)", font: "500 10px/1.3 Montserrat,Arial,sans-serif", cursor: "pointer", touchAction: "manipulation" }}>
+                <span aria-hidden="true" style={{ fontSize: 19, lineHeight: 1 }}>⛶</span>{detailsLanguage === "hu" ? "Teljes képernyő" : "Fullscreen view"}
+            </button>}
             {orbitStatic && <span style={{ position: "absolute", inset: 0, pointerEvents: "none" }} />}
             <div aria-hidden="true" style={{ position: "absolute", top: "var(--admiral-image-y, 0px)", left: "var(--admiral-image-x, 0px)", width: "var(--admiral-image-width, 100%)", height: "var(--admiral-image-height, 100%)", background: "#000", opacity: darken, pointerEvents: "none", zIndex: 2 }} />
-            {!staticRenderer && showControls && <div data-homepage-controls="" data-orbit-ignore="" style={{ position: "absolute", bottom: studioControls ? "auto" : controlsBottom, top: studioControls ? "var(--admiral-controls-top)" : "auto", left: studioControls ? "var(--admiral-controls-left)" : "50%", transform: "translateX(-50%)", display: "flex", alignItems: "center", justifyContent: "center", flexWrap: "wrap", gap: 7, width: "max-content", maxWidth: studioControls ? "var(--admiral-controls-width)" : "94%", zIndex: 3 }}>
+            {!staticRenderer && showControls && !fullscreen.active && <div data-homepage-controls="" data-orbit-ignore="" style={{ position: "absolute", bottom: studioControls ? "auto" : controlsBottom, top: studioControls ? "var(--admiral-controls-top)" : "auto", left: studioControls ? "var(--admiral-controls-left)" : "50%", transform: "translateX(-50%)", display: "flex", alignItems: "center", justifyContent: "center", flexWrap: "wrap", gap: 7, width: "max-content", maxWidth: studioControls ? "var(--admiral-controls-width)" : "94%", zIndex: 3 }}>
                 {(stage === "opening" || stage === "approach") && <button type="button" style={homepageButton} onClick={() => actions.current?.skip()}>Skip approach</button>}
                 {stage === "approach" && (heroState === "paused" || heroState === "error") && <button type="button" style={homepageButton} onClick={() => actions.current?.resumeHero()}>{heroState === "error" ? "Retry approach" : "Continue approach"}</button>}
                 {stage === "connection" && <button type="button" style={homepageButton} onClick={() => actions.current?.skip()}>Skip connection</button>}
@@ -1453,7 +1771,7 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
             {!staticRenderer && !showControls && orbitInfo.state === "error" && <div data-homepage-controls="" data-orbit-ignore="" style={{ position: "absolute", bottom: 18, left: "50%", transform: "translateX(-50%)", zIndex: 3 }}>
                 <button type="button" style={homepageButton} onClick={() => { void (rootRef.current as (HTMLElement & { retryOrbit?: () => Promise<void> }) | null)?.retryOrbit?.() }}>Retry orbit</button>
             </div>}
-            {!useStudio && detailsMode !== "off" && <ApartmentDetailsStrip apartment={detailsData} language={detailsLanguage} visible={detailsVisible} preview={false}
+            {!useStudio && !fullscreen.active && detailsMode !== "off" && <ApartmentDetailsStrip apartment={detailsData} language={detailsLanguage} visible={detailsVisible} preview={false}
                 bottom={detailsBottom} inset={detailsInset} onHeightChange={setDetailsHeight} onOpen={jsonDetails && selectedApartment ? () => openApartmentDetails() : undefined} />}
             {!staticRenderer && <AdmiralApartmentDetailCard openId={detailApartmentId} dataUrl={detailDataUrl} assetBase={apartmentAssetBase} inquiryUrl={inquiryUrl} pageUrl={detailPageUrl}
                 onOpenChange={reportDetailOpen} onClosed={closeApartmentDetails} />}
@@ -2512,6 +2830,7 @@ interface OrbitOptions {
     backingSize?: () => { width: number; height: number } | null;
     /** Map physical pointer coordinates into the transformed scene's logical space. */
     inputPoint?: (clientX: number, clientY: number) => { x: number; y: number };
+    inputBounds?: () => { left: number; top: number; width: number; height: number } | null;
     /** Optional image rectangle in CSS pixels, independent of the full canvas backing size. */
     viewport?: (bounds: { width: number; height: number }) => { x: number; y: number; width: number; height: number } | null;
     onUpdate?: (snapshot: OrbitSnapshot) => void;
@@ -2960,8 +3279,8 @@ function createOrbitPlayer(options: OrbitOptions) {
     }
 
     function insideViewer(x: number, y: number) {
-        const box = root.getBoundingClientRect();
-        return box.width > 0 && box.height > 0 && x >= box.left && x <= box.right && y >= box.top && y <= box.bottom;
+        const box = options.inputBounds?.() || root.getBoundingClientRect();
+        return box.width > 0 && box.height > 0 && x >= box.left && x <= box.left + box.width && y >= box.top && y <= box.top + box.height;
     }
 
     function inputPoint(clientX: number, clientY: number) {
@@ -2970,7 +3289,7 @@ function createOrbitPlayer(options: OrbitOptions) {
     }
 
     function coveredTrialControl(x: number, y: number) {
-        return Array.from(root.querySelectorAll<HTMLButtonElement>("[data-homepage-controls] button, button[data-apartment-open], button[data-orbit-detail-link]")).some(button => {
+        return Array.from(root.querySelectorAll<HTMLButtonElement>("[data-homepage-controls] button, button[data-apartment-open], button[data-orbit-detail-link], button[data-orbit-fullscreen-open], button[data-orbit-fullscreen-close]")).some(button => {
             if (button.disabled || button.getAttribute("aria-disabled") === "true" || button.closest("[inert], [hidden], [aria-hidden='true']")) return false;
             const css = getComputedStyle(button);
             if (css.display === "none" || css.visibility === "hidden" || css.visibility === "collapse" || Number(css.opacity) === 0) return false;
