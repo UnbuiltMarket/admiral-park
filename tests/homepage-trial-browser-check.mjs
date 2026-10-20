@@ -56,7 +56,7 @@ async function fixture(options={}){
   return route.fulfill({contentType:'text/html',body:'<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><style>html,body{margin:0;font:18px Arial;background:#0e1720}#stage{height:100svh;position:relative;overflow:hidden}.copy{position:absolute;left:6%;top:20%;max-width:650px;color:white;z-index:4}.cta{position:absolute;left:6%;top:65%;z-index:4}.cta a{display:inline-block;padding:18px;background:white;color:black}#navbar{position:fixed;z-index:50;top:8px;left:12px;display:flex;gap:12px}#nested{position:absolute;right:0;top:100px;width:110px;height:100px;overflow:auto;z-index:40;background:white}#native-input{position:absolute;right:5px;top:220px;z-index:40;width:95px}#external-framer-overlay{position:absolute;inset:0;z-index:20;pointer-events:auto}#external-framer-overlay>div{width:100%;height:100%}</style></head><body'+(options.externalOverlay?' style="height:300vh"':'')+'><nav id="navbar"><a id="nav-link" href="#apartments">Apartments</a><button id="nav-button">Contact</button></nav><div id="mount"></div></body></html>'});
  });
  await page.goto('http://homepage.test/');await page.addScriptTag({content:react});await page.addScriptTag({content:dom});
- await page.evaluate(({code,props,staticMode,publicMode,twoInstances,externalOverlay,gateDecodeIndices,gateFirstNativeDecodes,accelerateDecodeWatchdog,useDefaultOrbitStart,cleanFixture,storyOverlays,storyAliases,tallStory,stageScale,stageWidth,stageHeight})=>{
+ await page.evaluate(({code,props,staticMode,publicMode,twoInstances,externalOverlay,gateDecodeIndices,gateFirstNativeDecodes,accelerateDecodeWatchdog,useDefaultOrbitStart,useDefaultPhoneWidth,cleanFixture,storyOverlays,storyAliases,tallStory,stageScale,stageWidth,stageHeight})=>{
   if(cleanFixture){const style=document.createElement('style');style.textContent='#nested,#native-input{display:none!important}';document.head.appendChild(style);}
   window.bitmapCreated=0;window.bitmapClosed=0;window.bitmapRecords=[];window.sequenceDraws=[];window.orbitLive=0;window.orbitLiveMax=0;
   const bitmapRecords=new WeakMap(),nativeDrawImage=CanvasRenderingContext2D.prototype.drawImage;
@@ -102,11 +102,12 @@ async function fixture(options={}){
   const Intro=module.exports[storyAliases?'BalatonfuredContent':'OpeningContent'](Frame),Building=module.exports[storyAliases?'AranyhidContent':'BuildingContent'](Frame),CTA=module.exports.ArrivalCTA(Frame);
   const Stories=storyOverlays?Array.from({length:8},(_,index)=>module.exports[`OrbitView${index+1}`](Frame)):[];
   window.component=module.exports.default;
-  window.props={useGitHubAssets:publicMode,heroBaseUrl:'http://homepage.test/hero',connectionBaseUrl:'http://homepage.test/connection',connectionDuration:.6,orbitBaseUrl:'http://homepage.test/orbit',orbitStartFrame:0,detailsMode:'off',snapDuration:.3,phoneOrbitMode:'inline',...props};
+  window.props={useGitHubAssets:publicMode,heroBaseUrl:'http://homepage.test/hero',connectionBaseUrl:'http://homepage.test/connection',connectionDuration:.6,orbitBaseUrl:'http://homepage.test/orbit',orbitStartFrame:0,detailsMode:'off',snapDuration:.3,phoneImageWidth:80,...props};
   if(useDefaultOrbitStart)delete window.props.orbitStartFrame;
+  if(useDefaultPhoneWidth)delete window.props.phoneImageWidth;
   window.root=ReactDOM.createRoot(document.querySelector('#mount'));
   window.renderTrial=()=>window.root.render(React.createElement(React.StrictMode,null,React.createElement('section',{id:'stage',style:{...(stageScale?{transform:`scale(${stageScale})`,transformOrigin:'top left'}:{}),...(stageWidth?{width:stageWidth}:{}),...(stageHeight?{height:stageHeight}:{})}},
-   React.createElement(window.component,{...window.props,key:window.componentKey||0}),
+   React.createElement(window.component,window.props),
    React.createElement(Intro,{id:'intro',className:'copy'},'LOCATION'),
    React.createElement(Building,{id:'building',className:'copy'},'BUILDING'),
    React.createElement(CTA,{id:'cta',className:'cta'},React.createElement('a',{href:'#apartments',onClick:()=>window.ctaClicked=true},'Apartment details')),
@@ -116,8 +117,8 @@ async function fixture(options={}){
    React.createElement('input',{id:'native-input',defaultValue:'Apartment'})),
    twoInstances?React.createElement('section',{id:'secondary',style:{display:'none',position:'relative',height:'100svh'}},React.createElement(window.component,window.props)):null));
   window.renderTrial();window.samples=[];
-  window.sampleTimer=setInterval(()=>{const root=document.querySelector('[data-admiral-homepage]'),orbit=document.querySelector('[data-admiral-orbit]')||root,hero=document.querySelector('[data-admiral-sequence]');if(root)window.samples.push({time:performance.now(),stage:root.dataset.homepageStage,sequence:root.dataset.activeSequence,sequenceState:hero?.dataset.sequenceState,heroDecoded:Number(hero?.dataset.decoded),state:orbit?.dataset.orbitState,position:Number(orbit?.dataset.orbitPosition),frame:Number(orbit?.dataset.orbitFrame),checkpoint:Number(orbit?.dataset.orbitCheckpoint),decoded:Number(orbit?.dataset.orbitDecoded),buffered:Number(orbit?.dataset.orbitBuffered),bufferTotal:Number(orbit?.dataset.orbitBufferTotal),requiredReady:Number(orbit?.dataset.orbitRequiredReady),requiredTotal:Number(orbit?.dataset.orbitRequiredTotal),decoding:Number(orbit?.dataset.orbitDecoding),ready:orbit?.dataset.orbitReady,target:Number(orbit?.dataset.orbitTarget),mix:Number(orbit?.dataset.orbitFrameMix),heroFrame:Number(hero?.dataset.frame),rotation:root.dataset.phoneRotation,rotationBlocked:root.dataset.phoneRotationBlocked});},16);
- },{code,props:options.props||{},staticMode:!!options.staticMode,publicMode,twoInstances:!!options.twoInstances,externalOverlay:!!options.externalOverlay,gateDecodeIndices:options.gateDecodeIndices||[],gateFirstNativeDecodes:options.gateFirstNativeDecodes||0,accelerateDecodeWatchdog:!!options.accelerateDecodeWatchdog,useDefaultOrbitStart:!!options.useDefaultOrbitStart,cleanFixture:!!options.cleanFixture,storyOverlays:!!options.storyOverlays,storyAliases:!!options.storyAliases,tallStory:!!options.tallStory,stageScale:options.stageScale,stageWidth:options.stageWidth,stageHeight:options.stageHeight});
+  window.sampleTimer=setInterval(()=>{const root=document.querySelector('[data-admiral-homepage]'),orbit=document.querySelector('[data-admiral-orbit]')||root,hero=document.querySelector('[data-admiral-sequence]');if(root)window.samples.push({time:performance.now(),stage:root.dataset.homepageStage,sequence:root.dataset.activeSequence,sequenceState:hero?.dataset.sequenceState,heroDecoded:Number(hero?.dataset.decoded),state:orbit?.dataset.orbitState,position:Number(orbit?.dataset.orbitPosition),frame:Number(orbit?.dataset.orbitFrame),checkpoint:Number(orbit?.dataset.orbitCheckpoint),decoded:Number(orbit?.dataset.orbitDecoded),buffered:Number(orbit?.dataset.orbitBuffered),bufferTotal:Number(orbit?.dataset.orbitBufferTotal),requiredReady:Number(orbit?.dataset.orbitRequiredReady),requiredTotal:Number(orbit?.dataset.orbitRequiredTotal),decoding:Number(orbit?.dataset.orbitDecoding),ready:orbit?.dataset.orbitReady,target:Number(orbit?.dataset.orbitTarget),mix:Number(orbit?.dataset.orbitFrameMix),heroFrame:Number(hero?.dataset.frame)});},16);
+ },{code,props:options.props||{},staticMode:!!options.staticMode,publicMode,twoInstances:!!options.twoInstances,externalOverlay:!!options.externalOverlay,gateDecodeIndices:options.gateDecodeIndices||[],gateFirstNativeDecodes:options.gateFirstNativeDecodes||0,accelerateDecodeWatchdog:!!options.accelerateDecodeWatchdog,useDefaultOrbitStart:!!options.useDefaultOrbitStart,useDefaultPhoneWidth:!!options.useDefaultPhoneWidth,cleanFixture:!!options.cleanFixture,storyOverlays:!!options.storyOverlays,storyAliases:!!options.storyAliases,tallStory:!!options.tallStory,stageScale:options.stageScale,stageWidth:options.stageWidth,stageHeight:options.stageHeight});
  await page.waitForSelector('[data-admiral-homepage]');
  await page.waitForFunction(()=>[...document.images].some(image=>image.naturalWidth>0));
  await page.mouse.move(450,500);
@@ -185,35 +186,6 @@ async function installFramingCapture(page){
  });
 }
 async function readFraming(page){return page.evaluate(()=>window.readFraming());}
-async function rotationData(page){return page.locator('[data-admiral-homepage]').evaluate(root=>({...root.dataset}));}
-async function waitRotationBlocked(page,blocked){await page.waitForFunction(blocked=>document.querySelector('[data-admiral-homepage]')?.dataset.phoneRotationBlocked===String(blocked),blocked,{timeout:12000});}
-async function assertNoRotationQuestion(page){assert.equal(await page.locator('[data-phone-rotation][data-rotation-state], [data-phone-rotation-continue], [data-phone-rotation-portrait], [role="dialog"][aria-modal="true"]').count(),0,'Turning the scene has no question, Continue button or blocking cover');}
-async function tapButton(page,name){const box=await page.getByRole('button',{name,exact:true}).boundingBox();assert.ok(box,name);await page.touchscreen.tap(box.x+box.width/2,box.y+box.height/2);}
-async function installSceneCapture(page){
- await page.evaluate(()=>{
-  window.sceneSamples=[];window.readScene=()=>{
-   const root=document.querySelector('[data-admiral-homepage]'),hero=root.querySelector('[data-admiral-sequence]'),canvas=root.dataset.homepageStage==='orbit'?[...root.querySelectorAll('canvas')].find(canvas=>!canvas.closest('[data-admiral-sequence]')):hero.querySelector('canvas');
-   return {stage:root.dataset.homepageStage,angle:Number(root.dataset.sceneAngle),width:Number(root.dataset.sceneWidth),height:Number(root.dataset.sceneHeight),progress:Number(hero.dataset.progress),frame:Number(hero.dataset.frame),paintedSequence:window.sequenceDraws.at(-1)?.activeSequence,canvasWidth:canvas.width,canvasHeight:canvas.height};
-  };
-  const sample=()=>{window.sceneSamples.push(window.readScene());window.sceneRaf=requestAnimationFrame(sample);};sample();
- });
-}
-async function readScene(page){return page.evaluate(()=>window.readScene());}
-function assertAutomaticLandscape(scene,width,height,message){assert.equal(scene.angle,90,message+' ends at a full quarter turn');assert.ok(Math.abs(scene.width-height)<1,message+' has a landscape logical width');assert.ok(Math.abs(scene.height-width)<1,message+' has a landscape logical height');}
-async function assertScreenCovered(page,name){
- const navStyle=await page.addStyleTag({content:'#navbar{visibility:hidden!important}'});
- try{
-  const screenshot=await page.screenshot({path:fileURLToPath(new URL(name,out))});
-  const pixels=await page.evaluate(async base64=>{
-   const image=new Image();image.src='data:image/png;base64,'+base64;await image.decode();const canvas=document.createElement('canvas');canvas.width=image.width;canvas.height=image.height;const context=canvas.getContext('2d');context.drawImage(image,0,0);
-   const output=[];for(const y of [.03,.5,.97])for(const x of [.03,.5,.97])output.push([...context.getImageData(Math.floor(image.width*x),Math.floor(image.height*y),1,1).data]);return output;
-  },screenshot.toString('base64'));
-  assert.equal(pixels.length,9);for(const pixel of pixels){assert.equal(pixel[3],255,'Every sampled screen region is opaque');assert.ok(![[16,24,32],[14,23,32],[0,0,0]].some(background=>background.every((value,index)=>Math.abs(pixel[index]-value)<=2)),'The displayed picture covers the viewport corners and center during the turn: '+pixel);}
- }finally{await navStyle.evaluate(element=>element.remove());}
-}
-const phoneTouchSessions=new WeakMap();
-async function phoneTouch(page,type,x=180,y=300){let cdp=phoneTouchSessions.get(page);if(!cdp){cdp=await page.context().newCDPSession(page);phoneTouchSessions.set(page,cdp);}await cdp.send('Input.dispatchTouchEvent',{type,touchPoints:type==='touchEnd'||type==='touchCancel'?[]:[{x,y}]});}
-function assertHeldOrbit(data,expected,message){assert.ok(Math.abs(Number(data.orbitPosition)-expected.position)<.001,message+' preserves its exact camera position');assert.equal(Number(data.orbitTarget),expected.target,message+' preserves the original checkpoint target');}
 function assertFullFraming(frame,message){
  assert.equal(frame.x,0,message+' begins at the left edge');assert.equal(frame.y,0,message+' begins at the top edge');
  assert.ok(Math.abs(frame.width-frame.rootWidth)<1,message+' fills the component width');assert.ok(Math.abs(frame.height-frame.rootHeight)<1,message+' fills the component height');
@@ -255,73 +227,33 @@ async function assertStoryTarget(page,view){
 }
 
 try{
- await pass('phone automatic turn gradually fills portrait through SEQ_02 without prompts and keeps a fixed canvas backing',async()=>{
-  const f=await fixture({cleanFixture:true,externalOverlay:true,context:{viewport:{width:390,height:844},isMobile:true,hasTouch:true,deviceScaleFactor:2},props:{phoneOrbitMode:'landscape',connectionDuration:3,maxSpeed:1,showViewpoints:false}}),{page}=f;
-  try{
-   await installSceneCapture(page);await coveredClick(page,'Skip approach');await waitStage(page,'building');assert.equal((await readScene(page)).angle,0,'The approach still arrives fullscreen and upright');
-   await assertNoRotationQuestion(page);await assertScreenCovered(page,'phone-auto-turn-start.png');await page.evaluate(()=>window.sceneSamples=[]);await coveredClick(page,'Explore building');
-   await page.waitForFunction(()=>{const root=document.querySelector('[data-admiral-homepage]');return root?.dataset.homepageStage==='connection'&&Number(root.dataset.sceneAngle)>30&&Number(root.dataset.sceneAngle)<65;});
-   const middle=await readScene(page);assert.ok(middle.progress>0&&middle.progress<1);await assertScreenCovered(page,'phone-auto-turn-middle.png');await assertNoRotationQuestion(page);
-   await waitOrbit(page);await assertScreenCovered(page,'phone-auto-turn-end.png');const final=await readScene(page);assertAutomaticLandscape(final,390,844,'Portrait orbit');
-   const samples=await page.evaluate(()=>window.sceneSamples.filter(sample=>sample.stage==='connection'&&sample.paintedSequence==='SEQ_02'&&sample.canvasWidth>1));
-   assert.ok(samples.length>12,'The transition is sampled over multiple compositor frames');assert.ok(samples.some(sample=>sample.angle<10));assert.ok(samples.some(sample=>sample.angle>80));
-   for(let index=1;index<samples.length;index++){
-    const previous=samples[index-1],current=samples[index];assert.ok(current.angle>=previous.angle-.01,'The scene angle never runs backwards during a forward connector');assert.ok(current.angle-previous.angle<20,'The scene turns gradually rather than snapping');
-    assert.equal(current.canvasWidth,previous.canvasWidth,'Turning does not reallocate canvas backing width each frame');assert.equal(current.canvasHeight,previous.canvasHeight,'Turning does not reallocate canvas backing height each frame');
-    if(current.progress===previous.progress)assert.equal(current.angle,previous.angle,'The turn is tied to the actual painted sequence progress');
-   }
-   assert.equal((await rotationData(page)).phoneRotationBlocked,'false');assert.equal(await page.evaluate(()=>scrollY),0);
-  }finally{await f.close();}
- });
- await pass('phone automatic turn direct orbit rotates details and keeps transformed controls touchable',async()=>{
-  const f=await fixture({cleanFixture:true,externalOverlay:true,storyOverlays:true,context:{viewport:{width:390,height:844},isMobile:true,hasTouch:true,deviceScaleFactor:2},props:{phoneOrbitMode:'landscape',startView:'orbit',orbitStartFrame:45,detailsMode:'preview',showViewpoints:false,snapDuration:.35,storyDelay:.01,storyIn:.02,storyOut:.02}}),{page}=f;
-  try{
-   await installSceneCapture(page);await waitFrame(page,45);await waitDetails(page);assertAutomaticLandscape(await readScene(page),390,844,'Direct orbit entry');await assertNoRotationQuestion(page);
-   assert.equal(await page.locator(detailsSelector).evaluate(element=>!!element.closest('[data-homepage-scene]')),true,'Apartment details turn with the image');
-   assert.equal(await page.locator('[data-homepage-controls]').evaluate(element=>!!element.closest('[data-homepage-scene]')),true,'Trial controls turn with the image');
-   const details=await page.locator(detailsSelector).boundingBox();assert.ok(details.x>=-1&&details.y>=-1&&details.x+details.width<=391&&details.y+details.height<=845,'Rotated detail fields remain inside the physical viewport');
-   await waitStory(page,4);await assertStoryTarget(page,4);const native=await page.locator(storySelector(4)).evaluate(element=>{const box=element.getBoundingClientRect();return {inScene:!!element.closest('[data-homepage-scene]'),rotate:parseFloat(getComputedStyle(element).rotate),left:box.left,top:box.top,right:box.right,bottom:box.bottom};});
-   assert.equal(native.inScene,false,'The editable native Framer group remains outside the code scene');assert.equal(native.rotate,90,'Its override turns the native group to match the parked image');assert.ok(native.left>=-1&&native.top>=-1&&native.right<=391&&native.bottom<=845,'The rotated native text group stays inside the physical viewport');
-   await tapButton(page,'Story action 4');assert.equal(await page.evaluate(()=>window.storyClicks),1,'The rotated native Framer CTA remains touchable');assert.equal(Number((await orbitData(page)).orbitPosition),45,'Tapping the native CTA does not move the camera');
-   await tapButton(page,'Next view');await waitFrame(page,60);await tapButton(page,'Previous view');await waitFrame(page,45);
-   await tapButton(page,'Pause rotation');await waitOrbit(page,'paused');await tapButton(page,'Continue rotation');await waitFrame(page,45);
-   await waitBuffer(page,31);const orbit=await orbitData(page);assert.equal(Number(orbit.orbitMotionWidth),640,'A rotated phone retains the phone decode profile');assert.ok(Number(orbit.orbitDecoded)<=32,'The phone decode memory budget is retained');
-   await page.waitForFunction(()=>Number(getComputedStyle(document.querySelector('[data-apartment-details]')).opacity)>.99);await componentScreenshot(page,'phone-auto-turn-details-controls.png');
-  }finally{await f.close();}
- });
- await pass('phone automatic turn guards physical resize gestures and preserves the active checkpoint target',async()=>{
-  const f=await fixture({cleanFixture:true,externalOverlay:true,context:{viewport:{width:390,height:844},isMobile:true,hasTouch:true,deviceScaleFactor:2},props:{phoneOrbitMode:'landscape',startView:'orbit',snapDuration:2,showViewpoints:false}}),{page}=f;
-  try{
-   await installSceneCapture(page);await waitFrame(page,0);await waitBuffer(page,31);await tapButton(page,'Next view');await page.waitForFunction(()=>{const orbit=document.querySelector('[data-admiral-orbit]');return Number(orbit?.dataset.orbitPosition)>1&&Number(orbit?.dataset.orbitPosition)<9;});
-   await phoneTouch(page,'touchStart',180,430);await page.setViewportSize({width:844,height:390});await waitRotationBlocked(page,true);const current=await orbitData(page),held={position:Number(current.orbitPosition),target:Number(current.orbitTarget)};assert.equal(held.target,15);
-   await phoneTouch(page,'touchMove',80,240);await page.mouse.wheel(0,-900);await page.waitForTimeout(650);assertHeldOrbit(await orbitData(page),held,'A gesture held through the physical turn');await assertNoRotationQuestion(page);
-   await phoneTouch(page,'touchEnd');await waitRotationBlocked(page,false);await waitFrame(page,15);await page.waitForTimeout(350);assert.equal(Number((await orbitData(page)).orbitPosition),15,'Stale input does not queue another checkpoint');assert.equal((await readScene(page)).angle,0,'A physically landscape phone does not also rotate the content');
-   await page.setViewportSize({width:390,height:844});await waitRotationBlocked(page,true);await waitRotationBlocked(page,false);assertAutomaticLandscape(await readScene(page),390,844,'Returning portrait');await page.waitForTimeout(350);await waitFrame(page,15);
-   await tapButton(page,'Next view');await page.waitForFunction(()=>Number(document.querySelector('[data-admiral-orbit]')?.dataset.orbitPosition)>16);await tapButton(page,'Pause rotation');await waitOrbit(page,'paused');const paused=await orbitData(page),manual={position:Number(paused.orbitPosition),target:Number(paused.orbitTarget)};
-   for(const viewport of [{width:844,height:390},{width:390,height:844}]){await page.setViewportSize(viewport);await waitRotationBlocked(page,true);await waitRotationBlocked(page,false);await page.waitForTimeout(250);assertHeldOrbit(await orbitData(page),manual,'A manually paused camera after physical rotation');assert.equal((await orbitData(page)).orbitState,'paused');}
-   await tapButton(page,'Continue rotation');await waitFrame(page,30);
-  }finally{await f.close();}
- });
- await pass('phone automatic turn reverses with SEQ_02 and Overview resets the upright opening',async()=>{
-  const f=await fixture({cleanFixture:true,context:{viewport:{width:390,height:844},isMobile:true,hasTouch:true,deviceScaleFactor:2},props:{phoneOrbitMode:'landscape',connectionDuration:4,maxSpeed:1,showViewpoints:false}}),{page}=f;
-  try{
-   await installSceneCapture(page);await coveredClick(page,'Skip approach');await waitStage(page,'building');await coveredClick(page,'Explore building');await page.waitForFunction(()=>Number(document.querySelector('[data-admiral-homepage]')?.dataset.sceneAngle)>40);
-   const beforeReverse=(await readScene(page)).angle;await page.mouse.move(190,400);await page.mouse.wheel(0,-200);await page.waitForFunction(angle=>Number(document.querySelector('[data-admiral-homepage]')?.dataset.sceneAngle)<angle-1,beforeReverse);await page.evaluate(()=>window.sceneSamples=[]);await waitStage(page,'building');
-   const samples=await page.evaluate(()=>window.sceneSamples.filter(sample=>sample.stage==='connection'&&sample.paintedSequence==='SEQ_02'));
-   assert.ok(samples.length>8,'Reverse playback exposes multiple intermediate rotation angles');for(let index=1;index<samples.length;index++)assert.ok(samples[index].angle<=samples[index-1].angle+.01,'The frame turns back with the reverse camera movement');
-   assert.equal((await readScene(page)).angle,0,'Returning to the building restores its original upright fullscreen image');await coveredClick(page,'Explore building');await waitOrbit(page);assert.equal((await readScene(page)).angle,90);
-   await tapButton(page,'Overview');await waitStage(page,'opening');assert.equal((await readScene(page)).angle,0);await assertNoRotationQuestion(page);await assertScreenCovered(page,'phone-auto-turn-overview.png');
-  }finally{await f.close();}
- });
- await pass('phone automatic turn leaves desktop and explicit inline phone framing unchanged',async()=>{
-  for(const setting of [{context:{viewport:{width:1200,height:800}},props:{phoneOrbitMode:'landscape'},desktop:true},{context:{viewport:{width:390,height:844},isMobile:true,hasTouch:true},props:{phoneOrbitMode:'inline'},desktop:false}]){
-   const f=await fixture({cleanFixture:true,...setting,props:{startView:'orbit',...setting.props}}),{page}=f;
+ await pass('upright full-width phone defaults ignore the old turning setting and preserve buttons and swipes',async()=>{
+  for(const viewport of [{width:390,height:844},{width:375,height:667}]){
+   const f=await fixture({cleanFixture:true,useDefaultPhoneWidth:true,context:{viewport,isMobile:true,hasTouch:true,deviceScaleFactor:2},props:{phoneOrbitMode:'landscape',duration:.6,connectionDuration:1.2,maxSpeed:1,snapDuration:.2,detailsMode:'preview',showViewpoints:false}}),{page}=f;
    try{
-    await installSceneCapture(page);await installFramingCapture(page);await waitOrbit(page);await assertNoRotationQuestion(page);assert.equal((await readScene(page)).angle,0);assert.equal((await rotationData(page)).phoneRotationBlocked,'false');
-    if(setting.desktop){assert.equal((await rotationData(page)).phoneDevice,'false');assertFullFraming(await readFraming(page),'Desktop orbit');await page.setViewportSize({width:600,height:900});await page.waitForTimeout(650);assert.equal((await rotationData(page)).phoneDevice,'false','A narrow desktop remains a desktop');assert.equal((await readScene(page)).angle,0);}else assertPhoneFraming(await readFraming(page),390,80,'Explicit inline mode');
+    await installFramingCapture(page);assertFullFraming(await readFraming(page),'Upright SEQ_01 opening');
+    await coveredClick(page,'Skip approach');await waitStage(page,'building');assertFullFraming(await readFraming(page),'Upright SEQ_01 arrival');
+    await page.evaluate(()=>window.framingSamples=[]);await coveredClick(page,'Explore building');await waitOrbit(page);await waitDetails(page);
+    const transition=await page.evaluate(()=>window.framingSamples.filter(sample=>sample.stage==='connection'&&sample.sequence==='SEQ_02'&&sample.paintedSequence==='SEQ_02'&&sample.canvasWidth>1));
+    assertMonotonicFraming(transition,true);
+    const frame=await readFraming(page);assertPhoneFraming(frame,viewport.width,80,'Upright full-width orbit');
+    assert.ok(Math.abs(frame.height-viewport.width*1010/1920)<1,'Default image height preserves the complete source aspect ratio');
+    assert.ok(Math.abs(frame.visibleWidth-100)<.1,'Default shows 100% of the source width');
+    assert.equal(await page.locator('[data-homepage-scene],[data-phone-rotation],[data-phone-rotation-continue],[aria-modal="true"]').count(),0,'There is no rotating scene, prompt or confirmation button');
+    const transforms=await page.locator('[data-admiral-homepage],[data-admiral-homepage] canvas,[data-admiral-sequence] img').evaluateAll(nodes=>nodes.map(node=>getComputedStyle(node).transform));
+    assert.ok(transforms.every(transform=>transform==='none'),'The image and controls remain upright without CSS rotation');
+    const details=await page.locator(detailsSelector).boundingBox();assert.ok(details.y>=frame.y+frame.height+8,'Apartment details remain below the full-width image');
     await coveredClick(page,'Next view');await waitFrame(page,15);
+    const cdp=await page.context().newCDPSession(page),y=frame.y+frame.height*.5;
+    await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:viewport.width*.75,y}]});
+    await cdp.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x:viewport.width*.35,y}]});
+    await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});await waitFrame(page,30);
+    assert.equal(await page.evaluate(()=>scrollY),0,'The orbit swipe keeps the homepage in place');
+    await componentScreenshot(page,'upright-full-width-'+viewport.width+'.png');
    }finally{await f.close();}
   }
+  const direct=await fixture({cleanFixture:true,useDefaultPhoneWidth:true,useDefaultOrbitStart:true,context:{viewport:{width:390,height:844},isMobile:true,hasTouch:true},props:{startView:'orbit',phoneOrbitMode:'landscape',showViewpoints:false}});
+  try{await waitFrame(direct.page,45);await installFramingCapture(direct.page);const frame=await readFraming(direct.page);assert.ok(Math.abs(frame.visibleWidth-100)<.1);assert.ok(Math.abs(frame.height-390*1010/1920)<1,'Direct orbit entry also uses upright 100% width');}finally{await direct.close();}
  });
  await pass('mobile framing SEQ_02 transforms fullscreen into a wide image and every orbit camera preserves coverage',async()=>{
   for(const viewport of [{width:390,height:844},{width:375,height:667}]){

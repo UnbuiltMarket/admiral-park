@@ -80,21 +80,11 @@ The animation uses a separate translation, preserving the group's Framer positio
 
 ## Try the mobile framing
 
-**Phone orbit → Turn during SEQ02** is the default phone experience. To retain the earlier upright, smaller image trial below, choose **Phone orbit → Inline portrait**.
+The mobile layout is upright again. SEQ_01 remains fullscreen; SEQ_02 opens into a normal, full-width landscape image with the story and apartment data below it. There is no automatic sideways turn, rotation prompt, confirmation or browser orientation lock.
 
-### Automatic scene turn
+**Phone image width** now defaults to **100%**, so the entire source-image width is visible. Existing Framer instances may keep the previous 80% property value after replacing the code: select the camera component and set **Phone image width → 100%** once. The old Phone orbit setting is removed and any saved sideways-mode value is ignored.
 
-SEQ_01 stays upright and fullscreen. The next scroll starts SEQ_02 directly. As its displayed frames advance, the scene gradually turns clockwise from 0° to 90°. The orbit ends as a fullscreen sideways landscape view. There is no rotation question, Continue button, portrait gate or document-level cover. The visitor can simply turn the phone to read the horizontal view naturally.
-
-The turn follows the actually drawn SEQ_02 progress, including reversal. Loading holds the current image and angle together. Overview restores the upright opening scene. The scene grows during the turn to cover all screen corners, then finishes with its logical width and height swapped. Apartment details, trial controls and checkpoint stories follow the same orientation; their click and drag coordinates are adjusted to match.
-
-If the visitor physically rotates the phone into landscape, the scene becomes upright within that landscape viewport. A brief guard freezes camera movement while the viewport settles and releases unfinished gestures, without showing a question or confirmation. The camera position and committed destination stay the same. Manual pause stays paused. A landscape-to-landscape turn is guarded the same way.
-
-Keep the same component, assets, Orbit start frame and Phone orbit setting across Phone and Tablet breakpoints. Framer may switch breakpoint layouts when the phone turns. The code preserves its own scene across a short component handoff; the external navbar remains governed by its native Framer layout.
-
-The phone keeps its existing decode and cache limits in either orientation. The automatic turn uses a fixed square canvas backing capped at 1280 × 1280 pixels (about 6.6 MB per canvas) instead of reallocating it on every frame. No new image sequence or video is downloaded for the turn.
-
-For the trial, paste the updated component, select **Phone orbit → Turn during SEQ02**, and test on a physical phone. **Start trial → Orbit directly** checks the final sideways view; **Full journey** checks the gradual turn. **Trial controls → Off** gives the clean presentation. Use **Inline portrait** to compare with the earlier layout. Pushing GitHub does not publish the Framer page.
+Browser orientation locking is not reliable for an ordinary webpage across phones and commonly requires fullscreen ([MDN: ScreenOrientation.lock](https://developer.mozilla.org/en-US/docs/Web/API/ScreenOrientation/lock)). The website therefore follows the normal browser orientation and responsive layout, without asking the visitor to turn the phone.
 
 Replace the contents of the existing Framer code file with the updated **AdmiralHomepageTrial.tsx**. Keep the existing camera instance and native content overrides. No permanent loader is needed.
 
@@ -103,12 +93,12 @@ On the Phone breakpoint, keep the outer viewer at the full screen height. The co
 | Framer control | Trial value | Effect |
 | --- | ---: | --- |
 | **Phone framing** | On | SEQ_01 stays fullscreen. SEQ_02 gradually opens into a landscape image, and the orbit keeps that framing. Applies to component widths of 767 px or less. |
-| **Phone image width** | 80% | Shows at least 80% of the original landscape image width. Increase toward 100% to show more of each view. This is image coverage, not the component's CSS width. |
+| **Phone image width** | 100% | Shows the full source-image width in the upright mobile viewer. Reducing it to 80% crops the sides for a closer view. This is source-image coverage, not the component's CSS width. |
 | **Phone image top** | 80 px | Leaves room above the parked image for the navbar. Adjust to the actual mobile header. |
 | **Apartment details** | Sample | Shows the example strip below the image while testing the layout. Use Hover only when apartment picking is connected. |
 | **Trial controls** | Off for content layout | Leaves the available phone space for the story and apartment strip. Enable temporarily when checking camera buttons. |
 
-At a 390 px screen width, the default parked image is approximately 390 × 256 px. At 100% source coverage it becomes approximately 390 × 205 px. The outer viewer height does not change, so the transition does not move the page. On short screens the image height and top inset are constrained to leave room for the details.
+At a 390 px screen width, the default parked image is approximately 390 × 205 px. At 80% source coverage it becomes approximately 390 × 256 px. The outer viewer height does not change, so the transition does not move the page. On short screens the image height and top inset are constrained to leave room for the details.
 
 Test **Start trial → Orbit directly** first to tune the phone layout. Then choose **Full journey** to inspect the fullscreen-to-landscape change during SEQ_02. The image framing follows the displayed frames, including reversal. Overview restores the fullscreen opening picture. Desktop framing stays as authored; turning Phone framing off restores the previous fullscreen phone layout.
 

@@ -63,7 +63,7 @@ test('paste-in homepage registers its controls and server-renders without loadin
  vm.runInNewContext(compiled,{module,exports:module.exports,require:name=>name==='framer'?stub:requireDev(name)});
  assert.deepEqual(Object.keys(module.exports).sort(),['AranyhidContent','ArrivalCTA','BalatonfuredContent','BuildingContent','OpeningContent',...Array.from({length:8},(_,i)=>`OrbitView${i+1}`),'default'].sort());
  assert.equal(registered,module.exports.default);
- for(const key of ['startView','editorView','connectionBaseUrl','connectionDuration','checkpointCount','motionWidth','orbitMobileWidth','snapDuration','frameBlend','desktopBuffer','phoneBuffer','orbitStartFrame','detailsMode','detailsLanguage','detailsBottom','detailsInset','apartmentPreview','editorOrbitView','orbitStories','storyIn','storyOut','storyDelay','phoneOrbitMode','phoneFraming','phoneImageWidth','phoneImageTop',...Array.from({length:8},(_,i)=>`storyView${i+1}`)])assert.ok(controls[key],`Framer control ${key}`);
+ for(const key of ['startView','editorView','connectionBaseUrl','connectionDuration','checkpointCount','motionWidth','orbitMobileWidth','snapDuration','frameBlend','desktopBuffer','phoneBuffer','orbitStartFrame','detailsMode','detailsLanguage','detailsBottom','detailsInset','apartmentPreview','editorOrbitView','orbitStories','storyIn','storyOut','storyDelay','phoneFraming','phoneImageWidth','phoneImageTop',...Array.from({length:8},(_,i)=>`storyView${i+1}`)])assert.ok(controls[key],`Framer control ${key}`);
  assert.equal(controls.duration.title,'SEQ_01 duration');assert.equal(controls.connectionDuration.title,'SEQ_02 duration');assert.equal(controls.connectionDuration.defaultValue,2.5);assert.equal(controls.connectionBaseUrl.defaultValue,'');
  assert.ok(Array.from(controls.editorView.options).includes('connection'),'Editor exposes a static connection preview');
  assert.equal(controls.snapDuration.title,'Settle time');assert.equal(controls.snapDuration.defaultValue,1.5);assert.equal(controls.snapDuration.max,10);
@@ -72,8 +72,7 @@ test('paste-in homepage registers its controls and server-renders without loadin
  assert.equal(controls.phoneBuffer.title,'Phone buffer');assert.equal(controls.phoneBuffer.defaultValue,1);assert.equal(controls.phoneBuffer.min,1);assert.equal(controls.phoneBuffer.max,3);
  assert.equal(controls.orbitStartFrame.title,'Orbit start frame');assert.equal(controls.orbitStartFrame.defaultValue,45);assert.equal(controls.orbitStartFrame.min,0);assert.equal(controls.orbitStartFrame.max,119);assert.equal(controls.orbitStartFrame.step,1);
  assert.equal(controls.detailsMode.defaultValue,'preview');assert.deepEqual(Array.from(controls.detailsMode.options),['preview','hover','off']);assert.equal(controls.detailsLanguage.defaultValue,'hu');assert.deepEqual(Array.from(controls.detailsLanguage.options),['hu','en']);
- assert.equal(controls.phoneFraming.defaultValue,true);assert.equal(controls.phoneImageWidth.defaultValue,80);assert.equal(controls.phoneImageWidth.min,80);assert.equal(controls.phoneImageWidth.max,100);assert.equal(controls.phoneImageTop.defaultValue,80);
- assert.equal(controls.phoneOrbitMode.defaultValue,'landscape');assert.deepEqual(Array.from(controls.phoneOrbitMode.options),['landscape','inline']);assert.equal(controls.phoneOrbitMode.optionTitles[0],'Turn during SEQ02');
+ assert.equal(controls.phoneFraming.defaultValue,true);assert.equal(controls.phoneImageWidth.defaultValue,100);assert.equal(controls.phoneImageWidth.min,80);assert.equal(controls.phoneImageWidth.max,100);assert.equal(controls.phoneImageTop.defaultValue,80);
  assert.equal(controls.detailsBottom.defaultValue,32);assert.equal(controls.detailsInset.defaultValue,48);assert.equal(controls.apartmentPreview.type,'Object');
  for(const field of ['number','area','terrace','garden','rooms','availability','floorplan'])assert.ok(controls.apartmentPreview.controls[field],`Apartment preview control ${field}`);
  assert.equal(controls.editorOrbitView.defaultValue,'entry');assert.deepEqual(Array.from(controls.editorOrbitView.options),['entry',...Array.from({length:8},(_,i)=>String(i+1))]);
@@ -83,13 +82,14 @@ test('paste-in homepage registers its controls and server-renders without loadin
   for(const key of ['enterFrom','exitTo'])assert.deepEqual(Array.from(control.controls[key].options),['left','right','top','bottom','none'],`View ${view} ${key} directions`);
   assert.equal(control.controls.enterFrom.defaultValue,'bottom');assert.equal(control.controls.exitTo.defaultValue,'bottom');assert.equal(control.controls.distance.defaultValue,24);
  }
- for(const removed of ['wheelSensitivity','dragSensitivity','orbitMomentum'])assert.equal(controls[removed],undefined,`Obsolete speed control ${removed} is hidden`);
+ for(const removed of ['wheelSensitivity','dragSensitivity','orbitMomentum','phoneOrbitMode'])assert.equal(controls[removed],undefined,`Obsolete speed control ${removed} is hidden`);
  const html=requireDev('react-dom/server').renderToStaticMarkup(requireDev('react').createElement(module.exports.default));
  assert.match(html,/raw%20sequence00\.avif/);
  assert.doesNotMatch(html,/<script|<iframe|<nav|<video/);assert.doesNotMatch(html,/data-orbit-story=/,'The component does not invent or duplicate the eight native Framer content groups');
  assert.doesNotMatch(source,/hero-manifest\.json|__admiralHeroFactoriesV1|AdmiralHeroLoader/);
- assert.doesNotMatch(source,/data-phone-rotation-continue|data-phone-rotation-portrait|aria-modal="true"/,'Automatic image turning does not require a confirmation dialog');
- assert.match(source,/data-homepage-scene/,'The image and its controls share one rotating scene');
+ assert.doesNotMatch(html,/data-homepage-scene|data-phone-rotation|aria-modal="true"/,'The mobile fallback has no rotating scene or rotation prompt');
+ const oldTurnSetting=requireDev('react-dom/server').renderToStaticMarkup(requireDev('react').createElement(module.exports.default,{phoneOrbitMode:'landscape'}));
+ assert.equal(oldTurnSetting,html,'A stored Framer turning setting is safely ignored after the fallback');
  const connectionPreview=requireDev('react-dom/server').renderToStaticMarkup(requireDev('react').createElement(module.exports.default,{editorView:'connection'}));
  assert.match(connectionPreview,/02%20sequence36%20copy\.avif/,'Connection editor displays its middle frame');assert.match(connectionPreview,/data-homepage-stage="connection"/);
  const orbitPreview=requireDev('react-dom/server').renderToStaticMarkup(requireDev('react').createElement(module.exports.default,{editorView:'orbit'}));
