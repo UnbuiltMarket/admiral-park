@@ -11,7 +11,7 @@ const source=await read('src/framer/AdmiralApartmentList.tsx');
 test('the list delegates apartment details to one local Framer module and contains no duplicate card UI',async()=>{
  const parsed=ts.createSourceFile('AdmiralApartmentList.tsx',source,ts.ScriptTarget.ES2020,true,ts.ScriptKind.TSX);
  const imports=parsed.statements.filter(ts.isImportDeclaration).map(node=>node.moduleSpecifier.text);
- assert.deepEqual(imports,['react','framer','./AdmiralApartmentDetailCard']);
+ assert.deepEqual(imports,['react','framer','./AdmiralApartmentDetailCard.tsx']);
  assert.doesNotMatch(source,/INITIAL_JSON|"provenance"|originalFileName|function detailPlan\b|function detailRooms\b|detail-dialog/);
  const [shell,css]=await Promise.all([read('src/shared/apartment-list/shell.html'),read('src/shared/apartment-list/styles.css')]);
  assert.doesNotMatch(shell+css,/detail-dialog|detail-shell|detail-plan-canvas|room-marker|share-popover/);
@@ -26,7 +26,7 @@ test('the list keeps its Framer controls and can render on the server without fe
  const exports={};
  const noFetch=()=>{throw Error('Server render must not fetch data');};
  const stub={ControlType:new Proxy({},{get:(_,name)=>name}),RenderTarget:{canvas:'canvas',current:()=> 'canvas'},addPropertyControls:(value,props)=>{component=value;controls=props;}};
- vm.runInNewContext(compiled,{exports,require:name=>name==='react'?React:name==='framer'?stub:name==='./AdmiralApartmentDetailCard'?{default:()=>null}:assert.fail('Unexpected dependency '+name),fetch:noFetch});
+ vm.runInNewContext(compiled,{exports,require:name=>name==='react'?React:name==='framer'?stub:name==='./AdmiralApartmentDetailCard.tsx'?{default:()=>null}:assert.fail('Unexpected dependency '+name),fetch:noFetch});
  assert.equal(component,exports.default);
  for(const key of ['dataUrl','assetBaseUrl','inquiryUrl','pageUrl','colors','detailColors','inset'])assert.ok(controls[key],key);
  assert.match(controls.dataUrl.defaultValue,/\/data\/apartment-details\.json$/);

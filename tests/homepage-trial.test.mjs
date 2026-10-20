@@ -13,10 +13,13 @@ const sharedSource=await readFile(new URL('src/framer/AdmiralApartmentDetailCard
 const listSource=await readFile(new URL('src/framer/AdmiralApartmentList.tsx',root),'utf8');
 const compilerOptions={target:ts.ScriptTarget.ES2020,module:ts.ModuleKind.CommonJS,jsx:ts.JsxEmit.React};
 function framerModules(stub){
- const sources=new Map([['./AdmiralHomepageTrial',source],['./AdmiralApartmentDetailCard',sharedSource],['./AdmiralApartmentList',listSource]]),cache=new Map();
+ const sources=new Map([['./AdmiralHomepageTrial.tsx',source],['./AdmiralApartmentDetailCard.tsx',sharedSource],['./AdmiralApartmentList.tsx',listSource]]),cache=new Map();
  const load=name=>{
   if(name==='framer')return stub;
-  if(!sources.has(name))return requireDev(name);
+  if(!sources.has(name)){
+   assert.ok(!name.startsWith('.'),'Local imports must resolve by their exact Framer filename: '+name);
+   return requireDev(name);
+  }
   if(cache.has(name))return cache.get(name).exports;
   const module={exports:{}};cache.set(name,module);
   vm.runInNewContext(ts.transpileModule(sources.get(name),{compilerOptions}).outputText,{module,exports:module.exports,require:load});
@@ -59,10 +62,10 @@ test('SEQ_02 contains every connecting frame at the same aspect ratio as the her
  assert.ok(bytes>3_000_000&&bytes<5_000_000,'Connector retains the exported compressed frames');
 });
 
-test('homepage list and shared detail card type-check together with the real React and Framer SDKs',()=>{
+test('homepage list and shared detail card type-check together with the available React and Framer type declarations',()=>{
  const files=['AdmiralHomepageTrial.tsx','AdmiralApartmentList.tsx','AdmiralApartmentDetailCard.tsx'].map(name=>fileURLToPath(new URL('src/framer/'+name,root)));
  const modules=path.dirname(path.dirname(requireDev.resolve('react/package.json')));
- const options={strict:true,noEmit:true,skipLibCheck:true,target:ts.ScriptTarget.ES2020,module:ts.ModuleKind.ESNext,
+ const options={strict:true,noEmit:true,allowImportingTsExtensions:true,skipLibCheck:true,target:ts.ScriptTarget.ES2020,module:ts.ModuleKind.ESNext,
   moduleResolution:ts.ModuleResolutionKind.Bundler,jsx:ts.JsxEmit.React,types:['react'],
   typeRoots:[path.join(modules,'@types')],lib:['lib.es2020.d.ts','lib.dom.d.ts']};
  const host=ts.createCompilerHost(options);
@@ -74,7 +77,7 @@ test('homepage list and shared detail card type-check together with the real Rea
 test('paste-in homepage registers its controls and server-renders without loading remote executable code',()=>{
  let registered,controls;
  const stub={addPropertyControls:(component,props)=>{registered=component;controls=props;},ControlType:new Proxy({},{get:(_,name)=>name}),useIsStaticRenderer:()=>true,RenderTarget:{canvas:'canvas',current:()=> 'canvas'}};
- const modules=framerModules(stub),module={exports:modules.load('./AdmiralHomepageTrial')};
+ const modules=framerModules(stub),module={exports:modules.load('./AdmiralHomepageTrial.tsx')};
  assert.deepEqual(Object.keys(module.exports).sort(),['AranyhidContent','ArrivalCTA','BalatonfuredContent','BuildingContent','OpeningContent',...Array.from({length:8},(_,i)=>`OrbitView${i+1}`),'default'].sort());
  assert.equal(registered,module.exports.default);
  for(const key of ['startView','editorView','connectionBaseUrl','connectionDuration','checkpointCount','motionWidth','orbitMobileWidth','snapDuration','frameBlend','desktopBuffer','phoneBuffer','orbitStartFrame','detailsMode','detailsLanguage','detailsBottom','detailsInset','apartmentPreview','editorOrbitView','orbitStories','storyIn','storyOut','storyDelay','phoneFraming','phoneImageWidth','phoneImageTop','orbitLayout','orbitBackground','apartmentDataUrl','detailDataUrl','apartmentAssetBase','previewApartmentId','detailPageUrl','inquiryUrl',...Array.from({length:8},(_,i)=>`storyView${i+1}`)])assert.ok(controls[key],`Framer control ${key}`);
@@ -124,15 +127,15 @@ test('paste-in homepage registers its controls and server-renders without loadin
 
 test('homepage and list import one dedicated shared card without embedding its UI or engine',()=>{
  for(const [name,entry] of [['homepage',source],['list',listSource]]){
-  assert.match(entry,/from ["']\.\/AdmiralApartmentDetailCard["']/,'The '+name+' imports the shared Framer module');
+  assert.match(entry,/from ["']\.\/AdmiralApartmentDetailCard\.tsx["']/,'The '+name+' imports the exact shared Framer filename');
   assert.doesNotMatch(entry,/function detailPlan\(|function detailRooms\(|ORBIT_APARTMENT_CARD_STYLES|class=\\?["']detail-shell/,'The '+name+' has no embedded copy of the card runtime or markup');
   assert.doesNotMatch(entry,/\.detail-plan-stage\s*\{|\.detail-shell\s*\{/,'The '+name+' has no embedded detail-card CSS');
  }
  assert.doesNotMatch(sharedSource,/const filterIds\s*=|function showCompare\(|function filtered\(|id=\\?["']filters\\?["']|id=\\?["']compare-dialog\\?["']/,'The shared card has no list filtering or comparison engine');
  assert.doesNotMatch(sharedSource,/A\.0\.01\.01/,'Detailed apartment room records remain external JSON');
  const stub={addPropertyControls:()=>{},ControlType:new Proxy({},{get:(_,name)=>name}),useIsStaticRenderer:()=>true,RenderTarget:{canvas:'canvas',current:()=> 'canvas'}};
- const modules=framerModules(stub),home=modules.load('./AdmiralHomepageTrial'),shared=modules.load('./AdmiralApartmentDetailCard'),list=modules.load('./AdmiralApartmentList');
- assert.equal(modules.load('./AdmiralApartmentDetailCard'),shared,'Both entries resolve the same cached shared module');assert.ok(home.default&&list.default&&shared.default);assert.equal(shared.default,shared.AdmiralApartmentDetailCard);
+ const modules=framerModules(stub),home=modules.load('./AdmiralHomepageTrial.tsx'),shared=modules.load('./AdmiralApartmentDetailCard.tsx'),list=modules.load('./AdmiralApartmentList.tsx');
+ assert.equal(modules.load('./AdmiralApartmentDetailCard.tsx'),shared,'Both entries resolve the same cached shared module');assert.ok(home.default&&list.default&&shared.default);assert.equal(shared.default,shared.AdmiralApartmentDetailCard);
  const html=requireDev('react-dom/server').renderToStaticMarkup(requireDev('react').createElement(list.default));assert.doesNotMatch(html,/<iframe|<script/,'The list also server-renders without remote executable wrappers');
 });
 

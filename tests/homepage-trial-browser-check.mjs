@@ -128,15 +128,15 @@ async function fixture(options={}){
   };
   document.querySelector('#nav-button').addEventListener('click',()=>window.navClicked=(window.navClicked||0)+1);
   const stub={useIsStaticRenderer:()=>staticMode,RenderTarget:{canvas:'canvas',current:()=>staticMode?'canvas':'preview'},addPropertyControls:()=>{},ControlType:new Proxy({},{get:(_,name)=>name})};
-  const moduleSources=new Map([['./AdmiralHomepageTrial',code],['./AdmiralApartmentDetailCard',sharedCode],['./AdmiralApartmentList',listCode]]),moduleCache=new Map();window.sharedCardLoads=0;
+  const moduleSources=new Map([['./AdmiralHomepageTrial.tsx',code],['./AdmiralApartmentDetailCard.tsx',sharedCode],['./AdmiralApartmentList.tsx',listCode]]),moduleCache=new Map();window.sharedCardLoads=0;
   const requireModule=name=>{
    if(name==='react')return React;if(name==='framer')return stub;
    if(!moduleSources.has(name))throw new Error('Unexpected Framer module '+name);
    if(moduleCache.has(name))return moduleCache.get(name).exports;
-   const module={exports:{}};moduleCache.set(name,module);if(name==='./AdmiralApartmentDetailCard')window.sharedCardLoads++;
+   const module={exports:{}};moduleCache.set(name,module);if(name==='./AdmiralApartmentDetailCard.tsx')window.sharedCardLoads++;
    new Function('module','exports','require',moduleSources.get(name))(module,module.exports,requireModule);return module.exports;
   };
-  const module={exports:requireModule('./AdmiralHomepageTrial')};window.requireFramerModule=requireModule;window.sharedCardModule=requireModule('./AdmiralApartmentDetailCard');
+  const module={exports:requireModule('./AdmiralHomepageTrial.tsx')};window.requireFramerModule=requireModule;window.sharedCardModule=requireModule('./AdmiralApartmentDetailCard.tsx');
   const Frame=React.forwardRef((props,ref)=>React.createElement('div',{...props,ref}));
   const Intro=module.exports[storyAliases?'BalatonfuredContent':'OpeningContent'](Frame),Building=module.exports[storyAliases?'AranyhidContent':'BuildingContent'](Frame),CTA=module.exports.ArrivalCTA(Frame);
   const Stories=storyOverlays?Array.from({length:8},(_,index)=>module.exports[`OrbitView${index+1}`](Frame)):[];
@@ -147,7 +147,7 @@ async function fixture(options={}){
   if(useDefaultOrbitLayout)delete window.props.orbitLayout;
   window.root=ReactDOM.createRoot(document.querySelector('#mount'));
   if(listMode){
-   window.component=requireModule('./AdmiralApartmentList').default;
+   window.component=requireModule('./AdmiralApartmentList.tsx').default;
    window.props={dataUrl:'http://homepage.test/apartment-details.json',assetBaseUrl:'http://homepage.test/apartment-assets',pageUrl:'http://homepage.test/lista',...props};
    window.renderTrial=()=>window.root.render(React.createElement(React.StrictMode,null,bothEntries?React.createElement('section',{id:'stage',style:{position:'fixed',inset:0,zIndex:0}},React.createElement(module.exports.default,{useGitHubAssets:false,heroBaseUrl:'http://homepage.test/hero',connectionBaseUrl:'http://homepage.test/connection',orbitBaseUrl:'http://homepage.test/orbit',startView:'orbit',orbitStartFrame:0,showControls:false,detailsMode:'off',snapDuration:.3})):null,React.createElement('section',{id:'list-fixture',style:bothEntries?{position:'fixed',inset:0,zIndex:20,overflow:'auto'}:undefined},React.createElement(window.component,window.props))));window.renderTrial();return;
   }
@@ -397,7 +397,7 @@ try{
  await pass('list entry and homepage resolve one shared card module and list opening reuses its loaded JSON dataset',async()=>{
   const f=await fixture({listMode:true,cleanFixture:true}),{page}=f;
   try{
-   await page.locator('[data-admiral-apartment-list="shared"]').waitFor();assert.equal(await page.evaluate(()=>window.sharedCardLoads),1,'The homepage and list imports resolve one cached shared component module');assert.equal(await page.evaluate(()=>window.requireFramerModule('./AdmiralApartmentDetailCard')===window.sharedCardModule),true);
+   await page.locator('[data-admiral-apartment-list="shared"]').waitFor();assert.equal(await page.evaluate(()=>window.sharedCardLoads),1,'The homepage and list imports resolve one cached shared component module');assert.equal(await page.evaluate(()=>window.requireFramerModule('./AdmiralApartmentDetailCard.tsx')===window.sharedCardModule),true);
    await page.locator('#building').selectOption('A');await page.waitForTimeout(120);const initialRequests=f.detailRequests.length;assert.ok(initialRequests>=1,'The list loads its full apartment dataset');await componentScreenshot(page,'shared-list-before-open.png');
    await page.locator('[data-detail="A001"]').first().click();const card=await waitApartmentCard(page);assert.equal(f.detailRequests.length,initialRequests,'The shared detail card consumes the list dataset without fetching it again');assert.equal(await card.locator('.room-marker').count(),10);assert.equal(await card.locator('.detail-apartment-number').innerText(),'A001');await componentScreenshot(page,'shared-list-card-open.png');
    await card.locator('[data-save="A001"]').click();await card.getByRole('button',{name:'Bezárás',exact:true}).click();await card.waitFor({state:'hidden'});assert.equal(await page.locator('#building').inputValue(),'A','Closing the shared card preserves the active list filter');assert.equal(await page.locator('[data-admiral-apartment-list] [data-save="A001"]').getAttribute('aria-pressed'),'true','Favorites synchronize from the shared card back to its list entry');

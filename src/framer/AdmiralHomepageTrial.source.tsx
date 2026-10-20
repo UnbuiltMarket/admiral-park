@@ -1,7 +1,7 @@
 import * as React from "react"
 import type { ComponentType } from "react"
 import { addPropertyControls, ControlType, useIsStaticRenderer } from "framer"
-import AdmiralApartmentDetailCard from "./AdmiralApartmentDetailCard"
+import AdmiralApartmentDetailCard from "./AdmiralApartmentDetailCard.tsx"
 
 const HOMEPAGE_HERO_NAMES: string[] = __HERO_NAMES__
 const HOMEPAGE_CONNECTION_NAMES: string[] = __CONNECTION_NAMES__

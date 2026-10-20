@@ -1,10 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import vm from 'node:vm';
-import {readFile} from 'node:fs/promises';
+import {readFile,readdir} from 'node:fs/promises';
 import {spawnSync} from 'node:child_process';
 import {createHash} from 'node:crypto';
 import {fileURLToPath} from 'node:url';
+import path from 'node:path';
 import {ts} from '../scripts/tooling.mjs';
 
 const root=new URL('../',import.meta.url),read=path=>readFile(new URL(path,root),'utf8');
@@ -17,11 +18,41 @@ function functions(source,mountName){
 }
 const card=functions(runtime,'mountOrbitApartmentCardRuntime');
 
+test('authored and delivered Framer local imports resolve exact filenames with explicit extensions',async()=>{
+  const folder=fileURLToPath(new URL('src/framer/',root));
+  const files=['AdmiralHomepageTrial.source.tsx','AdmiralApartmentList.source.tsx',
+    'AdmiralHomepageTrial.tsx','AdmiralApartmentList.tsx','AdmiralApartmentDetailCard.tsx'];
+  let localImports=0;
+  for(const file of files){
+    const source=await read('src/framer/'+file);
+    const parsed=ts.createSourceFile(file,source,ts.ScriptTarget.ES2020,true,ts.ScriptKind.TSX);
+    const specifiers=[];
+    const visit=node=>{
+      if((ts.isImportDeclaration(node)||ts.isExportDeclaration(node))&&node.moduleSpecifier&&ts.isStringLiteral(node.moduleSpecifier))specifiers.push(node.moduleSpecifier.text);
+      if(ts.isCallExpression(node)&&node.expression.kind===ts.SyntaxKind.ImportKeyword&&node.arguments.length===1&&ts.isStringLiteral(node.arguments[0]))specifiers.push(node.arguments[0].text);
+      ts.forEachChild(node,visit);
+    };
+    visit(parsed);
+    for(const specifier of specifiers.filter(name=>name.startsWith('.'))){
+      localImports++;
+      assert.match(specifier,/\.(?:tsx?|jsx?)$/,file+' local import must include its file extension: '+specifier);
+      const target=path.resolve(folder,specifier),relative=path.relative(folder,target);
+      assert.ok(relative&&!relative.startsWith('..')&&!path.isAbsolute(relative),file+' dependency must be installed inside the Framer code folder');
+      let directory=folder;
+      for(const segment of relative.split(path.sep)){
+        assert.ok((await readdir(directory)).includes(segment),file+' dependency must exist with exact filename case: '+specifier);
+        directory=path.join(directory,segment);
+      }
+    }
+  }
+  assert.ok(localImports>=4,'Both authored and generated consumers must exercise local dependency validation');
+});
+
 test('both editable Framer consumers import and mount the sole canonical detail renderer',async()=>{
   for(const name of ['AdmiralHomepageTrial','AdmiralApartmentList']){
     const source=await read('src/framer/'+name+'.source.tsx');
     const parsed=ts.createSourceFile(name+'.tsx',source,ts.ScriptTarget.ES2020,true,ts.ScriptKind.TSX);
-    const imports=parsed.statements.filter(node=>ts.isImportDeclaration(node)&&node.moduleSpecifier.text==='./AdmiralApartmentDetailCard');
+    const imports=parsed.statements.filter(node=>ts.isImportDeclaration(node)&&node.moduleSpecifier.text==='./AdmiralApartmentDetailCard.tsx');
     assert.equal(imports.length,1,name+' imports the shared module once');
     assert.equal(imports[0].importClause?.name?.text,'AdmiralApartmentDetailCard');
     let mounts=0;

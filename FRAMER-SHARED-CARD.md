@@ -10,7 +10,7 @@ Create or update these three Framer code files at the same folder level, using t
 2. `AdmiralHomepageTrial.tsx` — replace the contents of the existing homepage file. Keep the current component instance and its sidebar settings.
 3. `AdmiralApartmentList.tsx` — replace the contents of the existing list file. Keep the current list instance and sidebar settings.
 
-Both entry files import `./AdmiralApartmentDetailCard`. If you deliberately place the shared file in another folder, update both import paths. An unresolved-import error means the shared file is missing or its name/path differs.
+Both entry files import `./AdmiralApartmentDetailCard.tsx`, including the `.tsx` extension required by the Framer code-file path. Keep that exact filename and case. If you deliberately place the shared file in another folder, update both import paths. An unresolved-import error can also mean the shared file is missing or its name/path differs.
 
 The component code stays inside the Framer project. No GitHub component loader is involved. Code edits remain available to Framer's editor immediately. Publish the Framer project normally after reviewing the result.
 
