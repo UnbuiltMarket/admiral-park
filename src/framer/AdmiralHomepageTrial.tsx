@@ -33,7 +33,7 @@ interface AdmiralHomepageTrialProps {
     detailsMode?: "preview" | "hover" | "off"; detailsLanguage?: ApartmentDetailsLanguage
     detailsBottom?: number; detailsInset?: number; apartmentPreview?: ApartmentDetailsPreview
     orbitLayout?: "mobile" | "studio" | "classic"; apartmentDataUrl?: string; apartmentAssetBase?: string; previewApartmentId?: string
-    detailPageUrl?: string; inquiryUrl?: string; orbitBackground?: string
+    detailPageUrl?: string; detailDataUrl?: string; inquiryUrl?: string; orbitBackground?: string
     background?: string; alt?: string; style?: React.CSSProperties
 }
 interface HomepageActions { explore: () => void; overview: () => void; skip: () => void; resumeHero: () => void; orbit: ReturnType<typeof createOrbitPlayer> | null }
@@ -510,6 +510,7 @@ interface OrbitApartmentStudioProps {
     onViewport: (element: HTMLDivElement | null) => void
     language: "hu" | "en"
     onLayout?: () => void
+    onOpenDetails?: () => void
 }
 
 const orbitApartmentStudioStyles = `
@@ -666,7 +667,7 @@ const orbitApartmentStudioStyles = `
 `
 
 function OrbitApartmentStudio(props: OrbitApartmentStudioProps): React.JSX.Element {
-    const { active, mode, dataset, dataStatus, error, onRetry, apartment, onSelect, assetBase, detailsUrl, inquiryUrl, onViewport, language, onLayout } = props
+    const { active, mode, dataset, dataStatus, error, onRetry, apartment, onSelect, assetBase, detailsUrl, inquiryUrl, onViewport, language, onLayout, onOpenDetails } = props
     const hu = language !== "en"
     const [view, setView] = React.useState<"floorplan" | "floorLayout">("floorplan")
     const [expanded, setExpanded] = React.useState(false), [zoom, setZoom] = React.useState(1)
@@ -750,11 +751,11 @@ function OrbitApartmentStudio(props: OrbitApartmentStudioProps): React.JSX.Eleme
             <div className="orbit-studio-price"><p className="orbit-studio-label">{apartment?.priceIncludesVat === false ? hu ? "Nettó vételár" : "Net purchase price" : labels.gross}</p><p className="orbit-studio-price-value" data-orbit-apartment-price="" data-orbit-field="price">
                 {positive(apartment?.price) ? <>{number.format(apartment!.price! / 1000000)}<small>M Ft</small></> : availability === "sold" ? hu ? "Nincs megadva" : "Not provided" : hu ? "Ár kérésre" : "Price on request"}
             </p></div>
-            {actionLink && <a className="orbit-studio-primary" href={actionLink} data-orbit-apartment-action="" {...(inquiryLink ? { "data-orbit-inquiry": "" } : { "data-orbit-detail-link": "" })}><span>{inquiryLink ? labels.inquire : labels.details}</span><span aria-hidden="true">↗</span></a>}
+            {!inquiryLink && onOpenDetails ? <button type="button" className="orbit-studio-primary" data-orbit-apartment-action="" data-orbit-detail-link="" aria-haspopup="dialog" onClick={onOpenDetails}><span>{labels.details}</span><span aria-hidden="true">↗</span></button> : actionLink && <a className="orbit-studio-primary" href={actionLink} data-orbit-apartment-action="" {...(inquiryLink ? { "data-orbit-inquiry": "" } : { "data-orbit-detail-link": "" })}><span>{inquiryLink ? labels.inquire : labels.details}</span><span aria-hidden="true">↗</span></a>}
         </div>
         <div className="orbit-studio-secondary">
             {download && <a href={download} className="orbit-studio-text-button" target="_blank" rel="noopener noreferrer" download={record?.media?.datasheet?.filename || undefined} data-orbit-apartment-download="" data-orbit-download=""><span aria-hidden="true">↓</span>{labels.download}</a>}
-            {inquiryLink && detailLink && <a href={detailLink} className="orbit-studio-text-button" data-orbit-detail-link="">{labels.details}<span aria-hidden="true">↗</span></a>}
+            {inquiryLink && (onOpenDetails ? <button type="button" className="orbit-studio-text-button" data-orbit-detail-link="" aria-haspopup="dialog" onClick={onOpenDetails}>{labels.details}<span aria-hidden="true">↗</span></button> : detailLink && <a href={detailLink} className="orbit-studio-text-button" data-orbit-detail-link="">{labels.details}<span aria-hidden="true">↗</span></a>)}
             {apartment && <button type="button" className="orbit-studio-text-button" onClick={() => { void share() }}>{labels.share}<span aria-hidden="true">↗</span></button>}
             <span className="orbit-studio-share-message" role="status">{shareMessage}</span>
         </div>
@@ -829,6 +830,1355 @@ function OrbitApartmentStudio(props: OrbitApartmentStudioProps): React.JSX.Eleme
     </>
 }
 
+// Same native apartment dialog as AdmiralApartmentList, built from the shared snapshot.
+const ORBIT_APARTMENT_CARD_STYLES = ":root, :host {\n  --paper: #fbfaf8;\n  --surface: #f1f0eb;\n  --filter-background: #f1f0eb;\n  --ink: #242824;\n  --muted: #70736d;\n  --accent: #a38c69;\n  --line: #deded6;\n  --button: #242824;\n  --button-text: #ffffff;\n  --available: #4f7959;\n  --negotiating: #b28a2f;\n  --sold: #b4564f;\n  --hover: color-mix(in srgb, var(--ink) 3%, var(--paper));\n  --detail-top: #fdfbfb;\n  --detail-bottom: #e4e9ec;\n  --detail-ink: #242824;\n  --detail-muted: #687074;\n  --detail-watermark-top: #f2f0f1;\n  --detail-watermark-bottom: #d9dfe2;\n  font-family: 'Montserrat', Arial, sans-serif;\n  font-size: 14px;\n  font-synthesis: none;\n  color: var(--ink);\n  background: var(--paper);\n  color-scheme: light;\n  -webkit-font-smoothing: antialiased;\n}\n:host { display: block; width: 100%; }\n* { box-sizing: border-box; }\nbody { margin: 0; background: var(--paper); }\nbody.dialog-open { overflow: hidden; }\nbutton, input, select { font: inherit; color: inherit; }\nbutton, select, input[type=\"checkbox\"], summary { cursor: pointer; }\nbutton, a, input, select, summary { -webkit-tap-highlight-color: color-mix(in srgb, var(--ink) 0%, transparent); }\nbutton, a { touch-action: manipulation; }\nbutton { border: 0; background: none; }\nbutton:disabled { cursor: default; opacity: .4; }\na { color: inherit; text-decoration: none; }\ninput, select { min-width: 0; border-radius: 0; }\ninput[type=\"number\"] { appearance: textfield; -moz-appearance: textfield; }\ninput::-webkit-inner-spin-button, input::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }\nbutton:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible, summary:focus-visible { outline: 1px solid var(--accent); outline-offset: 5px; }\ninput:focus-visible, select:focus-visible { outline-offset: 2px; }\n[hidden] { display: none !important; }\n.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }\n.list-container { width: 100%; container: apartment-list / inline-size; }\n.page-width { width: 100%; max-width: 1480px; margin-inline: auto; padding: var(--component-padding, 32px); }\n.mobile-filter-button { display: none; }\n\n/* A distinct, quiet header groups the filters above the results. */\n.filter-header { padding: 20px 24px 17px; border: 1px solid var(--line); border-radius: 14px; background: var(--filter-background); }\n.filters { margin: 0; }\n.primary-filters { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 30px; }\n.field { min-width: 0; }\n.field > label, .range-field legend { display: block; color: var(--muted); font-size: 10px; font-weight: 400; letter-spacing: 1.15px; line-height: 1.4; text-transform: uppercase; }\n.field > label { margin-bottom: 7px; }\n.field select { display: block; width: 100%; height: 33px; padding: 0 0 8px; border: 0; border-bottom: 1px solid var(--line); background: none; font-size: 14px; line-height: 1.5; transition: border-color .15s; }\n.field select:hover, .field select:focus { border-color: var(--accent); }\n.select-wrap { position: relative; min-width: 0; }\n.select-wrap::after { content: ''; position: absolute; right: 3px; top: 8px; width: 5px; height: 5px; border-right: 1px solid currentColor; border-bottom: 1px solid currentColor; transform: rotate(45deg); pointer-events: none; color: var(--muted); }\n.select-wrap select { appearance: none; padding-right: 23px; }\nselect option { background: var(--surface); color: var(--ink); }\n.range-filters { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto; align-items: end; gap: 30px; margin-top: 17px; }\n.range-field { min-width: 0; margin: 0; padding: 0; border: 0; }\n.range-field legend { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; width: 100%; padding: 0; margin: 0; }\n.range-field output { color: var(--ink); font-size: 12px; line-height: 1.5; letter-spacing: 0; text-transform: none; white-space: nowrap; }\n.range-slider { position: relative; width: 100%; height: 44px; margin-bottom: -5px; touch-action: pan-y; }\n.slider-track { position: absolute; left: 22px; right: 22px; top: 21px; height: 1px; background: var(--line); pointer-events: none; }\n.slider-selection { position: absolute; left: var(--range-start, 0%); right: calc(100% - var(--range-end, 100%)); top: 0; height: 1px; background: var(--accent); }\n.range-slider input[type=\"range\"] { position: absolute; inset: 0; z-index: 1; appearance: none; -webkit-appearance: none; width: 100%; height: 44px; margin: 0; padding: 0; border: 0; background: none; pointer-events: none; cursor: auto; outline: none; }\n.range-slider input[type=\"range\"]:last-of-type { z-index: 2; }\n.range-slider[data-min-at-max=\"true\"] input[type=\"range\"]:first-of-type { z-index: 3; }\n.range-slider input[type=\"range\"]:focus-visible { z-index: 4; }\n.range-slider input[type=\"range\"]::-webkit-slider-runnable-track { height: 1px; background: none; border: 0; }\n.range-slider input[type=\"range\"]::-webkit-slider-thumb { appearance: none; -webkit-appearance: none; width: 44px; height: 44px; margin-top: -21.5px; border: 0; border-radius: 50%; background: radial-gradient(circle, var(--accent) 0 5px, transparent 5.5px); pointer-events: auto; cursor: ew-resize; }\n.range-slider input[type=\"range\"]:focus-visible::-webkit-slider-thumb { background: radial-gradient(circle, var(--accent) 0 5px, var(--filter-background) 5.5px 8px, var(--accent) 8.5px 9px, transparent 9.5px); }\n.range-slider input[type=\"range\"]::-moz-range-track { height: 1px; border: 0; background: none; }\n.range-slider input[type=\"range\"]::-moz-range-thumb { width: 44px; height: 44px; border: 0; border-radius: 50%; background: radial-gradient(circle, var(--accent) 0 5px, transparent 5.5px); pointer-events: auto; cursor: ew-resize; }\n.range-slider input[type=\"range\"]:focus-visible::-moz-range-thumb { background: radial-gradient(circle, var(--accent) 0 5px, var(--filter-background) 5.5px 8px, var(--accent) 8.5px 9px, transparent 9.5px); }\n.checkbox-filters { display: flex; align-items: center; justify-content: flex-end; gap: 18px; min-height: 44px; margin-bottom: -5px; }\n.checkbox-label { display: inline-flex; align-items: center; gap: 9px; color: var(--muted); font-size: 11px; line-height: 1.5; white-space: nowrap; cursor: pointer; }\n.checkbox-label input { appearance: none; display: inline-grid; place-items: center; width: 12px; height: 12px; flex-shrink: 0; margin: 0; border: 1px solid color-mix(in srgb, var(--muted) 50%, var(--paper)); background: none; border-radius: 0; cursor: pointer; }\n.checkbox-label input:checked { border-color: var(--accent); background: var(--accent); }\n.checkbox-label input:checked::after { content: ''; width: 5px; height: 3px; border-left: 1px solid var(--paper); border-bottom: 1px solid var(--paper); transform: rotate(-45deg) translateY(-1px); }\n.checkbox-label:has(input:checked) { color: var(--ink); }\ninput[aria-invalid=\"true\"] { border-color: var(--negotiating); }\n\n/* A quiet count line leads into an unboxed list. */\n.result-toolbar { display: flex; align-items: center; gap: 25px; padding: 27px 0 21px; }\n.result-count { margin: 0; font-size: 12px; line-height: 1.5; }\n.result-count strong { font-family: 'Montserrat', Arial, sans-serif; font-size: 27px; font-weight: 400; margin-right: 3px; }\n.result-total { color: var(--muted); font-size: 11px; }\n.reset-button { display: inline-flex; align-items: center; gap: 10px; padding: 8px 0; color: var(--muted); font-size: 10px; }\n.reset-button:hover { color: var(--ink); }\n.reset-button > span { color: var(--accent); font-size: 17px; }\n.sort-field { display: flex; align-items: center; gap: 17px; margin-left: auto; min-width: 0; }\n.sort-field > label { color: var(--muted); font-size: 9px; letter-spacing: 1px; text-transform: uppercase; }\n.sort-field .select-wrap::after { top: 8px; right: 2px; }\n.sort-field select { min-width: 172px; max-width: 100%; border: 0; background: none; padding: 0 23px 0 0; font-size: 11px; line-height: 1.7; }\n.favorites-hint { display: flex; align-items: center; gap: 8px; margin: -7px 0 17px; color: var(--muted); font-size: 10px; line-height: 1.6; }\n.favorites-hint > svg { width: 13px; height: 13px; flex-shrink: 0; color: var(--accent); }\n.filter-chips { display: flex; flex-wrap: wrap; gap: 8px; }\n.filter-chips:not(:empty) { padding-bottom: 24px; }\n.filter-chip { display: inline-flex; align-items: center; gap: 13px; max-width: 100%; padding: 6px 0; margin-right: 14px; border-bottom: 1px solid var(--line); color: var(--muted); font-size: 10px; text-align: left; overflow-wrap: anywhere; }\n.filter-chip > span { color: var(--accent); font-size: 16px; }\n.filter-chip:hover { color: var(--ink); border-color: var(--accent); }\n.results { width: 100%; }\n.apartment-table { width: 100%; border-collapse: collapse; table-layout: auto; text-align: left; font-variant-numeric: tabular-nums; }\n.apartment-table th { height: 42px; padding: 0 12px 15px; border-bottom: 1px solid var(--line); color: var(--muted); font-size: 10px; font-weight: 400; letter-spacing: .2px; white-space: nowrap; vertical-align: bottom; }\n.apartment-table th:first-child, .apartment-table td:first-child { padding-left: 0; }\n.apartment-table th:last-child, .apartment-table td:last-child { padding-right: 0; }\n.apartment-table th button { padding: 5px 0 0; text-align: left; font: inherit; color: inherit; white-space: nowrap; }\n.apartment-table td { height: 146px; padding: 15px 12px; border-bottom: 1px solid var(--line); vertical-align: middle; font-size: 14px; line-height: 1.6; }\n.apartment-row { cursor: pointer; transition: background .15s; }\n.apartment-row:hover, .apartment-row:focus-within { background: var(--hover); }\n.unit-id, .unit-type { font-family: 'Montserrat', Arial, sans-serif; font-size: 26px; font-weight: 400; letter-spacing: -.6px; line-height: 1.15; white-space: nowrap; }\n.unit-type { flex-shrink: 0; }\n.unit-open { display: inline-block; padding: 0; border: 0; background: none; text-align: left; transition: color .15s; }\n.unit-open:hover { color: var(--accent); }\n.unit-summary { display: flex; align-items: center; gap: 12px; }\n.unit-identification { flex-shrink: 0; }\n.unit-media { display: flex; align-items: flex-start; gap: 10px; }\n.unit-media .media-preview { width: 140px; flex-shrink: 0; }\n.unit-media .preview-visual { height: 110px; }\n.cell-floor-layout { width: 124px; }\n.cell-floor-layout .media-preview { margin-inline: auto; }\n.media-preview { display: flex; flex-direction: column; align-items: stretch; width: 100px; min-width: 0; padding: 0; border: 0; background: none; text-align: left; }\n.preview-visual { display: flex; align-items: center; justify-content: center; width: 100%; height: 90px; overflow: hidden; border: 0; background: none; transition: opacity .15s; }\n.preview-visual img { display: block; min-width: 0; min-height: 0; width: 100%; height: 100%; border: 0; object-fit: contain; background: none; }\n.media-preview:hover .preview-visual { opacity: .8; }\n.preview-unavailable { color: var(--muted); font-size: 8px; text-align: center; }\n.row-actions { display: flex; justify-content: flex-end; align-items: center; gap: 9px; }\n.action-pills { display: flex; flex-direction: column; align-items: stretch; gap: 8px; width: 102px; flex-shrink: 0; }\n.datasheet-link { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 34px; padding: 8px 13px; border: 1px solid var(--line); border-radius: 999px; background: none; color: var(--ink); font-size: 10px; line-height: 1.5; white-space: nowrap; transition: border-color .15s, background .15s; }\n.datasheet-large { min-height: 40px; padding: 10px 17px; font-size: 11px; }\n.datasheet-link > svg { color: var(--accent); flex-shrink: 0; }\n.datasheet-link:hover { border-color: var(--accent); background: var(--hover); }\n.datasheet-link[aria-busy=\"true\"] { opacity: .45; pointer-events: none; }\n.action-pill { display: inline-flex; align-items: center; justify-content: center; gap: 6px; width: 102px; min-width: 102px; max-width: 102px; height: 34px; min-height: 34px; max-height: 34px; margin: 0; padding: 0 9px; border: 1px solid var(--line); border-radius: 999px; background: none; color: var(--ink); font-size: 10px; font-weight: 400; line-height: 1.4; text-align: center; white-space: nowrap; cursor: pointer; transition: border-color .15s, background .15s, color .15s; }\n.action-pill:hover { border-color: var(--accent); background: var(--hover); }\n.action-pill > svg { width: 14px; height: 14px; flex-shrink: 0; }\n.compare-toggle > svg { opacity: 0; }\n.compare-toggle[aria-pressed=\"true\"] { border-color: var(--button); background: var(--button); color: var(--button-text); }\n.compare-toggle[aria-pressed=\"true\"] > svg { opacity: 1; }\n.download-wrap { display: inline-flex; flex-direction: column; align-items: flex-start; min-width: 0; }\n.download-fallback { display: inline-flex; gap: 5px; margin-top: 6px; color: var(--muted); font-size: 9px; text-decoration: underline; text-underline-offset: 3px; }\n.cell-area, .cell-building, .cell-interior, .cell-balcony, .cell-garden, .cell-price, .cell-floor { white-space: nowrap; }\n.cell-garden { width: 66px; }\n.garden-value { display: block; min-height: 1.5em; }\n.cell-price { font-weight: 400; }\n.cell-rooms, .heading-rooms { text-align: center; }\n.status-pill { display: inline-flex; align-items: center; gap: 7px; color: var(--muted); font-size: 10px; line-height: 1.5; white-space: nowrap; }\n.status-pill::before { content: ''; width: 4px; height: 4px; flex-shrink: 0; border-radius: 50%; background: currentColor; }\n.status-available { color: var(--available); }\n.status-under_negotiation { color: var(--negotiating); }\n.status-sold { color: var(--sold); }\n.status-unknown { color: var(--muted); }\n.cell-actions { min-width: 150px; text-align: right; }\n.save-button { display: inline-grid; place-items: center; width: 31px; height: 34px; vertical-align: middle; padding: 6px; color: color-mix(in srgb, var(--muted) 65%, var(--paper)); }\n.save-button svg { display: block; width: 18px; height: 18px; }\n.save-button:hover, .save-button.is-saved { color: var(--accent); }\n.save-button.is-saved svg path { fill: currentColor; }\n.details-button { display: inline-flex; align-items: center; justify-content: space-between; gap: 20px; min-height: 36px; padding: 5px 0 5px 10px; font-size: 11px; line-height: 1.5; white-space: nowrap; }\n.details-button > span { color: var(--accent); font-size: 17px; transition: transform .15s; }\n.details-button:hover > span { transform: translate(2px, -2px); }\n.data-note { max-width: 870px; margin: 25px 0 0; color: var(--muted); font-size: 10px; line-height: 1.9; }\n.data-note:empty { display: none; }\n.data-note a { text-decoration: underline; text-underline-offset: 3px; }\n.loading-state, .empty-state { padding: 64px 24px; border-block: 1px solid var(--line); text-align: center; color: var(--muted); font-size: 12px; }\n.loading-dot { display: inline-block; width: 4px; height: 4px; margin-right: 11px; border-radius: 50%; background: var(--accent); animation: breathe 1s infinite alternate; }\n.empty-mark { display: block; color: var(--accent); font-size: 36px; margin-bottom: 15px; }\n.empty-state h2 { color: var(--ink); font-family: 'Montserrat', Arial, sans-serif; font-size: 27px; line-height: 1.3; font-weight: 400; margin: 0 0 14px; }\n.empty-state p { margin: 0 0 23px; font-size: 12px; line-height: 1.8; }\n.button-primary, .button-secondary { display: inline-flex; align-items: center; justify-content: center; gap: 20px; min-height: 43px; padding: 12px 19px; border: 1px solid var(--button); font-size: 11px; line-height: 1.5; text-align: center; }\n.button-primary { background: var(--button); color: var(--button-text); }\n.button-primary:hover { background: color-mix(in srgb, var(--button) 88%, var(--paper)); }\n.button-secondary { border-color: var(--line); background: none; color: var(--ink); }\n.button-secondary:hover { border-color: var(--accent); }\n\n/* Selection stays visible while the visitor compares the list. */\n.compare-tray { position: fixed; bottom: 20px; left: 50%; z-index: 30; transform: translateX(-50%); display: flex; align-items: center; justify-content: space-between; gap: 24px; width: min(900px, calc(100% - 40px)); padding: 19px 23px; border: 1px solid var(--line); background: var(--surface); box-shadow: 0 6px 30px color-mix(in srgb, var(--ink) 7%, transparent); }\n.compare-tray > div:first-child { display: flex; align-items: center; gap: 21px; min-width: 0; flex-wrap: wrap; }\n.compare-tray > div:last-child { display: flex; align-items: center; gap: 12px; flex-shrink: 0; }\n.tray-label { font-size: 9px; letter-spacing: 1px; color: var(--muted); }\n.compare-tray strong { font-family: 'Montserrat', Arial, sans-serif; font-weight: 400; font-size: 18px; }\n.tray-hint { color: var(--muted); font-size: 10px; white-space: nowrap; }\n.compare-tray .button-secondary { border: 0; color: var(--muted); padding-inline: 10px; }\n.toast { position: fixed; bottom: 26px; left: 50%; z-index: 80; transform: translate(-50%, 12px); max-width: calc(100% - 32px); padding: 13px 21px; background: var(--button); color: var(--button-text); font-size: 11px; line-height: 1.7; text-align: center; opacity: 0; pointer-events: none; transition: opacity .2s, transform .2s; }\n.toast.visible { opacity: 1; transform: translate(-50%, 0); }\n\n/* Details and comparison inherit the list's editable theme. */\n.apartment-dialog { width: min(930px, calc(100% - 40px)); max-height: calc(100% - 40px); margin: auto; padding: 0; overflow: auto; border: 1px solid var(--line); color: var(--ink); background: var(--paper); box-shadow: 0 20px 90px color-mix(in srgb, var(--ink) 15%, transparent); }\n.apartment-dialog::backdrop { background: color-mix(in srgb, var(--ink) 42%, transparent); backdrop-filter: blur(3px); }\n.dialog-inner { padding: 34px 38px; }\n.dialog-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 22px; padding-bottom: 25px; margin-bottom: 28px; border-bottom: 1px solid var(--line); }\n.eyebrow { color: var(--muted); font-size: 9px; letter-spacing: 1.3px; line-height: 1.6; margin-bottom: 13px; }\n.dialog-head h2 { margin: 0; font-family: 'Montserrat', Arial, sans-serif; font-size: 39px; font-weight: 400; letter-spacing: -.8px; line-height: 1.1; }\n.dialog-head h2 > span { color: var(--muted); }\n.dialog-close { display: grid; place-items: center; width: 33px; height: 33px; flex-shrink: 0; padding: 0; color: var(--muted); font-size: 25px; font-weight: 300; line-height: 1; }\n.dialog-close:hover { color: var(--accent); }\n.detail-gallery { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; gap: 15px; }\n.gallery-preview { width: 100%; }\n.gallery-preview .preview-visual { height: 180px; }\n.source-note { color: var(--muted); font-size: 10px; line-height: 1.9; margin: 21px 0 0; }\n.dialog-inner > .source-note { padding-top: 22px; margin-top: 26px; border-top: 1px solid var(--line); }\n.empty-plan { padding: 0 0 23px; border-bottom: 1px solid var(--line); color: var(--muted); }\n.empty-plan h3 { margin: 0 0 11px; font-family: 'Montserrat', Arial, sans-serif; font-size: 24px; font-weight: 400; line-height: 1.4; color: var(--ink); }\n.empty-plan p { margin: 0; font-size: 11px; line-height: 1.8; }\n\n/* The drawing leads; the room list flows into the centered price and inquiry. */\n#detail-dialog { width: 90vw; max-width: none; height: 90dvh; max-height: 90dvh; padding: 0; overflow: hidden; overscroll-behavior: contain; border: 1px solid color-mix(in srgb, var(--detail-muted) 20%, var(--detail-top)); color: var(--detail-ink); background: linear-gradient(180deg, var(--detail-top), var(--detail-bottom)); box-shadow: 0 24px 100px color-mix(in srgb, var(--detail-ink) 22%, transparent); font-family: 'Montserrat', Arial, Helvetica, sans-serif; }\n#detail-dialog::backdrop { background: color-mix(in srgb, var(--detail-ink) 47%, transparent); backdrop-filter: blur(5px); }\n#detail-dialog .detail-shell { position: relative; width: 100%; height: 100%; min-height: 0; isolation: isolate; }\n#detail-dialog .detail-brand-motif { position: absolute; z-index: -1; inset: 0 0 0 auto; width: 67%; pointer-events: none; background: linear-gradient(180deg, var(--detail-watermark-top), var(--detail-watermark-bottom)); -webkit-mask-image: var(--detail-monogram-image, none); mask-image: var(--detail-monogram-image, none); -webkit-mask-position: center; mask-position: center; -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat; -webkit-mask-size: contain; mask-size: contain; opacity: .6; }\n#detail-dialog .detail-topbar { position: absolute; z-index: 50; top: 9px; right: 11px; height: 42px; pointer-events: none; }\n#detail-dialog .detail-top-actions { display: flex; align-items: center; justify-content: flex-end; gap: 7px; pointer-events: auto; }\n#detail-dialog .detail-drawing-save { display: flex; align-items: center; flex-shrink: 0; }\n#detail-dialog .detail-drawing-save .save-button.save-with-label { display: inline-flex; align-items: center; justify-content: center; gap: 5px; width: auto; height: 34px; min-height: 34px; padding: 2px 0; color: var(--detail-muted); }\n#detail-dialog .detail-drawing-save .save-button:hover, #detail-dialog .detail-drawing-save .save-button.is-saved { color: var(--detail-ink); }\n#detail-dialog .detail-drawing-save svg { width: 18px; height: 18px; }\n#detail-dialog .detail-save-label { display: block; max-width: 100px; font-size: 10px; font-weight: 400; line-height: 1.25; text-align: left; }\n#detail-dialog .dialog-close { width: 38px; height: 40px; color: var(--detail-ink); font-size: 29px; font-weight: 300; }\n#detail-dialog .dialog-close:hover { color: var(--detail-muted); }\n#detail-dialog :is(button, a, summary, input):focus-visible { outline: 2px solid var(--detail-ink); outline-offset: 4px; }\n#detail-dialog .detail-layout { position: relative; display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); column-gap: clamp(20px, 2vw, 42px); width: 100%; height: 100%; min-width: 0; min-height: 0; padding: 22px clamp(18px, 2vw, 42px) 34px; }\n#detail-dialog .detail-sidebar { grid-column: 2; grid-row: 1; display: grid; grid-template-rows: auto 1px minmax(0, 1fr) auto; row-gap: 16px; min-width: 0; min-height: 0; }\n#detail-dialog .detail-core { display: grid; grid-template-columns: minmax(0, .95fr) minmax(0, 1.05fr); align-items: center; column-gap: 20px; min-width: 0; padding-block: 16px; }\n#detail-dialog .detail-identity { min-width: 0; text-align: center; }\n#detail-dialog .detail-brand-group { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0; min-width: 0; }\n#detail-dialog .detail-logo { display: block; width: 200px; max-width: 100%; aspect-ratio: 1232.62 / 523.833007; margin-inline: auto; background: var(--detail-ink); -webkit-mask-image: var(--detail-logo-image, none); mask-image: var(--detail-logo-image, none); -webkit-mask-position: center; mask-position: center; -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat; -webkit-mask-size: contain; mask-size: contain; }\n#detail-dialog .detail-apartment-number { margin: 0; color: var(--detail-ink); font-size: 48px; font-weight: 600; letter-spacing: -1.7px; line-height: 1.05; text-align: center; white-space: nowrap; }\n#detail-dialog .detail-area-row { display: flex; flex-direction: column; gap: 8px; min-width: 0; padding-top: 0; }\n#detail-dialog .detail-metrics { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin: 0; }\n#detail-dialog .detail-metrics.has-garden { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }\n#detail-dialog .detail-core:has(.detail-metrics.has-garden) { grid-template-columns: minmax(0, .7fr) minmax(0, 1.3fr); }\n#detail-dialog .detail-metrics > div { display: block; min-width: 0; text-align: center; }\n#detail-dialog .detail-metrics dt { margin: 0 0 4px; color: var(--detail-muted); font-size: 15px; font-weight: 400; line-height: 1.4; }\n#detail-dialog .detail-metrics dd { margin: 0; font-size: 30px; font-weight: 600; letter-spacing: -.8px; line-height: 1.05; white-space: nowrap; }\n#detail-dialog .detail-metrics.has-garden dd { white-space: normal; }\n#detail-dialog .detail-metrics dd small { display: inline-block; margin-left: 3px; color: var(--detail-muted); font-size: 14px; font-weight: 400; letter-spacing: 0; line-height: 1.3; vertical-align: baseline; }\n#detail-dialog .detail-drawing-toolbar { display: flex; align-items: center; justify-content: flex-start; flex-shrink: 0; gap: 10px; min-width: 0; min-height: 27px; margin-bottom: 10px; }\n#detail-dialog .detail-drawing-toolbar .detail-document-tabs { flex-shrink: 0; margin: 0; }\n#detail-dialog .detail-unit-meta { flex: 1; min-width: 0; margin: 0; padding: 0; color: var(--detail-muted); font-size: 10px; font-weight: 400; line-height: 1.4; text-align: right; }\n#detail-dialog .detail-unit-meta strong { font-weight: 600; }\n#detail-dialog .detail-unit-meta span { display: inline-block; margin-inline: 3px; }\n#detail-dialog .detail-layout-label { margin-left: 7px; color: var(--detail-muted); font-size: 10px; font-weight: 300; letter-spacing: 0; line-height: 1.3; }\n#detail-dialog .detail-illustration-note { position: absolute; z-index: 10; left: 10px; bottom: 6px; max-width: calc(100% - 20px); margin: 0; padding: 0; color: var(--detail-muted); font-size: 9px; font-weight: 300; line-height: 1.3; text-align: left; pointer-events: none; }\n#detail-dialog .detail-divider { display: block; width: 100%; height: 1px; margin: 0; border: 0; background: color-mix(in srgb, var(--detail-muted) 25%, transparent); }\n#detail-dialog .detail-room-panel { position: relative; }\n#detail-dialog .detail-room-tabs { position: absolute; top: 0; right: 0; gap: 12px; margin: 0; padding: 0; }\n#detail-dialog .detail-panel-nav { display: none; }\n#detail-dialog .detail-drawing { grid-column: 1; grid-row: 1; }\n#detail-dialog .detail-drawing, #detail-dialog .detail-room-panel { display: flex; flex-direction: column; min-width: 0; min-height: 0; }\n#detail-dialog .detail-document-tabs, #detail-dialog .detail-room-tabs { display: flex; align-items: center; gap: 16px; flex-shrink: 0; min-width: 0; min-height: 27px; margin-bottom: 10px; }\n#detail-dialog :is(.detail-document-tabs, .detail-room-tabs, .detail-summary-tabs) button { min-height: 27px; margin: 0; padding: 3px 0 6px; border: 0; border-bottom: 1px solid transparent; color: var(--detail-muted); background: none; font-size: 11px; line-height: 1.4; text-align: left; }\n#detail-dialog :is(.detail-document-tabs, .detail-room-tabs, .detail-summary-tabs) button[aria-selected=\"true\"], #detail-dialog :is(.detail-document-tabs, .detail-room-tabs) button.is-active { border-bottom-color: var(--detail-ink); color: var(--detail-ink); }\n#detail-dialog .detail-plan, #detail-dialog .detail-floor-plan { display: flex; flex: 1; flex-direction: column; min-width: 0; min-height: 0; margin: 0; }\n#detail-dialog .detail-section-label { flex-shrink: 0; margin: 0 0 9px; color: var(--detail-muted); font-size: 10px; font-weight: 400; letter-spacing: 1.1px; line-height: 1.4; text-transform: uppercase; }\n#detail-dialog .detail-plan-stage { position: relative; container-type: size; display: grid; flex: 1; place-items: center; min-width: 0; min-height: 0; margin: 0; padding: 0; border: 0; background: none; }\n#detail-dialog .detail-plan-canvas { position: relative; width: min(100cqw, calc(100cqh * var(--plan-aspect, 1))); max-width: 100%; max-height: 100%; aspect-ratio: var(--plan-aspect, 1); overflow: hidden; border: 0; background: none; }\n#detail-dialog .detail-plan-surface { position: absolute; }\n#detail-dialog .detail-plan-image { display: block; width: 100%; height: 100%; max-width: none; margin: 0; border: 0; object-fit: contain; background: none; }\n#detail-dialog .detail-plan-markers { position: absolute; inset: 0; }\n#detail-dialog .room-marker { position: absolute; z-index: 2; display: grid; place-items: center; width: 28px; height: 28px; margin: 0; padding: 0; border: 0; border-radius: 50%; color: var(--detail-ink); background: none; font-family: inherit; font-size: 11px; font-weight: 400; line-height: 1; transform: translate(-50%, -50%); isolation: isolate; cursor: pointer; }\n#detail-dialog .room-marker::before { content: ''; position: absolute; z-index: -1; inset: 4px; border: 1px solid color-mix(in srgb, var(--detail-ink) 48%, var(--detail-top)); border-radius: 50%; background: color-mix(in srgb, var(--detail-top) 96%, transparent); box-shadow: 0 1px 5px color-mix(in srgb, var(--detail-ink) 9%, transparent); transition: background .15s, border-color .15s; }\n#detail-dialog .room-marker.is-active { z-index: 5; color: var(--detail-top); }\n#detail-dialog .room-marker.is-active::before { border-color: var(--detail-ink); background: var(--detail-ink); }\n#detail-dialog .room-marker:focus-visible { outline-offset: 0; }\n#detail-dialog .detail-plan-note { flex-shrink: 0; margin: 9px 0 0; color: var(--detail-muted); font-size: 10px; line-height: 1.5; }\n#detail-dialog .detail-floor-plan > .detail-floor-image { display: block; flex: 1; min-width: 0; min-height: 0; width: 100%; height: 100%; margin: 0; border: 0; object-fit: contain; background: none; }\n#detail-dialog .empty-plan { display: flex; flex: 1; flex-direction: column; justify-content: center; min-height: 0; padding: 0; border: 0; color: var(--detail-muted); }\n#detail-dialog .empty-plan h3 { color: var(--detail-ink); }\n#detail-dialog .detail-rooms, #detail-dialog .unit-room-section { display: flex; flex: 1; flex-direction: column; min-width: 0; min-height: 0; margin: 0; }\n#detail-dialog :is(.detail-rooms, .unit-room-section) > h3 { flex-shrink: 0; min-height: 28px; margin: 0 0 6px; padding-right: 190px; color: var(--detail-ink); font-family: inherit; font-size: 20px; font-weight: 400; letter-spacing: -.4px; line-height: 1.3; }\n#detail-dialog .room-page { flex: 1; min-width: 0; min-height: 0; }\n#detail-dialog .type-room-list, #detail-dialog .unit-room-list { display: grid; grid-template-columns: repeat(var(--room-columns, 1), minmax(0, 1fr)); gap: 0 10px; margin: 0; padding: 0; list-style: none; }\n#detail-dialog .type-room-list > li { min-width: 0; }\n#detail-dialog .room-legend-button { display: grid; grid-template-columns: var(--room-circle, 18px) minmax(0, 1fr) auto; align-items: center; gap: 6px; width: 100%; min-height: 0; margin: 0; padding: var(--room-padding, 4px) 0; border: 0; border-bottom: 1px solid color-mix(in srgb, var(--detail-muted) 20%, transparent); background: none; color: var(--detail-ink); text-align: left; }\n#detail-dialog .room-number { display: grid; place-items: center; width: var(--room-circle, 18px); height: var(--room-circle, 18px); border: 1px solid color-mix(in srgb, var(--detail-muted) 36%, var(--detail-top)); border-radius: 50%; color: var(--detail-muted); font-size: 10px; line-height: 1; transition: background .15s, color .15s; }\n#detail-dialog .room-name { min-width: 0; font-size: 11px; line-height: 1.4; }\n#detail-dialog .room-area { font-size: 10px; font-variant-numeric: tabular-nums; line-height: 1.4; white-space: nowrap; }\n#detail-dialog .room-legend-button.is-active .room-number { border-color: var(--detail-ink); background: var(--detail-ink); color: var(--detail-top); }\n#detail-dialog .unit-room-list li { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: baseline; gap: 8px; min-width: 0; min-height: 0; padding: var(--room-padding, 4px) 0; border-bottom: 1px solid color-mix(in srgb, var(--detail-muted) 20%, transparent); color: var(--detail-muted); font-size: 11px; line-height: 1.4; }\n#detail-dialog .unit-room-list li > :last-child { color: var(--detail-ink); font-size: 10px; font-weight: 400; white-space: nowrap; }\n\n\n#detail-dialog .detail-conversion { display: grid; grid-template-rows: auto auto auto; row-gap: 10px; min-width: 0; }\n#detail-dialog .detail-price { margin: 0; padding: 6px 10px; border-radius: 8px; background: color-mix(in srgb, var(--detail-ink) 4%, transparent); text-align: center; }\n#detail-dialog .detail-price > span { display: block; margin: 0 0 5px; color: var(--detail-muted); font-size: 11px; line-height: 1.4; }\n#detail-dialog .detail-price > p { display: flex; align-items: baseline; justify-content: center; flex-wrap: wrap; gap: 6px; margin: 0; }\n#detail-dialog .price-value { font-size: clamp(38px, 3.5vw, 58px); font-weight: 400; letter-spacing: -1.6px; line-height: 1.05; }\n#detail-dialog .price-unit { color: var(--detail-ink); font-size: 12px; font-weight: 400; line-height: 1.4; }\n#detail-dialog .price-unavailable { font-size: 24px; font-weight: 400; letter-spacing: -.7px; line-height: 1.2; }\n#detail-dialog .detail-inquiry { position: relative; min-width: 0; min-height: 60px; margin: 0; }\n#detail-dialog .detail-inquiry > .inquiry-button { width: 100%; }\n#detail-dialog .inquiry-pending { position: absolute; z-index: 40; bottom: calc(100% + 8px); left: 0; right: 0; margin: 0; padding: 13px 15px; border: 1px solid color-mix(in srgb, var(--detail-muted) 28%, var(--detail-top)); border-radius: 3px; color: var(--detail-muted); background: var(--detail-top); box-shadow: 0 7px 25px color-mix(in srgb, var(--detail-ink) 12%, transparent); font-size: 11px; line-height: 1.6; }\n#detail-dialog .inquiry-pending p { margin: 0; }\n#detail-dialog .inquiry-pending button { display: inline; margin: 4px 0 0; padding: 0; color: var(--detail-ink); font-size: inherit; text-decoration: underline; text-underline-offset: 4px; }\n#detail-dialog .detail-footer { display: grid; grid-template-columns: minmax(0, 1fr) minmax(100px, .85fr) minmax(0, 1fr); align-items: center; gap: 12px; margin: 0; min-width: 0; }\n#detail-dialog .detail-footer > :is(.download-wrap, .detail-share-wrap) { display: block; width: 100%; min-width: 0; }\n#detail-dialog .detail-footer .footer-pill { display: flex; align-items: center; justify-content: center; gap: 6px; width: 100%; min-width: 0; max-width: none; height: 44px; min-height: 44px; max-height: 44px; margin: 0; padding: 8px 11px; border: 1px solid var(--detail-ink); border-radius: 999px; color: var(--detail-ink); background: none; font-size: 11px; font-weight: 500; line-height: 1.2; text-align: center; white-space: normal; cursor: pointer; }\n#detail-dialog .detail-footer .datasheet-link { color: var(--detail-ink); background: none; }\n#detail-dialog .detail-footer .datasheet-link:hover { background: color-mix(in srgb, var(--detail-top) 40%, transparent); }\n#detail-dialog .detail-footer .footer-pill > svg { display: block; width: 15px; height: 15px; flex-shrink: 0; color: currentColor; }\n#detail-dialog .detail-footer .share-button:hover, #detail-dialog .detail-footer .share-button[aria-expanded=\"true\"] { background: color-mix(in srgb, var(--detail-top) 40%, transparent); }\n#detail-dialog .detail-status { display: flex; align-items: center; justify-content: center; min-width: 0; min-height: 44px; margin: 0; padding: 0; border: 0; text-align: center; }\n#detail-dialog .detail-status .status-pill { display: inline-flex; align-items: center; justify-content: center; gap: 6px; max-width: 100%; color: var(--detail-ink); font-size: 18px; font-weight: 400; line-height: 1.15; white-space: normal; }\n#detail-dialog .detail-status .status-pill::before { display: block; width: 6px; height: 6px; flex-shrink: 0; border-radius: 50%; background: currentColor; }\n#detail-dialog .detail-status .status-available { color: var(--available); }\n#detail-dialog .detail-status .status-sold { color: var(--sold); }\n#detail-dialog .detail-status .status-under_negotiation { color: var(--negotiating); }\n#detail-dialog .detail-status .status-available::before { animation: detail-availability-pulse 2.3s ease-in-out infinite; }\n@keyframes detail-availability-pulse { 0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--available) 24%, transparent); } 50% { box-shadow: 0 0 0 4px color-mix(in srgb, var(--available) 8%, transparent); } }\n@media (prefers-reduced-motion: reduce) { #detail-dialog .detail-status .status-available::before { animation: none; box-shadow: none; } }\n#detail-dialog .detail-share-wrap { position: relative; }\n#detail-dialog .download-fallback { color: var(--detail-muted); }\n#detail-dialog .share-popover { position: fixed; z-index: 100; width: min(280px, calc(90vw - 24px)); margin: 0; padding: 14px; border: 1px solid color-mix(in srgb, var(--detail-muted) 28%, var(--detail-top)); border-radius: 8px; color: var(--detail-ink); background: var(--detail-top); box-shadow: 0 10px 38px color-mix(in srgb, var(--detail-ink) 16%, transparent); }\n#detail-dialog .share-heading { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin-bottom: 9px; }\n#detail-dialog .share-heading > div { display: flex; flex-direction: column; gap: 4px; }\n#detail-dialog .share-heading span { color: var(--detail-muted); font-size: 10px; line-height: 1.4; }\n#detail-dialog .share-heading strong { font-family: 'Montserrat', Arial, sans-serif; font-size: 23px; font-weight: 400; line-height: 1.1; }\n#detail-dialog .share-heading > button { display: grid; place-items: center; width: 30px; height: 30px; padding: 0; color: var(--detail-ink); font-size: 22px; line-height: 1; }\n#detail-dialog .share-options { display: grid; }\n#detail-dialog .share-options > :is(button, a) { display: flex; align-items: center; gap: 11px; min-height: 33px; margin: 0; padding: 7px 0; border-bottom: 1px solid color-mix(in srgb, var(--detail-muted) 16%, transparent); color: var(--detail-ink); font-size: 12px; line-height: 1.4; text-align: left; }\n#detail-dialog .share-options > :is(button, a) > span { width: 18px; color: var(--detail-muted); text-align: center; }\n#detail-dialog .share-options > :is(button, a):hover { color: var(--detail-muted); }\n#detail-dialog .share-url { display: block; width: 100%; min-width: 0; height: 31px; margin-top: 11px; padding: 6px 8px; border: 1px solid color-mix(in srgb, var(--detail-muted) 25%, transparent); border-radius: 3px; color: var(--detail-muted); background: none; font-size: 10px; line-height: 1.4; }\n#detail-dialog .share-feedback { display: block; min-height: 14px; margin-top: 7px; color: var(--detail-muted); font-size: 10px; line-height: 1.4; }\n\n/* ADMIRAL_INQUIRY_BUTTON_START */\n.inquiry-button { --inquiry-gold-shadow: #b1935c; --inquiry-gold-mid: #d4bd8e; --inquiry-gold-light: #ecdbb5; --inquiry-gold-edge: #bda36f; --inquiry-ink: #2c281f; --inquiry-shine: #fffdf4; box-sizing: border-box; position: relative; display: inline-flex; align-items: center; justify-content: center; gap: 22px; width: 100%; min-width: 0; height: 60px; min-height: 60px; margin: 0; padding: 15px 24px; overflow: hidden; border: 1px solid var(--inquiry-gold-edge); border-radius: 999px; color: var(--inquiry-ink); background: linear-gradient(112deg, var(--inquiry-gold-shadow) 0%, var(--inquiry-gold-mid) 30%, var(--inquiry-gold-light) 57%, var(--inquiry-gold-shadow) 100%); box-shadow: inset 0 1px 0 color-mix(in srgb, var(--inquiry-shine) 55%, transparent), 0 3px 11px color-mix(in srgb, var(--inquiry-gold-shadow) 12%, transparent); font-family: 'Montserrat', Arial, sans-serif; font-size: 22px; font-weight: 600; letter-spacing: .2px; line-height: 1.3; text-align: center; text-decoration: none; cursor: pointer; -webkit-tap-highlight-color: transparent; transition: transform .2s, box-shadow .2s; }\n.inquiry-button:hover { transform: translateY(-1px); box-shadow: inset 0 1px 0 color-mix(in srgb, var(--inquiry-shine) 70%, transparent), 0 5px 15px color-mix(in srgb, var(--inquiry-gold-shadow) 18%, transparent); }\n.inquiry-button:active { transform: translateY(0); }\n.inquiry-button:focus-visible { outline: 2px solid var(--inquiry-ink); outline-offset: 5px; }\n.inquiry-button > svg { display: none; }\n@media (prefers-reduced-motion: reduce) { .inquiry-button { transition: none; } .inquiry-button:hover { transform: none; } }\n/* ADMIRAL_INQUIRY_BUTTON_END */\n\n/* Center the complete room block within its measured spare space. */\n@media (min-width: 1101px) and (min-height: 601px) {\n  #detail-dialog .detail-room-tabs, #detail-dialog .detail-room-panel :is(.detail-rooms, .unit-room-section) > h3, #detail-dialog .detail-room-panel :is(.type-room-list, .unit-room-list) { transform: translateY(calc(var(--room-slack, 0px) * .5)); }\n}\n@media (min-width: 1700px) and (min-height: 900px) {\n  #detail-dialog .detail-layout { padding-block: 28px 40px; }\n  #detail-dialog .detail-sidebar { row-gap: 16px; }\n  #detail-dialog .detail-core { column-gap: 24px; padding-block: 24px; }\n  #detail-dialog .detail-logo { width: 230px; }\n  #detail-dialog .detail-apartment-number { font-size: 56px; }\n  #detail-dialog .detail-metrics dd { font-size: 34px; }\n  #detail-dialog .room-name { font-size: 12px; }\n}\n@media (max-height: 800px) {\n  #detail-dialog .detail-layout { padding-block: 16px 28px; }\n  #detail-dialog .detail-sidebar { row-gap: 8px; }\n  #detail-dialog .detail-core { column-gap: 16px; padding-block: 4px; }\n  #detail-dialog .detail-logo { width: 200px; }\n  #detail-dialog .detail-metrics { gap: 8px; }\n  #detail-dialog .detail-metrics dd { font-size: 28px; }\n  #detail-dialog .detail-conversion { row-gap: 6px; }\n  #detail-dialog .detail-price { padding: 4px 8px; }\n  #detail-dialog .detail-price > span { margin-bottom: 3px; font-size: 10px; }\n  #detail-dialog .price-value { font-size: 32px; }\n}\n@media (max-width: 1100px), (max-height: 600px) {\n  #detail-dialog .detail-layout { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto 1px 32px minmax(0, 1fr) auto; gap: 8px 0; padding: 13px 15px 25px; }\n  #detail-dialog .detail-sidebar { display: contents; }\n  #detail-dialog .detail-core { grid-column: 1; grid-row: 1; grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr); column-gap: 14px; padding-block: 0; }\n  #detail-dialog .detail-logo { width: 160px; }\n  #detail-dialog .detail-core:has(.detail-metrics.has-garden) { grid-template-columns: minmax(0, .6fr) minmax(0, 1.4fr); }\n  #detail-dialog .detail-apartment-number { font-size: 34px; letter-spacing: -1.3px; }\n  #detail-dialog .detail-area-row { gap: 6px; padding-top: 0; }\n  #detail-dialog .detail-metrics { gap: 8px; }\n  #detail-dialog .detail-metrics dt { font-size: 14px; }\n  #detail-dialog .detail-metrics dd { font-size: 22px; letter-spacing: -.8px; white-space: normal; }\n  #detail-dialog .detail-metrics dd small { font-size: 14px; }\n  #detail-dialog .detail-divider { grid-column: 1; grid-row: 2; }\n  #detail-dialog .detail-panel-nav { grid-column: 1; grid-row: 3; display: flex; align-items: stretch; justify-content: center; gap: 26px; border-bottom: 1px solid color-mix(in srgb, var(--detail-muted) 18%, transparent); }\n  #detail-dialog .detail-panel-nav button { min-width: 75px; min-height: 32px; margin: 0; padding: 0 4px; border: 0; border-bottom: 1px solid transparent; color: var(--detail-muted); background: none; font-size: 11px; line-height: 1.4; }\n  #detail-dialog .detail-panel-nav button[aria-selected=\"true\"] { border-bottom-color: var(--detail-ink); color: var(--detail-ink); }\n  #detail-dialog .detail-layout [data-detail-panel] { grid-column: 1; grid-row: 4; display: none; }\n  #detail-dialog .detail-shell[data-panel=\"plan\"] .detail-drawing { display: flex; }\n  #detail-dialog .detail-shell[data-panel=\"rooms\"] .detail-room-panel { display: flex; }\n  #detail-dialog .detail-room-panel { width: 100%; min-height: 0; padding-top: 26px; }\n  #detail-dialog .detail-room-panel h3 { display: block; min-height: 0; margin: 0 0 4px; padding: 0; font-size: 16px; line-height: 1.25; }\n  #detail-dialog .detail-room-tabs { min-height: 24px; }\n  #detail-dialog .detail-drawing-toolbar { gap: 8px; }\n  #detail-dialog .detail-drawing-toolbar .detail-document-tabs { gap: 10px; }\n  #detail-dialog .detail-drawing-toolbar .detail-document-tabs button { font-size: 10px; }\n  #detail-dialog .detail-unit-meta { font-size: 9px; }\n  #detail-dialog .detail-unit-meta span { margin-inline: 1px; }\n  #detail-dialog .detail-conversion { grid-column: 1; grid-row: 5; row-gap: 8px; }\n  #detail-dialog .detail-price > span { font-size: 10px; margin-bottom: 4px; }\n  #detail-dialog .price-value { font-size: 34px; }\n  #detail-dialog .price-unit { font-size: 10px; }\n  #detail-dialog .price-unavailable { font-size: 20px; }\n  #detail-dialog .detail-inquiry { min-height: 52px; }\n  #detail-dialog .detail-inquiry > .inquiry-button { height: 52px; min-height: 52px; padding: 12px 20px; font-size: 20px; }\n  #detail-dialog .detail-footer { grid-template-columns: minmax(0, 1fr) minmax(80px, .95fr) minmax(0, 1fr); gap: 6px; }\n  #detail-dialog .detail-footer .footer-pill { gap: 4px; padding: 6px; font-size: 10px; }\n  #detail-dialog .detail-footer .footer-pill > svg { width: 13px; height: 13px; }\n  #detail-dialog .detail-status .status-pill { gap: 4px; font-size: 14px; }\n  #detail-dialog .detail-status .status-pill::before { width: 5px; height: 5px; }\n  #detail-dialog .detail-brand-motif { width: 100%; }\n  #detail-dialog .detail-illustration-note { left: 8px; bottom: 5px; font-size: 8.5px; }\n}\n@media (max-width: 600px) {\n  #detail-dialog .detail-metrics dd small { display: block; margin-left: 0; }\n  #detail-dialog .detail-topbar { top: 8px; right: 8px; }\n  #detail-dialog .detail-top-actions { gap: 8px; }\n  #detail-dialog .detail-drawing-toolbar { flex-wrap: wrap; justify-content: flex-start; row-gap: 4px; column-gap: 10px; }\n  #detail-dialog .detail-drawing-save .save-button.save-with-label { gap: 4px; }\n  #detail-dialog .detail-save-label { max-width: 70px; font-size: 9.5px; overflow-wrap: anywhere; }\n  #detail-dialog .detail-drawing-toolbar .detail-unit-meta { flex-basis: 100%; font-size: 9px; text-align: left; }\n  #detail-dialog .dialog-close { width: 32px; height: 38px; font-size: 28px; }\n}\n@media (max-width: 600px) and (max-height: 700px) {\n  #detail-dialog .detail-layout { grid-template-rows: auto 1px 28px minmax(0, 1fr) auto; row-gap: 3px; padding: 6px 15px 20px; }\n  #detail-dialog .detail-core { column-gap: 12px; }\n  #detail-dialog .detail-logo { width: 130px; }\n  #detail-dialog .detail-apartment-number { font-size: 28px; letter-spacing: -1px; }\n  #detail-dialog .detail-area-row { gap: 4px; padding-top: 0; }\n  #detail-dialog .detail-metrics { gap: 6px; }\n  #detail-dialog .detail-metrics.has-garden { gap: 4px; }\n  #detail-dialog .detail-metrics dt { margin-bottom: 2px; }\n  #detail-dialog .detail-metrics dd { font-size: 18px; }\n  #detail-dialog .detail-conversion { row-gap: 4px; }\n  #detail-dialog .detail-price > span { margin-bottom: 2px; }\n  #detail-dialog .price-value { font-size: 28px; }\n  #detail-dialog .price-unavailable { font-size: 18px; }\n  #detail-dialog .detail-inquiry { min-height: 44px; }\n  #detail-dialog .detail-inquiry > .inquiry-button { height: 44px; min-height: 44px; padding: 10px 18px; font-size: 18px; }\n  #detail-dialog .detail-status .status-pill { font-size: 13px; }\n  #detail-dialog .detail-panel-nav { gap: 8px; }\n  #detail-dialog .detail-panel-nav button { min-width: 45px; min-height: 28px; font-size: 10px; }\n  #detail-dialog .detail-shell[data-panel=\"rooms\"] .detail-panel-nav { justify-content: flex-start; padding-right: 140px; }\n  #detail-dialog .detail-room-panel { padding-top: 0; }\n  #detail-dialog .detail-room-tabs { top: -31px; min-height: 28px; gap: 8px; }\n  #detail-dialog .detail-room-panel h3 { margin: 0; font-size: 13px; line-height: 1.2; }\n  #detail-dialog .detail-layout-label { margin-left: 5px; font-size: 10px; }\n  #detail-dialog .detail-illustration-note { font-size: 8px; line-height: 1.2; }\n  #detail-dialog .detail-room-tabs button { min-height: 28px; padding: 0; font-size: 10px; }\n}\n@media (max-width: 360px) and (max-height: 700px) {\n  #detail-dialog .detail-layout { row-gap: 2px; }\n}\n@media (max-width: 360px) {\n  #detail-dialog .detail-core { column-gap: 10px; }\n  #detail-dialog .detail-drawing-toolbar { gap: 6px; }\n  #detail-dialog .detail-drawing-toolbar .detail-document-tabs { gap: 8px; }\n  #detail-dialog .detail-drawing-toolbar .detail-document-tabs button { font-size: 9px; }\n  #detail-dialog .detail-unit-meta { font-size: 8px; }\n  #detail-dialog .type-room-list, #detail-dialog .unit-room-list { column-gap: 8px; }\n  #detail-dialog .room-legend-button { grid-template-columns: 14px minmax(0, 1fr) auto; gap: 2px; }\n  #detail-dialog .room-number { width: 14px; height: 14px; font-size: 9px; }\n  #detail-dialog .room-area { font-size: 9px; }\n}\n@media (max-height: 600px) and (min-width: 601px) {\n  #detail-dialog .detail-layout { --detail-landscape-rail: 300px; grid-template-columns: var(--detail-landscape-rail) minmax(0, 1fr); grid-template-rows: 28px minmax(0, 1fr); gap: 8px 20px; padding: 14px 18px 26px; }\n  #detail-dialog .detail-sidebar { grid-column: 1; grid-row: 1 / 3; display: grid; grid-template-rows: auto 1px minmax(0, 1fr) auto; row-gap: 6px; }\n  #detail-dialog .detail-core { grid-column: 1; grid-row: 1; grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr); column-gap: 10px; }\n  #detail-dialog .detail-logo { width: 140px; }\n  #detail-dialog .detail-apartment-number { font-size: 30px; }\n  #detail-dialog .detail-area-row { gap: 6px; padding-top: 0; }\n  #detail-dialog .detail-metrics { gap: 6px; }\n  #detail-dialog .detail-metrics dd { font-size: 20px; }\n  #detail-dialog .detail-room-panel h3 { margin: 0 0 3px; font-size: 14px; line-height: 1.2; }\n  #detail-dialog .detail-conversion { grid-column: 1; grid-row: 4; row-gap: 4px; }\n  #detail-dialog .detail-price > span { margin-bottom: 2px; }\n  #detail-dialog .price-value { font-size: 29px; }\n  #detail-dialog .detail-inquiry { min-height: 44px; }\n  #detail-dialog .detail-inquiry > .inquiry-button { height: 44px; min-height: 44px; padding: 10px 18px; font-size: 18px; }\n  #detail-dialog .detail-panel-nav { grid-column: 2; grid-row: 1; padding-right: 66px; gap: 16px; }\n  #detail-dialog .detail-layout > .detail-drawing { grid-column: 2; grid-row: 2; }\n  #detail-dialog .detail-room-panel { position: absolute; left: calc(18px + var(--detail-landscape-rail) + 20px); right: 18px; top: 50px; bottom: 14px; width: auto; padding-top: 26px; }\n}\n\n.compare-dialog { width: min(1000px, calc(100% - 40px)); }\n.compare-scroll { overflow-x: auto; }\n.compare-table { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 12px; }\n.compare-table th, .compare-table td { padding: 15px 17px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: middle; line-height: 1.6; }\n.compare-table th { width: 26%; font-size: 10px; font-weight: 400; color: var(--muted); }\n.compare-table thead th { padding-top: 0; padding-bottom: 21px; font-family: 'Montserrat', Arial, sans-serif; font-size: 24px; color: var(--ink); }\n.compare-table thead th:first-child { font-family: 'Montserrat', Arial, sans-serif; font-size: 10px; color: var(--muted); }\n.compare-table th:first-child { padding-left: 0; }\n.compare-table td:last-child, .compare-table th:last-child { padding-right: 0; }\n.compare-table tbody tr:hover { background: var(--hover); }\n.compare-table .details-button { padding-left: 0; font-size: 10px; gap: 12px; }\n@keyframes breathe { to { opacity: .3; } }\n\n/* The full drawing is loaded only after a preview is opened. */\n.media-dialog { position: fixed; inset: 0; width: 100vw; max-width: none; height: 100dvh; max-height: none; margin: 0; padding: 0; border: 0; overflow: hidden; background: var(--paper); color: var(--ink); }\n.media-dialog::backdrop { background: var(--paper); }\n.media-shell { display: grid; grid-template-rows: auto minmax(0, 1fr) auto; width: 100%; height: 100%; }\n.media-header { display: grid; grid-template-columns: 1fr auto auto; align-items: center; gap: 32px; padding: 20px 32px; border-bottom: 1px solid var(--line); }\n.media-heading { min-width: 0; }\n.media-heading .eyebrow { margin: 0 0 6px; font-size: 8px; }\n.media-heading h2 { margin: 0; font-family: 'Montserrat', Arial, sans-serif; font-size: 27px; font-weight: 400; line-height: 1.2; }\n.media-description { margin: 7px 0 0; color: var(--muted); font-size: 10px; line-height: 1.6; }\n.media-tabs { display: flex; align-items: center; gap: 25px; }\n.media-tabs button { min-height: 40px; padding: 7px 0; border-bottom: 1px solid color-mix(in srgb, var(--line) 0%, transparent); color: var(--muted); font-size: 11px; }\n.media-tabs button[aria-selected=\"true\"] { border-color: var(--accent); color: var(--ink); }\n.media-stage { position: relative; min-width: 0; min-height: 0; overflow: hidden; user-select: none; touch-action: pan-x pan-y pinch-zoom; outline-offset: -5px; }\n.media-canvas { position: absolute; inset: 24px; pointer-events: none; }\n.media-image { display: block; width: 100%; height: 100%; object-fit: contain; transform-origin: center; transition: transform .1s ease-out; }\n.media-stage[data-zoomed=\"true\"] { cursor: grab; touch-action: none; }\n.media-stage[data-dragging=\"true\"] { cursor: grabbing; }\n.media-stage[data-dragging=\"true\"] .media-image { transition: none; }\n.media-dialog[data-loading=\"true\"] .media-image, .media-dialog[data-error=\"true\"] .media-image { opacity: 0; }\n.media-load-status { position: absolute; inset: 20px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; color: var(--muted); font-size: 12px; line-height: 1.8; text-align: center; }\n.media-load-status:empty { display: none; }\n.media-load-status p { margin: 0; }\n.media-load-status > div { display: flex; justify-content: center; flex-wrap: wrap; gap: 12px; }\n.media-footer { display: flex; align-items: center; justify-content: space-between; gap: 24px; padding: 13px 32px; border-top: 1px solid var(--line); }\n.media-footer > p { margin: 0; color: var(--muted); font-size: 10px; line-height: 1.7; }\n.media-zoom { display: flex; flex-shrink: 0; align-items: center; border: 1px solid var(--line); }\n.media-zoom button { display: grid; place-items: center; min-width: 37px; height: 36px; padding: 0 10px; color: var(--ink); font-size: 17px; }\n.media-zoom .zoom-level { min-width: 65px; font-size: 10px; border-inline: 1px solid var(--line); }\n.media-zoom button:hover { background: var(--hover); }\n\n/* Every apartment remains one full-width list row, including narrow Framer frames. */\n@container apartment-list (max-width: 1360px) {\n  .primary-filters, .range-filters { gap: 24px; }\n  .checkbox-filters { gap: 14px; }\n  .checkbox-label { font-size: 10px; gap: 7px; }\n  .apartment-table th, .apartment-table td { padding-inline: 8px; }\n  .apartment-table td { font-size: 13px; }\n  .apartment-table th { font-size: 9px; }\n  .unit-id, .unit-type { font-size: 25px; }\n  .unit-summary { gap: 10px; }\n  .cell-actions { min-width: 142px; }\n  .details-button { font-size: 10px; gap: 14px; padding-left: 5px; }\n  .status-pill { font-size: 9px; gap: 6px; }\n}\n@container apartment-list (max-width: 1360px) {\n  .apartment-table, .apartment-table tbody { display: block; }\n  .apartment-table thead { display: none; }\n  .apartment-table tbody { border-top: 1px solid var(--line); }\n  .apartment-table .apartment-row { display: grid; grid-template-columns: 250px minmax(40px, 1fr) minmax(66px, 1fr) minmax(100px, 1fr) minmax(80px, 1fr) minmax(105px, 1fr); grid-template-rows: auto auto; column-gap: 8px; row-gap: 4px; padding: 5px 0; margin: 0; border: 0; border-bottom: 1px solid var(--line); background: none; }\n  .apartment-table .apartment-row:hover, .apartment-table .apartment-row:focus-within { background: var(--hover); }\n  .apartment-table td { display: flex; flex-direction: column; justify-content: center; align-self: center; align-items: flex-start; min-width: 0; height: auto; min-height: 0; padding: 0; border: 0; gap: 6px; font-size: 13px; line-height: 1.5; text-align: left; }\n  .apartment-table td::before { content: attr(data-label); display: block; color: var(--muted); font-size: 9px; line-height: 1.4; font-weight: 400; white-space: normal; }\n  .apartment-table .cell-unit { grid-column: 1; grid-row: 1 / 3; }\n  .apartment-table .cell-unit::before { display: none; }\n  .apartment-table .cell-building { grid-column: 2; grid-row: 1; }\n  .apartment-table .cell-floor { grid-column: 3; grid-row: 1; }\n  .apartment-table .cell-rooms { grid-column: 4; grid-row: 1; }\n  .apartment-table .cell-interior { grid-column: 5; grid-row: 1; }\n  .apartment-table .cell-balcony { grid-column: 2 / 4; grid-row: 2; align-self: start; justify-self: start; width: calc(50% - 4px); }\n  .apartment-table .cell-garden { grid-column: 2 / 4; grid-row: 2; align-self: start; justify-self: end; width: calc(50% - 4px); }\n  .apartment-table .cell-price { grid-column: 6; grid-row: 1; font-size: 14px; }\n  .apartment-table .cell-status { grid-column: 2 / 4; grid-row: 2; align-self: end; }\n  .apartment-table .cell-status::before { display: none; }\n  .apartment-table .cell-status .status-pill { font-size: 10px; }\n  .apartment-table .cell-floor-layout { grid-column: 4; grid-row: 2; width: auto; align-items: center; }\n  .apartment-table .cell-floor-layout::before { display: none; }\n  .apartment-table .cell-actions { grid-column: 5 / -1; grid-row: 2; display: flex; flex-direction: column; justify-content: center; align-items: flex-end; min-width: 0; min-height: 90px; padding: 0; border: 0; }\n  .apartment-table .cell-actions::before { display: none; }\n  .cell-actions .save-button { width: 25px; padding-left: 0; }\n}\n@container apartment-list (max-width: 1200px) {\n  .apartment-table .apartment-row { padding-block: 18px; row-gap: 9px; }\n}\n@container apartment-list (max-width: 860px) {\n  .apartment-table .cell-balcony, .apartment-table .cell-garden { font-size: 12px; }\n}\n@container apartment-list (max-width: 760px) {\n  .filter-header { padding: 18px 20px 15px; }\n  .primary-filters { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px 24px; }\n  .range-filters { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 11px 24px; margin-top: 17px; }\n  .checkbox-filters { grid-column: 1 / -1; justify-content: flex-start; gap: 20px; min-height: 25px; margin-bottom: 0; }\n  .apartment-table .apartment-row { grid-template-columns: repeat(12, minmax(0, 1fr)); grid-template-rows: auto auto auto auto; column-gap: 6px; row-gap: 15px; padding: 19px 0; }\n  .apartment-table td { font-size: 14px; gap: 4px; }\n  .apartment-table .cell-unit { grid-column: 1 / -1; grid-row: 1; }\n  .unit-summary { gap: 12px; }\n  .unit-media { gap: 12px; }\n  .unit-media .preview-visual { height: 90px; }\n  .unit-id, .unit-type { font-size: 26px; }\n  .apartment-table .cell-building { grid-column: 1 / 3; grid-row: 2; }\n  .apartment-table .cell-floor { grid-column: 3 / 6; grid-row: 2; }\n  .apartment-table .cell-rooms { grid-column: 6 / 9; grid-row: 2; }\n  .apartment-table .cell-interior { grid-column: 9 / -1; grid-row: 2; }\n  .apartment-table .cell-balcony { grid-column: 1 / 4; grid-row: 3; align-self: center; justify-self: stretch; width: auto; font-size: 14px; }\n  .apartment-table .cell-garden { grid-column: 4 / 6; grid-row: 3; align-self: center; justify-self: stretch; width: auto; }\n  .apartment-table .cell-price { grid-column: 6 / 10; grid-row: 3; }\n  .apartment-table .cell-status { grid-column: 10 / -1; grid-row: 3; align-self: center; }\n  .apartment-table .cell-status::before { display: block; }\n  .apartment-table .cell-status .status-pill { white-space: normal; line-height: 1.4; }\n  .apartment-table .cell-floor-layout { grid-column: 1 / 5; grid-row: 4; align-items: flex-start; }\n  .cell-floor-layout .media-preview { margin-inline: 0; }\n  .apartment-table .cell-actions { grid-column: 5 / -1; grid-row: 4; justify-content: center; min-height: 90px; padding-top: 0; }\n}\n@container apartment-list (max-width: 600px) {\n  .filter-header { padding: 14px 17px; }\n  .mobile-filter-button { display: flex; align-items: center; width: 100%; min-height: 28px; padding: 0; gap: 10px; border: 0; font-size: 12px; text-align: left; }\n  .mobile-filter-button > svg { color: var(--accent); }\n  .filter-toggle-icon { margin-left: auto; font-size: 20px; font-weight: 300; color: var(--muted); }\n  .mobile-filter-button[aria-expanded=\"true\"] .filter-toggle-icon { transform: rotate(45deg); }\n  .filters { display: none; margin-top: 22px; }\n  .filters[data-open=\"true\"] { display: block; }\n  .primary-filters { gap: 16px 24px; }\n  .field > label, .range-field legend { font-size: 9px; letter-spacing: 1px; }\n  .field select { font-size: 14px; }\n  .range-filters { grid-template-columns: 1fr; gap: 8px; margin-top: 20px; }\n  .range-field output { font-size: 12px; }\n  .checkbox-filters { gap: 18px; min-height: 30px; padding-top: 3px; flex-wrap: wrap; }\n  .checkbox-label { font-size: 10px; gap: 8px; }\n  .result-toolbar { flex-wrap: wrap; gap: 15px; padding: 23px 0 20px; }\n  .result-count { font-size: 11px; }\n  .result-count strong { font-size: 26px; }\n  .result-total { font-size: 10px; }\n  .reset-button { margin-left: auto; gap: 8px; font-size: 9px; }\n  .sort-field { flex-basis: 100%; justify-content: flex-start; margin-left: 0; gap: 15px; }\n  .sort-field > label { font-size: 8px; }\n  .sort-field select { font-size: 10px; min-width: 164px; }\n  .favorites-hint { margin-top: -4px; margin-bottom: 17px; font-size: 9px; }\n  .data-note { margin-top: 19px; font-size: 9px; }\n  .filter-chips:not(:empty) { padding-bottom: 18px; }\n  .filter-chip { font-size: 9px; }\n  .empty-state { padding: 44px 10px; }\n  .empty-state h2 { font-size: 25px; }\n  .empty-state p { font-size: 11px; }\n}\n@container apartment-list (max-width: 380px) {\n  .unit-summary { gap: 10px; }\n  .unit-media { gap: 8px; }\n  .unit-id, .unit-type { font-size: 25px; }\n  .unit-media .preview-visual { height: 86px; }\n  .media-preview { width: 94px; }\n  .preview-visual { height: 86px; }\n  .gallery-preview { width: 100%; }\n  .gallery-preview .preview-visual { height: 180px; }\n}\n@container (max-width: 640px) { .page-width { padding-inline: min(var(--component-padding, 32px), 20px); } }\n@media (max-width: 760px) {\n  .page-width { padding-inline: min(var(--component-padding, 32px), 20px); }\n  .apartment-dialog, .compare-dialog { width: calc(100% - 24px); max-height: calc(100% - 24px); }\n  .dialog-inner { padding: 26px 23px; }\n  .dialog-head { padding-bottom: 23px; margin-bottom: 24px; }\n  .dialog-head h2 { font-size: 34px; }\n  .eyebrow { font-size: 8px; letter-spacing: 1.1px; }\n  .source-note { font-size: 10px; }\n  .compare-tray { width: calc(100% - 24px); bottom: 12px; padding: 16px; gap: 16px; flex-wrap: wrap; }\n  .compare-tray > div:first-child { flex: 1; gap: 10px 16px; }\n  .tray-label { flex-basis: 100%; font-size: 8px; }\n  .compare-tray strong { font-size: 17px; }\n  .compare-tray > div:last-child { width: 100%; justify-content: space-between; gap: 15px; }\n  .compare-tray .button-primary { flex: 1; min-height: 39px; padding-block: 10px; font-size: 10px; }\n  .compare-tray .button-secondary { min-height: 39px; padding: 10px 0; font-size: 10px; }\n  .compare-table { font-size: 10px; }\n  .compare-table th, .compare-table td { padding: 13px 7px; overflow-wrap: anywhere; }\n  .compare-table th { width: 27%; font-size: 9px; }\n  .compare-table thead th { font-size: 19px; }\n  .compare-table .details-button { gap: 7px; font-size: 9px; }\n  .compare-dialog .dialog-head h2 { font-size: 29px; line-height: 1.2; }\n  .toast { font-size: 10px; padding: 12px 17px; }\n  .media-header { grid-template-columns: 1fr auto; gap: 12px 20px; padding: 18px 20px 0; }\n  .media-header .dialog-close { grid-column: 2; grid-row: 1; align-self: start; }\n  .media-heading h2 { font-size: 25px; }\n  .media-tabs { grid-column: 1 / -1; gap: 25px; }\n  .media-tabs button { min-height: 39px; font-size: 10px; }\n  .media-canvas { inset: 15px; }\n  .media-footer { gap: 15px; padding: 12px 18px; }\n  .media-footer > p { font-size: 9px; max-width: 180px; }\n  .media-zoom button { min-width: 33px; padding-inline: 8px; }\n  .media-zoom .zoom-level { min-width: 54px; }\n}\n@media (prefers-reduced-motion: reduce) {\n  *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }\n}\n"
+const ORBIT_APARTMENT_CARD_SHELL = "\n  <div class=\"list-container\">\n  <main class=\"page-width\" id=\"apartment-app\" aria-label=\"Lakáslista\">\n    <section class=\"filter-header\" aria-label=\"Lakásszűrők\">\n    <button class=\"mobile-filter-button\" id=\"mobile-filters\" type=\"button\" aria-expanded=\"false\" aria-controls=\"filters\"><svg width=\"17\" height=\"17\" viewBox=\"0 0 18 18\" fill=\"none\" aria-hidden=\"true\"><path d=\"M2 5h14M2 13h14M6 2v6M12 10v6\" stroke=\"currentColor\" stroke-width=\"1.2\"/></svg><span>Szűrés</span><span class=\"filter-toggle-icon\" aria-hidden=\"true\">+</span></button>\n    <form id=\"filters\" class=\"filters\" data-open=\"false\" aria-label=\"Lakások szűrése\">\n      <div class=\"primary-filters\">\n        <div class=\"field\"><label for=\"building\">Épület</label><div class=\"select-wrap\"><select id=\"building\"><option value=\"\">Összes épület</option></select></div></div>\n        <div class=\"field\"><label for=\"floor\">Emelet</label><div class=\"select-wrap\"><select id=\"floor\"><option value=\"\">Összes emelet</option></select></div></div>\n        <div class=\"field\"><label for=\"rooms\">Szobák</label><div class=\"select-wrap\"><select id=\"rooms\"><option value=\"\">Összes</option></select></div></div>\n        <div class=\"field\"><label for=\"status\">Elérhetőség</label><div class=\"select-wrap\"><select id=\"status\"><option value=\"\">Minden lakás</option><option value=\"available\">Elérhető</option><option value=\"under_negotiation\">Tárgyalás alatt</option><option value=\"sold\">Elkelt</option><option value=\"unknown\">Egyeztetés szükséges</option></select></div></div>\n      </div>\n      <div class=\"range-filters\">\n          <fieldset class=\"range-field\"><legend><span>Alapterület</span><output id=\"area-range-value\" for=\"minArea maxArea\">m²</output></legend><div class=\"range-slider\"><span class=\"slider-track\" aria-hidden=\"true\"><span class=\"slider-selection\"></span></span><label class=\"sr-only\" for=\"minArea\">Minimum alapterület négyzetméterben</label><input id=\"minArea\" type=\"range\" min=\"0\" max=\"1\" step=\"1\"><label class=\"sr-only\" for=\"maxArea\">Maximum alapterület négyzetméterben</label><input id=\"maxArea\" type=\"range\" min=\"0\" max=\"1\" step=\"1\"></div></fieldset>\n          <fieldset class=\"range-field\"><legend><span>Vételár</span><output id=\"price-range-value\" for=\"minPrice maxPrice\">M Ft</output></legend><div class=\"range-slider\"><span class=\"slider-track\" aria-hidden=\"true\"><span class=\"slider-selection\"></span></span><label class=\"sr-only\" for=\"minPrice\">Minimum vételár millió forintban</label><input id=\"minPrice\" type=\"range\" min=\"0\" max=\"1\" step=\"1\"><label class=\"sr-only\" for=\"maxPrice\">Maximum vételár millió forintban</label><input id=\"maxPrice\" type=\"range\" min=\"0\" max=\"1\" step=\"1\"></div></fieldset>\n          <div class=\"checkbox-filters\"><label class=\"checkbox-label\" for=\"terrace\"><input id=\"terrace\" type=\"checkbox\"><span>Erkély</span></label><label class=\"checkbox-label\" for=\"garden\"><input id=\"garden\" type=\"checkbox\"><span>Kert</span></label><label class=\"checkbox-label\" for=\"favoritesOnly\"><input id=\"favoritesOnly\" type=\"checkbox\"><span>Kedvencek</span></label></div>\n      </div>\n    </form>\n    </section>\n    <div class=\"result-toolbar\">\n      <p class=\"result-count\" id=\"result-count\" aria-live=\"polite\" aria-atomic=\"true\">Lakások betöltése…</p>\n      <button type=\"button\" id=\"reset\" class=\"reset-button\">Alaphelyzet <span aria-hidden=\"true\">↺</span></button>\n      <div class=\"sort-field\"><label for=\"sort\">Rendezés</label><div class=\"select-wrap\"><select id=\"sort\"><option value=\"id\">Lakásazonosító szerint</option><option value=\"price-asc\">Ár: növekvő</option><option value=\"price-desc\">Ár: csökkenő</option><option value=\"area-asc\">Alapterület: növekvő</option><option value=\"area-desc\">Alapterület: csökkenő</option><option value=\"floor\">Emelet szerint</option></select></div></div>\n    </div>\n    <p class=\"favorites-hint\"><svg viewBox=\"0 0 24 24\" width=\"13\" height=\"13\" aria-hidden=\"true\"><path d=\"M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 0 0 0-7.8Z\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\"/></svg><span>A szívvel a kedvencekhez mentheti a lakást.</span></p>\n    <div class=\"filter-chips\" id=\"filter-chips\" aria-label=\"Aktív szűrők\"></div>\n    <div id=\"results\" class=\"results\" aria-busy=\"true\"><div class=\"loading-state\"><span class=\"loading-dot\"></span>Lakások betöltése…</div></div>\n    <p class=\"data-note\" id=\"data-note\"></p>\n  </main>\n  </div>\n  <aside id=\"compare-tray\" class=\"compare-tray\" aria-label=\"Összehasonlításra kijelölt lakások\" hidden></aside>\n  <dialog id=\"detail-dialog\" class=\"apartment-dialog\" aria-label=\"Lakás részletei\"></dialog>\n  <dialog id=\"compare-dialog\" class=\"apartment-dialog compare-dialog\" aria-label=\"Lakások összehasonlítása\"></dialog>\n  <dialog id=\"media-dialog\" class=\"media-dialog\" aria-labelledby=\"media-title\"></dialog>\n  <div id=\"toast\" class=\"toast\" role=\"status\" aria-live=\"polite\"></div>\n"
+
+/* ADMIRAL_FONT_LOADER_START */
+function ensureOrbitApartmentCardFont(folder: any): any {
+    if (typeof (window as any) === 'undefined' || !(window as any).FontFace || !(document as any).fonts || !folder)
+        return Promise.resolve();
+    const cache: any = (window as any)[Symbol.for('admiral-park:montserrat-fonts')] ||= new Map();
+    if (cache.has(folder))
+        return cache.get(folder);
+    const sources: any = ([
+        (['montserrat-latin-ext-variable.woff2', 'U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C4,U+2113,U+2C60-2C7F,U+A720-A7FF'] as any),
+        (['montserrat-latin-variable.woff2', 'U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD'] as any),
+    ] as any);
+    const loaded: any = Promise.allSettled(sources.map(([file, unicodeRange]: any): any => {
+        const face: any = new FontFace('Montserrat', 'url("' + new URL(file, folder).href + '")', ({ style: 'normal', weight: '100 900', display: 'swap', unicodeRange } as any));
+        (document as any).fonts.add(face);
+        return face.load();
+    }));
+    cache.set(folder, loaded);
+    return loaded;
+}
+/* ADMIRAL_FONT_LOADER_END */
+function mountOrbitApartmentCardRuntime(root: any = (document as any), config: any = ({} as any)): any {
+    const $: any = (id: any): any => root.querySelector(`#${id}`);
+    const lifecycle: any = new AbortController();
+    const signal: any = lifecycle.signal;
+    const events: any = ({ signal } as any);
+    const esc: any = (value: any): any => String(value ?? '').replace(/[&<>"']/g, (c: any): any => (({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' } as any)[c]));
+    const roomLabel: any = (value: any): any => String(value ?? '').replace(/terasz/giu, 'Erkély');
+    const number: any = new Intl.NumberFormat('hu-HU', ({ maximumFractionDigits: 2 } as any));
+    const priceNumber: any = new Intl.NumberFormat('hu-HU', ({ maximumFractionDigits: 2 } as any));
+    const area: any = (value: any): any => Number.isFinite(value) ? `${number.format(value)} m²` : 'Nincs adat';
+    const price: any = (value: any): any => Number.isFinite(value) ? `${priceNumber.format(value / 1000000)} M Ft` : 'Ár kérésre';
+    const apartmentPrice: any = (a: any): any => a.price == null && a.status === 'sold' ? 'Nincs megadva' : price(a.price);
+    const floorText: any = (a: any): any => a.floorLabel || (a.floor === 0 ? 'Földszint' : a.floor == null ? 'Nincs adat' : `${a.floor}. emelet`);
+    const labels: any = ({ available: 'Elérhető', under_negotiation: 'Tárgyalás alatt', sold: 'Elkelt', unknown: 'Érdeklődjön' } as any);
+    const statusText: any = (a: any): any => a.statusLabel || labels[a.status] || labels.unknown;
+    const safeUrl: any = (value: any): any => { if (typeof value !== 'string' || !value.trim())
+        return null; try {
+        const u: any = new URL(value, location.href);
+        return (['http:', 'https:'] as any).includes(u.protocol) ? u.href : null;
+    }
+    catch {
+        return null;
+    } };
+    function assetUrl(value: any): any {
+        if (typeof value !== 'string' || !value.trim())
+            return null;
+        const input: any = value.trim();
+        try {
+            if (/^[a-z][a-z\d+.-]*:/i.test(input)) {
+                const direct: any = new URL(input);
+                return (['http:', 'https:'] as any).includes(direct.protocol) ? direct.href : null;
+            }
+            let base: any = (document as any).baseURI, relative: any = input;
+            if (typeof config.assetBaseUrl === 'string' && config.assetBaseUrl.trim()) {
+                const custom: any = new URL(config.assetBaseUrl.trim(), (document as any).baseURI);
+                if (!(['http:', 'https:'] as any).includes(custom.protocol))
+                    return null;
+                if (!custom.pathname.endsWith('/'))
+                    custom.pathname += '/';
+                base = custom.href;
+                relative = relative.replace(/^\.?\/?assets\//, '');
+            }
+            else if (typeof config.dataUrl === 'string' && /^https?:\/\//i.test(config.dataUrl))
+                base = new URL('.', config.dataUrl).href;
+            const resolved: any = new URL(relative, base);
+            return (['http:', 'https:'] as any).includes(resolved.protocol) ? resolved.href : null;
+        }
+        catch {
+            return null;
+        }
+    }
+    const montserratFolder: any = assetUrl('assets/fonts/montserrat/');
+    ensureOrbitApartmentCardFont(montserratFolder).then((): any => { if (!signal.aborted)
+        requestAnimationFrame(fitDetailRooms); });
+    const embed: any = !!config.embed;
+    const useUrl: any = !embed && !config.disableUrl;
+    const filterIds: any = (['building', 'floor', 'rooms', 'status', 'minArea', 'maxArea', 'minPrice', 'maxPrice', 'terrace', 'garden', 'favoritesOnly'] as any);
+    const checks: any = new Set((['terrace', 'garden', 'favoritesOnly'] as any));
+    const numericFilters: any = new Set((['minArea', 'maxArea', 'minPrice', 'maxPrice'] as any));
+    const rangeGroups: any = ([
+        ({ min: 'minArea', max: 'maxArea', field: 'areaInterior', divisor: 1, unit: 'm²', output: 'area-range-value' } as any),
+        ({ min: 'minPrice', max: 'maxPrice', field: 'price', divisor: 1000000, unit: 'M Ft', output: 'price-range-value' } as any),
+    ] as any);
+    const rangeBounds: any = new Map();
+    const defaults: any = (Object as any).fromEntries(filterIds.map((k: any): any => ([k, checks.has(k) ? false : ''] as any)));
+    let state: any = ({ ...defaults, sort: 'id' } as any);
+    let apartments: any = ([] as any), data: any, selected: any = new Set(), favorites: any = new Set(), toastTimer: any, mediaView: any = null, mediaSequence: any = 0, rangeDrag: any = null;
+    let requestedApartmentId: any = typeof config.apartment === 'string' ? config.apartment : null, cardOpen: any = false;
+    const dialogFocus: any = new WeakMap(), dialogStack: any = ([] as any), downloadUrls: any = new Set();
+    const modalRegistry: any = (window as any)[Symbol.for('admiral-park:open-dialogs')] ||= new Set();
+    const modalScroll: any = (window as any)[Symbol.for('admiral-park:scroll-lock')] ||= ({ locked: false, value: '', priority: '', watched: new WeakSet() } as any);
+    const dialogs: any = ([$('detail-dialog'), $('compare-dialog'), $('media-dialog')] as any).filter(Boolean);
+    let detailResize: any = null, selectedPlanRoom: any = null, hoverPlanRoom: any = null, focusedPlanRoom: any = null;
+    let storage: any = true;
+    try {
+        const stored: any = JSON.parse(localStorage.getItem('admiral-park:favorites:v1') || '[]');
+        if (Array.isArray(stored))
+            favorites = new Set(stored.filter((x: any): any => typeof x === 'string'));
+    }
+    catch {
+        storage = false;
+    }
+    function toast(message: any): any {
+        $('toast').textContent = message;
+        $('toast').classList.add('visible');
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout((): any => $('toast').classList.remove('visible'), 4200);
+    }
+    function readUrl(): any {
+        if (!useUrl)
+            return;
+        const p: any = new URL(location.href).searchParams;
+        for (const id of filterIds) {
+            if (checks.has(id))
+                state[id] = p.get(id) === '1';
+            else if (numericFilters.has(id))
+                state[id] = p.has(id) && /^\d+(?:\.\d+)?$/.test(p.get(id)) ? p.get(id) : '';
+            else
+                state[id] = p.get(id) || '';
+        }
+        if (([...$('sort').options] as any).some((o: any): any => o.value === p.get('sort')))
+            state.sort = p.get('sort');
+    }
+    function writeUrl(): any {
+        if (!useUrl)
+            return;
+        const u: any = new URL(location.href);
+        u.searchParams.delete('search');
+        for (const id of filterIds) {
+            const v: any = state[id];
+            if (v !== '' && v !== false)
+                u.searchParams.set(id, checks.has(id) ? '1' : v);
+            else
+                u.searchParams.delete(id);
+        }
+        if (state.sort !== 'id')
+            u.searchParams.set('sort', state.sort);
+        else
+            u.searchParams.delete('sort');
+        try {
+            history.replaceState(null, '', u);
+        }
+        catch { }
+    }
+    function syncControls(): any {
+        for (const id of ([...filterIds, 'sort'] as any)) {
+            if (numericFilters.has(id))
+                continue;
+            if (checks.has(id))
+                $(id).checked = !!state[id];
+            else {
+                $(id).value = state[id];
+                if ($(id).tagName === 'SELECT' && !$(id).value) {
+                    state[id] = '';
+                    $(id).value = '';
+                }
+            }
+        }
+        syncRanges();
+    }
+    function setupRanges(): any {
+        for (const group of rangeGroups) {
+            const values: any = apartments.map((a: any): any => a[group.field]).filter(hasNumber).map((value: any): any => value / group.divisor);
+            const min: any = values.length ? Math.floor(Math.min(...values)) : 0;
+            const max: any = values.length ? Math.max(min + 1, Math.ceil(Math.max(...values))) : 1;
+            rangeBounds.set(group.min, ({ min, max } as any));
+            for (const id of ([group.min, group.max] as any)) {
+                $(id).min = String(min);
+                $(id).max = String(max);
+                $(id).disabled = !values.length;
+            }
+        }
+    }
+    function syncRanges(): any {
+        for (const group of rangeGroups) {
+            const bounds: any = rangeBounds.get(group.min);
+            if (!bounds)
+                continue;
+            const clamp: any = (value: any): any => Math.max(bounds.min, Math.min(bounds.max, Math.round(Number(value))));
+            let low: any = state[group.min] === '' ? bounds.min : clamp(state[group.min]);
+            const high: any = state[group.max] === '' ? bounds.max : clamp(state[group.max]);
+            low = Math.min(low, high);
+            state[group.min] = low === bounds.min ? '' : String(low);
+            state[group.max] = high === bounds.max ? '' : String(high);
+            for (const [id, value] of ([([group.min, low] as any), ([group.max, high] as any)] as any)) {
+                $(id).value = String(value);
+                $(id).setAttribute('aria-valuetext', `${number.format(value)} ${group.unit}`);
+            }
+            $(group.output).textContent = `${number.format(low)} – ${number.format(high)} ${group.unit}`;
+            const track: any = $(group.min).closest('.range-slider');
+            track.dataset.minAtMax = String(low === bounds.max);
+            $(group.min).setAttribute('aria-valuemax', String(high));
+            $(group.max).setAttribute('aria-valuemin', String(low));
+            track.style.setProperty('--range-start', `${(low - bounds.min) / (bounds.max - bounds.min) * 100}%`);
+            track.style.setProperty('--range-end', `${(high - bounds.min) / (bounds.max - bounds.min) * 100}%`);
+        }
+    }
+    function updateRange(id: any): any {
+        const group: any = rangeGroups.find((group: any): any => group.min === id || group.max === id);
+        if (!group || !rangeBounds.has(group.min))
+            return;
+        const value: any = Number($(id).value);
+        state[id] = String(id === group.min ? Math.min(value, Number($(group.max).value)) : Math.max(value, Number($(group.min).value)));
+        syncRanges();
+    }
+    function setupOptions(id: any, options: any): any {
+        const select: any = $(id);
+        select.replaceChildren(new Option('Összes', ''), ...options.map(([v, l]: any): any => new Option(l, v)));
+    }
+    const byId: any = (id: any): any => apartments.find((a: any): any => a.id === id);
+    const hasNumber: any = (v: any): any => typeof v === 'number' && Number.isFinite(v);
+    function matches(a: any): any {
+        if (state.building && a.building !== state.building)
+            return false;
+        if (state.floor !== '' && a.floor !== Number(state.floor))
+            return false;
+        if (state.rooms && (state.rooms === '4+' ? !(a.rooms >= 4) : a.rooms !== Number(state.rooms)))
+            return false;
+        if (state.status && a.status !== state.status)
+            return false;
+        if (state.terrace && !(a.areaTerrace > 0))
+            return false;
+        if (state.garden && !(a.areaGarden > 0))
+            return false;
+        if (state.favoritesOnly && !favorites.has(a.id))
+            return false;
+        for (const [key, field, direction, mult] of ([(['minArea', 'areaInterior', 1, 1] as any), (['maxArea', 'areaInterior', -1, 1] as any), (['minPrice', 'price', 1, 1000000] as any), (['maxPrice', 'price', -1, 1000000] as any)] as any)) {
+            if (state[key] !== '' && (!hasNumber(a[field]) || direction * a[field] < direction * Number(state[key]) * mult))
+                return false;
+        }
+        return true;
+    }
+    function sorted(list: any): any {
+        const [key, direction]: any = state.sort === 'floor' ? (['floor', 'asc'] as any) : state.sort.split('-');
+        const field: any = ({ price: 'price', area: 'areaInterior', floor: 'floor' } as any)[key];
+        return list.sort((a: any, b: any): any => {
+            if (!field)
+                return a.id.localeCompare(b.id, 'hu', ({ numeric: true } as any));
+            const av: any = a[field], bv: any = b[field];
+            if (av == null && bv != null)
+                return 1;
+            if (bv == null && av != null)
+                return -1;
+            return (av == null ? 0 : (av - bv) * (direction === 'desc' ? -1 : 1)) || a.id.localeCompare(b.id, 'hu', ({ numeric: true } as any));
+        });
+    }
+    const svg: any = (name: any): any => name === 'heart' ? '<svg viewBox="0 0 24 24" width="19" height="19" aria-hidden="true"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 0 0 0-7.8Z" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>' : '<span aria-hidden="true">↗</span>';
+    const downloadIcon: any = '<svg viewBox="0 0 20 20" width="15" height="15" fill="none" aria-hidden="true"><path d="M10 2v10m-4-4 4 4 4-4M3 13v4h14v-4" stroke="currentColor" stroke-width="1.2"/></svg>';
+    function mediaEntries(a: any): any {
+        return ([(['floorplan', 'Alaprajz'] as any), (['floorLayout', 'Szintrajz'] as any)] as any).flatMap(([key, name]: any): any => {
+            const source: any = a.media?.[key] || (key === 'floorplan' && a.floorplan ? ({ full: a.floorplan } as any) : null);
+            const full: any = assetUrl(source?.full);
+            if (!full)
+                return ([] as any);
+            let label: any = typeof source.label === 'string' && source.label.trim() ? source.label.trim() : name;
+            if (key === 'floorplan' && a.apartmentType)
+                label = `${a.apartmentType} típus`;
+            return ([({ key, name, label, full, thumbnail: assetUrl(source.thumbnail), isIllustrative: !!source.isIllustrative } as any)] as any);
+        });
+    }
+    function previewButton(a: any, item: any, large: any = false): any {
+        return `<button class="media-preview${large ? ' gallery-preview' : ''}" data-media="${esc(a.id)}" data-media-kind="${item.key}" title="${esc(item.label)}" aria-label="${esc(a.id)} – ${esc(item.name)} megnyitása: ${esc(item.label)}"><span class="preview-visual">${item.thumbnail ? `<img src="${esc(item.thumbnail)}" alt="" loading="lazy" decoding="async" data-thumbnail><span class="preview-unavailable" hidden>Megnyitás</span>` : '<span class="preview-unavailable">Megnyitás</span>'}</span></button>`;
+    }
+    function datasheet(a: any): any {
+        const source: any = a.media?.datasheet, url: any = assetUrl(source?.url);
+        if (!url)
+            return null;
+        return ({ url, label: typeof source.label === 'string' && source.label.trim() ? source.label : 'Adatlap', filename: (typeof source.filename === 'string' && source.filename.trim() ? source.filename : `Admiral-Park-${a.id}-adatlap.pdf`).replace(/[\\/:*?"<>|]/g, '-') } as any);
+    }
+    function downloadLink(a: any, large: any = false): any {
+        const file: any = datasheet(a);
+        if (!file)
+            return '';
+        return `<span class="download-wrap"><a class="datasheet-link action-pill${large ? ' datasheet-large footer-pill' : ''}" href="${esc(file.url)}" download="${esc(file.filename)}" target="_blank" rel="noopener" data-download="${esc(a.id)}" aria-label="${esc(a.id)} – ${esc(file.label)} letöltése PDF formátumban" title="${esc(file.label)}">${downloadIcon}<span>Adatlap</span></a></span>`;
+    }
+    function saveButton(a: any, explain: any = false): any { const saved: any = favorites.has(a.id); return `<button type="button" class="save-button ${saved ? 'is-saved' : ''}${explain ? ' save-with-label' : ''}" data-save="${esc(a.id)}" aria-label="${esc(a.id)} ${saved ? 'eltávolítása a kedvencekből' : 'mentése a kedvencekhez'}" aria-pressed="${saved}">${svg('heart')}${explain ? `<span class="detail-save-label">${saved ? 'Kedvencekhez mentve' : 'Mentés a kedvencekhez'}</span>` : ''}</button>`; }
+    function compareToggle(a: any): any { return `<button type="button" class="compare-toggle action-pill" data-compare="${esc(a.id)}" aria-label="${esc(a.id)} összehasonlítása" aria-pressed="${selected.has(a.id)}"><svg viewBox="0 0 20 20" width="14" height="14" fill="none" aria-hidden="true"><path d="m4 10 4 4 8-8" stroke="currentColor" stroke-width="1.2"/></svg><span>Összevetés</span></button>`; }
+    function row(a: any): any {
+        const media: any = mediaEntries(a);
+        const floorplan: any = media.find((item: any): any => item.key === 'floorplan'), floorLayout: any = media.find((item: any): any => item.key === 'floorLayout');
+        return `<tr class="apartment-row" data-unit="${esc(a.id)}">
+    <td class="cell-unit" data-label="Lakás"><div class="unit-summary"><div class="unit-identification"><button type="button" class="unit-id unit-open" data-detail="${esc(a.id)}" aria-label="${esc(a.id)} lakás részleteinek megnyitása" aria-haspopup="dialog">${esc(a.id)}</button></div>${floorplan ? `<div class="unit-media">${previewButton(a, floorplan)}</div>` : ''}<span class="unit-type" aria-label="${esc(a.apartmentType || '')} lakástípus">${esc(a.apartmentType || '')}</span></div></td>
+    <td class="cell-building" data-label="Épület">${esc(a.building)}</td>
+    <td class="cell-floor" data-label="Emelet">${esc(floorText(a))}</td>
+    <td class="cell-rooms" data-label="Szobák">${a.rooms == null ? `<span title="${esc(a.layoutLabel || 'Nincs adat')}">${esc(a.layoutLabel || 'Nincs adat')}</span>` : number.format(a.rooms)}</td>
+    <td class="cell-area cell-interior" data-label="Nettó alapterület">${area(a.areaInterior)}</td>
+    <td class="cell-area cell-balcony" data-label="Erkély">${area(a.areaTerrace)}</td>
+    <td class="cell-area cell-garden" data-label="Kert"><span class="garden-value">${hasNumber(a.areaGarden) && a.areaGarden > 0 ? area(a.areaGarden) : ''}</span></td>
+    <td class="cell-price" data-label="Bruttó ár">${apartmentPrice(a)}</td>
+    <td class="cell-status" data-label="Státusz"><span class="status-pill status-${esc(a.status)}">${esc(statusText(a))}</span></td>
+    <td class="cell-floor-layout" data-label="Szintrajz">${floorLayout ? previewButton(a, floorLayout) : ''}</td>
+    <td class="cell-actions"><div class="row-actions">${saveButton(a)}<div class="action-pills">${downloadLink(a)}${compareToggle(a)}</div></div></td>
+  </tr>`;
+    }
+    function renderChips(): any {
+        const titles: any = ({ building: 'Épület', floor: 'Emelet', rooms: 'Szobák', status: 'Státusz', minArea: 'Terület ettől', maxArea: 'Terület eddig', minPrice: 'Ár ettől', maxPrice: 'Ár eddig', terrace: 'Erkély', garden: 'Kert', favoritesOnly: 'Kedvencek' } as any);
+        $('filter-chips').innerHTML = filterIds.filter((id: any): any => state[id] !== '' && state[id] !== false).map((id: any): any => {
+            let value: any = state[id];
+            if ($(id).tagName === 'SELECT')
+                value = $(id).selectedOptions[0]?.textContent || value;
+            else if (id.includes('Area'))
+                value = `${number.format(Number(value))} m²`;
+            else if (id.includes('Price'))
+                value = `${number.format(Number(value))} M Ft`;
+            return `<button class="filter-chip" data-remove-filter="${id}" aria-label="${esc(titles[id])} szűrő törlése">${esc(titles[id])}${checks.has(id) ? '' : `: ${esc(value)}`} <span aria-hidden="true">×</span></button>`;
+        }).join('');
+    }
+    function renderTray(): any {
+        const chosen: any = ([...selected] as any).map(byId).filter(Boolean);
+        $('compare-tray').hidden = chosen.length === 0;
+        $('compare-tray').innerHTML = `<div><span class="tray-label">ÖSSZEHASONLÍTÁS</span><strong>${chosen.map((a: any): any => esc(a.id)).join(' · ')}</strong><span class="tray-hint">${chosen.length} / 3 lakás</span></div><div><button class="button-secondary" data-clear-compare> Törlés </button><button class="button-primary" data-open-compare ${chosen.length < 2 ? 'disabled' : ''}>Összehasonlítom ${svg('arrow')}</button></div>`;
+        resizeEmbed();
+    }
+    function render(): any {
+        if (config.detailOnly) {
+            $('results').replaceChildren();
+            return;
+        }
+        const list: any = sorted(apartments.filter(matches));
+        const invalidArea: any = state.minArea !== '' && state.maxArea !== '' && Number(state.minArea) > Number(state.maxArea);
+        const invalidPrice: any = state.minPrice !== '' && state.maxPrice !== '' && Number(state.minPrice) > Number(state.maxPrice);
+        $('result-count').innerHTML = `<strong>${list.length}</strong> lakás${list.length === apartments.length ? '' : ` <span class="result-total">/ ${apartments.length}</span>`}`;
+        $('results').innerHTML = list.length ? `<table class="apartment-table"><caption class="sr-only">Lakások. A nettó belső terület, az erkély és a kert külön szerepel, az árak bruttó forintárak.</caption><thead><tr><th scope="col">Lakás / típus</th><th scope="col">Épület</th><th scope="col"><button data-sort="floor">Emelet ${state.sort === 'floor' ? '↑' : '↕'}</button></th><th scope="col" class="heading-rooms">Szobák</th><th scope="col"><button data-sort="area">Nettó alapterület ${state.sort.startsWith('area') ? (state.sort.endsWith('desc') ? '↓' : '↑') : '↕'}</button></th><th scope="col">Erkély</th><th scope="col">Kert</th><th scope="col"><button data-sort="price">Bruttó ár ${state.sort.startsWith('price') ? (state.sort.endsWith('desc') ? '↓' : '↑') : '↕'}</button></th><th scope="col">Státusz</th><th scope="col">Szintrajz</th><th scope="col"><span class="sr-only">Műveletek</span></th></tr></thead><tbody>${list.map(row).join('')}</tbody></table>` : `<div class="empty-state"><span class="empty-mark" aria-hidden="true">⌕</span><h2>${invalidArea || invalidPrice ? 'Ellenőrizze a megadott tartományt.' : 'Most nincs ilyen lakás.'}</h2><p>${invalidArea || invalidPrice ? 'A kezdőérték legyen kisebb vagy egyenlő a záróértékkel.' : 'Módosítsa a szűrőket, vagy nézze meg a teljes kínálatot.'}</p><button class="button-primary" data-reset>Szűrők törlése</button></div>`;
+        $('minArea').setAttribute('aria-invalid', String(invalidArea));
+        $('maxArea').setAttribute('aria-invalid', String(invalidArea));
+        $('minPrice').setAttribute('aria-invalid', String(invalidPrice));
+        $('maxPrice').setAttribute('aria-invalid', String(invalidPrice));
+        renderChips();
+        renderTray();
+        writeUrl();
+        resizeEmbed();
+        $('results').setAttribute('aria-busy', 'false');
+    }
+    function reset(): any { state = ({ ...defaults, sort: 'id' } as any); syncControls(); render(); }
+    function syncModalState(): any {
+        const nextCardOpen: any = dialogs.some((dialog: any): any => dialog.open);
+        if (nextCardOpen !== cardOpen) {
+            cardOpen = nextCardOpen;
+            config.onOpenChange?.(cardOpen);
+        }
+        for (const dialog of modalRegistry)
+            if (!dialog.open || !dialog.isConnected)
+                modalRegistry.delete(dialog);
+        const documentDialogs: any = ([...(document as any).querySelectorAll('dialog[open]')] as any), locked: any = modalRegistry.size > 0 || documentDialogs.length > 0;
+        (document as any).body.classList.toggle('dialog-open', locked);
+        if (locked && !modalScroll.locked) {
+            modalScroll.value = (document as any).body.style.getPropertyValue('overflow');
+            modalScroll.priority = (document as any).body.style.getPropertyPriority('overflow');
+            modalScroll.locked = true;
+            (document as any).body.style.setProperty('overflow', 'hidden', modalScroll.priority);
+        }
+        else if (!locked && modalScroll.locked) {
+            if (modalScroll.value)
+                (document as any).body.style.setProperty('overflow', modalScroll.value, modalScroll.priority);
+            else
+                (document as any).body.style.removeProperty('overflow');
+            modalScroll.locked = false;
+        }
+        for (const dialog of documentDialogs)
+            if (!modalRegistry.has(dialog) && !modalScroll.watched.has(dialog)) {
+                modalScroll.watched.add(dialog);
+                dialog.addEventListener('close', (): any => { modalScroll.watched.delete(dialog); syncModalState(); }, ({ once: true } as any));
+            }
+    }
+    function openDialog(dialog: any): any {
+        if (!dialog.open) {
+            dialogFocus.set(dialog, root.activeElement || (document as any).activeElement);
+            dialog.showModal();
+            dialogStack.push(dialog);
+            modalRegistry.add(dialog);
+        }
+        syncModalState();
+        dialog.querySelector('[data-close]')?.focus();
+    }
+    function finishDialogClose(dialog: any): any {
+        if (dialog.open || (!modalRegistry.has(dialog) && !dialogStack.includes(dialog)))
+            return;
+        modalRegistry.delete(dialog);
+        const position: any = dialogStack.indexOf(dialog);
+        if (position !== -1)
+            dialogStack.splice(position, 1);
+        syncModalState();
+        if (dialog.id === 'detail-dialog' && useUrl) {
+            const u: any = new URL(location.href);
+            u.searchParams.delete('apartment');
+            history.replaceState(null, '', u);
+        }
+        if (dialog.id === 'media-dialog') {
+            mediaView = null;
+            dialog.replaceChildren();
+        }
+        const top: any = dialogStack.findLast((item: any): any => item.open), previous: any = dialogFocus.get(dialog);
+        const fallback: any = dialog.id === 'detail-dialog' ? root.querySelector(`[data-detail="${CSS.escape(dialog.dataset.apartment || '')}"]`) : null;
+        const focus: any = previous?.isConnected && (!top || top.contains(previous)) ? previous : top?.querySelector('[data-close]') || fallback;
+        focus?.focus(({ preventScroll: true } as any));
+    }
+    function closeDialog(dialog: any): any { if (dialog?.open) {
+        dialog.close();
+        finishDialogClose(dialog);
+    } }
+    function fact(title: any, value: any): any { return `<div class="fact"><dt>${esc(title)}</dt><dd>${value}</dd></div>`; }
+    function inquiry(a: any): any {
+        const inquiryUrl: any = safeUrl(config.inquiryUrl);
+        if (inquiryUrl) {
+            const u: any = new URL(inquiryUrl);
+            u.searchParams.set('apartment', a.id);
+            return `<a class="inquiry-button" href="${esc(u.href)}" target="_blank" rel="noopener"><span>Érdeklődöm</span></a>`;
+        }
+        return `<button type="button" class="inquiry-button" data-inquiry-placeholder aria-expanded="false" aria-controls="inquiry-pending"><span>Érdeklődöm</span></button><div class="inquiry-pending" id="inquiry-pending" role="status" hidden><p>A kapcsolatfelvétel hamarosan elérhető.</p><button type="button" class="inquiry-copy" data-copy-inquiry="${esc(a.id)}">Lakásadatok másolása</button></div>`;
+    }
+    function positionInquiryNotice(): any {
+        const dialog: any = $('detail-dialog'), note: any = dialog?.querySelector('.inquiry-pending');
+        if (!dialog?.open || !note || note.hidden)
+            return;
+        note.style.bottom = 'auto';
+        note.style.top = '0px';
+        const bounds: any = dialog.querySelector('.detail-layout').getBoundingClientRect(), anchor: any = dialog.querySelector('.detail-inquiry').getBoundingClientRect(), height: any = note.getBoundingClientRect().height;
+        const preferred: any = anchor.top - height - 8 < bounds.top + 6 ? anchor.bottom + 8 : anchor.top - height - 8;
+        note.style.top = `${Math.max(bounds.top + 6, Math.min(preferred, bounds.bottom - height - 6)) - anchor.top}px`;
+    }
+    function detailMetric(label: any, value: any): any {
+        return `<div><dt>${esc(label)}</dt><dd>${hasNumber(value) ? number.format(value) : '—'}${hasNumber(value) ? '<small>m2</small>' : ''}</dd></div>`;
+    }
+    function validPlanMarkers(layout: any): any {
+        return Array.isArray(layout?.markers) ? layout.markers.filter((marker: any): any => Number.isSafeInteger(marker.number) && marker.number > 0 && hasNumber(marker.x) && marker.x >= 0 && marker.x <= 1 && hasNumber(marker.y) && marker.y >= 0 && marker.y <= 1 && typeof marker.name === 'string') : ([] as any);
+    }
+    function detailPlan(a: any): any {
+        const layout: any = data.roomLayouts?.[a.apartmentType], source: any = a.media?.floorplan;
+        const url: any = assetUrl(source?.original || (layout ? `assets/floorplans/types/${encodeURIComponent(a.apartmentType)}/original.png` : source?.full || a.floorplan));
+        if (!url)
+            return '<div class="empty-plan"><h3>Alaprajz</h3><p>Az alaprajz még nem érhető el.</p></div>';
+        const view: any = layout?.viewBox || ({ x: 0, y: 0, width: 1, height: 1 } as any);
+        const dimensions: any = layout?.imageDimensions || ({ width: 1500, height: 2000 } as any);
+        const imageWidth: any = dimensions.width || dimensions[0] || 1500, imageHeight: any = dimensions.height || dimensions[1] || 2000;
+        const surface: any = `left:${-view.x / view.width * 100}%;top:${-view.y / view.height * 100}%;width:${100 / view.width}%;height:${100 / view.height}%`;
+        const markers: any = validPlanMarkers(layout);
+        return `<section class="detail-plan" data-document-panel="plan" id="detail-document-plan" role="tabpanel" aria-labelledby="detail-document-plan-tab"><div class="detail-plan-stage"><div class="detail-plan-canvas" style="--plan-aspect:${imageWidth * view.width / (imageHeight * view.height)};aspect-ratio:${imageWidth * view.width}/${imageHeight * view.height}"><div class="detail-plan-surface" style="${surface}"><img class="detail-plan-image" src="${esc(url)}" alt="${esc(a.apartmentType || a.id)} típus számozott alaprajza" decoding="async"><div class="detail-plan-markers" aria-label="A típusterv helyiségei">${markers.map((marker: any): any => `<button type="button" class="room-marker" data-plan-room="${marker.number}" style="left:${marker.x * 100}%;top:${marker.y * 100}%" aria-label="${marker.number}. ${esc(roomLabel(marker.name))}" aria-pressed="false">${marker.number}</button>`).join('')}</div></div></div></div></section>`;
+    }
+    function detailRooms(a: any): any {
+        const rooms: any = Array.isArray(a.roomList) ? a.roomList : ([] as any), markers: any = validPlanMarkers(data.roomLayouts?.[a.apartmentType]);
+        const mapped: any = markers.length && rooms.length === markers.length && markers.every((marker: any): any => rooms.some((room: any): any => room.planNumber === marker.number));
+        const layoutSummary: any = typeof a.layoutLabel === 'string' && a.layoutLabel.trim() ? a.layoutLabel.trim().replace(/hálószoba/giu, 'szoba') : hasNumber(a.rooms) ? `${number.format(a.rooms)} szoba` : '';
+        const roomHeading: any = `Helyiségek.${layoutSummary ? ` <span class="detail-layout-label">${esc(layoutSummary)}</span>` : ''}`;
+        const ownRooms: any = `<ul class="unit-room-list">${rooms.map((room: any): any => `<li><span>${esc(roomLabel(room.name))}</span><strong>${area(room.area)}</strong></li>`).join('') || '<li>A helyiséglista még nem érhető el.</li>'}</ul>`;
+        return `<section class="detail-room-panel" data-detail-panel="rooms" id="detail-panel-rooms" role="tabpanel" aria-labelledby="detail-tab-rooms" data-room-view="type"><div class="detail-room-tabs" role="tablist" aria-label="Helyiségjegyzék"><button type="button" id="detail-room-type-tab" data-room-view="type" role="tab" aria-selected="true" aria-controls="detail-room-type">Típusterv</button>${!mapped ? '<button type="button" id="detail-room-unit-tab" data-room-view="unit" role="tab" aria-selected="false" tabindex="-1" aria-controls="detail-room-unit">Lakásterületek</button>' : ''}</div><div class="detail-rooms" data-room-panel="type" id="detail-room-type" role="tabpanel" aria-labelledby="detail-room-type-tab"><h3>${roomHeading}</h3><div class="room-page">${markers.length ? `<ol class="type-room-list">${markers.map((marker: any): any => { const room: any = mapped ? rooms.find((room: any): any => room.planNumber === marker.number) : null; return `<li><button type="button" class="room-legend-button" data-plan-room="${marker.number}" aria-pressed="false"><span class="room-number">${String(marker.number).padStart(2, '0')}</span><span class="room-name">${esc(roomLabel(marker.name))}</span>${room ? `<span class="room-area">${area(room.area)}</span>` : ''}</button></li>`; }).join('')}</ol>` : ownRooms}</div></div>${!mapped ? `<div class="unit-room-section" data-room-panel="unit" id="detail-room-unit" role="tabpanel" aria-labelledby="detail-room-unit-tab" hidden><h3>${roomHeading}</h3><div class="room-page">${ownRooms}</div></div>` : ''}</section>`;
+    }
+    function detail(id: any): any {
+        const a: any = byId(id);
+        if (!a)
+            return;
+        selectedPlanRoom = null;
+        hoverPlanRoom = null;
+        focusedPlanRoom = null;
+        if (useUrl) {
+            const u: any = new URL(location.href);
+            u.searchParams.set('apartment', id);
+            history.replaceState(null, '', u);
+        }
+        const floor: any = mediaEntries(a).find((item: any): any => item.key === 'floorLayout');
+        const floorCaption: any = String(floorText(a)), floorMatch: any = /^(.*?)\s*emelet$/iu.exec(floorCaption);
+        const floorMeta: any = floorMatch && floorMatch[1].trim() ? `<strong>${esc(floorMatch[1].trim())}</strong> emelet` : `<strong>${esc(floorCaption)}</strong>`;
+        const monogram: any = assetUrl('assets/brand/ap-monogram.png'), logo: any = assetUrl('assets/brand/admiral-park-full-logo-no-location.svg');
+        const dialog: any = $('detail-dialog');
+        dialog.dataset.apartment = id;
+        detailResize?.disconnect();
+        dialog.innerHTML = `<div class="detail-shell" data-panel="plan"><div class="detail-brand-motif" aria-hidden="true"></div>
+    <header class="detail-topbar"><div class="detail-top-actions"><button type="button" class="dialog-close" data-close aria-label="Bezárás">×</button></div></header>
+    <div class="detail-layout">
+      <aside class="detail-sidebar" aria-label="A lakás adatai">
+        <div class="detail-core">
+          <div class="detail-identity"><div class="detail-brand-group"><span class="detail-logo" role="img" aria-label="Admiral Park"></span></div></div>
+          <div class="detail-area-row"><h2 class="detail-apartment-number">${esc(a.id)}</h2><dl class="detail-metrics${a.areaGarden > 0 ? ' has-garden' : ''}">${detailMetric('Beltér', a.areaInterior)}${detailMetric('Erkély', a.areaTerrace)}${hasNumber(a.areaGarden) && a.areaGarden > 0 ? detailMetric('Kert', a.areaGarden) : ''}</dl></div>
+        </div>
+        <hr class="detail-divider">
+        ${detailRooms(a)}
+        <div class="detail-conversion"><div class="detail-price"><span>Bruttó vételár</span><p>${hasNumber(a.price) ? `<span class="price-value">${priceNumber.format(a.price / 1000000)}</span> <small class="price-unit">M Ft</small>` : `<span class="price-unavailable">${esc(apartmentPrice(a))}</span>`}</p></div><div class="detail-inquiry">${inquiry(a)}</div><div class="detail-downloads detail-footer">${downloadLink(a, true)}<div class="detail-status"><span class="status-pill status-${esc(a.status)}">${esc(statusText(a))}</span></div>${shareControl(a)}</div></div>
+      </aside>
+      <nav class="detail-panel-nav" role="tablist" aria-label="Rajz és helyiségjegyzék">${([(['plan', 'Rajzok'] as any), (['rooms', 'Helyiségek'] as any)] as any).map(([key, label]: any): any => `<button type="button" role="tab" id="detail-tab-${key}" data-detail-tab="${key}" aria-controls="detail-panel-${key}" aria-selected="${key === 'plan'}" tabindex="${key === 'plan' ? 0 : -1}">${label}</button>`).join('')}</nav>
+      <section class="detail-drawing" data-detail-panel="plan" id="detail-panel-plan" role="tabpanel" aria-labelledby="detail-tab-plan"><div class="detail-drawing-toolbar"><div class="detail-document-tabs" role="tablist" aria-label="Rajz kiválasztása"><button type="button" id="detail-document-plan-tab" role="tab" data-document-view="plan" aria-selected="true" aria-controls="detail-document-plan">Alaprajz</button>${floor ? '<button type="button" id="detail-document-floor-tab" role="tab" data-document-view="floor" aria-selected="false" tabindex="-1" aria-controls="detail-document-floor">Szintrajz</button>' : ''}</div><div class="detail-drawing-save">${saveButton(a, true)}</div><p class="detail-unit-meta"><strong>${esc(a.apartmentType || '')}</strong> típus <span>·</span> <strong>${esc(a.building)}</strong> épület <span>·</span> ${floorMeta} <span>·</span> <strong>${esc(a.orientation || 'Nincs adat')}</strong> tájolás</p></div>${detailPlan(a)}${floor ? `<section class="detail-floor-plan" data-document-panel="floor" id="detail-document-floor" role="tabpanel" aria-labelledby="detail-document-floor-tab" hidden><p class="detail-section-label">${esc(floorText(a))} · A, B, C épület</p><img class="detail-floor-image" src="${esc(floor.full)}" alt="${esc(floorText(a))} szintrajza" decoding="async"><p class="detail-plan-note">${esc(a.id)} · ${esc(a.building)} épület</p></section>` : ''}</section>
+    </div><p class="detail-illustration-note">Az alaprajz illusztráció. Bútorozatlan átadás.</p></div>`;
+        const shell: any = dialog.querySelector('.detail-shell');
+        if (monogram)
+            shell.style.setProperty('--detail-monogram-image', `url("${monogram.replace(/"/g, '%22')}")`);
+        if (logo)
+            shell.style.setProperty('--detail-logo-image', `url("${logo.replace(/"/g, '%22')}")`);
+        openDialog(dialog);
+        dialog.scrollTop = 0;
+        detailResize = new ResizeObserver((): any => requestAnimationFrame(fitDetailRooms));
+        detailResize.observe(dialog.querySelector('.detail-room-panel'));
+        requestAnimationFrame(fitDetailRooms);
+    }
+    function selectDetailPanel(value: any, focus: any = false): any {
+        const dialog: any = $('detail-dialog'), shell: any = dialog.querySelector('.detail-shell');
+        if (!shell)
+            return;
+        shell.dataset.panel = value;
+        dialog.querySelectorAll('[data-detail-tab]').forEach((button: any): any => { const active: any = button.dataset.detailTab === value; button.setAttribute('aria-selected', String(active)); button.tabIndex = active ? 0 : -1; });
+        if (focus && getComputedStyle(dialog.querySelector('.detail-panel-nav')).display !== 'none')
+            dialog.querySelector(`[data-detail-tab="${value}"]`)?.focus(({ preventScroll: true } as any));
+        requestAnimationFrame(fitDetailRooms);
+    }
+    function selectDetailDocument(value: any): any {
+        const dialog: any = $('detail-dialog');
+        dialog.querySelectorAll('[data-document-view]').forEach((button: any): any => { const active: any = button.dataset.documentView === value; button.setAttribute('aria-selected', String(active)); button.tabIndex = active ? 0 : -1; });
+        dialog.querySelectorAll('[data-document-panel]').forEach((panel: any): any => { panel.hidden = panel.dataset.documentPanel !== value; });
+    }
+    function selectDetailRoomView(value: any): any {
+        const dialog: any = $('detail-dialog'), panel: any = dialog.querySelector('.detail-room-panel');
+        if (!panel)
+            return;
+        panel.dataset.roomView = value;
+        panel.querySelectorAll('button[data-room-view]').forEach((button: any): any => { const active: any = button.dataset.roomView === value; button.setAttribute('aria-selected', String(active)); button.tabIndex = active ? 0 : -1; });
+        panel.querySelectorAll('[data-room-panel]').forEach((item: any): any => { item.hidden = item.dataset.roomPanel !== value; });
+        fitDetailRooms();
+    }
+    function fitDetailRooms(): any {
+        const dialog: any = $('detail-dialog');
+        if (signal.aborted || !dialog.open)
+            return;
+        const panel: any = dialog.querySelector('.detail-room-panel'), view: any = panel?.dataset.roomView;
+        panel?.style.setProperty('--room-slack', '0px');
+        const frame: any = panel?.querySelector(`[data-room-panel="${view}"] .room-page`);
+        if (!frame?.clientHeight)
+            return;
+        const list: any = frame.querySelector('ol,ul');
+        if (!list)
+            return;
+        const maxColumns: any = Math.max(1, Math.min(4, Math.floor(frame.clientWidth / 125)));
+        for (let columns: any = 1; columns <= maxColumns; columns++) {
+            list.style.setProperty('--room-columns', String(columns));
+            list.dataset.columns = String(columns);
+            for (const padding of ([4, 2, 1, 0] as any)) {
+                list.style.setProperty('--room-padding', `${padding}px`);
+                list.style.setProperty('--room-circle', `${padding >= 2 ? 18 : 16}px`);
+                // Use the actual fractional height; rounded clientHeight could clip the last row.
+                if (list.getBoundingClientRect().height <= Math.floor(frame.getBoundingClientRect().height) - 1) {
+                    panel.style.setProperty('--room-slack', `${Math.max(0, frame.getBoundingClientRect().height - list.getBoundingClientRect().height - 1)}px`);
+                    return;
+                }
+            }
+        }
+    }
+    function paintPlanRoom(value: any): any {
+        const dialog: any = $('detail-dialog'), number: any = value == null ? null : String(value);
+        dialog.querySelectorAll('[data-plan-room]').forEach((button: any): any => { button.classList.toggle('is-active', button.dataset.planRoom === number); button.setAttribute('aria-pressed', String(button.dataset.planRoom === selectedPlanRoom)); });
+    }
+    function selectPlanRoom(value: any, origin: any): any {
+        selectedPlanRoom = String(value);
+        selectDetailRoomView('type');
+        paintPlanRoom(selectedPlanRoom);
+        if (origin?.classList.contains('room-marker'))
+            selectDetailPanel('rooms', true);
+        else {
+            selectDetailDocument('plan');
+            selectDetailPanel('plan', true);
+        }
+    }
+    function showCompare(): any {
+        const chosen: any = ([...selected] as any).map(byId).filter(Boolean);
+        if (chosen.length < 2)
+            return;
+        const fields: any = ([(['Státusz', (a: any): any => esc(statusText(a))] as any), (['Épület', (a: any): any => esc(a.building)] as any), (['Emelet', (a: any): any => esc(floorText(a))] as any), (['Szobák', (a: any): any => esc(a.rooms ?? a.layoutLabel ?? 'Nincs adat')] as any), (['Nettó belső alapterület', (a: any): any => area(a.areaInterior)] as any), (['Erkély', (a: any): any => area(a.areaTerrace)] as any), (['Kert', (a: any): any => hasNumber(a.areaGarden) && a.areaGarden > 0 ? area(a.areaGarden) : ''] as any), (['Tájolás', (a: any): any => esc(a.orientation || 'Nincs adat')] as any), (['Bruttó vételár', (a: any): any => price(a.price)] as any)] as any);
+        $('compare-dialog').innerHTML = `<div class="dialog-inner"><header class="dialog-head"><div><div class="eyebrow">AZ ÖN VÁLASZTÁSA</div><h2>Lakások összehasonlítása</h2></div><button class="dialog-close" data-close aria-label="Bezárás">×</button></header><div class="compare-scroll" tabindex="0" role="region" aria-label="Összehasonlító táblázat"><table class="compare-table"><caption class="sr-only">A kiválasztott lakások adatai</caption><thead><tr><th scope="col">Lakás</th>${chosen.map((a: any): any => `<th scope="col">${esc(a.id)}</th>`).join('')}</tr></thead><tbody>${fields.map(([name, fn]: any): any => `<tr><th scope="row">${name}</th>${chosen.map((a: any): any => `<td>${fn(a)}</td>`).join('')}</tr>`).join('')}<tr><th scope="row">Részletek</th>${chosen.map((a: any): any => `<td><button class="details-button" data-from-compare="${esc(a.id)}">Megnézem ${svg('arrow')}</button></td>`).join('')}</tr></tbody></table></div></div>`;
+        openDialog($('compare-dialog'));
+    }
+    function openMedia(id: any, kind: any): any {
+        const a: any = byId(id);
+        if (!a)
+            return;
+        const entries: any = mediaEntries(a);
+        if (!entries.length)
+            return;
+        mediaView = ({ id, entries, index: Math.max(0, entries.findIndex((item: any): any => item.key === kind)), scale: 1, x: 0, y: 0, drag: null, token: 0 } as any);
+        const dialog: any = $('media-dialog');
+        dialog.innerHTML = `<div class="media-shell"><header class="media-header"><div class="media-heading"><p class="eyebrow">${esc(a.id)} · ${esc(a.building)} ÉPÜLET</p><h2 id="media-title"></h2><p class="media-description" id="media-description"></p></div><div class="media-tabs" role="tablist" aria-label="Rajz kiválasztása">${entries.map((item: any, index: any): any => `<button type="button" role="tab" id="media-tab-${item.key}" data-media-tab="${index}" aria-controls="media-image-region" aria-selected="false" tabindex="-1">${esc(item.name)}</button>`).join('')}</div><button class="dialog-close" data-close aria-label="Rajznézet bezárása">×</button></header><div class="media-stage" id="media-image-region" role="tabpanel" tabindex="0" aria-describedby="media-help"><div class="media-canvas"><img class="media-image" alt="" draggable="false" decoding="async"></div><div class="media-load-status" role="status" aria-live="polite"></div></div><footer class="media-footer"><p id="media-help">Nagyítás után húzza a rajzot, vagy használja a nyílbillentyűket.</p><div class="media-zoom" role="group" aria-label="Rajz nagyítása"><button data-zoom="out" aria-label="Kicsinyítés">−</button><button data-zoom="reset" class="zoom-level" aria-label="Nagyítás visszaállítása">100%</button><button data-zoom="in" aria-label="Nagyítás">+</button></div></footer></div>`;
+        openDialog(dialog);
+        showMedia(mediaView.index);
+    }
+    function showMedia(index: any): any {
+        if (!mediaView)
+            return;
+        mediaView.index = (index + mediaView.entries.length) % mediaView.entries.length;
+        mediaView.scale = 1;
+        mediaView.x = 0;
+        mediaView.y = 0;
+        mediaView.drag = null;
+        const current: any = mediaView.entries[mediaView.index], token: any = ++mediaSequence, dialog: any = $('media-dialog');
+        mediaView.token = token;
+        const image: any = dialog.querySelector('.media-image'), status: any = dialog.querySelector('.media-load-status');
+        dialog.dataset.loading = 'true';
+        dialog.dataset.error = 'false';
+        dialog.querySelector('#media-title').textContent = current.name;
+        dialog.querySelector('.media-description').textContent = current.label;
+        dialog.querySelector('.media-stage').setAttribute('aria-label', `${mediaView.id} – ${current.label}`);
+        dialog.querySelector('.media-stage').setAttribute('aria-labelledby', `media-tab-${current.key}`);
+        dialog.querySelector('.media-stage').setAttribute('aria-busy', 'true');
+        dialog.querySelectorAll('[data-media-tab]').forEach((button: any): any => { const active: any = Number(button.dataset.mediaTab) === mediaView.index; button.setAttribute('aria-selected', String(active)); button.tabIndex = active ? 0 : -1; });
+        image.removeAttribute('src');
+        image.alt = `${mediaView.id} – ${current.label}`;
+        status.textContent = 'Rajz betöltése…';
+        image.onload = (): any => {
+            if (!mediaView || token !== mediaView.token)
+                return;
+            dialog.dataset.loading = 'false';
+            dialog.querySelector('.media-stage').setAttribute('aria-busy', 'false');
+            status.textContent = '';
+            updateMediaTransform();
+        };
+        image.onerror = (): any => {
+            if (!mediaView || token !== mediaView.token)
+                return;
+            dialog.dataset.loading = 'false';
+            dialog.dataset.error = 'true';
+            dialog.querySelector('.media-stage').setAttribute('aria-busy', 'false');
+            status.innerHTML = `<p>A nagy méretű rajz most nem tölthető be.</p><div><button class="button-secondary" data-media-retry>Újrapróbálom</button><a class="button-secondary" href="${esc(current.full)}" target="_blank" rel="noopener">Kép megnyitása új lapon ${svg('arrow')}</a></div>`;
+        };
+        image.src = current.full;
+        updateMediaTransform();
+    }
+    function updateMediaTransform(): any {
+        if (!mediaView)
+            return;
+        const dialog: any = $('media-dialog'), canvas: any = dialog.querySelector('.media-canvas'), image: any = dialog.querySelector('.media-image');
+        if (!canvas || !image)
+            return;
+        const fit: any = image.naturalWidth ? Math.min(canvas.clientWidth / image.naturalWidth, canvas.clientHeight / image.naturalHeight) : 1;
+        const maxX: any = Math.max(0, (image.naturalWidth * fit * mediaView.scale - canvas.clientWidth) / 2), maxY: any = Math.max(0, (image.naturalHeight * fit * mediaView.scale - canvas.clientHeight) / 2);
+        mediaView.x = Math.max(-maxX, Math.min(maxX, mediaView.x));
+        mediaView.y = Math.max(-maxY, Math.min(maxY, mediaView.y));
+        image.style.transform = `translate(${mediaView.x}px,${mediaView.y}px) scale(${mediaView.scale})`;
+        dialog.querySelector('.media-stage').dataset.zoomed = String(mediaView.scale > 1);
+        const zoom: any = dialog.querySelector('.zoom-level');
+        zoom.textContent = `${Math.round(mediaView.scale * 100)}%`;
+        dialog.querySelector('[data-zoom="out"]').disabled = mediaView.scale <= 1;
+        dialog.querySelector('[data-zoom="in"]').disabled = mediaView.scale >= 4;
+    }
+    function zoomMedia(action: any): any {
+        if (!mediaView)
+            return;
+        mediaView.scale = action === 'reset' ? 1 : Math.max(1, Math.min(4, mediaView.scale + (action === 'in' ? .5 : -.5)));
+        if (mediaView.scale === 1) {
+            mediaView.x = 0;
+            mediaView.y = 0;
+        }
+        updateMediaTransform();
+    }
+    async function downloadDatasheet(id: any, trigger: any): Promise<any> {
+        const a: any = byId(id), file: any = a && datasheet(a);
+        if (!file || trigger.getAttribute('aria-busy') === 'true')
+            return;
+        trigger.setAttribute('aria-busy', 'true');
+        trigger.setAttribute('aria-disabled', 'true');
+        try {
+            const response: any = await fetch(file.url, ({ signal, credentials: 'omit' } as any));
+            if (!response.ok)
+                throw new Error('Download unavailable');
+            const blob: any = await response.blob();
+            if (new TextDecoder().decode(await blob.slice(0, 5).arrayBuffer()) !== '%PDF-')
+                throw new Error('Invalid PDF');
+            const url: any = URL.createObjectURL(blob);
+            downloadUrls.add(url);
+            const link: any = (document as any).createElement('a');
+            link.href = url;
+            link.download = file.filename;
+            (dialogStack.findLast((dialog: any): any => dialog.open)?.querySelector('.dialog-inner,.detail-shell') || root.querySelector('main') || (document as any).body).append(link);
+            link.click();
+            link.remove();
+            setTimeout((): any => { URL.revokeObjectURL(url); downloadUrls.delete(url); }, 30000);
+            toast('Az adatlap letöltése elindult.');
+        }
+        catch (error: any) {
+            if (signal.aborted)
+                return;
+            const holder: any = trigger.closest('.download-wrap');
+            if (holder && !holder.querySelector('.download-fallback'))
+                holder.insertAdjacentHTML('beforeend', `<a class="download-fallback" href="${esc(file.url)}" target="_blank" rel="noopener">PDF megnyitása ${svg('arrow')}</a>`);
+            toast('A letöltés nem indult el. A PDF külön megnyitható.');
+        }
+        finally {
+            trigger.removeAttribute('aria-busy');
+            trigger.removeAttribute('aria-disabled');
+        }
+    }
+    function apartmentLink(id: any): any { const u: any = new URL(safeUrl(config.pageUrl) || location.href); for (const key of ([...filterIds, 'search', 'sort'] as any))
+        u.searchParams.delete(key); u.searchParams.set('apartment', id); return u.href; }
+    const sendIcon: any = '<svg viewBox="0 0 24 24" width="21" height="21" fill="none" aria-hidden="true"><path d="m21 3-7.2 18-3.6-7.2L3 10.2 21 3Zm0 0L10.2 13.8" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+    function sharePayload(a: any): any {
+        return ({ title: `Admiral Park · ${a.id}`, text: `Admiral Park ${a.id} lakás · ${area(a.areaInterior)} beltér · ${area(a.areaTerrace)} erkély${hasNumber(a.price) ? ` · ${price(a.price)}` : ''}`, url: apartmentLink(a.id) } as any);
+    }
+    function shareControl(a: any): any {
+        const payload: any = sharePayload(a), email: any = `mailto:?subject=${encodeURIComponent(payload.title)}&body=${encodeURIComponent(payload.text + '\n\n' + payload.url)}`, whatsapp: any = `https://wa.me/?text=${encodeURIComponent(payload.text + '\n' + payload.url)}`;
+        return `<div class="detail-share-wrap"><button type="button" class="share-button footer-pill" data-share="${esc(a.id)}" title="Lakás megosztása" aria-label="${esc(a.id)} lakás megosztása" aria-haspopup="dialog" aria-expanded="false" aria-controls="detail-share-menu">${sendIcon}<span>Küldd el valakinek</span></button><div class="share-popover" id="detail-share-menu" role="dialog" aria-label="Lakás megosztása" hidden><div class="share-heading"><div><span>Lakás megosztása</span><strong>${esc(a.id)}</strong></div><button type="button" data-share-close aria-label="Megosztás bezárása">×</button></div><div class="share-options"><button type="button" data-share-copy="${esc(a.id)}"><span aria-hidden="true">↗</span>Link másolása</button><a data-share-email href="${esc(email)}"><span aria-hidden="true">@</span>E-mail</a><a data-share-whatsapp href="${esc(whatsapp)}" target="_blank" rel="noopener noreferrer"><span aria-hidden="true">↗</span>WhatsApp</a></div><label class="sr-only" for="detail-share-url">A lakás hivatkozása</label><input class="share-url" id="detail-share-url" type="text" readonly value="${esc(payload.url)}"><output class="share-feedback" role="status" aria-live="polite"></output></div></div>`;
+    }
+    function shareMenu(): any { return $('detail-dialog')?.querySelector('.share-popover'); }
+    function closeShare(restore: any = true): any {
+        const menu: any = shareMenu();
+        if (!menu || menu.hidden)
+            return false;
+        menu.hidden = true;
+        const button: any = $('detail-dialog').querySelector('[data-share]');
+        button?.setAttribute('aria-expanded', 'false');
+        if (restore)
+            button?.focus(({ preventScroll: true } as any));
+        return true;
+    }
+    function positionShareMenu(): any {
+        const dialog: any = $('detail-dialog'), menu: any = shareMenu();
+        if (!dialog?.open || !menu || menu.hidden)
+            return;
+        const bounds: any = dialog.getBoundingClientRect(), anchor: any = dialog.querySelector('[data-share]').getBoundingClientRect(), close: any = dialog.querySelector('[data-close]').getBoundingClientRect();
+        const width: any = menu.getBoundingClientRect().width, height: any = menu.getBoundingClientRect().height, minTop: any = close.bottom + 8, maxTop: any = bounds.bottom - height - 12;
+        const preferred: any = anchor.top - height - 8 >= minTop ? anchor.top - height - 8 : anchor.bottom + 8;
+        menu.style.left = `${Math.max(bounds.left + 12, Math.min(anchor.right - width, bounds.right - width - 12))}px`;
+        menu.style.top = `${Math.max(minTop, Math.min(preferred, maxTop))}px`;
+    }
+    function openShareMenu(id: any): any {
+        const dialog: any = $('detail-dialog'), menu: any = shareMenu();
+        if (!dialog.open || dialog.dataset.apartment !== id || !menu)
+            return;
+        menu.hidden = false;
+        dialog.querySelector('[data-share]')?.setAttribute('aria-expanded', 'true');
+        positionShareMenu();
+        menu.querySelector('[data-share-copy]')?.focus(({ preventScroll: true } as any));
+    }
+    async function shareApartment(id: any, trigger: any): Promise<any> {
+        const a: any = byId(id);
+        if (!a || trigger.getAttribute('aria-busy') === 'true')
+            return;
+        if (closeShare())
+            return;
+        const payload: any = sharePayload(a);
+        if (typeof navigator.share === 'function') {
+            trigger.setAttribute('aria-busy', 'true');
+            try {
+                await navigator.share(payload);
+                return;
+            }
+            catch (error: any) {
+                if (error?.name === 'AbortError' || signal.aborted || !trigger.isConnected)
+                    return;
+            }
+            finally {
+                trigger.removeAttribute('aria-busy');
+            }
+        }
+        openShareMenu(id);
+    }
+    async function copyShareLink(id: any): Promise<any> {
+        const menu: any = shareMenu();
+        if (!menu || menu.hidden)
+            return;
+        const copied: any = await copyText(apartmentLink(id));
+        if (!menu.isConnected)
+            return;
+        menu.querySelector('.share-feedback').textContent = copied ? 'Link másolva.' : 'A link kijelölve, másolásra kész.';
+        if (!copied) {
+            const input: any = menu.querySelector('.share-url');
+            input.focus(({ preventScroll: true } as any));
+            input.select();
+        }
+        positionShareMenu();
+    }
+    async function copyText(text: any): Promise<any> {
+        try {
+            await navigator.clipboard.writeText(text);
+            toast('A vágólapra másoltuk.');
+            return true;
+        }
+        catch {
+            const previous: any = root.activeElement || (document as any).activeElement, helper: any = (document as any).createElement('textarea'), holder: any = root.querySelector('dialog[open] .dialog-inner,dialog[open] .detail-shell') || root.querySelector('main') || (document as any).body;
+            helper.value = text;
+            helper.setAttribute('aria-label', 'Másolható szöveg');
+            helper.style.cssText = 'position:fixed;top:20px;left:20px;z-index:99999;width:80%;height:80px';
+            holder.append(helper);
+            helper.focus(({ preventScroll: true } as any));
+            helper.select();
+            let copied: any = false;
+            try {
+                copied = (document as any).execCommand('copy');
+            }
+            catch { }
+            helper.remove();
+            previous?.focus(({ preventScroll: true } as any));
+            toast(copied ? 'A vágólapra másoltuk.' : 'A böngésző nem engedélyezte a másolást.');
+            return copied;
+        }
+    }
+    function resizeEmbed(): any { if (embed)
+        requestAnimationFrame((): any => { parent.postMessage(({ type: 'admiral-list-height', height: (document as any).documentElement.scrollHeight, instance: config.instance } as any), '*'); }); }
+    // Hover and keyboard focus preview the paired room without changing the active panel.
+    for (const name of (['pointerover', 'pointermove', 'pointerout', 'focusin', 'focusout'] as any))
+        root.addEventListener(name, (event: any): any => {
+            if (event.pointerType === 'touch')
+                return;
+            const button: any = event.target.closest?.('.room-marker,.room-legend-button');
+            if (!button?.closest('#detail-dialog') || button.contains(event.relatedTarget))
+                return;
+            if (name === 'pointermove' && button.classList.contains('is-active'))
+                return;
+            if (name === 'pointerover' || name === 'pointermove')
+                hoverPlanRoom = button.dataset.planRoom;
+            if (name === 'pointerout')
+                hoverPlanRoom = null;
+            if (name === 'focusin')
+                focusedPlanRoom = button.dataset.planRoom;
+            if (name === 'focusout')
+                focusedPlanRoom = null;
+            paintPlanRoom(name === 'focusin' ? focusedPlanRoom : hoverPlanRoom || focusedPlanRoom || selectedPlanRoom);
+        }, events);
+    root.addEventListener('click', (event: any): any => {
+        if (!event.target.closest('.detail-share-wrap'))
+            closeShare(false);
+        const clickedRow: any = event.target.closest('.apartment-row[data-unit]');
+        if (clickedRow && !event.target.closest('button,a,input,label,select,textarea,[role="button"]')) {
+            const selection: any = (window as any).getSelection();
+            if (selection && !selection.isCollapsed && (clickedRow.contains(selection.anchorNode) || clickedRow.contains(selection.focusNode)))
+                return;
+            clickedRow.querySelector('[data-detail]')?.focus(({ preventScroll: true } as any));
+            detail(clickedRow.dataset.unit);
+            return;
+        }
+        const t: any = event.target.closest('button,a[data-download],[data-close]');
+        if (!t)
+            return;
+        if (t.hasAttribute('data-share'))
+            shareApartment(t.dataset.share, t);
+        if (t.hasAttribute('data-share-close'))
+            closeShare();
+        if (t.hasAttribute('data-share-copy'))
+            copyShareLink(t.dataset.shareCopy);
+        if (t.hasAttribute('data-detail-tab'))
+            selectDetailPanel(t.dataset.detailTab);
+        if (t.hasAttribute('data-document-view'))
+            selectDetailDocument(t.dataset.documentView);
+        if (t.hasAttribute('data-room-view'))
+            selectDetailRoomView(t.dataset.roomView);
+        if (t.hasAttribute('data-plan-room'))
+            selectPlanRoom(t.dataset.planRoom, t);
+        if (t.hasAttribute('data-inquiry-placeholder')) {
+            const dialog: any = $('detail-dialog'), note: any = dialog.querySelector('.inquiry-pending');
+            if (note) {
+                note.hidden = !note.hidden;
+                t.setAttribute('aria-expanded', String(!note.hidden));
+                if (!note.hidden)
+                    positionInquiryNotice();
+            }
+        }
+        if (t.hasAttribute('data-media'))
+            openMedia(t.dataset.media, t.dataset.mediaKind);
+        if (t.hasAttribute('data-media-tab'))
+            showMedia(Number(t.dataset.mediaTab));
+        if (t.hasAttribute('data-media-retry') && mediaView) {
+            showMedia(mediaView.index);
+            $('media-dialog').querySelector('.media-stage')?.focus();
+        }
+        if (t.hasAttribute('data-zoom'))
+            zoomMedia(t.dataset.zoom);
+        if (t.hasAttribute('data-download')) {
+            event.preventDefault();
+            downloadDatasheet(t.dataset.download, t);
+        }
+        if (t.id === 'reset' || t.hasAttribute('data-reset'))
+            reset();
+        if (t.id === 'mobile-filters') {
+            const open: any = $('filters').dataset.open !== 'true';
+            $('filters').dataset.open = String(open);
+            t.setAttribute('aria-expanded', String(open));
+            resizeEmbed();
+        }
+        if (t.hasAttribute('data-remove-filter')) {
+            const id: any = t.dataset.removeFilter;
+            state[id] = defaults[id];
+            syncControls();
+            render();
+        }
+        if (t.hasAttribute('data-sort')) {
+            const key: any = t.dataset.sort;
+            state.sort = key === 'floor' ? 'floor' : `${key}-${state.sort === `${key}-asc` ? 'desc' : 'asc'}`;
+            syncControls();
+            render();
+        }
+        if (t.hasAttribute('data-save')) {
+            const id: any = t.dataset.save;
+            if (favorites.has(id))
+                favorites.delete(id);
+            else
+                favorites.add(id);
+            try {
+                localStorage.setItem('admiral-park:favorites:v1', JSON.stringify(([...favorites] as any)));
+            }
+            catch {
+                storage = false;
+            }
+            const wasDetail: any = $('detail-dialog').open;
+            render();
+            if (wasDetail) {
+                const a: any = byId(id);
+                const b: any = $('detail-dialog').querySelector(`[data-save="${CSS.escape(id)}"]`);
+                if (b) {
+                    const holder: any = (document as any).createElement('div');
+                    holder.innerHTML = saveButton(a, true);
+                    b.replaceWith(holder.firstElementChild);
+                    $('detail-dialog').querySelector('[data-save]')?.focus();
+                }
+            }
+            else
+                $('results').querySelector(`[data-save="${CSS.escape(id)}"]`)?.focus();
+            toast(favorites.has(id) ? `A(z) ${id} lakást elmentettük${storage ? '' : '. A mentés csak ezen az oldalon marad meg'}.` : `A(z) ${id} lakást eltávolítottuk a kedvencekből.`);
+        }
+        if (t.hasAttribute('data-detail'))
+            detail(t.dataset.detail);
+        if (t.hasAttribute('data-compare')) {
+            const id: any = t.dataset.compare;
+            if (selected.has(id))
+                selected.delete(id);
+            else {
+                if (selected.size >= 3) {
+                    toast('Legfeljebb 3 lakás hasonlítható össze.');
+                    return;
+                }
+                selected.add(id);
+            }
+            t.setAttribute('aria-pressed', String(selected.has(id)));
+            renderTray();
+        }
+        if (t.hasAttribute('data-close'))
+            closeDialog(t.closest('dialog'));
+        if (t.hasAttribute('data-clear-compare')) {
+            selected.clear();
+            render();
+        }
+        if (t.hasAttribute('data-open-compare'))
+            showCompare();
+        if (t.hasAttribute('data-from-compare')) {
+            closeDialog($('compare-dialog'));
+            detail(t.dataset.fromCompare);
+        }
+        if (t.hasAttribute('data-copy-inquiry')) {
+            const a: any = byId(t.dataset.copyInquiry);
+            copyText(`Érdeklődöm az Admiral Park ${a.id} lakása iránt.\n${a.building} épület, ${floorText(a)}\nNettó alapterület: ${area(a.areaInterior)}\nErkély: ${area(a.areaTerrace)}\nBruttó ár: ${price(a.price)}\n${apartmentLink(a.id)}`);
+        }
+    }, events);
+    $('filters').addEventListener('submit', (e: any): any => e.preventDefault(), events);
+    $('filters').addEventListener('input', (e: any): any => { const id: any = e.target.id; if (!filterIds.includes(id))
+        return; if (numericFilters.has(id))
+        updateRange(id);
+    else
+        state[id] = checks.has(id) ? e.target.checked : e.target.value; render(); }, events);
+    function moveRangeOnTrack(event: any): any {
+        if (!rangeDrag || rangeDrag.pointerId !== event.pointerId)
+            return;
+        const { input, track }: any = rangeDrag, rect: any = track.querySelector('.slider-track').getBoundingClientRect();
+        const ratio: any = Math.max(0, Math.min(1, (event.clientX - rect.left) / Math.max(1, rect.width)));
+        input.value = String(Number(input.min) + ratio * (Number(input.max) - Number(input.min)));
+        updateRange(input.id);
+        render();
+    }
+    $('filters').addEventListener('pointerdown', (event: any): any => {
+        const track: any = event.target.closest('.range-slider');
+        if (!track || event.target.matches('input') || event.button !== 0)
+            return;
+        const inputs: any = ([...track.querySelectorAll('input[type="range"]')] as any);
+        if (inputs.some((input: any): any => input.disabled))
+            return;
+        const rect: any = track.querySelector('.slider-track').getBoundingClientRect();
+        const value: any = Number(inputs[0].min) + (event.clientX - rect.left) / Math.max(1, rect.width) * (Number(inputs[0].max) - Number(inputs[0].min));
+        const input: any = inputs.reduce((closest: any, item: any): any => Math.abs(Number(item.value) - value) < Math.abs(Number(closest.value) - value) ? item : closest);
+        rangeDrag = ({ input, track, pointerId: event.pointerId } as any);
+        track.setPointerCapture(event.pointerId);
+        input.focus();
+        event.preventDefault();
+        moveRangeOnTrack(event);
+    }, events);
+    $('filters').addEventListener('pointermove', moveRangeOnTrack, events);
+    for (const name of (['pointerup', 'pointercancel'] as any))
+        $('filters').addEventListener(name, (event: any): any => { if (rangeDrag?.pointerId === event.pointerId)
+            rangeDrag = null; }, events);
+    $('sort').addEventListener('change', (e: any): any => { state.sort = e.target.value; render(); }, events);
+    root.addEventListener('keydown', (event: any): any => {
+        if (event.key === 'Escape' && closeShare()) {
+            event.preventDefault();
+            event.stopPropagation();
+            return;
+        }
+        const tab: any = event.target.closest('[role=tab][data-detail-tab],[role=tab][data-document-view],[role=tab][data-room-view]');
+        if (!tab || !(['ArrowLeft', 'ArrowRight', 'Home', 'End'] as any).includes(event.key))
+            return;
+        const tabs: any = ([...tab.closest('[role=tablist]').querySelectorAll('[role=tab]')] as any), current: any = tabs.indexOf(tab), index: any = event.key === 'Home' ? 0 : event.key === 'End' ? tabs.length - 1 : (current + (event.key === 'ArrowRight' ? 1 : -1) + tabs.length) % tabs.length;
+        event.preventDefault();
+        tabs[index].click();
+        tabs[index].focus(({ preventScroll: true } as any));
+    }, events);
+    root.addEventListener('error', (event: any): any => {
+        const image: any = event.target;
+        if (image.matches?.('img[data-thumbnail]')) {
+            image.hidden = true;
+            const fallback: any = image.parentElement.querySelector('.preview-unavailable');
+            if (fallback)
+                fallback.hidden = false;
+        }
+    }, ({ ...events, capture: true } as any));
+    for (const dialog of dialogs) {
+        dialog.addEventListener('cancel', (e: any): any => { e.preventDefault(); if (dialog.id === 'detail-dialog' && closeShare())
+            return; closeDialog(dialog); }, events);
+        dialog.addEventListener('click', (e: any): any => { if (e.target === dialog) {
+            const r: any = dialog.getBoundingClientRect();
+            if (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom)
+                closeDialog(dialog);
+        } }, events);
+        dialog.addEventListener('close', (): any => finishDialogClose(dialog), events);
+    }
+    const mediaDialog: any = $('media-dialog');
+    mediaDialog?.addEventListener('pointerdown', (event: any): any => {
+        const stage: any = event.target.closest('.media-stage');
+        if (!stage || !mediaView || mediaView.scale <= 1 || event.button !== 0)
+            return;
+        event.preventDefault();
+        stage.focus();
+        stage.setPointerCapture(event.pointerId);
+        mediaView.drag = ({ pointerId: event.pointerId, startX: event.clientX, startY: event.clientY, x: mediaView.x, y: mediaView.y } as any);
+        stage.dataset.dragging = 'true';
+    }, events);
+    mediaDialog?.addEventListener('pointermove', (event: any): any => {
+        if (!mediaView?.drag || mediaView.drag.pointerId !== event.pointerId)
+            return;
+        mediaView.x = mediaView.drag.x + event.clientX - mediaView.drag.startX;
+        mediaView.y = mediaView.drag.y + event.clientY - mediaView.drag.startY;
+        updateMediaTransform();
+    }, events);
+    function stopMediaDrag(event: any): any {
+        if (!mediaView?.drag || mediaView.drag.pointerId !== event.pointerId)
+            return;
+        const stage: any = mediaDialog.querySelector('.media-stage');
+        mediaView.drag = null;
+        if (stage) {
+            stage.dataset.dragging = 'false';
+            if (stage.hasPointerCapture(event.pointerId))
+                stage.releasePointerCapture(event.pointerId);
+        }
+    }
+    mediaDialog?.addEventListener('pointerup', stopMediaDrag, events);
+    mediaDialog?.addEventListener('pointercancel', stopMediaDrag, events);
+    mediaDialog?.addEventListener('keydown', (event: any): any => {
+        if (!mediaView)
+            return;
+        if (event.target.matches('[role="tab"]') && (['ArrowLeft', 'ArrowRight', 'Home', 'End'] as any).includes(event.key)) {
+            event.preventDefault();
+            const index: any = event.key === 'Home' ? 0 : event.key === 'End' ? mediaView.entries.length - 1 : mediaView.index + (event.key === 'ArrowRight' ? 1 : -1);
+            showMedia(index);
+            mediaDialog.querySelector('[role="tab"][aria-selected="true"]')?.focus();
+            return;
+        }
+        if ((['+', '=', '-', '0'] as any).includes(event.key)) {
+            event.preventDefault();
+            zoomMedia(event.key === '0' ? 'reset' : event.key === '-' ? 'out' : 'in');
+            return;
+        }
+        if (!event.target.closest('.media-stage') || !event.key.startsWith('Arrow'))
+            return;
+        event.preventDefault();
+        if (mediaView.scale <= 1) {
+            if ((['ArrowLeft', 'ArrowRight'] as any).includes(event.key))
+                showMedia(mediaView.index + (event.key === 'ArrowRight' ? 1 : -1));
+            return;
+        }
+        const step: any = event.shiftKey ? 120 : 45;
+        if (event.key === 'ArrowLeft')
+            mediaView.x += step;
+        if (event.key === 'ArrowRight')
+            mediaView.x -= step;
+        if (event.key === 'ArrowUp')
+            mediaView.y += step;
+        if (event.key === 'ArrowDown')
+            mediaView.y -= step;
+        updateMediaTransform();
+    }, events);
+    (window as any).addEventListener('resize', (): any => { updateMediaTransform(); requestAnimationFrame((): any => { positionInquiryNotice(); positionShareMenu(); }); }, events);
+    if (useUrl)
+        (window as any).addEventListener('popstate', (): any => { state = ({ ...defaults, sort: 'id' } as any); readUrl(); syncControls(); render(); const id: any = new URL(location.href).searchParams.get('apartment'); if (id)
+            detail(id);
+        else if ($('detail-dialog').open)
+            closeDialog($('detail-dialog')); }, events);
+    if (embed)
+        (document as any).documentElement.classList.add('embedded');
+    const observer: any = new ResizeObserver(resizeEmbed);
+    observer.observe(root.host || (document as any).body);
+    async function load(): Promise<any> {
+        config.onState?.('loading', '');
+        $('results').setAttribute('aria-busy', 'true');
+        $('results').innerHTML = '<div class="empty-state" role="status"><p>Lakások betöltése…</p></div>';
+        try {
+            const source: any = config.dataUrl || './apartments.json';
+            const response: any = await fetch(source, ({ cache: 'no-cache', signal } as any));
+            if (!response.ok)
+                throw new Error(`HTTP ${response.status}`);
+            data = await response.json();
+            if (!data || data.schemaVersion !== '1.0' || !Array.isArray(data.apartments))
+                throw new Error('Nem támogatott adatformátum');
+            const ids: any = new Set();
+            for (const a of data.apartments) {
+                if (typeof a.id !== 'string' || !a.id || ids.has(a.id) || !(Object as any).hasOwn(labels, a.status) || typeof a.building !== 'string')
+                    throw new Error('Hibás vagy ismétlődő lakásadat');
+                ids.add(a.id);
+                for (const field of (['floor', 'rooms', 'areaInterior', 'areaTerrace', 'areaGarden', 'price'] as any)) {
+                    if (a[field] != null && (!hasNumber(a[field]) || a[field] < 0))
+                        throw new Error('Hibás számadat');
+                }
+            }
+            apartments = data.apartments;
+            favorites = new Set(([...favorites] as any).filter((id: any): any => ids.has(id)));
+            setupOptions('building', ([...new Set(apartments.map((a: any): any => a.building))] as any).sort().map((v: any): any => ([v, `${v} épület`] as any)));
+            setupOptions('floor', ([...new Set(apartments.map((a: any): any => a.floor).filter((v: any): any => v != null))] as any).sort((a: any, b: any): any => a - b).map((v: any): any => ([String(v), v === 0 ? 'Földszint' : `${v}. emelet`] as any)));
+            setupOptions('rooms', ([...new Set(apartments.map((a: any): any => a.rooms).filter((v: any): any => v != null).map((v: any): any => v >= 4 ? '4+' : String(v)))] as any).sort().map((v: any): any => ([v, `${v === '4+' ? v : number.format(Number(v))} szoba`] as any)));
+            setupRanges();
+            readUrl();
+            syncControls();
+            $('data-note').textContent = 'A nettó belső alapterület, az erkély és a kert külön szerepel. Az árak bruttó árak. A helyiségadatok munkaközi tervből származnak; az aktuális árat és elérhetőséget az értékesítő erősíti meg.';
+            render();
+            config.onState?.('ready', '');
+            config.onReady?.(controller);
+            const id: any = requestedApartmentId || (useUrl ? new URL(location.href).searchParams.get('apartment') : null);
+            if (id && byId(id))
+                detail(id);
+            else if (id)
+                config.onState?.('error', 'A kiválasztott lakás nem található.');
+            if (root === (document as any))
+                (window as any).admiralList = ({ getData: (): any => structuredClone(data), getState: (): any => (({ ...state } as any)), reload: load } as any);
+        }
+        catch (error: any) {
+            if (signal.aborted)
+                return;
+            $('results').setAttribute('aria-busy', 'false');
+            $('result-count').textContent = 'Az adatok nem érhetők el';
+            $('results').innerHTML = '<div class="empty-state" role="alert"><h2>Nem sikerült betölteni a lakáslistát.</h2><p>Próbálja újra néhány pillanat múlva.</p><button class="button-primary" id="retry">Újrapróbálom</button></div>';
+            $('retry').addEventListener('click', load);
+            resizeEmbed();
+            config.onState?.('error', 'Nem sikerült betölteni a lakás adatait. Próbálja újra.');
+        }
+    }
+    const controller: any = ({
+        open(id: any) {
+            requestedApartmentId = typeof id === 'string' ? id : null;
+            if (!requestedApartmentId)
+                return;
+            if (data) {
+                if (byId(requestedApartmentId)) {
+                    config.onState?.('ready', '');
+                    detail(requestedApartmentId);
+                }
+                else
+                    config.onState?.('error', 'A kiválasztott lakás nem található.');
+            }
+        },
+        close() { requestedApartmentId = null; for (const dialog of ([...dialogs] as any).reverse())
+            closeDialog(dialog); },
+        retry() { return load(); },
+        dispose() { lifecycle.abort(); observer.disconnect(); detailResize?.disconnect(); clearTimeout(toastTimer); for (const d of ([...dialogs] as any).reverse()) {
+            if (d.open)
+                d.close();
+            modalRegistry.delete(d);
+        } for (const url of downloadUrls)
+            URL.revokeObjectURL(url); downloadUrls.clear(); mediaView = null; syncModalState(); }
+    } as any);
+    load();
+    return controller;
+}
+
+
+interface OrbitApartmentCardController {
+    open: (id: string) => void
+    close: () => void
+    retry: () => unknown
+    dispose: () => void
+}
+interface OrbitApartmentCardProps {
+    openId: string | null
+    dataUrl: string
+    assetBase: string
+    inquiryUrl: string
+    pageUrl: string
+    onOpenChange: (open: boolean) => void
+    onClosed: () => void
+    onReady?: () => void
+}
+
+function OrbitApartmentCard(props: OrbitApartmentCardProps) {
+    const { openId, dataUrl, assetBase, inquiryUrl, pageUrl } = props
+    const host = React.useRef<HTMLDivElement | null>(null)
+    const controller = React.useRef<OrbitApartmentCardController | null>(null)
+    const noticeHost = React.useRef<HTMLDivElement | null>(null)
+    const opener = React.useRef<HTMLElement | null>(null)
+    const lastRequestedId = React.useRef<string | null>(null)
+    const retryFrame = React.useRef<number | null>(null)
+    const restoreFrame = React.useRef<number | null>(null)
+    const current = React.useRef(props)
+    const closing = React.useRef(false)
+    current.current = props
+    const [started, setStarted] = React.useState(false)
+    const [state, setState] = React.useState<"idle" | "loading" | "ready" | "error">("idle")
+    const [error, setError] = React.useState("")
+    const [nativeOpen, setNativeOpen] = React.useState(false)
+
+    const restoreFocus = React.useCallback(() => {
+        if (restoreFrame.current !== null) cancelAnimationFrame(restoreFrame.current)
+        restoreFrame.current = requestAnimationFrame(() => {
+            restoreFrame.current = null
+            const target = opener.current
+            if (target?.isConnected && target.getClientRects().length && !target.closest("[inert]")) target.focus({ preventScroll: true })
+        })
+    }, [])
+
+    React.useEffect(() => () => {
+        if (retryFrame.current !== null) cancelAnimationFrame(retryFrame.current)
+        if (restoreFrame.current !== null) cancelAnimationFrame(restoreFrame.current)
+    }, [])
+
+    React.useEffect(() => {
+        if (openId) {
+            if (restoreFrame.current !== null) { cancelAnimationFrame(restoreFrame.current); restoreFrame.current = null }
+            if (!lastRequestedId.current) opener.current = document.activeElement instanceof HTMLElement ? document.activeElement : null
+            closing.current = false
+            setStarted(true)
+        } else if (lastRequestedId.current && !closing.current) { closing.current = true; restoreFocus() }
+        lastRequestedId.current = openId
+    }, [openId, restoreFocus])
+
+    React.useEffect(() => {
+        if (!started || !host.current) return
+        const shadow = host.current.shadowRoot || host.current.attachShadow({ mode: "open" })
+        let alive = true
+        let lastOpen = false
+        // The list shell stays available for the shared engine's selectors, while its
+        // renderer is disabled. No list rows or their image requests are created.
+        shadow.innerHTML = "<style>" + ORBIT_APARTMENT_CARD_STYLES + "\n:host{position:fixed!important;inset:0 auto auto 0!important;width:0!important;height:0!important;min-height:0!important;background:transparent!important;pointer-events:none!important;overflow:visible!important}.list-container,#compare-tray{display:none!important}dialog,.toast{pointer-events:auto}dialog{font-size:14px}</style>" + ORBIT_APARTMENT_CARD_SHELL
+        const list = shadow.querySelector<HTMLElement>(".list-container")
+        if (list) { list.hidden = true; list.inert = true }
+        setState("loading")
+        setError("")
+        setNativeOpen(false)
+        try {
+            const runtime = mountOrbitApartmentCardRuntime(shadow, {
+                dataUrl,
+                assetBaseUrl: assetBase,
+                inquiryUrl,
+                pageUrl: pageUrl || window.location.href,
+                disableUrl: true,
+                detailOnly: true,
+                apartment: current.current.openId,
+                onState: (next: "loading" | "ready" | "error", message: string) => {
+                    if (!alive) return
+                    setState(next)
+                    setError(message || "")
+                },
+                onReady: () => { if (alive) current.current.onReady?.() },
+                onOpenChange: (next: boolean) => {
+                    if (!alive || next === lastOpen) return
+                    lastOpen = next
+                    setNativeOpen(next)
+                    current.current.onOpenChange(next)
+                    if (!next && !closing.current) { closing.current = true; current.current.onClosed(); restoreFocus() }
+                },
+            }) as OrbitApartmentCardController
+            controller.current = runtime
+            return () => {
+                // StrictMode disposal must not clear the current apartment selection.
+                alive = false
+                if (controller.current === runtime) controller.current = null
+                runtime.dispose()
+                shadow.replaceChildren()
+            }
+        } catch {
+            setState("error")
+            setError("Nem sikerült megnyitni a lakás adatait. Próbálja újra.")
+            return () => { alive = false; controller.current = null; shadow.replaceChildren() }
+        }
+    }, [started, dataUrl, assetBase, inquiryUrl, pageUrl, restoreFocus])
+
+    React.useEffect(() => {
+        if (openId) controller.current?.open(openId)
+        else controller.current?.close()
+    }, [openId, started, dataUrl, assetBase, inquiryUrl, pageUrl])
+
+    const close = React.useCallback(() => {
+        if (closing.current) return
+        closing.current = true
+        if (retryFrame.current !== null) { cancelAnimationFrame(retryFrame.current); retryFrame.current = null }
+        controller.current?.close()
+        current.current.onOpenChange(false)
+        current.current.onClosed()
+        restoreFocus()
+    }, [restoreFocus])
+    const retry = React.useCallback(() => {
+        if (controller.current) {
+            controller.current.open(current.current.openId || "")
+            controller.current.retry()
+        } else {
+            setStarted(false)
+            if (retryFrame.current !== null) cancelAnimationFrame(retryFrame.current)
+            retryFrame.current = requestAnimationFrame(() => { retryFrame.current = null; if (current.current.openId) setStarted(true) })
+        }
+    }, [])
+    const notice = !!openId && !nativeOpen && (state === "loading" || state === "error" || !started)
+
+    React.useEffect(() => {
+        if (notice) noticeHost.current?.querySelector<HTMLButtonElement>('button[aria-label="Close apartment details"]')?.focus({ preventScroll: true })
+    }, [notice, state])
+
+    return <div
+        data-orbit-detail-card=""
+        data-orbit-ignore=""
+        data-state={state === "idle" && openId ? "loading" : state}
+        data-apartment-id={openId || ""}
+        style={{ position: "absolute", inset: 0, pointerEvents: "none", zIndex: 30 }}
+    >
+        <div ref={host} data-orbit-ignore="" style={{ position: "fixed", top: 0, left: 0, width: 0, height: 0, pointerEvents: "none" }} />
+        {notice && <div
+            ref={noticeHost}
+            data-orbit-ignore=""
+            role="dialog"
+            aria-modal="true"
+            aria-label="Apartment details"
+            onKeyDown={event => {
+                if (event.key === "Escape") { event.preventDefault(); event.stopPropagation(); close(); return }
+                if (event.key === "Tab") {
+                    const buttons = Array.from(event.currentTarget.querySelectorAll<HTMLButtonElement>("button:not(:disabled)"))
+                    const first = buttons[0], last = buttons[buttons.length - 1]
+                    if (first && ((!event.shiftKey && document.activeElement === last) || (event.shiftKey && document.activeElement === first) || !event.currentTarget.contains(document.activeElement))) {
+                        event.preventDefault()
+                        const target = event.shiftKey ? last : first
+                        target?.focus()
+                    }
+                    event.stopPropagation()
+                }
+            }}
+            style={{ position: "fixed", inset: 0, display: "grid", placeItems: "center", background: "rgba(36,40,36,.42)", backdropFilter: "blur(5px)", pointerEvents: "auto", padding: 20 }}
+        >
+            <div style={{ position: "relative", width: "min(460px,100%)", padding: "42px 30px 30px", color: "#242824", background: "linear-gradient(180deg,#fdfbfb,#e4e9ec)", font: "14px/1.7 Montserrat,Arial,sans-serif", boxShadow: "0 24px 100px rgba(36,40,36,.22)" }}>
+                <button type="button" aria-label="Close apartment details" onClick={close} style={{ position: "absolute", top: 8, right: 12, border: 0, background: "none", color: "inherit", fontSize: 28, cursor: "pointer" }}>×</button>
+                <p style={{ margin: "0 0 12px", fontSize: 24, fontWeight: 500 }}>{openId}</p>
+                {state === "error" ? <><p role="alert" style={{ margin: "0 0 20px" }}>{error || "Nem sikerült betölteni a lakás adatait."}</p><button type="button" aria-label="Retry apartment details" onClick={retry} style={{ minHeight: 42, padding: "9px 20px", border: "1px solid #a38c69", borderRadius: 999, background: "none", color: "inherit", font: "inherit", cursor: "pointer" }}>Újrapróbálom</button></> : <p role="status" aria-live="polite" style={{ margin: 0 }}>Lakásadatok betöltése…</p>}
+            </div>
+        </div>}
+    </div>
+}
+
 
 /**
  * @framerSupportedLayoutWidth any-prefer-fixed
@@ -850,6 +2200,7 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
         detailsMode = "preview", detailsLanguage = "hu", detailsBottom = 32, detailsInset = 48, apartmentPreview,
         orbitLayout = "mobile", apartmentDataUrl = "https://raw.githubusercontent.com/UnbuiltMarket/admiral-park/main/data/apartments.json",
         apartmentAssetBase = HOMEPAGE_ASSETS + "/apartment-list/", previewApartmentId = "A001", detailPageUrl = "/lista", inquiryUrl = "", orbitBackground = "#fdfbfb",
+        detailDataUrl = "https://raw.githubusercontent.com/UnbuiltMarket/admiral-park/main/data/apartment-details.json",
         background = "#101820", alt = "Explore Admiral Park, Balatonfüred", style,
     } = props
     const staticRenderer = useIsStaticRenderer()
@@ -881,6 +2232,8 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
     const useStudio = (orbitLayout === "studio" || orbitLayout === "mobile" && mobilePresentation) && detailsMode !== "off"
     const jsonDetails = orbitLayout !== "classic" && detailsMode !== "off"
     const [selectedApartmentId, setSelectedApartmentId] = React.useState<string | null>(null)
+    const [detailApartmentId, setDetailApartmentId] = React.useState<string | null>(null)
+    const detailOpen = React.useRef(false)
     const apartmentData = useOrbitApartments(apartmentDataUrl, jsonDetails && (staticRenderer && editorView === "orbit" || hostVisible && ["building", "connection", "handoff", "orbit"].includes(stage)))
     const selectedApartment = React.useMemo(() => {
         const records = apartmentData.dataset?.apartments || []
@@ -900,6 +2253,18 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
     const rootRef = React.useRef<HTMLDivElement>(null), heroRootRef = React.useRef<HTMLDivElement>(null)
     const heroCanvasRef = React.useRef<HTMLCanvasElement>(null), orbitCanvasRef = React.useRef<HTMLCanvasElement>(null), posterRef = React.useRef<HTMLImageElement>(null)
     const actions = React.useRef<HomepageActions | null>(null)
+    const openApartmentDetails = React.useCallback((id?: string) => {
+        const value = id || selectedApartment?.id, root = rootRef.current
+        if (!value || !apartmentData.dataset?.apartments.some(apartment => apartment.id === value) || !root ||
+            root.dataset.homepageStage !== "orbit" || root.dataset.orbitState !== "checkpoint" || Number(root.dataset.orbitCheckpoint) < 0) return
+        setSelectedApartmentId(value); detailOpen.current = true; actions.current?.orbit?.setSuspended(true); setDetailApartmentId(value)
+    }, [selectedApartment?.id, apartmentData.dataset])
+    const closeApartmentDetails = React.useCallback(() => {
+        detailOpen.current = false; setDetailApartmentId(null); actions.current?.orbit?.setSuspended(false)
+    }, [])
+    const reportDetailOpen = React.useCallback((open: boolean) => {
+        if (rootRef.current) rootRef.current.dataset.apartmentDetailOpen = String(open)
+    }, [])
     const studioViewportRef = React.useRef<HTMLDivElement | null>(null)
     const studioEnabled = React.useRef(useStudio); studioEnabled.current = useStudio
     const framingConfig = React.useRef<HomepageFramingConfig>({ enabled: phoneFraming, sourceWidth: phoneImageWidth, top: phoneImageTop, detailsHeight, detailsBottom, reserveDetails: detailsMode !== "off" })
@@ -1047,6 +2412,7 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
                 }
             },
         })
+        orbit?.setSuspended(detailOpen.current)
         // Prefetch only compressed bytes, using the browser cache. No second decoded sequence lives beside SEQ_01.
         function warmConnection() {
             const connection = (navigator as Navigator & { connection?: { saveData?: boolean; effectiveType?: string } }).connection
@@ -1252,6 +2618,20 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
     }, [jsonDetails, apartmentData.dataset])
 
     React.useEffect(() => {
+        const root = rootRef.current
+        if (!root || staticRenderer) return
+        const click = (event: Event) => {
+            const detail = (event as CustomEvent<unknown>).detail
+            const values = detail && typeof detail === "object" ? detail as { id?: unknown; apartmentId?: unknown; number?: unknown } : null
+            const id = typeof detail === "string" ? detail : values?.id ?? values?.apartmentId ?? values?.number
+            if (typeof id === "string") openApartmentDetails(id)
+        }
+        root.addEventListener("admiral:apartment-click", click)
+        return () => root.removeEventListener("admiral:apartment-click", click)
+    }, [openApartmentDetails, staticRenderer])
+    React.useEffect(() => { if (stage !== "orbit" && detailApartmentId) closeApartmentDetails() }, [stage, detailApartmentId, closeApartmentDetails])
+
+    React.useEffect(() => {
         const root = rootRef.current, channel = root && homepageChannels.get(root)
         if (channel) { channel.timing = timing.current; notifyHomepage() }
     }, [openingOut, buildingIn, buildingFull, ctaIn, rise])
@@ -1296,7 +2676,7 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
             <div aria-hidden="true" style={{ position: "absolute", inset: 0, background: orbitBackground, opacity: "var(--admiral-studio-light, 0)" as unknown as number, pointerEvents: "none" }} />
             {useStudio && <OrbitApartmentStudio active={orbitVisible || orbitStatic} mode={detailsMode} dataset={apartmentData.dataset} dataStatus={apartmentData.status} error={apartmentData.error}
                 onRetry={apartmentData.retry} apartment={selectedApartment} onSelect={setSelectedApartmentId} assetBase={apartmentAssetBase} detailsUrl={detailPageUrl} inquiryUrl={inquiryUrl}
-                onViewport={setStudioViewport} language={detailsLanguage} onLayout={refreshStudioLayout} />}
+                onViewport={setStudioViewport} language={detailsLanguage} onLayout={refreshStudioLayout} onOpenDetails={() => openApartmentDetails()} />}
             <div ref={heroRootRef} data-admiral-sequence="" style={{ position: "absolute", inset: 0, zIndex: 2, pointerEvents: stage === "orbit" || stage === "handoff" ? "none" : "auto", clipPath: imageClip }}>
                 <img ref={posterRef} src={posterUrl} alt={alt} loading="eager" decoding="async" {...{ fetchpriority: "high" }} crossOrigin="anonymous" draggable={false}
                     style={{ position: "absolute", top: "var(--admiral-image-y, 0px)", left: "var(--admiral-image-x, 0px)", width: "var(--admiral-image-width, 100%)", height: "var(--admiral-image-height, 100%)", objectFit: "cover", objectPosition: `${focalX}% ${focalY}%`, pointerEvents: "none" }} />
@@ -1315,6 +2695,7 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
                 {(stage === "building" || stage === "handoff" || stage === "orbit") && orbitInfo.state === "error" && <button type="button" style={homepageButton} onClick={() => { void (rootRef.current as (HTMLElement & { retryOrbit?: () => Promise<void> }) | null)?.retryOrbit?.() }}>Retry orbit</button>}
                 {(stage === "building" || stage === "connection" || stage === "handoff" || stage === "orbit") && <button type="button" style={homepageButton} onClick={() => actions.current?.overview()}>Overview</button>}
                 {stage === "orbit" && <>
+                    {detailsMode === "preview" && selectedApartment && <button type="button" disabled={orbitMoving} style={orbitButtonStyle} onClick={() => openApartmentDetails()}>Open apartment details</button>}
                     <button type="button" aria-label="Previous view" disabled={orbitMoving} style={orbitButtonStyle} onClick={() => actions.current?.orbit?.go(-1)}>←</button>
                     <span aria-live="polite" style={{ ...homepageButton, cursor: "default", minWidth: 65, textAlign: "center" }}>{orbitInfo.checkpoint >= 0 ? `View ${orbitInfo.checkpoint + 1} / ${checkpoints}` : orbitInfo.state === "checkpoint" ? "Custom view" : orbitInfo.state === "buffering" ? "Preparing view…" : orbitInfo.state === "error" ? "View unavailable" : "Looking around"}</span>
                     <button type="button" aria-label="Next view" disabled={orbitMoving} style={orbitButtonStyle} onClick={() => actions.current?.orbit?.go(1)}>→</button>
@@ -1332,7 +2713,9 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
                 <button type="button" style={homepageButton} onClick={() => { void (rootRef.current as (HTMLElement & { retryOrbit?: () => Promise<void> }) | null)?.retryOrbit?.() }}>Retry orbit</button>
             </div>}
             {!useStudio && detailsMode !== "off" && <ApartmentDetailsStrip apartment={detailsData} language={detailsLanguage} visible={detailsVisible} preview={!jsonDetails && detailsMode === "preview"}
-                bottom={detailsBottom} inset={detailsInset} onHeightChange={setDetailsHeight} />}
+                bottom={detailsBottom} inset={detailsInset} onHeightChange={setDetailsHeight} onOpen={jsonDetails && selectedApartment ? () => openApartmentDetails() : undefined} />}
+            {!staticRenderer && <OrbitApartmentCard openId={detailApartmentId} dataUrl={detailDataUrl} assetBase={apartmentAssetBase} inquiryUrl={inquiryUrl} pageUrl={detailPageUrl}
+                onOpenChange={reportDetailOpen} onClosed={closeApartmentDetails} />}
             {!staticRenderer && !useStudio && jsonDetails && orbitVisible && apartmentData.status === "error" && <div data-orbit-ignore="" role="status" style={{ position: "absolute", left: "4%", bottom: 24, zIndex: 4 }}>
                 <button type="button" style={homepageButton} onClick={apartmentData.retry}>{detailsLanguage === "en" ? "Retry apartment data" : "Lakásadatok újratöltése"}</button>
             </div>}
@@ -1524,6 +2907,7 @@ addPropertyControls(AdmiralHomepageTrial, {
     apartmentAssetBase: { type: ControlType.String, title: "Media base", defaultValue: HOMEPAGE_ASSETS + "/apartment-list/", hidden: p => p.orbitLayout === "classic" },
     previewApartmentId: { type: ControlType.String, title: "Preview apartment", defaultValue: "A001", hidden: p => p.orbitLayout === "classic" || p.detailsMode === "hover" || p.detailsMode === "off", description: "A real JSON apartment ID, used until picking masks are connected. You can also change it in the preview selector." },
     detailPageUrl: { type: ControlType.String, title: "Details page", defaultValue: "/lista", hidden: p => p.orbitLayout === "classic", description: "Your Framer apartment page path. Links add ?apartment=ID to open this apartment." },
+    detailDataUrl: { type: ControlType.String, title: "Detail card JSON", defaultValue: "https://raw.githubusercontent.com/UnbuiltMarket/admiral-park/main/data/apartment-details.json", description: "Full apartment data for the shared list-view card, fetched only when an apartment is opened." },
     inquiryUrl: { type: ControlType.String, title: "Inquiry page", defaultValue: "", hidden: p => p.orbitLayout === "classic", description: "Optional enquiry page URL. If empty, the action opens the apartment details page." },
     detailsMode: { type: ControlType.Enum, title: "Apartment details", options: ["preview", "hover", "off"], optionTitles: ["Preview", "Hover", "Off"], defaultValue: "preview", description: "Preview shows real JSON data with a trial apartment selector. Hover waits for a selected apartment ID from the future masks. Off hides the apartment workspace." },
     detailsLanguage: { type: ControlType.Enum, title: "Details language", options: ["hu", "en"], optionTitles: ["Magyar", "English"], defaultValue: "hu", hidden: p => p.detailsMode === "off" },
@@ -1620,6 +3004,8 @@ const apartmentDetailsStyles = `
     box-sizing: border-box;
     pointer-events: none !important;
 }
+[data-apartment-details] [data-apartment-open] { display: block; max-width: 100%; padding: 0; border: 0; color: inherit; background: none; cursor: pointer; pointer-events: auto !important; }
+[data-apartment-details] [data-apartment-open]:focus-visible { outline: 2px solid currentColor; outline-offset: 5px; }
 [data-apartment-details] .admiral-details-grid {
     display: grid;
     grid-template-columns: minmax(95px,1.05fr) minmax(80px,.95fr) minmax(65px,.85fr) minmax(60px,.8fr) minmax(55px,.65fr) minmax(100px,1fr) 112px;
@@ -1739,7 +3125,7 @@ const apartmentDetailsStyles = `
 }
 `
 
-function ApartmentDetailsStrip({ apartment, language, visible, preview, bottom, inset, onHeightChange }: {
+function ApartmentDetailsStrip({ apartment, language, visible, preview, bottom, inset, onHeightChange, onOpen }: {
     apartment: ApartmentDetailsData | null
     language: ApartmentDetailsLanguage
     visible: boolean
@@ -1747,6 +3133,7 @@ function ApartmentDetailsStrip({ apartment, language, visible, preview, bottom, 
     bottom: number
     inset: number
     onHeightChange?: (height: number) => void
+    onOpen?: () => void
 }): React.JSX.Element {
     const last = React.useRef<{ apartment: ApartmentDetailsData; preview: boolean } | null>(apartment ? { apartment, preview } : null)
     if (apartment) last.current = { apartment, preview }
@@ -1807,7 +3194,9 @@ function ApartmentDetailsStrip({ apartment, language, visible, preview, bottom, 
             </div>
             <div className="admiral-details-field admiral-details-plan" data-apartment-field="floorplan">
                 <div className="admiral-details-label">{labels.floorplan}</div>
-                {floorplan ? <img className="admiral-details-plan-image" src={floorplan} alt={hu ? `${data.number} lakás alaprajza` : `Floor plan of apartment ${data.number}`} loading="lazy" decoding="async" draggable={false} onError={() => setFailedFloorplan(floorplan)} /> : sample ?
+                {onOpen ? <button type="button" data-apartment-open="" data-orbit-ignore="" aria-label={hu ? `${data.number} lakás részletei` : `Apartment ${data.number} details`} aria-haspopup="dialog" tabIndex={shown ? 0 : -1} disabled={!shown} onClick={onOpen}>
+                    {floorplan ? <img className="admiral-details-plan-image" src={floorplan} alt={hu ? `${data.number} lakás alaprajza` : `Floor plan of apartment ${data.number}`} loading="lazy" decoding="async" draggable={false} onError={() => setFailedFloorplan(floorplan)} /> : <span className="admiral-details-plan-empty">{hu ? "Részletek ↗" : "Details ↗"}</span>}
+                </button> : floorplan ? <img className="admiral-details-plan-image" src={floorplan} alt={hu ? `${data.number} lakás alaprajza` : `Floor plan of apartment ${data.number}`} loading="lazy" decoding="async" draggable={false} onError={() => setFailedFloorplan(floorplan)} /> : sample ?
                     <svg className="admiral-details-plan-image" viewBox="0 0 112 78" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label={hu ? "Mintaalaprajz — nem valódi lakás" : "Sample floor plan — not an actual apartment"}>
                         <path d="M7 6H105V58H77V69H7V6Z" stroke="currentColor" strokeWidth="1.3" />
                         <path d="M47 6V29M47 39V69M7 43H28M37 43H47M47 29H70M80 29H105M77 29V58M47 53H61M70 53H77" stroke="currentColor" strokeWidth="1.1" />

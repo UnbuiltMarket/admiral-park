@@ -1,0 +1,43 @@
+{
+  "schemaVersion": "1.0",
+  "sourceProject": "AdmiralApartmentList",
+  "description": "Exact list-view dialog UI with an adapter for lazy orbit opening. No apartment data is embedded.",
+  "originals": {
+    "app.js": {
+      "sha256": "e9e27b340fb8b79434b1e0f9483547388112f30f0061698390c97a66e5e6015f",
+      "bytes": 63766
+    },
+    "styles.css": {
+      "sha256": "43a8c713e85fdde16379fcd27cd4265d997d102bfee5c539fcc790988207edfa",
+      "bytes": 63971
+    },
+    "index.html": {
+      "sha256": "7ed09fd95a17cad5f24ad0736614357eca43c92a442ff8d5212526e930baa4d7",
+      "bytes": 5450
+    }
+  },
+  "adapted": {
+    "app.js": {
+      "sha256": "10f0badbd5cd1f59d0481efb44ea2c6ecfa2442bbf9cdefee83ddb2132818381",
+      "bytes": 64122
+    },
+    "styles.css": {
+      "sha256": "43a8c713e85fdde16379fcd27cd4265d997d102bfee5c539fcc790988207edfa"
+    },
+    "shell.html": {
+      "sha256": "84c2ec55b01fb822efcfde4999afb1c58ba74c141e6a625ee2595d6192c2d414"
+    }
+  },
+  "adapter": {
+    "version": 1,
+    "changes": [
+      "manual mount only",
+      "runtime and font-loader names",
+      "queued apartment selection",
+      "skip list rendering",
+      "dialog lifecycle bridge",
+      "loading and retry bridge",
+      "controller lifecycle"
+    ]
+  }
+}

@@ -4,6 +4,7 @@ import {readFile,readdir} from 'node:fs/promises';
 import {fileURLToPath} from 'node:url';
 import path from 'node:path';
 import vm from 'node:vm';
+import {createHash} from 'node:crypto';
 import {ts,requireDev} from '../scripts/tooling.mjs';
 
 const root=new URL('../',import.meta.url);
@@ -63,9 +64,9 @@ test('paste-in homepage registers its controls and server-renders without loadin
  vm.runInNewContext(compiled,{module,exports:module.exports,require:name=>name==='framer'?stub:requireDev(name)});
  assert.deepEqual(Object.keys(module.exports).sort(),['AranyhidContent','ArrivalCTA','BalatonfuredContent','BuildingContent','OpeningContent',...Array.from({length:8},(_,i)=>`OrbitView${i+1}`),'default'].sort());
  assert.equal(registered,module.exports.default);
- for(const key of ['startView','editorView','connectionBaseUrl','connectionDuration','checkpointCount','motionWidth','orbitMobileWidth','snapDuration','frameBlend','desktopBuffer','phoneBuffer','orbitStartFrame','detailsMode','detailsLanguage','detailsBottom','detailsInset','apartmentPreview','editorOrbitView','orbitStories','storyIn','storyOut','storyDelay','phoneFraming','phoneImageWidth','phoneImageTop','orbitLayout','orbitBackground','apartmentDataUrl','apartmentAssetBase','previewApartmentId','detailPageUrl','inquiryUrl',...Array.from({length:8},(_,i)=>`storyView${i+1}`)])assert.ok(controls[key],`Framer control ${key}`);
+ for(const key of ['startView','editorView','connectionBaseUrl','connectionDuration','checkpointCount','motionWidth','orbitMobileWidth','snapDuration','frameBlend','desktopBuffer','phoneBuffer','orbitStartFrame','detailsMode','detailsLanguage','detailsBottom','detailsInset','apartmentPreview','editorOrbitView','orbitStories','storyIn','storyOut','storyDelay','phoneFraming','phoneImageWidth','phoneImageTop','orbitLayout','orbitBackground','apartmentDataUrl','detailDataUrl','apartmentAssetBase','previewApartmentId','detailPageUrl','inquiryUrl',...Array.from({length:8},(_,i)=>`storyView${i+1}`)])assert.ok(controls[key],`Framer control ${key}`);
  assert.equal(controls.orbitLayout.defaultValue,'mobile');assert.deepEqual(Array.from(controls.orbitLayout.options),['mobile','studio','classic']);assert.equal(controls.orbitBackground.defaultValue,'#fdfbfb');
- assert.equal(controls.apartmentDataUrl.defaultValue,'https://raw.githubusercontent.com/UnbuiltMarket/admiral-park/main/data/apartments.json');assert.equal(controls.apartmentAssetBase.defaultValue.replace(/\/$/,''),'https://raw.githubusercontent.com/UnbuiltMarket/admiral-park/main/assets/apartment-list');assert.equal(controls.previewApartmentId.defaultValue,'A001');assert.equal(controls.detailPageUrl.defaultValue,'/lista');assert.equal(controls.inquiryUrl.defaultValue,'');
+ assert.equal(controls.apartmentDataUrl.defaultValue,'https://raw.githubusercontent.com/UnbuiltMarket/admiral-park/main/data/apartments.json');assert.equal(controls.detailDataUrl.defaultValue,'https://raw.githubusercontent.com/UnbuiltMarket/admiral-park/main/data/apartment-details.json');assert.equal(controls.apartmentAssetBase.defaultValue.replace(/\/$/,''),'https://raw.githubusercontent.com/UnbuiltMarket/admiral-park/main/assets/apartment-list');assert.equal(controls.previewApartmentId.defaultValue,'A001');assert.equal(controls.detailPageUrl.defaultValue,'/lista');assert.equal(controls.inquiryUrl.defaultValue,'');
  assert.equal(controls.duration.title,'SEQ_01 duration');assert.equal(controls.connectionDuration.title,'SEQ_02 duration');assert.equal(controls.connectionDuration.defaultValue,2.5);assert.equal(controls.connectionBaseUrl.defaultValue,'');
  assert.ok(Array.from(controls.editorView.options).includes('connection'),'Editor exposes a static connection preview');
  assert.equal(controls.snapDuration.title,'Settle time');assert.equal(controls.snapDuration.defaultValue,1.5);assert.equal(controls.snapDuration.max,10);
@@ -106,4 +107,11 @@ test('paste-in homepage registers its controls and server-renders without loadin
   const preview=requireDev('react-dom/server').renderToStaticMarkup(requireDev('react').createElement(module.exports.default,{orbitLayout:'classic',editorView:'orbit',orbitStartFrame:input}));
   assert.ok(preview.includes(`adjusted%20sequence${String(expected).padStart(4,'0')}%20copy.avif`),`Orbit start ${String(input)} resolves to ${expected}`);
  }
+});
+
+test('orbit detail card includes the exact shared list styles and native dialog shell without embedded room data',async()=>{
+ const styles=await readFile(new URL('src/shared/apartment-card/styles.css',root),'utf8'),shell=await readFile(new URL('src/shared/apartment-card/shell.html',root),'utf8'),manifest=JSON.parse(await readFile(new URL('src/shared/apartment-card/source.json',root),'utf8'));
+ assert.equal(createHash('sha256').update(styles).digest('hex'),manifest.originals['styles.css'].sha256,'The detail card uses the unchanged list-view CSS');
+ assert.ok(source.includes(JSON.stringify(styles)),'The standalone Framer file contains those exact shared styles');assert.ok(source.includes(JSON.stringify(shell)),'The standalone component contains the same native card shell');
+ assert.match(shell,/id="detail-dialog"/);assert.match(shell,/id="media-dialog"/);assert.match(source,/data-orbit-detail-card/);assert.doesNotMatch(source,/A\.0\.01\.01/,'Detailed apartment room records are fetched lazily, not embedded into every page load');
 });

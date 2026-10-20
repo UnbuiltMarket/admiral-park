@@ -10,7 +10,7 @@ The complete desktop studio experiment is preserved on the GitHub branch [`orbit
 2. Keep the outer component and its Relative parent at **100vh**, filling the viewport. The studio occupies the lower **90% of that component**, leaving a header reserve above. Do not reduce the component itself to 90vh.
 3. Use **Orbit layout → Fullscreen desktop** and **Apartment details → Preview** while the picking masks are unfinished. Existing component instances may retain the previous **Apartment studio** choice after pasting; change it explicitly. The desktop white detail strip and phone workspace use the same real JSON apartment. Choose it with **Preview apartment** in the sidebar, or with the phone preview selector.
 4. Keep the default apartment JSON and media base URLs when using the supplied GitHub assets. The JSON is `data/apartments.json`; the media base is `assets/apartment-list/`. Asset paths in the JSON are resolved against this media base.
-5. Set the apartment details page and, when available, the inquiry page URL. Links add `?apartment=<ID>` while preserving other query parameters. The default details destination is `/lista`. An inquiry action appears only when an inquiry URL is configured; otherwise the main action opens the actual apartment details page.
+5. Set the apartment details page for shared links and, when available, the inquiry page URL. Links add `?apartment=<ID>` while preserving other query parameters. The default shared-link destination is `/lista`. The workspace's details action opens the shared card over the orbit. If an inquiry URL is configured, its main inquiry action remains a real link and a separate details action opens the card.
 6. Keep **Trial controls → Off** for reviewing the composition. Use Framer Preview to check desktop and phone layouts. Repository changes still require pasting the updated generated component into Framer.
 
 Desktop places the orbit beside a large floorplan. Apartment identity and availability sit above the image; area values and further facts sit below. Phone layouts keep the orbit full width, with a separately scrollable drawing and detail region below. The floorplan remains at least 280px high instead of shrinking into a thumbnail; **Nagyítás** opens a larger drawing with zoom and drag controls. On short phones, scroll the information region to reach its remaining actions.
@@ -31,12 +31,38 @@ The script validates the current 69 apartments and ten confirmed type plans, wri
 
 The browser loads the apartment JSON once and requests the selected plan, rather than downloading every apartment drawing. Matching apartment types can share one cached plan. The floorplan expansion uses that same selected image.
 
+## Open the list-view apartment card
+
+Selecting an apartment opens the same native detail card used by `AdmiralApartmentList`: the full logo, large numbered floorplan, room legend, floor layout, status, price, inquiry button, PDF, favourites and sharing. Its source and CSS are kept in `src/shared/apartment-card/` and inlined into the paste-ready homepage file. No separate loader, iframe or second Framer code file is needed.
+
+Until the picking masks exist, open the selected unit with the floorplan thumbnail in the desktop white strip, **Lakás részletei** in the phone workspace, or **Open apartment details** in the trial controls. The card overlays the current homepage. Closing it restores the same camera and selected apartment; card interactions suspend orbit navigation.
+
+**Detail card JSON** defaults to `data/apartment-details.json`. Its 69 records include the public room lists and plan markers needed by the full card. This larger dataset and the card's selected drawing are fetched on demand after the first click. The compact orbit data remains separate and small. No list rows or all-apartment thumbnails are loaded behind the card.
+
+Refresh the card data and shared presentation after changes in the apartment-list project:
+
+```text
+node scripts/sync-apartment-details.mjs --source <canonical-apartments.json>
+node scripts/sync-apartment-card.mjs --source <apartment-list-project-folder>
+node scripts/build.mjs
+```
+
+The presentation sync records hashes and checks its adapter anchors. If the other project's source changes substantially, it stops for a code review instead of silently generating a different card. It never edits the apartment-list project. The **Details page** setting provides share-link destinations; clicking a unit opens the local card without navigating to that page.
+
 ## Future picking masks
 
 The masks are not implemented by this studio. While testing, the preview selector provides the selected apartment ID. A future picking implementation can send the same ID on the camera component root:
 
 ```js
 root.dispatchEvent(new CustomEvent("admiral:apartment-hover", {
+    detail: { id: "A101" }
+}))
+```
+
+The picking implementation opens that apartment's full card with the corresponding click event:
+
+```js
+root.dispatchEvent(new CustomEvent("admiral:apartment-click", {
     detail: { id: "A101" }
 }))
 ```

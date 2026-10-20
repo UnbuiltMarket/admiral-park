@@ -32,7 +32,7 @@ interface AdmiralHomepageTrialProps {
     detailsMode?: "preview" | "hover" | "off"; detailsLanguage?: ApartmentDetailsLanguage
     detailsBottom?: number; detailsInset?: number; apartmentPreview?: ApartmentDetailsPreview
     orbitLayout?: "mobile" | "studio" | "classic"; apartmentDataUrl?: string; apartmentAssetBase?: string; previewApartmentId?: string
-    detailPageUrl?: string; inquiryUrl?: string; orbitBackground?: string
+    detailPageUrl?: string; detailDataUrl?: string; inquiryUrl?: string; orbitBackground?: string
     background?: string; alt?: string; style?: React.CSSProperties
 }
 interface HomepageActions { explore: () => void; overview: () => void; skip: () => void; resumeHero: () => void; orbit: ReturnType<typeof createOrbitPlayer> | null }
@@ -61,6 +61,7 @@ function homepageImageRect(progress: number, bounds: { width: number; height: nu
 // @ORBIT_STORY_INSERT
 // @ORBIT_APARTMENT_DATA_INSERT
 // @ORBIT_APARTMENT_STUDIO_INSERT
+// @ORBIT_APARTMENT_CARD_INSERT
 
 /**
  * @framerSupportedLayoutWidth any-prefer-fixed
@@ -82,6 +83,7 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
         detailsMode = "preview", detailsLanguage = "hu", detailsBottom = 32, detailsInset = 48, apartmentPreview,
         orbitLayout = "mobile", apartmentDataUrl = "https://raw.githubusercontent.com/UnbuiltMarket/admiral-park/main/data/apartments.json",
         apartmentAssetBase = HOMEPAGE_ASSETS + "/apartment-list/", previewApartmentId = "A001", detailPageUrl = "/lista", inquiryUrl = "", orbitBackground = "#fdfbfb",
+        detailDataUrl = "https://raw.githubusercontent.com/UnbuiltMarket/admiral-park/main/data/apartment-details.json",
         background = "#101820", alt = "Explore Admiral Park, Balatonfüred", style,
     } = props
     const staticRenderer = useIsStaticRenderer()
@@ -113,6 +115,8 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
     const useStudio = (orbitLayout === "studio" || orbitLayout === "mobile" && mobilePresentation) && detailsMode !== "off"
     const jsonDetails = orbitLayout !== "classic" && detailsMode !== "off"
     const [selectedApartmentId, setSelectedApartmentId] = React.useState<string | null>(null)
+    const [detailApartmentId, setDetailApartmentId] = React.useState<string | null>(null)
+    const detailOpen = React.useRef(false)
     const apartmentData = useOrbitApartments(apartmentDataUrl, jsonDetails && (staticRenderer && editorView === "orbit" || hostVisible && ["building", "connection", "handoff", "orbit"].includes(stage)))
     const selectedApartment = React.useMemo(() => {
         const records = apartmentData.dataset?.apartments || []
@@ -132,6 +136,18 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
     const rootRef = React.useRef<HTMLDivElement>(null), heroRootRef = React.useRef<HTMLDivElement>(null)
     const heroCanvasRef = React.useRef<HTMLCanvasElement>(null), orbitCanvasRef = React.useRef<HTMLCanvasElement>(null), posterRef = React.useRef<HTMLImageElement>(null)
     const actions = React.useRef<HomepageActions | null>(null)
+    const openApartmentDetails = React.useCallback((id?: string) => {
+        const value = id || selectedApartment?.id, root = rootRef.current
+        if (!value || !apartmentData.dataset?.apartments.some(apartment => apartment.id === value) || !root ||
+            root.dataset.homepageStage !== "orbit" || root.dataset.orbitState !== "checkpoint" || Number(root.dataset.orbitCheckpoint) < 0) return
+        setSelectedApartmentId(value); detailOpen.current = true; actions.current?.orbit?.setSuspended(true); setDetailApartmentId(value)
+    }, [selectedApartment?.id, apartmentData.dataset])
+    const closeApartmentDetails = React.useCallback(() => {
+        detailOpen.current = false; setDetailApartmentId(null); actions.current?.orbit?.setSuspended(false)
+    }, [])
+    const reportDetailOpen = React.useCallback((open: boolean) => {
+        if (rootRef.current) rootRef.current.dataset.apartmentDetailOpen = String(open)
+    }, [])
     const studioViewportRef = React.useRef<HTMLDivElement | null>(null)
     const studioEnabled = React.useRef(useStudio); studioEnabled.current = useStudio
     const framingConfig = React.useRef<HomepageFramingConfig>({ enabled: phoneFraming, sourceWidth: phoneImageWidth, top: phoneImageTop, detailsHeight, detailsBottom, reserveDetails: detailsMode !== "off" })
@@ -279,6 +295,7 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
                 }
             },
         })
+        orbit?.setSuspended(detailOpen.current)
         // Prefetch only compressed bytes, using the browser cache. No second decoded sequence lives beside SEQ_01.
         function warmConnection() {
             const connection = (navigator as Navigator & { connection?: { saveData?: boolean; effectiveType?: string } }).connection
@@ -484,6 +501,20 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
     }, [jsonDetails, apartmentData.dataset])
 
     React.useEffect(() => {
+        const root = rootRef.current
+        if (!root || staticRenderer) return
+        const click = (event: Event) => {
+            const detail = (event as CustomEvent<unknown>).detail
+            const values = detail && typeof detail === "object" ? detail as { id?: unknown; apartmentId?: unknown; number?: unknown } : null
+            const id = typeof detail === "string" ? detail : values?.id ?? values?.apartmentId ?? values?.number
+            if (typeof id === "string") openApartmentDetails(id)
+        }
+        root.addEventListener("admiral:apartment-click", click)
+        return () => root.removeEventListener("admiral:apartment-click", click)
+    }, [openApartmentDetails, staticRenderer])
+    React.useEffect(() => { if (stage !== "orbit" && detailApartmentId) closeApartmentDetails() }, [stage, detailApartmentId, closeApartmentDetails])
+
+    React.useEffect(() => {
         const root = rootRef.current, channel = root && homepageChannels.get(root)
         if (channel) { channel.timing = timing.current; notifyHomepage() }
     }, [openingOut, buildingIn, buildingFull, ctaIn, rise])
@@ -528,7 +559,7 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
             <div aria-hidden="true" style={{ position: "absolute", inset: 0, background: orbitBackground, opacity: "var(--admiral-studio-light, 0)" as unknown as number, pointerEvents: "none" }} />
             {useStudio && <OrbitApartmentStudio active={orbitVisible || orbitStatic} mode={detailsMode} dataset={apartmentData.dataset} dataStatus={apartmentData.status} error={apartmentData.error}
                 onRetry={apartmentData.retry} apartment={selectedApartment} onSelect={setSelectedApartmentId} assetBase={apartmentAssetBase} detailsUrl={detailPageUrl} inquiryUrl={inquiryUrl}
-                onViewport={setStudioViewport} language={detailsLanguage} onLayout={refreshStudioLayout} />}
+                onViewport={setStudioViewport} language={detailsLanguage} onLayout={refreshStudioLayout} onOpenDetails={() => openApartmentDetails()} />}
             <div ref={heroRootRef} data-admiral-sequence="" style={{ position: "absolute", inset: 0, zIndex: 2, pointerEvents: stage === "orbit" || stage === "handoff" ? "none" : "auto", clipPath: imageClip }}>
                 <img ref={posterRef} src={posterUrl} alt={alt} loading="eager" decoding="async" {...{ fetchpriority: "high" }} crossOrigin="anonymous" draggable={false}
                     style={{ position: "absolute", top: "var(--admiral-image-y, 0px)", left: "var(--admiral-image-x, 0px)", width: "var(--admiral-image-width, 100%)", height: "var(--admiral-image-height, 100%)", objectFit: "cover", objectPosition: `${focalX}% ${focalY}%`, pointerEvents: "none" }} />
@@ -547,6 +578,7 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
                 {(stage === "building" || stage === "handoff" || stage === "orbit") && orbitInfo.state === "error" && <button type="button" style={homepageButton} onClick={() => { void (rootRef.current as (HTMLElement & { retryOrbit?: () => Promise<void> }) | null)?.retryOrbit?.() }}>Retry orbit</button>}
                 {(stage === "building" || stage === "connection" || stage === "handoff" || stage === "orbit") && <button type="button" style={homepageButton} onClick={() => actions.current?.overview()}>Overview</button>}
                 {stage === "orbit" && <>
+                    {detailsMode === "preview" && selectedApartment && <button type="button" disabled={orbitMoving} style={orbitButtonStyle} onClick={() => openApartmentDetails()}>Open apartment details</button>}
                     <button type="button" aria-label="Previous view" disabled={orbitMoving} style={orbitButtonStyle} onClick={() => actions.current?.orbit?.go(-1)}>←</button>
                     <span aria-live="polite" style={{ ...homepageButton, cursor: "default", minWidth: 65, textAlign: "center" }}>{orbitInfo.checkpoint >= 0 ? `View ${orbitInfo.checkpoint + 1} / ${checkpoints}` : orbitInfo.state === "checkpoint" ? "Custom view" : orbitInfo.state === "buffering" ? "Preparing view…" : orbitInfo.state === "error" ? "View unavailable" : "Looking around"}</span>
                     <button type="button" aria-label="Next view" disabled={orbitMoving} style={orbitButtonStyle} onClick={() => actions.current?.orbit?.go(1)}>→</button>
@@ -564,7 +596,9 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
                 <button type="button" style={homepageButton} onClick={() => { void (rootRef.current as (HTMLElement & { retryOrbit?: () => Promise<void> }) | null)?.retryOrbit?.() }}>Retry orbit</button>
             </div>}
             {!useStudio && detailsMode !== "off" && <ApartmentDetailsStrip apartment={detailsData} language={detailsLanguage} visible={detailsVisible} preview={!jsonDetails && detailsMode === "preview"}
-                bottom={detailsBottom} inset={detailsInset} onHeightChange={setDetailsHeight} />}
+                bottom={detailsBottom} inset={detailsInset} onHeightChange={setDetailsHeight} onOpen={jsonDetails && selectedApartment ? () => openApartmentDetails() : undefined} />}
+            {!staticRenderer && <OrbitApartmentCard openId={detailApartmentId} dataUrl={detailDataUrl} assetBase={apartmentAssetBase} inquiryUrl={inquiryUrl} pageUrl={detailPageUrl}
+                onOpenChange={reportDetailOpen} onClosed={closeApartmentDetails} />}
             {!staticRenderer && !useStudio && jsonDetails && orbitVisible && apartmentData.status === "error" && <div data-orbit-ignore="" role="status" style={{ position: "absolute", left: "4%", bottom: 24, zIndex: 4 }}>
                 <button type="button" style={homepageButton} onClick={apartmentData.retry}>{detailsLanguage === "en" ? "Retry apartment data" : "Lakásadatok újratöltése"}</button>
             </div>}
@@ -756,6 +790,7 @@ addPropertyControls(AdmiralHomepageTrial, {
     apartmentAssetBase: { type: ControlType.String, title: "Media base", defaultValue: HOMEPAGE_ASSETS + "/apartment-list/", hidden: p => p.orbitLayout === "classic" },
     previewApartmentId: { type: ControlType.String, title: "Preview apartment", defaultValue: "A001", hidden: p => p.orbitLayout === "classic" || p.detailsMode === "hover" || p.detailsMode === "off", description: "A real JSON apartment ID, used until picking masks are connected. You can also change it in the preview selector." },
     detailPageUrl: { type: ControlType.String, title: "Details page", defaultValue: "/lista", hidden: p => p.orbitLayout === "classic", description: "Your Framer apartment page path. Links add ?apartment=ID to open this apartment." },
+    detailDataUrl: { type: ControlType.String, title: "Detail card JSON", defaultValue: "https://raw.githubusercontent.com/UnbuiltMarket/admiral-park/main/data/apartment-details.json", description: "Full apartment data for the shared list-view card, fetched only when an apartment is opened." },
     inquiryUrl: { type: ControlType.String, title: "Inquiry page", defaultValue: "", hidden: p => p.orbitLayout === "classic", description: "Optional enquiry page URL. If empty, the action opens the apartment details page." },
     detailsMode: { type: ControlType.Enum, title: "Apartment details", options: ["preview", "hover", "off"], optionTitles: ["Preview", "Hover", "Off"], defaultValue: "preview", description: "Preview shows real JSON data with a trial apartment selector. Hover waits for a selected apartment ID from the future masks. Off hides the apartment workspace." },
     detailsLanguage: { type: ControlType.Enum, title: "Details language", options: ["hu", "en"], optionTitles: ["Magyar", "English"], defaultValue: "hu", hidden: p => p.detailsMode === "off" },

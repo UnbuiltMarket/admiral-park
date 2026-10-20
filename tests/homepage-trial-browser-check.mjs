@@ -25,8 +25,8 @@ const pause=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 
 async function fixture(options={}){
  const context=await browser.newContext({viewport:{width:1200,height:800},...options.context});
- const page=await context.newPage(),errors=[],heroRequests=[],connectionRequests=[],orbitRequests=[],floorplanRequests=[],apartmentRequests=[],apartmentMediaRequests=[];
- let failIndex=options.failOrbit,corruptIndex=options.corruptOrbit,failConnection=options.failConnection,corruptConnection=options.corruptConnection,failApartment=!!options.failApartment;
+ const page=await context.newPage(),errors=[],heroRequests=[],connectionRequests=[],orbitRequests=[],floorplanRequests=[],apartmentRequests=[],apartmentMediaRequests=[],detailRequests=[];
+ let failIndex=options.failOrbit,corruptIndex=options.corruptOrbit,failConnection=options.failConnection,corruptConnection=options.corruptConnection,failApartment=!!options.failApartment,failDetails=!!options.failDetails,detailGateOpen=!options.gateDetails;const detailWaiters=[];
  page.on('pageerror',error=>errors.push(error.message));
  await page.route('http://homepage.test/**',async route=>{
   const url=new URL(route.request().url()),pathname=decodeURIComponent(url.pathname);
@@ -35,6 +35,14 @@ async function fixture(options={}){
    if(options.delayApartment)await pause(options.delayApartment);
    if(failApartment)return route.fulfill({status:503,body:'Deliberate apartment data outage'});
    const body=options.apartmentPayload===undefined?await readFile(new URL('data/apartments.json',root),'utf8'):JSON.stringify(options.apartmentPayload);
+   return route.fulfill({contentType:'application/json',body});
+  }
+  if(pathname==='/apartment-details.json'){
+   detailRequests.push(pathname);
+   if(!detailGateOpen)await new Promise(resolve=>detailWaiters.push(resolve));
+   if(options.delayDetails)await pause(options.delayDetails);
+   if(failDetails)return route.fulfill({status:503,body:'Deliberate full detail data outage'});
+   const body=options.detailPayload===undefined?await readFile(new URL('data/apartment-details.json',root),'utf8'):JSON.stringify(options.detailPayload);
    return route.fulfill({contentType:'application/json',body});
   }
   if(pathname.startsWith('/apartment-assets/')){
@@ -138,7 +146,7 @@ async function fixture(options={}){
  await page.waitForSelector('[data-admiral-homepage]');
  await page.waitForFunction(()=>[...document.images].some(image=>image.naturalWidth>0));
  await page.mouse.move(450,500);
- return {context,page,errors,heroRequests,connectionRequests,orbitRequests,floorplanRequests,apartmentRequests,apartmentMediaRequests,restoreApartment(){failApartment=false;},restoreOrbit(){failIndex=undefined;corruptIndex=undefined;},restoreConnection(){failConnection=undefined;corruptConnection=undefined;},async close(){if(options.props?.orbitLayout==='studio'){await page.screenshot({path:fileURLToPath(new URL('studio-last-state.png',out))}).catch(()=>{});await writeFile(new URL('studio-last-state.json',out),JSON.stringify(await page.evaluate(()=>({root:{...document.querySelector('[data-admiral-homepage]')?.dataset},studio:{...document.querySelector('[data-orbit-studio]')?.dataset},text:document.querySelector('[data-orbit-studio]')?.innerText})).catch(()=>({})),null,2));}await page.evaluate(()=>{window.releaseDecodeGates?.();window.releaseNativeDecodeGates?.();window.releaseSequenceDecodeGates?.();}).catch(()=>{});assert.deepEqual(errors,[]);await context.close();}};
+ return {context,page,errors,heroRequests,connectionRequests,orbitRequests,floorplanRequests,apartmentRequests,apartmentMediaRequests,detailRequests,releaseDetails(){detailGateOpen=true;detailWaiters.splice(0).forEach(resolve=>resolve());},restoreDetails(){failDetails=false;},restoreApartment(){failApartment=false;},restoreOrbit(){failIndex=undefined;corruptIndex=undefined;},restoreConnection(){failConnection=undefined;corruptConnection=undefined;},async close(){detailGateOpen=true;detailWaiters.splice(0).forEach(resolve=>resolve());if(options.props?.orbitLayout==='studio'){await page.screenshot({path:fileURLToPath(new URL('studio-last-state.png',out))}).catch(()=>{});await writeFile(new URL('studio-last-state.json',out),JSON.stringify(await page.evaluate(()=>({root:{...document.querySelector('[data-admiral-homepage]')?.dataset},studio:{...document.querySelector('[data-orbit-studio]')?.dataset},text:document.querySelector('[data-orbit-studio]')?.innerText})).catch(()=>({})),null,2));}await page.evaluate(()=>{window.releaseDecodeGates?.();window.releaseNativeDecodeGates?.();window.releaseSequenceDecodeGates?.();}).catch(()=>{});assert.deepEqual(errors,[]);await context.close();}};
 }
 const orbitSelector='[data-admiral-orbit]';
 async function orbitData(page){return page.locator(orbitSelector).evaluate(element=>({...element.dataset}));}
@@ -233,7 +241,7 @@ function assertMonotonicFraming(samples,forward){
 
 
 const studioSelector='[data-orbit-studio]';
-const studioProps={orbitLayout:'studio',orbitBackground:'#fdfbfb',apartmentDataUrl:'http://homepage.test/apartments.json',apartmentAssetBase:'http://homepage.test/apartment-assets',previewApartmentId:'A001',detailsMode:'preview',startView:'orbit',showControls:false,showViewpoints:false};
+const studioProps={orbitLayout:'studio',orbitBackground:'#fdfbfb',apartmentDataUrl:'http://homepage.test/apartments.json',detailDataUrl:'http://homepage.test/apartment-details.json',apartmentAssetBase:'http://homepage.test/apartment-assets',previewApartmentId:'A001',detailsMode:'preview',startView:'orbit',showControls:false,showViewpoints:false};
 async function waitStudio(page,id='A001'){
  await waitOrbit(page);
  await page.waitForFunction(id=>{const studio=document.querySelector('[data-orbit-studio]'),plan=studio?.querySelector('[data-orbit-floorplan]');return studio?.dataset.active==='true'&&studio.dataset.apartmentId===id&&plan?.complete&&plan.naturalWidth>0;},id,{timeout:20000});
@@ -258,6 +266,15 @@ async function studioField(page,name){return page.locator('[data-orbit-field="'+
 async function apartmentSelect(page,id){await page.locator('[data-orbit-apartment-select]').selectOption(id);await waitStudio(page,id);}
 async function hoverStudioId(page,id){await page.locator('[data-admiral-homepage]').evaluate((root,id)=>root.dispatchEvent(new CustomEvent('admiral:apartment-hover',{detail:{id}})),id);await waitStudio(page,id);}
 
+const cardSelector='[data-orbit-detail-card]';
+async function clickApartment(page,id){await page.locator('[data-admiral-homepage]').evaluate((root,id)=>root.dispatchEvent(new CustomEvent('admiral:apartment-click',{detail:{id}})),id);}
+async function waitApartmentCard(page,id='A001'){
+ const card=page.locator('#detail-dialog');await card.waitFor({state:'visible'});assert.equal(await card.getAttribute('data-apartment'),id);
+ await card.locator('.detail-plan-image').evaluate(image=>image.decode());return card;
+}
+async function closeApartmentCard(page){await page.locator('#detail-dialog').getByRole('button',{name:'Bezárás',exact:true}).click();await page.locator('#detail-dialog').waitFor({state:'hidden'});await waitOrbit(page);}
+function assertSameCamera(before,after,message){for(const key of ['orbitPosition','orbitFrame','orbitTarget'])assert.equal(after[key],before[key],message+' retains '+key);}
+
 const storySelector=view=>`[data-orbit-story="${view}"]`;
 async function waitStory(page,view,state='visible'){
  await page.waitForFunction(({view,state})=>document.querySelector(`[data-orbit-story="${view}"]`)?.dataset.storyState===state,{view,state},{timeout:12000});
@@ -269,6 +286,53 @@ async function assertStoryTarget(page,view){
 }
 
 try{
+ await pass('shared detail card opens lazily for a parked canonical apartment and reuses the exact native list dialog',async()=>{
+  const f=await fixture({cleanFixture:true,useDefaultOrbitLayout:true,context:{viewport:{width:1440,height:900}},props:{...studioProps,showControls:true,snapDuration:1.2},gateDetails:true}),{page}=f;
+  try{
+   await waitOrbit(page);await page.getByRole('button',{name:'Open apartment details',exact:true}).waitFor();assert.equal(f.detailRequests.length,0,'The room-level detail JSON is not fetched during orbit loading');
+   await clickApartment(page,'NOT-A-REAL-APARTMENT');await page.waitForTimeout(100);assert.equal(f.detailRequests.length,0,'Unknown apartment IDs cannot open a card');
+   await page.getByRole('button',{name:'Next view',exact:true}).click();await waitOrbit(page,'settling');await clickApartment(page,'A001');await page.waitForTimeout(100);assert.equal(f.detailRequests.length,0,'Apartment clicks while the camera moves are ignored');await waitFrame(page,15);
+   await page.getByRole('button',{name:'Open apartment details',exact:true}).click();await page.locator(cardSelector+'[data-state=loading]').waitFor();await page.waitForFunction(()=>document.activeElement?.getAttribute('aria-label')==='Close apartment details');await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));await page.keyboard.press('Tab');await page.keyboard.press('Tab');assert.equal(await page.getByRole('button',{name:'Close apartment details',exact:true}).evaluate(element=>element===document.activeElement),true,'The pending card keeps keyboard focus inside its close control '+JSON.stringify(await page.evaluate(()=>({active:document.activeElement?.outerHTML?.slice(0,200),state:document.querySelector('[data-orbit-detail-card]')?.dataset.state}))));f.releaseDetails();const card=await waitApartmentCard(page);assert.equal(f.detailRequests.length,1,'The full detail projection downloads once, on the first valid click');
+   assert.equal(await card.locator('.detail-apartment-number').innerText(),'A001');assert.match(await card.locator('.detail-metrics').innerText(),/68[,.]67/);assert.equal(await card.locator('.room-marker[data-plan-room]').count(),10);assert.equal(await card.locator('.room-legend-button[data-plan-room]').count(),10);assert.match(await card.locator('.detail-room-panel').innerText(),/Előtér/);
+   assert.equal(await page.locator('[data-orbit-detail-card] #results .apartment-row').count(),0,'The shared engine renders no hidden apartment list or thumbnails');assert.equal(await page.locator('iframe').count(),0,'The same native dialog opens in this page');
+   const bounds=await card.boundingBox();assert.ok(bounds.width>=1000&&bounds.height>=700,'The shared desktop card retains its large reading layout');assert.match(await card.locator('.detail-plan-image').getAttribute('src'),/floorplans\/types\/B\/original\.png/);
+   const originals=[...new Set(f.apartmentMediaRequests.filter(url=>/original\.png/.test(url)))];assert.equal(originals.length,1,'Only the selected apartment type original is loaded');assert.ok(!f.apartmentMediaRequests.some(url=>/thumb\.webp/.test(url)&&!/types\/B\//.test(url)),'No hidden 69-apartment thumbnail preload is created');
+   await componentScreenshot(page,'shared-apartment-card-desktop.png');await closeApartmentCard(page);assert.equal(Number((await orbitData(page)).orbitFrame),15);assert.equal(await page.getByRole('button',{name:'Open apartment details',exact:true}).evaluate(element=>element===document.activeElement),true,'Closing restores the original preview trigger focus');
+   await page.locator('[data-apartment-open]').click();await waitApartmentCard(page);assert.equal(f.detailRequests.length,1,'The compact floorplan thumbnail reopens the cached same card');await closeApartmentCard(page);assert.equal(await page.locator('[data-apartment-open]').evaluate(element=>element===document.activeElement),true,'Closing returns focus to the actual thumbnail trigger');
+  }finally{await f.close();}
+ });
+ await pass('shared detail card preserves native numbered plan tabs favorites PDF inquiry and sharing actions',async()=>{
+  const f=await fixture({cleanFixture:true,useDefaultOrbitLayout:true,props:studioProps}),{page}=f;
+  try{
+   await waitOrbit(page);await clickApartment(page,'A001');const card=await waitApartmentCard(page),before=await orbitData(page);
+   await card.locator('.room-marker[data-plan-room="1"]').click();assert.equal(await card.locator('.room-legend-button[data-plan-room="1"]').getAttribute('aria-pressed'),'true','Numbered plan and existing room legend remain synchronized');
+   await card.getByRole('tab',{name:'Szintrajz',exact:true}).click();await card.locator('.detail-floor-image').waitFor({state:'visible'});await card.locator('.detail-floor-image').evaluate(image=>image.decode());assert.match(await card.locator('.detail-floor-image').getAttribute('src'),/floor-layouts\/00\/full\.webp/);await card.getByRole('tab',{name:'Alaprajz',exact:true}).click();
+   await card.locator('[data-save="A001"]').click();assert.equal(await card.locator('[data-save="A001"]').getAttribute('aria-pressed'),'true');assert.ok(JSON.parse(await page.evaluate(()=>localStorage.getItem('admiral-park:favorites:v1'))).includes('A001'));
+   await card.locator('[data-inquiry-placeholder]').click();await card.locator('.inquiry-pending').waitFor({state:'visible'});assert.match(await card.locator('.inquiry-pending').innerText(),/hamarosan/);
+   await page.evaluate(()=>{Object.defineProperty(navigator,'share',{configurable:true,value:undefined});Object.defineProperty(navigator,'clipboard',{configurable:true,value:{writeText:async value=>{window.sharedCardUrl=value;}}});});await card.locator('[data-share="A001"]').click();await card.locator('[data-share-copy="A001"]').click();assert.match(await page.evaluate(()=>window.sharedCardUrl),/apartment=A001/);await card.locator('[data-share-close]').click();
+   const [download]=await Promise.all([page.waitForEvent('download'),card.locator('[data-download]').click()]);assert.match(download.suggestedFilename(),/Admiral-Park-B-tipus-adatlap\.pdf/);
+   assertSameCamera(before,await orbitData(page),'Native card actions');await closeApartmentCard(page);assert.equal((await orbitData(page)).orbitState,'checkpoint');
+  }finally{await f.close();}
+ });
+ await pass('shared detail card blocks orbit gestures across its shadow boundary and Escape returns to the same phone view',async()=>{
+  const f=await fixture({cleanFixture:true,useDefaultOrbitLayout:true,context:{viewport:{width:390,height:844},isMobile:true,hasTouch:true,deviceScaleFactor:2},props:studioProps}),{page}=f;
+  try{
+   await waitStudio(page);const before=await orbitData(page);await page.locator('[data-orbit-detail-link]:visible').click();const card=await waitApartmentCard(page);assert.equal((await orbitData(page)).orbitSuspended,'true');await card.getByRole('tab',{name:'Helyiségek',exact:true}).click();await card.locator('.detail-room-panel').waitFor({state:'visible'});assert.equal(await card.locator('.room-legend-button[data-plan-room]').count(),10);await card.getByRole('tab',{name:'Rajzok',exact:true}).click();await card.locator('.detail-plan-image').waitFor({state:'visible'});
+   await page.mouse.move(200,300);await page.mouse.wheel(0,240);await page.keyboard.press('ArrowRight');await page.keyboard.press('PageDown');const cdp=await page.context().newCDPSession(page);
+   await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:320,y:400}]});await cdp.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x:100,y:400}]});await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});await page.waitForTimeout(350);assertSameCamera(before,await orbitData(page),'Shadow card wheel, keyboard and touch input');
+   await componentScreenshot(page,'shared-apartment-card-phone.png');await page.keyboard.press('Escape');await card.waitFor({state:'hidden'});await waitStudio(page);assert.equal((await orbitData(page)).orbitSuspended,'false');assertSameCamera(before,await orbitData(page),'Closing with Escape');
+   const geometry=await studioGeometry(page),x=geometry.viewport.x+geometry.viewport.width*.8,y=geometry.viewport.y+geometry.viewport.height*.5;await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x,y}]});await cdp.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x:x-160,y}]});await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});await waitFrame(page,15);
+  }finally{await f.close();}
+ });
+ await pass('shared detail card retries a failed lazy download and cancelling loading never reopens it later',async()=>{
+  const f=await fixture({cleanFixture:true,useDefaultOrbitLayout:true,failDetails:true,props:studioProps}),{page}=f;
+  try{
+   await waitOrbit(page);await clickApartment(page,'A001');await page.locator(cardSelector+'[data-state=error]').waitFor();assert.equal((await orbitData(page)).orbitSuspended,'true');await page.waitForFunction(()=>document.activeElement?.getAttribute('aria-label')==='Close apartment details');await page.keyboard.press('Tab');assert.equal(await page.getByRole('button',{name:'Retry apartment details',exact:true}).evaluate(element=>element===document.activeElement),true);await page.keyboard.press('Tab');assert.equal(await page.getByRole('button',{name:'Close apartment details',exact:true}).evaluate(element=>element===document.activeElement),true);await page.keyboard.press('Shift+Tab');assert.equal(await page.getByRole('button',{name:'Retry apartment details',exact:true}).evaluate(element=>element===document.activeElement),true,'The error dialog traps both forward and reverse keyboard focus');f.restoreDetails();await page.getByRole('button',{name:'Retry apartment details',exact:true}).click();await waitApartmentCard(page);assert.equal(f.detailRequests.length,2);await closeApartmentCard(page);
+   await clickApartment(page,'B105');const card=await waitApartmentCard(page,'B105');assert.equal(f.detailRequests.length,2,'Switching to another unit uses the same downloaded detail JSON');assert.match(await card.locator('.detail-status').innerText(),/Eladva|Elkelt/);await closeApartmentCard(page);
+  }finally{await f.close();}
+  const pending=await fixture({cleanFixture:true,useDefaultOrbitLayout:true,delayDetails:500,props:studioProps});
+  try{await waitOrbit(pending.page);await clickApartment(pending.page,'A001');await pending.page.locator(cardSelector+'[data-state=loading]').waitFor();await pending.page.getByRole('button',{name:'Close apartment details',exact:true}).click();await pending.page.waitForTimeout(700);assert.equal(await pending.page.locator('#detail-dialog[open]').count(),0,'A cancelled pending request cannot reopen the dialog');await waitOrbit(pending.page);await clickApartment(pending.page,'A001');await waitApartmentCard(pending.page);assert.equal(pending.detailRequests.length,1,'A successful cancelled download can be reused on a later deliberate open');await closeApartmentCard(pending.page);}finally{await pending.close();}
+ });
  await pass('default orbit layout preserves fullscreen desktop and enables the light studio only on phones',async()=>{
   const desktop=await fixture({cleanFixture:true,useDefaultOrbitLayout:true,context:{viewport:{width:1440,height:900}},props:studioProps}),{page}=desktop;
   try{await waitOrbit(page);await installFramingCapture(page);assertFullFraming(await readFraming(page),'Default desktop orbit');assert.equal(await page.locator('[data-orbit-studio][data-active="true"]').count(),0,'Desktop keeps the fullscreen orbit with no active studio panel');await page.waitForFunction(()=>document.querySelector('[data-apartment-field=number]')?.textContent.includes('A001'));assert.match(await apartmentField(page,'area'),/68[,.]67/,'Default fullscreen details use the real JSON apartment area');await sendApartment(page,{id:'A101'});await page.waitForFunction(()=>document.querySelector('[data-apartment-field=number]')?.textContent.includes('A101'));assert.match(await apartmentField(page,'area'),/47[,.]48/);await page.setViewportSize({width:390,height:844});await page.waitForTimeout(280);await waitStudio(page,'A101');assertStudioViewport(await studioGeometry(page));await page.setViewportSize({width:1440,height:900});await page.waitForTimeout(280);await waitFrame(page,0);assertFullFraming(await readFraming(page),'Desktop resize restores fullscreen orbit');assert.equal(await page.locator('[data-orbit-studio][data-active="true"]').count(),0);}finally{await desktop.close();}
@@ -367,8 +431,8 @@ try{
    await page.getByRole('tab',{name:'Szintrajz',exact:true}).click();await page.waitForFunction(()=>document.querySelector('[data-orbit-floorplan]')?.currentSrc.includes('/floor-layouts/00/full.webp'));await page.waitForFunction(()=>document.querySelector('[data-orbit-floorplan]')?.complete&&document.querySelector('[data-orbit-floorplan]')?.naturalWidth>0);
    assert.equal(Number((await orbitData(page)).orbitFrame),0,'The floor-layout tab cannot trigger camera motion');await page.getByRole('tab',{name:'Alaprajz',exact:true}).click();
    await page.getByRole('button',{name:'Alaprajz nagyítása',exact:true}).click();const dialog=page.locator('[data-orbit-plan-dialog]');await dialog.waitFor({state:'visible'});assert.ok((await dialog.boundingBox()).height>geometry.plan.height,'Expanded plan gets a larger reading area');await page.keyboard.press('Escape');
-   for(const selector of ['[data-orbit-inquiry]','[data-orbit-download]','[data-orbit-detail-link]']){const action=page.locator(selector+':visible').first();assert.ok(await action.getAttribute('href'),'Native action has a concrete destination');await action.evaluate(element=>element.addEventListener('click',event=>{event.preventDefault();window.studioActionClick=(window.studioActionClick||0)+1;},{once:true}));await action.click();}
-   assert.equal(await page.evaluate(()=>window.studioActionClick),3);await page.evaluate(()=>{Object.defineProperty(navigator,'share',{configurable:true,value:undefined});Object.defineProperty(navigator,'clipboard',{configurable:true,value:{writeText:async value=>{window.sharedStudioUrl=value;}}});});await page.getByRole('button',{name:'Megosztás',exact:false}).click();assert.match(await page.evaluate(()=>window.sharedStudioUrl),/\/lista\?apartment=A001/,'Sharing uses the selected apartment detail link');assert.equal(Number((await orbitData(page)).orbitFrame),0,'Detail actions never rotate the orbit');
+   for(const selector of ['[data-orbit-inquiry]','[data-orbit-download]']){const action=page.locator(selector+':visible').first();assert.ok(await action.getAttribute('href'),'Native action has a concrete destination');await action.evaluate(element=>element.addEventListener('click',event=>{event.preventDefault();window.studioActionClick=(window.studioActionClick||0)+1;},{once:true}));await action.click();}
+   assert.equal(await page.evaluate(()=>window.studioActionClick),2);await page.locator('[data-orbit-detail-link]:visible').click();await waitApartmentCard(page);await closeApartmentCard(page);await page.evaluate(()=>{Object.defineProperty(navigator,'share',{configurable:true,value:undefined});Object.defineProperty(navigator,'clipboard',{configurable:true,value:{writeText:async value=>{window.sharedStudioUrl=value;}}});});await page.getByRole('button',{name:'Megosztás',exact:false}).click();assert.match(await page.evaluate(()=>window.sharedStudioUrl),/\/lista\?apartment=A001/,'Sharing uses the selected apartment detail link');assert.equal(Number((await orbitData(page)).orbitFrame),0,'Detail actions never rotate the orbit');
   }finally{await f.close();}
  });
  await pass('upright full-width phone defaults ignore the old turning setting and preserve buttons and swipes',async()=>{
