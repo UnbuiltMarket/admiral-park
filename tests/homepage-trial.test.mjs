@@ -135,7 +135,7 @@ test('homepage and list import one dedicated shared card without embedding its U
  assert.doesNotMatch(sharedSource,/A\.0\.01\.01/,'Detailed apartment room records remain external JSON');
  const stub={addPropertyControls:()=>{},ControlType:new Proxy({},{get:(_,name)=>name}),useIsStaticRenderer:()=>true,RenderTarget:{canvas:'canvas',current:()=> 'canvas'}};
  const modules=framerModules(stub),home=modules.load('./AdmiralHomepageTrial.tsx'),shared=modules.load('./AdmiralApartmentDetailCard.tsx'),list=modules.load('./AdmiralApartmentList.tsx');
- assert.equal(modules.load('./AdmiralApartmentDetailCard.tsx'),shared,'Both entries resolve the same cached shared module');assert.ok(home.default&&list.default&&shared.default);assert.equal(shared.default,shared.AdmiralApartmentDetailCard);
+ assert.equal(modules.load('./AdmiralApartmentDetailCard.tsx'),shared,'Both entries resolve the same cached shared module');assert.ok(home.default&&list.default&&shared.default);assert.deepEqual(Object.keys(shared),['default'],'The shared module exposes a single component value export');
  const html=requireDev('react-dom/server').renderToStaticMarkup(requireDev('react').createElement(list.default));assert.doesNotMatch(html,/<iframe|<script/,'The list also server-renders without remote executable wrappers');
 });
 

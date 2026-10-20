@@ -25,7 +25,7 @@ export interface AdmiralApartmentDetailCardProps {
     theme?: React.CSSProperties
 }
 
-export function AdmiralApartmentDetailCard(props: AdmiralApartmentDetailCardProps) {
+export default function AdmiralApartmentDetailCard(props: AdmiralApartmentDetailCardProps) {
     const { openId, dataUrl, assetBase, inquiryUrl, pageUrl, dataset, theme } = props
     const host = React.useRef<HTMLDivElement | null>(null)
     const controller = React.useRef<OrbitApartmentCardController | null>(null)

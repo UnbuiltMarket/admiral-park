@@ -19,7 +19,7 @@ export async function buildApartmentCard() {
     .replace('__APARTMENT_CARD_STYLES__', () => JSON.stringify(styles))
     .replace('__APARTMENT_CARD_SHELL__', () => JSON.stringify(shell))
     .replace('// @APARTMENT_CARD_RUNTIME_INSERT', () => inlineApartmentCardRuntime(pdfExport + '\n' + runtime))
-    .trimEnd() + '\n\nexport default AdmiralApartmentDetailCard\n';
+    .trimEnd() + '\n';
   compileTS(source, 'AdmiralApartmentDetailCard.tsx');
   await writeFile(new URL('src/framer/AdmiralApartmentDetailCard.tsx', root), source);
   console.log(`Built shared apartment detail card (${Buffer.byteLength(source).toLocaleString('en')} bytes).`);

@@ -18,7 +18,7 @@ function functions(source,mountName){
 }
 const card=functions(runtime,'mountOrbitApartmentCardRuntime');
 
-test('authored and delivered Framer local imports resolve exact filenames with explicit extensions',async()=>{
+test('authored and delivered Framer dependencies use exact filenames and a direct default component declaration',async()=>{
   const folder=fileURLToPath(new URL('src/framer/',root));
   const files=['AdmiralHomepageTrial.source.tsx','AdmiralApartmentList.source.tsx',
     'AdmiralHomepageTrial.tsx','AdmiralApartmentList.tsx','AdmiralApartmentDetailCard.tsx'];
@@ -46,6 +46,18 @@ test('authored and delivered Framer local imports resolve exact filenames with e
     }
   }
   assert.ok(localImports>=4,'Both authored and generated consumers must exercise local dependency validation');
+  for(const file of ['OrbitApartmentCard.source.tsx','AdmiralApartmentDetailCard.tsx']){
+    const source=await read('src/framer/'+file);
+    const parsed=ts.createSourceFile(file,source,ts.ScriptTarget.ES2020,true,ts.ScriptKind.TSX);
+    const component=parsed.statements.filter(node=>ts.isFunctionDeclaration(node)&&node.name?.text==='AdmiralApartmentDetailCard');
+    assert.equal(component.length,1,file+' declares one shared component');
+    const modifiers=component[0].modifiers?.map(modifier=>modifier.kind)||[];
+    assert.ok(modifiers.includes(ts.SyntaxKind.ExportKeyword)&&modifiers.includes(ts.SyntaxKind.DefaultKeyword),file+' directly declares its default component for Framer metadata discovery');
+    const valueExports=parsed.statements.filter(node=>
+      ts.isExportAssignment(node)||ts.isExportDeclaration(node)||
+      ((ts.isFunctionDeclaration(node)||ts.isVariableStatement(node)||ts.isClassDeclaration(node)||ts.isEnumDeclaration(node))&&node.modifiers?.some(modifier=>modifier.kind===ts.SyntaxKind.ExportKeyword)));
+    assert.deepEqual(valueExports,[component[0]],file+' has no duplicate named component export or default alias');
+  }
 });
 
 test('both editable Framer consumers import and mount the sole canonical detail renderer',async()=>{

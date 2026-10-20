@@ -77,8 +77,8 @@ test('provided malformed data reports an error instead of silently fetching anot
 
 test('shared React component remains lazy and theme changes do not rebuild the card',()=>{
   assert.match(component,/export (?:interface|type) AdmiralApartmentDetailCardProps/);
-  assert.match(component,/export function AdmiralApartmentDetailCard/);
-  assert.match(component,/export default AdmiralApartmentDetailCard/);
+  assert.match(component,/export default function AdmiralApartmentDetailCard/);
+  assert.doesNotMatch(component,/export function AdmiralApartmentDetailCard|export default AdmiralApartmentDetailCard\s*(?:;|$)/m);
   assert.match(component,/if \(!started \|\| !host.current\) return/);
   assert.match(component,/dataset,/);
   const effectDependencies=component.match(/\}, \[started,([^\]]+)\]\)/)?.[1]||'';

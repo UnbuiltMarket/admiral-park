@@ -12,6 +12,8 @@ Create or update these three Framer code files at the same folder level, using t
 
 Both entry files import `./AdmiralApartmentDetailCard.tsx`, including the `.tsx` extension required by the Framer code-file path. Keep that exact filename and case. If you deliberately place the shared file in another folder, update both import paths. An unresolved-import error can also mean the shared file is missing or its name/path differs.
 
+If the canvas reports “Unable to resolve missing Admiral apartment detail card”, first confirm that `AdmiralApartmentDetailCard.tsx` exists in Assets → Code at the exact path imported by both entry files. Replace its entire contents with the generated shared file and save it before saving the two entry files. The shared component uses one direct `export default function AdmiralApartmentDetailCard(...)` declaration; keep this form rather than adding a separate named export and default alias. Existing homepage and list instances can stay in place. Source checks verify the declaration and dependency paths, and server-rendering checks verify the module exports; these checks do not inspect Framer's own project component registry. If the message remains after the correct shared file is saved, inspect the Framer code-file diagnostic rather than changing the live rendering behavior.
+
 The component code stays inside the Framer project. No GitHub component loader is involved. Code edits remain available to Framer's editor immediately. Publish the Framer project normally after reviewing the result.
 
 ## Apartment PDF download
