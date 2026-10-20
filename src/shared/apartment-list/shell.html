@@ -1,0 +1,34 @@
+
+  <div class="list-container">
+  <main class="page-width" id="apartment-app" aria-label="Lakáslista">
+    <section class="filter-header" aria-label="Lakásszűrők">
+    <button class="mobile-filter-button" id="mobile-filters" type="button" aria-expanded="false" aria-controls="filters"><svg width="17" height="17" viewBox="0 0 18 18" fill="none" aria-hidden="true"><path d="M2 5h14M2 13h14M6 2v6M12 10v6" stroke="currentColor" stroke-width="1.2"/></svg><span>Szűrés</span><span class="filter-toggle-icon" aria-hidden="true">+</span></button>
+    <form id="filters" class="filters" data-open="false" aria-label="Lakások szűrése">
+      <div class="primary-filters">
+        <div class="field"><label for="building">Épület</label><div class="select-wrap"><select id="building"><option value="">Összes épület</option></select></div></div>
+        <div class="field"><label for="floor">Emelet</label><div class="select-wrap"><select id="floor"><option value="">Összes emelet</option></select></div></div>
+        <div class="field"><label for="rooms">Szobák</label><div class="select-wrap"><select id="rooms"><option value="">Összes</option></select></div></div>
+        <div class="field"><label for="status">Elérhetőség</label><div class="select-wrap"><select id="status"><option value="">Minden lakás</option><option value="available">Elérhető</option><option value="under_negotiation">Tárgyalás alatt</option><option value="sold">Elkelt</option><option value="unknown">Egyeztetés szükséges</option></select></div></div>
+      </div>
+      <div class="range-filters">
+          <fieldset class="range-field"><legend><span>Alapterület</span><output id="area-range-value" for="minArea maxArea">m²</output></legend><div class="range-slider"><span class="slider-track" aria-hidden="true"><span class="slider-selection"></span></span><label class="sr-only" for="minArea">Minimum alapterület négyzetméterben</label><input id="minArea" type="range" min="0" max="1" step="1"><label class="sr-only" for="maxArea">Maximum alapterület négyzetméterben</label><input id="maxArea" type="range" min="0" max="1" step="1"></div></fieldset>
+          <fieldset class="range-field"><legend><span>Vételár</span><output id="price-range-value" for="minPrice maxPrice">M Ft</output></legend><div class="range-slider"><span class="slider-track" aria-hidden="true"><span class="slider-selection"></span></span><label class="sr-only" for="minPrice">Minimum vételár millió forintban</label><input id="minPrice" type="range" min="0" max="1" step="1"><label class="sr-only" for="maxPrice">Maximum vételár millió forintban</label><input id="maxPrice" type="range" min="0" max="1" step="1"></div></fieldset>
+          <div class="checkbox-filters"><label class="checkbox-label" for="terrace"><input id="terrace" type="checkbox"><span>Erkély</span></label><label class="checkbox-label" for="garden"><input id="garden" type="checkbox"><span>Kert</span></label><label class="checkbox-label" for="favoritesOnly"><input id="favoritesOnly" type="checkbox"><span>Kedvencek</span></label></div>
+      </div>
+    </form>
+    </section>
+    <div class="result-toolbar">
+      <p class="result-count" id="result-count" aria-live="polite" aria-atomic="true">Lakások betöltése…</p>
+      <button type="button" id="reset" class="reset-button">Alaphelyzet <span aria-hidden="true">↺</span></button>
+      <div class="sort-field"><label for="sort">Rendezés</label><div class="select-wrap"><select id="sort"><option value="id">Lakásazonosító szerint</option><option value="price-asc">Ár: növekvő</option><option value="price-desc">Ár: csökkenő</option><option value="area-asc">Alapterület: növekvő</option><option value="area-desc">Alapterület: csökkenő</option><option value="floor">Emelet szerint</option></select></div></div>
+    </div>
+    <p class="favorites-hint"><svg viewBox="0 0 24 24" width="13" height="13" aria-hidden="true"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 0 0 0-7.8Z" fill="none" stroke="currentColor" stroke-width="1.5"/></svg><span>A szívvel a kedvencekhez mentheti a lakást.</span></p>
+    <div class="filter-chips" id="filter-chips" aria-label="Aktív szűrők"></div>
+    <div id="results" class="results" aria-busy="true"><div class="loading-state"><span class="loading-dot"></span>Lakások betöltése…</div></div>
+    <p class="data-note" id="data-note"></p>
+  </main>
+  </div>
+  <aside id="compare-tray" class="compare-tray" aria-label="Összehasonlításra kijelölt lakások" hidden></aside>
+  <dialog id="compare-dialog" class="apartment-dialog compare-dialog" aria-label="Lakások összehasonlítása"></dialog>
+  <dialog id="media-dialog" class="media-dialog" aria-labelledby="media-title"></dialog>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>

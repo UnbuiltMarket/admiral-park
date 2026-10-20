@@ -13,7 +13,10 @@ const out=new URL('tmp/homepage-trial-check/',root);
 await mkdir(out,{recursive:true});
 const publicMode=process.env.HOMEPAGE_PUBLIC==='1';
 const source=await readFile(new URL('src/framer/AdmiralHomepageTrial.tsx',root),'utf8');
-const code=ts.transpileModule(source,{compilerOptions:{target:ts.ScriptTarget.ES2020,module:ts.ModuleKind.CommonJS,jsx:ts.JsxEmit.React}}).outputText;
+const compilerOptions={target:ts.ScriptTarget.ES2020,module:ts.ModuleKind.CommonJS,jsx:ts.JsxEmit.React};
+const code=ts.transpileModule(source,{compilerOptions}).outputText;
+const sharedCode=ts.transpileModule(await readFile(new URL('src/framer/AdmiralApartmentDetailCard.tsx',root),'utf8'),{compilerOptions}).outputText;
+const listCode=ts.transpileModule(await readFile(new URL('src/framer/AdmiralApartmentList.tsx',root),'utf8'),{compilerOptions}).outputText;
 const react=await readFile(path.join(path.dirname(requireDev.resolve('react/package.json')),'umd/react.development.js'),'utf8');
 const dom=await readFile(path.join(path.dirname(requireDev.resolve('react-dom/package.json')),'umd/react-dom.development.js'),'utf8');
 const heroes=await Promise.all(Array.from({length:65},(_,i)=>readFile(new URL('assets/images/AVIF 30_1920x1010 DESKTOP HERO SEQUENCE/'+encodeURIComponent(`raw sequence${String(i).padStart(2,'0')}.avif`),root))));
@@ -78,8 +81,8 @@ async function fixture(options={}){
   }
   return route.fulfill({contentType:'text/html',body:'<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><style>html,body{margin:0;font:18px Arial;background:#0e1720}#stage{height:100svh;position:relative;overflow:hidden}.copy{position:absolute;left:6%;top:20%;max-width:650px;color:white;z-index:4}.cta{position:absolute;left:6%;top:65%;z-index:4}.cta a{display:inline-block;padding:18px;background:white;color:black}#navbar{position:fixed;z-index:50;top:8px;left:12px;display:flex;gap:12px}#nested{position:absolute;right:0;top:100px;width:110px;height:100px;overflow:auto;z-index:40;background:white}#native-input{position:absolute;right:5px;top:220px;z-index:40;width:95px}#external-framer-overlay{position:absolute;inset:0;z-index:20;pointer-events:auto}#external-framer-overlay>div{width:100%;height:100%}</style></head><body'+(options.externalOverlay?' style="height:300vh"':'')+'><nav id="navbar"><a id="nav-link" href="#apartments">Apartments</a><button id="nav-button">Contact</button></nav><div id="mount"></div></body></html>'});
  });
- await page.goto('http://homepage.test/');await page.addScriptTag({content:react});await page.addScriptTag({content:dom});
- await page.evaluate(({code,props,staticMode,publicMode,twoInstances,externalOverlay,gateDecodeIndices,gateFirstNativeDecodes,accelerateDecodeWatchdog,useDefaultOrbitStart,useDefaultPhoneWidth,useDefaultOrbitLayout,cleanFixture,storyOverlays,storyAliases,tallStory,stageScale,stageWidth,stageHeight})=>{
+ await page.goto(options.initialUrl||'http://homepage.test/');await page.addScriptTag({content:react});await page.addScriptTag({content:dom});
+ await page.evaluate(({code,sharedCode,listCode,listMode,bothEntries,props,staticMode,publicMode,twoInstances,externalOverlay,gateDecodeIndices,gateFirstNativeDecodes,accelerateDecodeWatchdog,useDefaultOrbitStart,useDefaultPhoneWidth,useDefaultOrbitLayout,cleanFixture,storyOverlays,storyAliases,tallStory,stageScale,stageWidth,stageHeight})=>{
   if(cleanFixture){const style=document.createElement('style');style.textContent='#nested,#native-input{display:none!important}';document.head.appendChild(style);}
   window.bitmapCreated=0;window.bitmapClosed=0;window.bitmapRecords=[];window.sequenceDraws=[];window.orbitLive=0;window.orbitLiveMax=0;
   const bitmapRecords=new WeakMap(),nativeDrawImage=CanvasRenderingContext2D.prototype.drawImage;
@@ -118,9 +121,16 @@ async function fixture(options={}){
    }finally{window.nativeBitmapActive--;}
   };
   document.querySelector('#nav-button').addEventListener('click',()=>window.navClicked=(window.navClicked||0)+1);
-  const module={exports:{}};
   const stub={useIsStaticRenderer:()=>staticMode,RenderTarget:{canvas:'canvas',current:()=>staticMode?'canvas':'preview'},addPropertyControls:()=>{},ControlType:new Proxy({},{get:(_,name)=>name})};
-  new Function('module','exports','require',code)(module,module.exports,name=>name==='react'?React:stub);
+  const moduleSources=new Map([['./AdmiralHomepageTrial',code],['./AdmiralApartmentDetailCard',sharedCode],['./AdmiralApartmentList',listCode]]),moduleCache=new Map();window.sharedCardLoads=0;
+  const requireModule=name=>{
+   if(name==='react')return React;if(name==='framer')return stub;
+   if(!moduleSources.has(name))throw new Error('Unexpected Framer module '+name);
+   if(moduleCache.has(name))return moduleCache.get(name).exports;
+   const module={exports:{}};moduleCache.set(name,module);if(name==='./AdmiralApartmentDetailCard')window.sharedCardLoads++;
+   new Function('module','exports','require',moduleSources.get(name))(module,module.exports,requireModule);return module.exports;
+  };
+  const module={exports:requireModule('./AdmiralHomepageTrial')};window.requireFramerModule=requireModule;window.sharedCardModule=requireModule('./AdmiralApartmentDetailCard');
   const Frame=React.forwardRef((props,ref)=>React.createElement('div',{...props,ref}));
   const Intro=module.exports[storyAliases?'BalatonfuredContent':'OpeningContent'](Frame),Building=module.exports[storyAliases?'AranyhidContent':'BuildingContent'](Frame),CTA=module.exports.ArrivalCTA(Frame);
   const Stories=storyOverlays?Array.from({length:8},(_,index)=>module.exports[`OrbitView${index+1}`](Frame)):[];
@@ -130,6 +140,11 @@ async function fixture(options={}){
   if(useDefaultPhoneWidth)delete window.props.phoneImageWidth;
   if(useDefaultOrbitLayout)delete window.props.orbitLayout;
   window.root=ReactDOM.createRoot(document.querySelector('#mount'));
+  if(listMode){
+   window.component=requireModule('./AdmiralApartmentList').default;
+   window.props={dataUrl:'http://homepage.test/apartment-details.json',assetBaseUrl:'http://homepage.test/apartment-assets',pageUrl:'http://homepage.test/lista',...props};
+   window.renderTrial=()=>window.root.render(React.createElement(React.StrictMode,null,bothEntries?React.createElement('section',{id:'stage',style:{position:'fixed',inset:0,zIndex:0}},React.createElement(module.exports.default,{useGitHubAssets:false,heroBaseUrl:'http://homepage.test/hero',connectionBaseUrl:'http://homepage.test/connection',orbitBaseUrl:'http://homepage.test/orbit',startView:'orbit',orbitStartFrame:0,showControls:false,detailsMode:'off',snapDuration:.3})):null,React.createElement('section',{id:'list-fixture',style:bothEntries?{position:'fixed',inset:0,zIndex:20,overflow:'auto'}:undefined},React.createElement(window.component,window.props))));window.renderTrial();return;
+  }
   window.renderTrial=()=>window.root.render(React.createElement(React.StrictMode,null,React.createElement('section',{id:'stage',style:{...(stageScale?{transform:`scale(${stageScale})`,transformOrigin:'top left'}:{}),...(stageWidth?{width:stageWidth}:{}),...(stageHeight?{height:stageHeight}:{})}},
    React.createElement(window.component,window.props),
    React.createElement(Intro,{id:'intro',className:'copy'},'LOCATION'),
@@ -142,9 +157,9 @@ async function fixture(options={}){
    twoInstances?React.createElement('section',{id:'secondary',style:{display:'none',position:'relative',height:'100svh'}},React.createElement(window.component,window.props)):null));
   window.renderTrial();window.samples=[];
   window.sampleTimer=setInterval(()=>{const root=document.querySelector('[data-admiral-homepage]'),orbit=document.querySelector('[data-admiral-orbit]')||root,hero=document.querySelector('[data-admiral-sequence]');if(root)window.samples.push({time:performance.now(),stage:root.dataset.homepageStage,sequence:root.dataset.activeSequence,sequenceState:hero?.dataset.sequenceState,heroDecoded:Number(hero?.dataset.decoded),state:orbit?.dataset.orbitState,position:Number(orbit?.dataset.orbitPosition),frame:Number(orbit?.dataset.orbitFrame),checkpoint:Number(orbit?.dataset.orbitCheckpoint),decoded:Number(orbit?.dataset.orbitDecoded),buffered:Number(orbit?.dataset.orbitBuffered),bufferTotal:Number(orbit?.dataset.orbitBufferTotal),requiredReady:Number(orbit?.dataset.orbitRequiredReady),requiredTotal:Number(orbit?.dataset.orbitRequiredTotal),decoding:Number(orbit?.dataset.orbitDecoding),ready:orbit?.dataset.orbitReady,target:Number(orbit?.dataset.orbitTarget),mix:Number(orbit?.dataset.orbitFrameMix),heroFrame:Number(hero?.dataset.frame)});},16);
- },{code,props:options.props||{},staticMode:!!options.staticMode,publicMode,twoInstances:!!options.twoInstances,externalOverlay:!!options.externalOverlay,gateDecodeIndices:options.gateDecodeIndices||[],gateFirstNativeDecodes:options.gateFirstNativeDecodes||0,accelerateDecodeWatchdog:!!options.accelerateDecodeWatchdog,useDefaultOrbitStart:!!options.useDefaultOrbitStart,useDefaultPhoneWidth:!!options.useDefaultPhoneWidth,useDefaultOrbitLayout:!!options.useDefaultOrbitLayout,cleanFixture:!!options.cleanFixture,storyOverlays:!!options.storyOverlays,storyAliases:!!options.storyAliases,tallStory:!!options.tallStory,stageScale:options.stageScale,stageWidth:options.stageWidth,stageHeight:options.stageHeight});
- await page.waitForSelector('[data-admiral-homepage]');
- await page.waitForFunction(()=>[...document.images].some(image=>image.naturalWidth>0));
+ },{code,sharedCode,listCode,listMode:!!options.listMode,bothEntries:!!options.bothEntries,props:options.props||{},staticMode:!!options.staticMode,publicMode,twoInstances:!!options.twoInstances,externalOverlay:!!options.externalOverlay,gateDecodeIndices:options.gateDecodeIndices||[],gateFirstNativeDecodes:options.gateFirstNativeDecodes||0,accelerateDecodeWatchdog:!!options.accelerateDecodeWatchdog,useDefaultOrbitStart:!!options.useDefaultOrbitStart,useDefaultPhoneWidth:!!options.useDefaultPhoneWidth,useDefaultOrbitLayout:!!options.useDefaultOrbitLayout,cleanFixture:!!options.cleanFixture,storyOverlays:!!options.storyOverlays,storyAliases:!!options.storyAliases,tallStory:!!options.tallStory,stageScale:options.stageScale,stageWidth:options.stageWidth,stageHeight:options.stageHeight});
+ if(options.listMode)await page.locator('[data-detail="A001"]').first().waitFor({state:'visible'});
+ else{await page.waitForSelector('[data-admiral-homepage]');await page.waitForFunction(()=>[...document.images].some(image=>image.naturalWidth>0));}
  await page.mouse.move(450,500);
  return {context,page,errors,heroRequests,connectionRequests,orbitRequests,floorplanRequests,apartmentRequests,apartmentMediaRequests,detailRequests,releaseDetails(){detailGateOpen=true;detailWaiters.splice(0).forEach(resolve=>resolve());},restoreDetails(){failDetails=false;},restoreApartment(){failApartment=false;},restoreOrbit(){failIndex=undefined;corruptIndex=undefined;},restoreConnection(){failConnection=undefined;corruptConnection=undefined;},async close(){detailGateOpen=true;detailWaiters.splice(0).forEach(resolve=>resolve());if(options.props?.orbitLayout==='studio'){await page.screenshot({path:fileURLToPath(new URL('studio-last-state.png',out))}).catch(()=>{});await writeFile(new URL('studio-last-state.json',out),JSON.stringify(await page.evaluate(()=>({root:{...document.querySelector('[data-admiral-homepage]')?.dataset},studio:{...document.querySelector('[data-orbit-studio]')?.dataset},text:document.querySelector('[data-orbit-studio]')?.innerText})).catch(()=>({})),null,2));}await page.evaluate(()=>{window.releaseDecodeGates?.();window.releaseNativeDecodeGates?.();window.releaseSequenceDecodeGates?.();}).catch(()=>{});assert.deepEqual(errors,[]);await context.close();}};
 }
@@ -286,6 +301,30 @@ async function assertStoryTarget(page,view){
 }
 
 try{
+ await pass('list compare and media dialogs preserve filters and cannot control an orbit behind them',async()=>{
+  const f=await fixture({listMode:true,bothEntries:true,cleanFixture:true,context:{hasTouch:true}}),{page}=f;
+  try{
+   await waitOrbit(page);const before=await orbitData(page);await page.locator('#building').selectOption('A');await page.locator('[data-compare="A001"]').click();await page.locator('[data-compare="A003"]').click();await page.locator('[data-open-compare]').click();
+   const compare=page.locator('[data-admiral-apartment-list] #compare-dialog');await compare.waitFor({state:'visible'});assert.match(await compare.locator('.compare-table').innerText(),/A001/);assert.match(await compare.locator('.compare-table').innerText(),/A003/);const compareBox=await compare.boundingBox();assert.ok(compareBox.width>700&&compareBox.height>300,'The existing comparison table retains a useful dialog layout');await componentScreenshot(page,'shared-list-compare-open.png');
+   await compare.locator('[data-from-compare="A003"]').click();const card=await waitApartmentCard(page,'A003');await compare.waitFor({state:'hidden'});await card.getByRole('button',{name:'Bezárás',exact:true}).click();await card.waitFor({state:'hidden'});assert.equal(await page.locator('#building').inputValue(),'A','Opening a comparison apartment preserves its active list filter');
+   await page.locator('[data-media="A001"][data-media-kind="floorplan"]').click();const media=page.locator('[data-admiral-apartment-list] #media-dialog');await media.waitFor({state:'visible'});await media.locator('.media-image').evaluate(image=>image.decode());const mediaBox=await media.boundingBox();assert.ok(Math.abs(mediaBox.width-1200)<2&&Math.abs(mediaBox.height-800)<2,'The separate media dialog keeps its fullscreen geometry');const mediaStage=await media.locator('.media-stage').boundingBox();assert.ok(mediaStage.width>1000&&mediaStage.height>500,'The list media image retains a usable reading area after CSS pruning');await media.getByRole('button',{name:'Nagyítás',exact:true}).click();assert.notEqual(await media.locator('[data-zoom=reset]').innerText(),'100%','The original list media zoom remains active');assert.match(await media.locator('.media-image').getAttribute('style'),/scale\(1\.5\)/,'The native zoom changes the actual image transform');await componentScreenshot(page,'shared-list-media-open.png');
+   await media.locator('.media-stage').focus();await page.keyboard.press('ArrowRight');await page.mouse.move(400,350);await page.mouse.wheel(0,-120);const cdp=await page.context().newCDPSession(page);await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:800,y:400}]});await cdp.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x:450,y:400}]});await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});await page.waitForTimeout(350);assertSameCamera(before,await orbitData(page),'List compare and media actions');await page.keyboard.press('Escape');await media.waitFor({state:'hidden'});await waitOrbit(page);assertSameCamera(before,await orbitData(page),'Closing the separate list media dialog');assert.equal(await page.locator('#building').inputValue(),'A');await componentScreenshot(page,'shared-list-after-compare-media.png');
+  }finally{await f.close();}
+ });
+ await pass('list initial apartment link opens the shared card and closing preserves its building filter',async()=>{
+  const f=await fixture({listMode:true,cleanFixture:true,initialUrl:'http://homepage.test/?apartment=A001&building=A'}),{page}=f;
+  try{const card=await waitApartmentCard(page);assert.equal(await page.locator('#building').inputValue(),'A');const requests=f.detailRequests.length;await card.getByRole('button',{name:'Bezárás',exact:true}).click();await card.waitFor({state:'hidden'});const url=new URL(page.url());assert.equal(url.searchParams.has('apartment'),false);assert.equal(url.searchParams.get('building'),'A');assert.equal(await page.locator('#building').inputValue(),'A');assert.equal(f.detailRequests.length,requests);}finally{await f.close();}
+ });
+ await pass('list entry and homepage resolve one shared card module and list opening reuses its loaded JSON dataset',async()=>{
+  const f=await fixture({listMode:true,cleanFixture:true}),{page}=f;
+  try{
+   await page.locator('[data-admiral-apartment-list="shared"]').waitFor();assert.equal(await page.evaluate(()=>window.sharedCardLoads),1,'The homepage and list imports resolve one cached shared component module');assert.equal(await page.evaluate(()=>window.requireFramerModule('./AdmiralApartmentDetailCard')===window.sharedCardModule),true);
+   await page.locator('#building').selectOption('A');await page.waitForTimeout(120);const initialRequests=f.detailRequests.length;assert.ok(initialRequests>=1,'The list loads its full apartment dataset');await componentScreenshot(page,'shared-list-before-open.png');
+   await page.locator('[data-detail="A001"]').first().click();const card=await waitApartmentCard(page);assert.equal(f.detailRequests.length,initialRequests,'The shared detail card consumes the list dataset without fetching it again');assert.equal(await card.locator('.room-marker').count(),10);assert.equal(await card.locator('.detail-apartment-number').innerText(),'A001');await componentScreenshot(page,'shared-list-card-open.png');
+   await card.locator('[data-save="A001"]').click();await card.getByRole('button',{name:'Bezárás',exact:true}).click();await card.waitFor({state:'hidden'});assert.equal(await page.locator('#building').inputValue(),'A','Closing the shared card preserves the active list filter');assert.equal(await page.locator('[data-admiral-apartment-list] [data-save="A001"]').getAttribute('aria-pressed'),'true','Favorites synchronize from the shared card back to its list entry');
+   assert.equal(await page.evaluate(()=>window.sharedCardLoads),1);assert.equal(f.detailRequests.length,initialRequests);await componentScreenshot(page,'shared-list-entry.png');
+  }finally{await f.close();}
+ });
  await pass('shared detail card opens lazily for a parked canonical apartment and reuses the exact native list dialog',async()=>{
   const f=await fixture({cleanFixture:true,useDefaultOrbitLayout:true,context:{viewport:{width:1440,height:900}},props:{...studioProps,showControls:true,snapDuration:1.2},gateDetails:true}),{page}=f;
   try{

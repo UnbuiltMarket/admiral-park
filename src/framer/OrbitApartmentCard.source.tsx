@@ -1,4 +1,4 @@
-// Same native apartment dialog as AdmiralApartmentList, built from the shared snapshot.
+// Shared native apartment dialog used by both homepage and apartment list.
 const ORBIT_APARTMENT_CARD_STYLES = __APARTMENT_CARD_STYLES__
 const ORBIT_APARTMENT_CARD_SHELL = __APARTMENT_CARD_SHELL__
 
@@ -10,7 +10,7 @@ interface OrbitApartmentCardController {
     retry: () => unknown
     dispose: () => void
 }
-interface OrbitApartmentCardProps {
+export interface AdmiralApartmentDetailCardProps {
     openId: string | null
     dataUrl: string
     assetBase: string
@@ -19,10 +19,14 @@ interface OrbitApartmentCardProps {
     onOpenChange: (open: boolean) => void
     onClosed: () => void
     onReady?: () => void
+    /** Reuse the list's loaded JSON instead of issuing another request. */
+    dataset?: unknown
+    /** Shared card colour variables; updates without rebuilding the runtime. */
+    theme?: React.CSSProperties
 }
 
-function OrbitApartmentCard(props: OrbitApartmentCardProps) {
-    const { openId, dataUrl, assetBase, inquiryUrl, pageUrl } = props
+export function AdmiralApartmentDetailCard(props: AdmiralApartmentDetailCardProps) {
+    const { openId, dataUrl, assetBase, inquiryUrl, pageUrl, dataset, theme } = props
     const host = React.useRef<HTMLDivElement | null>(null)
     const controller = React.useRef<OrbitApartmentCardController | null>(null)
     const noticeHost = React.useRef<HTMLDivElement | null>(null)
@@ -67,22 +71,17 @@ function OrbitApartmentCard(props: OrbitApartmentCardProps) {
         const shadow = host.current.shadowRoot || host.current.attachShadow({ mode: "open" })
         let alive = true
         let lastOpen = false
-        // The list shell stays available for the shared engine's selectors, while its
-        // renderer is disabled. No list rows or their image requests are created.
-        shadow.innerHTML = "<style>" + ORBIT_APARTMENT_CARD_STYLES + "\n:host{position:fixed!important;inset:0 auto auto 0!important;width:0!important;height:0!important;min-height:0!important;background:transparent!important;pointer-events:none!important;overflow:visible!important}.list-container,#compare-tray{display:none!important}dialog,.toast{pointer-events:auto}dialog{font-size:14px}</style>" + ORBIT_APARTMENT_CARD_SHELL
-        const list = shadow.querySelector<HTMLElement>(".list-container")
-        if (list) { list.hidden = true; list.inert = true }
+        shadow.innerHTML = "<style>" + ORBIT_APARTMENT_CARD_STYLES + "\n:host{position:fixed!important;inset:0 auto auto 0!important;width:0!important;height:0!important;min-height:0!important;background:transparent!important;pointer-events:none!important;overflow:visible!important}dialog,.toast{pointer-events:auto}dialog{font-size:14px}</style>" + ORBIT_APARTMENT_CARD_SHELL
         setState("loading")
         setError("")
         setNativeOpen(false)
         try {
             const runtime = mountOrbitApartmentCardRuntime(shadow, {
                 dataUrl,
+                dataset,
                 assetBaseUrl: assetBase,
                 inquiryUrl,
                 pageUrl: pageUrl || window.location.href,
-                disableUrl: true,
-                detailOnly: true,
                 apartment: current.current.openId,
                 onState: (next: "loading" | "ready" | "error", message: string) => {
                     if (!alive) return
@@ -111,12 +110,12 @@ function OrbitApartmentCard(props: OrbitApartmentCardProps) {
             setError("Nem sikerült megnyitni a lakás adatait. Próbálja újra.")
             return () => { alive = false; controller.current = null; shadow.replaceChildren() }
         }
-    }, [started, dataUrl, assetBase, inquiryUrl, pageUrl, restoreFocus])
+    }, [started, dataUrl, assetBase, inquiryUrl, pageUrl, dataset, restoreFocus])
 
     React.useEffect(() => {
         if (openId) controller.current?.open(openId)
         else controller.current?.close()
-    }, [openId, started, dataUrl, assetBase, inquiryUrl, pageUrl])
+    }, [openId, started, dataUrl, assetBase, inquiryUrl, pageUrl, dataset])
 
     const close = React.useCallback(() => {
         if (closing.current) return
@@ -150,7 +149,7 @@ function OrbitApartmentCard(props: OrbitApartmentCardProps) {
         data-apartment-id={openId || ""}
         style={{ position: "absolute", inset: 0, pointerEvents: "none", zIndex: 30 }}
     >
-        <div ref={host} data-orbit-ignore="" style={{ position: "fixed", top: 0, left: 0, width: 0, height: 0, pointerEvents: "none" }} />
+        <div ref={host} data-orbit-ignore="" style={{ ...theme, position: "fixed", top: 0, left: 0, width: 0, height: 0, pointerEvents: "none" }} />
         {notice && <div
             ref={noticeHost}
             data-orbit-ignore=""

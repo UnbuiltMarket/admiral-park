@@ -6,7 +6,7 @@ No project claims, finished copy or new logo artwork are included. Each checkpoi
 
 ## Set up the layers
 
-1. Replace the whole existing Framer code file with the latest generated `src/framer/AdmiralHomepageTrial.tsx`. Keep the existing code component instance and choose overrides from this same file.
+1. First install the local `AdmiralApartmentDetailCard.tsx` dependency using [the shared-card setup](FRAMER-SHARED-CARD.md). Replace the existing homepage file with the latest generated `src/framer/AdmiralHomepageTrial.tsx`. Keep the existing code component instance and choose overrides from this same homepage file.
 2. Use one Relative parent Frame, sized to the viewport with height **100vh**. The camera component fills this parent. Put the content groups above it as siblings, rather than inside the code component. Keep the navbar above the viewer as native Framer content.
 3. Create a native Frame for the opening composition and apply **BalatonfuredContent**. The existing **OpeningContent** name still works for this same phase.
 4. Create a native Frame for the Aranyhíd sétány composition and apply **AranyhidContent**. The existing **BuildingContent** name still works. A separately timed native CTA can keep **ArrivalCTA**.
@@ -86,7 +86,7 @@ The mobile layout is upright again. SEQ_01 remains fullscreen; SEQ_02 opens into
 
 Browser orientation locking is not reliable for an ordinary webpage across phones and commonly requires fullscreen ([MDN: ScreenOrientation.lock](https://developer.mozilla.org/en-US/docs/Web/API/ScreenOrientation/lock)). The website therefore follows the normal browser orientation and responsive layout, without asking the visitor to turn the phone.
 
-Replace the contents of the existing Framer code file with the updated **AdmiralHomepageTrial.tsx**. Keep the existing camera instance and native content overrides. No permanent loader is needed.
+Keep **AdmiralApartmentDetailCard.tsx** installed beside the homepage file, then replace the contents of the existing homepage file with **AdmiralHomepageTrial.tsx**. Keep the existing camera instance and native content overrides. No permanent loader is needed.
 
 On the Phone breakpoint, keep the outer viewer at the full screen height. The code manages the image inside that fixed area:
 

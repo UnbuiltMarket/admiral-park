@@ -6,7 +6,7 @@ The complete desktop studio experiment is preserved on the GitHub branch [`orbit
 
 ## Framer setup
 
-1. Replace the entire contents of the existing Framer code file with the generated `src/framer/AdmiralHomepageTrial.tsx`. Keep the same component instance.
+1. Follow [the three-file shared-card setup](FRAMER-SHARED-CARD.md): create `AdmiralApartmentDetailCard.tsx`, then update the existing `AdmiralHomepageTrial.tsx` and `AdmiralApartmentList.tsx` files. Keep the same homepage and list component instances.
 2. Keep the outer component and its Relative parent at **100vh**, filling the viewport. The studio occupies the lower **90% of that component**, leaving a header reserve above. Do not reduce the component itself to 90vh.
 3. Use **Orbit layout → Fullscreen desktop** and **Apartment details → Preview** while the picking masks are unfinished. Existing component instances may retain the previous **Apartment studio** choice after pasting; change it explicitly. The desktop white detail strip and phone workspace use the same real JSON apartment. Choose it with **Preview apartment** in the sidebar, or with the phone preview selector.
 4. Keep the default apartment JSON and media base URLs when using the supplied GitHub assets. The JSON is `data/apartments.json`; the media base is `assets/apartment-list/`. Asset paths in the JSON are resolved against this media base.
@@ -33,7 +33,7 @@ The browser loads the apartment JSON once and requests the selected plan, rather
 
 ## Open the list-view apartment card
 
-Selecting an apartment opens the same native detail card used by `AdmiralApartmentList`: the full logo, large numbered floorplan, room legend, floor layout, status, price, inquiry button, PDF, favourites and sharing. Its source and CSS are kept in `src/shared/apartment-card/` and inlined into the paste-ready homepage file. No separate loader, iframe or second Framer code file is needed.
+Selecting an apartment opens the same native detail card used by `AdmiralApartmentList`: the full logo, large numbered floorplan, room legend, floor layout, status, price, inquiry button, PDF, favourites and sharing. Both entry points import the local `AdmiralApartmentDetailCard.tsx` file; the card is no longer copied inside the homepage or list. Its source is kept in `src/shared/apartment-card/`. No remote script loader or iframe is needed.
 
 Until the picking masks exist, open the selected unit with the floorplan thumbnail in the desktop white strip, **Lakás részletei** in the phone workspace, or **Open apartment details** in the trial controls. The card overlays the current homepage. Closing it restores the same camera and selected apartment; card interactions suspend orbit navigation.
 
@@ -44,6 +44,7 @@ Refresh the card data and shared presentation after changes in the apartment-lis
 ```text
 node scripts/sync-apartment-details.mjs --source <canonical-apartments.json>
 node scripts/sync-apartment-card.mjs --source <apartment-list-project-folder>
+node scripts/sync-apartment-list.mjs --source <apartment-list-project-folder>
 node scripts/build.mjs
 ```
 

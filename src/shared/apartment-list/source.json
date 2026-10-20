@@ -1,0 +1,6 @@
+{
+  "source": "Apartment list site snapshot",
+  "description": "List-only runtime snapshot. Apartment detail rendering is delegated to the shared Framer component.",
+  "upstreamAppSha256": "9290a561b4c4d96b6cafa8ab205b83ba285b875109d2525cb9d45b4bf85afa98",
+  "updated": "2026-10-20"
+}

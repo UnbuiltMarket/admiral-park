@@ -2,6 +2,7 @@ import { readFile, writeFile, mkdir } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { extractApartmentCard } from './extract-apartment-card.mjs';
 
 // Snapshot the existing list-view card; never modify its source project.
 const args = process.argv.slice(2);
@@ -46,13 +47,18 @@ runtime = replaceOnce(runtime, "load();\nreturn () => {lifecycle.abort();observe
 load();
 return controller;`, 'controller lifecycle');
 runtime = runtime.trimEnd() + '\n';
+// Validate and derive the card-only files before writing any snapshot. Upstream
+// changes to adapted behavior stop here for review rather than leaving the live
+// shared card stale while appearing to have synced successfully.
+const cardOnly = await extractApartmentCard({ runtimeSource: runtime, stylesSource: originals['styles.css'], shellSource: shell, writeOutputs: false });
 const manifest = {
     schemaVersion: '1.0',
     sourceProject: 'AdmiralApartmentList',
-    description: 'Exact list-view dialog UI with an adapter for lazy orbit opening. No apartment data is embedded.',
+    description: 'Original list-view snapshots plus a guarded card-only extraction used by both Framer entries. No apartment data is embedded.',
     originals: Object.fromEntries(Object.entries(originals).map(([name, content]) => [name, { sha256: sha(content), bytes: Buffer.byteLength(content) }])),
     adapted: { 'app.js': { sha256: sha(runtime), bytes: Buffer.byteLength(runtime) }, 'styles.css': { sha256: sha(originals['styles.css']) }, 'shell.html': { sha256: sha(shell) } },
-    adapter: { version: 1, changes: ['manual mount only', 'runtime and font-loader names', 'queued apartment selection', 'skip list rendering', 'dialog lifecycle bridge', 'loading and retry bridge', 'controller lifecycle'] },
+    cardOnly: Object.fromEntries(Object.entries(cardOnly).map(([name, text]) => [name, {sha256: sha(text), bytes: Buffer.byteLength(text)}])),
+    adapter: { version: 2, changes: ['manual mount only', 'runtime and font-loader names', 'queued apartment selection', 'dialog lifecycle bridge', 'loading and retry bridge', 'controller lifecycle', 'guarded card-only extraction', 'shared loaded dataset', 'favorites synchronization'] },
 };
 await mkdir(target, { recursive: true });
 await Promise.all([
@@ -60,5 +66,6 @@ await Promise.all([
     writeFile(path.join(target, 'styles.css'), originals['styles.css']),
     writeFile(path.join(target, 'shell.html'), shell),
     writeFile(path.join(target, 'source.json'), JSON.stringify(manifest, null, 2) + '\n'),
+    ...Object.entries(cardOnly).map(([name, text]) => writeFile(path.join(target, name), text)),
 ]);
-console.log(JSON.stringify({ target: 'src/shared/apartment-card/', runtimeBytes: Buffer.byteLength(runtime), stylesBytes: Buffer.byteLength(originals['styles.css']), sourceAppSha256: sha(originals['app.js']) }));
+console.log(JSON.stringify({ target: 'src/shared/apartment-card/', runtimeBytes: Buffer.byteLength(cardOnly['card-runtime.js']), stylesBytes: Buffer.byteLength(cardOnly['card.css']), sourceAppSha256: sha(originals['app.js']), next: 'node scripts/build.mjs' }));

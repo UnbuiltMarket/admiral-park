@@ -3,6 +3,8 @@ import {createHash} from "node:crypto";
 import {compileTS,inlineCore} from "./tooling.mjs";
 import {buildRemote} from "./build-remote.mjs";
 import {buildHomepage} from "./build-homepage.mjs";
+import {buildApartmentCard} from "./build-apartment-card.mjs";
+import {buildApartmentList} from "./build-apartment-list.mjs";
 const root=new URL("../",import.meta.url);
 for(const [coreName,componentName] of [["hero-player","AdmiralHeroVideo"],["hero-sequence","AdmiralHeroSequence"]]){
   const core=await readFile(new URL(`src/core/${coreName}.ts`,root),"utf8");
@@ -26,5 +28,7 @@ for(const [coreName,componentName] of [["hero-player","AdmiralHeroVideo"],["hero
   await writeFile(new URL(`src/framer/${componentName}.tsx`,root),single);
 }
 console.log("Built browser players and standalone Framer video/sequence components.");
+await buildApartmentCard();
+await buildApartmentList();
 await buildHomepage();
 if (process.argv.includes("--remote")) await buildRemote();

@@ -1,7 +1,6 @@
 import { readFile, readdir, writeFile } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 import { inlineCore, compileTS } from './tooling.mjs';
-import { inlineApartmentCardRuntime } from './inline-apartment-card.mjs';
 const root = new URL('../', import.meta.url);
 export async function buildHomepage() {
  const heroFolder = new URL('assets/images/AVIF 30_1920x1010 DESKTOP HERO SEQUENCE/', root);
@@ -31,15 +30,12 @@ export async function buildHomepage() {
  const orbitStories = await readFile(new URL('src/framer/OrbitStoryOverlays.source.tsx',root),'utf8');
  const apartmentData = await readFile(new URL('src/framer/OrbitApartmentData.source.tsx',root),'utf8');
  const apartmentStudio = await readFile(new URL('src/framer/OrbitApartmentStudio.source.tsx',root),'utf8');
- const cardFiles = await Promise.all(['src/framer/OrbitApartmentCard.source.tsx','src/shared/apartment-card/app.js','src/shared/apartment-card/styles.css','src/shared/apartment-card/shell.html'].map(file => readFile(new URL(file,root),'utf8')));
- const apartmentCard = cardFiles[0].replace('__APARTMENT_CARD_STYLES__',() => JSON.stringify(cardFiles[2])).replace('__APARTMENT_CARD_SHELL__',() => JSON.stringify(cardFiles[3]))
-  .replace('// @APARTMENT_CARD_RUNTIME_INSERT',() => inlineApartmentCardRuntime(cardFiles[1]));
- const source = '// Generated complete Framer homepage trial. Paste this entire file into Framer.\n'+template
+ const source = '// Generated Framer homepage. Requires AdmiralApartmentDetailCard.tsx in the same Framer project.\n'+template
   .replace('__HERO_NAMES__',JSON.stringify(heroNames)).replace('__CONNECTION_NAMES__',JSON.stringify(connectionNames)).replace('__ORBIT_NAMES__',JSON.stringify(orbitNames))
   .replace('__HERO_VERSION__',heroHash.digest('hex').slice(0,12)).replace('__CONNECTION_VERSION__',connectionHash.digest('hex').slice(0,12)).replace('__ORBIT_VERSION__',orbitHash.digest('hex').slice(0,12))
-  .replace('// @ORBIT_STORY_INSERT',orbitStories).replace('// @ORBIT_APARTMENT_DATA_INSERT',apartmentData).replace('// @ORBIT_APARTMENT_STUDIO_INSERT',apartmentStudio).replace('// @ORBIT_APARTMENT_CARD_INSERT',() => apartmentCard).replace('// @APARTMENT_DETAILS_INSERT',apartmentDetails).replace('// @HERO_CORE_INSERT',inlineCore(hero)).replace('// @ORBIT_CORE_INSERT',inlineCore(orbit)).trimEnd()+'\n';
+  .replace('// @ORBIT_STORY_INSERT',orbitStories).replace('// @ORBIT_APARTMENT_DATA_INSERT',apartmentData).replace('// @ORBIT_APARTMENT_STUDIO_INSERT',apartmentStudio).replace('// @APARTMENT_DETAILS_INSERT',apartmentDetails).replace('// @HERO_CORE_INSERT',inlineCore(hero)).replace('// @ORBIT_CORE_INSERT',inlineCore(orbit)).trimEnd()+'\n';
  compileTS(source,'AdmiralHomepageTrial.tsx');
  await writeFile(new URL('src/framer/AdmiralHomepageTrial.tsx',root),source);
  await writeFile(new URL('src/core/orbit-player.js',root),'// Generated from orbit-player.ts.\n'+compileTS(orbit,'orbit-player.ts'));
- console.log(`Built standalone homepage trial: ${heroNames.length} SEQ_01 frames + ${connectionNames.length} SEQ_02 frames + ${orbitNames.length} orbit frames.`);
+ console.log(`Built homepage with shared apartment card: ${heroNames.length} SEQ_01 frames + ${connectionNames.length} SEQ_02 frames + ${orbitNames.length} orbit frames.`);
 }

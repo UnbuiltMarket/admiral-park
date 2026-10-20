@@ -9,6 +9,21 @@ import {ts,requireDev} from '../scripts/tooling.mjs';
 
 const root=new URL('../',import.meta.url);
 const source=await readFile(new URL('src/framer/AdmiralHomepageTrial.tsx',root),'utf8');
+const sharedSource=await readFile(new URL('src/framer/AdmiralApartmentDetailCard.tsx',root),'utf8');
+const listSource=await readFile(new URL('src/framer/AdmiralApartmentList.tsx',root),'utf8');
+const compilerOptions={target:ts.ScriptTarget.ES2020,module:ts.ModuleKind.CommonJS,jsx:ts.JsxEmit.React};
+function framerModules(stub){
+ const sources=new Map([['./AdmiralHomepageTrial',source],['./AdmiralApartmentDetailCard',sharedSource],['./AdmiralApartmentList',listSource]]),cache=new Map();
+ const load=name=>{
+  if(name==='framer')return stub;
+  if(!sources.has(name))return requireDev(name);
+  if(cache.has(name))return cache.get(name).exports;
+  const module={exports:{}};cache.set(name,module);
+  vm.runInNewContext(ts.transpileModule(sources.get(name),{compilerOptions}).outputText,{module,exports:module.exports,require:load});
+  return module.exports;
+ };
+ return {load,cache};
+}
 
 test('trial orbit contains exactly 120 consecutive AVIFs at the intended aspect ratio',async()=>{
  const folder=new URL('assets/ORBIT PICKER/BEAUTY sequence_Desktop/',root);
@@ -44,24 +59,22 @@ test('SEQ_02 contains every connecting frame at the same aspect ratio as the her
  assert.ok(bytes>3_000_000&&bytes<5_000_000,'Connector retains the exported compressed frames');
 });
 
-test('combined homepage and native overrides type-check with the real React and Framer SDKs',()=>{
- const file=fileURLToPath(new URL('src/framer/AdmiralHomepageTrial.tsx',root));
+test('homepage list and shared detail card type-check together with the real React and Framer SDKs',()=>{
+ const files=['AdmiralHomepageTrial.tsx','AdmiralApartmentList.tsx','AdmiralApartmentDetailCard.tsx'].map(name=>fileURLToPath(new URL('src/framer/'+name,root)));
  const modules=path.dirname(path.dirname(requireDev.resolve('react/package.json')));
  const options={strict:true,noEmit:true,skipLibCheck:true,target:ts.ScriptTarget.ES2020,module:ts.ModuleKind.ESNext,
   moduleResolution:ts.ModuleResolutionKind.Bundler,jsx:ts.JsxEmit.React,types:['react'],
   typeRoots:[path.join(modules,'@types')],lib:['lib.es2020.d.ts','lib.dom.d.ts']};
  const host=ts.createCompilerHost(options);
  host.resolveModuleNames=(names,containing)=>names.map(name=>ts.resolveModuleName(name,containing,options,ts.sys).resolvedModule||ts.resolveModuleName(name,path.join(modules,'../component.tsx'),options,ts.sys).resolvedModule);
- const errors=ts.getPreEmitDiagnostics(ts.createProgram([file],options,host)).filter(d=>d.category===ts.DiagnosticCategory.Error);
+ const errors=ts.getPreEmitDiagnostics(ts.createProgram(files,options,host)).filter(d=>d.category===ts.DiagnosticCategory.Error);
  assert.equal(errors.length,0,ts.formatDiagnosticsWithColorAndContext(errors,{getCurrentDirectory:()=>process.cwd(),getCanonicalFileName:f=>f,getNewLine:()=>"\n"}));
 });
 
 test('paste-in homepage registers its controls and server-renders without loading remote executable code',()=>{
- const compiled=ts.transpileModule(source,{compilerOptions:{target:ts.ScriptTarget.ES2020,module:ts.ModuleKind.CommonJS,jsx:ts.JsxEmit.React}}).outputText;
  let registered,controls;
  const stub={addPropertyControls:(component,props)=>{registered=component;controls=props;},ControlType:new Proxy({},{get:(_,name)=>name}),useIsStaticRenderer:()=>true,RenderTarget:{canvas:'canvas',current:()=> 'canvas'}};
- const module={exports:{}};
- vm.runInNewContext(compiled,{module,exports:module.exports,require:name=>name==='framer'?stub:requireDev(name)});
+ const modules=framerModules(stub),module={exports:modules.load('./AdmiralHomepageTrial')};
  assert.deepEqual(Object.keys(module.exports).sort(),['AranyhidContent','ArrivalCTA','BalatonfuredContent','BuildingContent','OpeningContent',...Array.from({length:8},(_,i)=>`OrbitView${i+1}`),'default'].sort());
  assert.equal(registered,module.exports.default);
  for(const key of ['startView','editorView','connectionBaseUrl','connectionDuration','checkpointCount','motionWidth','orbitMobileWidth','snapDuration','frameBlend','desktopBuffer','phoneBuffer','orbitStartFrame','detailsMode','detailsLanguage','detailsBottom','detailsInset','apartmentPreview','editorOrbitView','orbitStories','storyIn','storyOut','storyDelay','phoneFraming','phoneImageWidth','phoneImageTop','orbitLayout','orbitBackground','apartmentDataUrl','detailDataUrl','apartmentAssetBase','previewApartmentId','detailPageUrl','inquiryUrl',...Array.from({length:8},(_,i)=>`storyView${i+1}`)])assert.ok(controls[key],`Framer control ${key}`);
@@ -109,9 +122,25 @@ test('paste-in homepage registers its controls and server-renders without loadin
  }
 });
 
-test('orbit detail card includes the exact shared list styles and native dialog shell without embedded room data',async()=>{
- const styles=await readFile(new URL('src/shared/apartment-card/styles.css',root),'utf8'),shell=await readFile(new URL('src/shared/apartment-card/shell.html',root),'utf8'),manifest=JSON.parse(await readFile(new URL('src/shared/apartment-card/source.json',root),'utf8'));
- assert.equal(createHash('sha256').update(styles).digest('hex'),manifest.originals['styles.css'].sha256,'The detail card uses the unchanged list-view CSS');
- assert.ok(source.includes(JSON.stringify(styles)),'The standalone Framer file contains those exact shared styles');assert.ok(source.includes(JSON.stringify(shell)),'The standalone component contains the same native card shell');
- assert.match(shell,/id="detail-dialog"/);assert.match(shell,/id="media-dialog"/);assert.match(source,/data-orbit-detail-card/);assert.doesNotMatch(source,/A\.0\.01\.01/,'Detailed apartment room records are fetched lazily, not embedded into every page load');
+test('homepage and list import one dedicated shared card without embedding its UI or engine',()=>{
+ for(const [name,entry] of [['homepage',source],['list',listSource]]){
+  assert.match(entry,/from ["']\.\/AdmiralApartmentDetailCard["']/,'The '+name+' imports the shared Framer module');
+  assert.doesNotMatch(entry,/function detailPlan\(|function detailRooms\(|ORBIT_APARTMENT_CARD_STYLES|class=\\?["']detail-shell/,'The '+name+' has no embedded copy of the card runtime or markup');
+  assert.doesNotMatch(entry,/\.detail-plan-stage\s*\{|\.detail-shell\s*\{/,'The '+name+' has no embedded detail-card CSS');
+ }
+ assert.doesNotMatch(sharedSource,/const filterIds\s*=|function showCompare\(|function filtered\(|id=\\?["']filters\\?["']|id=\\?["']compare-dialog\\?["']/,'The shared card has no list filtering or comparison engine');
+ assert.doesNotMatch(sharedSource,/A\.0\.01\.01/,'Detailed apartment room records remain external JSON');
+ const stub={addPropertyControls:()=>{},ControlType:new Proxy({},{get:(_,name)=>name}),useIsStaticRenderer:()=>true,RenderTarget:{canvas:'canvas',current:()=> 'canvas'}};
+ const modules=framerModules(stub),home=modules.load('./AdmiralHomepageTrial'),shared=modules.load('./AdmiralApartmentDetailCard'),list=modules.load('./AdmiralApartmentList');
+ assert.equal(modules.load('./AdmiralApartmentDetailCard'),shared,'Both entries resolve the same cached shared module');assert.ok(home.default&&list.default&&shared.default);assert.equal(shared.default,shared.AdmiralApartmentDetailCard);
+ const html=requireDev('react-dom/server').renderToStaticMarkup(requireDev('react').createElement(list.default));assert.doesNotMatch(html,/<iframe|<script/,'The list also server-renders without remote executable wrappers');
+});
+
+test('shared card keeps critical original style declarations while excluding list and comparison markup',async()=>{
+ const original=await readFile(new URL('src/shared/apartment-card/styles.css',root),'utf8'),styles=await readFile(new URL('src/shared/apartment-card/card.css',root),'utf8'),shell=await readFile(new URL('src/shared/apartment-card/card-shell.html',root),'utf8'),manifest=JSON.parse(await readFile(new URL('src/shared/apartment-card/source.json',root),'utf8'));
+ assert.equal(createHash('sha256').update(original).digest('hex'),manifest.originals['styles.css'].sha256,'The original stylesheet remains as pinned provenance');
+ const declaration=(css,selector)=>{const start=css.indexOf(selector+' {');assert.ok(start>=0,selector+' exists');const open=css.indexOf('{',start),close=css.indexOf('}',open);return css.slice(open+1,close).replace(/\s+/g,' ').trim();};
+ for(const selector of ['.apartment-dialog','#detail-dialog','#detail-dialog .detail-shell','#detail-dialog .detail-metrics','#detail-dialog .detail-plan-canvas','#detail-dialog .detail-plan-image','#detail-dialog .room-marker','#detail-dialog .share-popover','.media-dialog'])assert.equal(declaration(styles,selector),declaration(original,selector),selector+' retains its established declaration');
+ assert.ok(sharedSource.includes(JSON.stringify(styles)),'The shared module contains the extracted card CSS');assert.ok(sharedSource.includes(JSON.stringify(shell)),'The shared module contains only its native card shell');
+ assert.match(shell,/id="detail-dialog"/);assert.match(shell,/id="media-dialog"/);assert.doesNotMatch(shell,/id="filters"|id="results"|id="compare-dialog"|list-container/);assert.match(sharedSource,/data-orbit-detail-card/);
 });

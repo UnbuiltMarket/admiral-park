@@ -1,7 +1,7 @@
 {
   "schemaVersion": "1.0",
   "sourceProject": "AdmiralApartmentList",
-  "description": "Exact list-view dialog UI with an adapter for lazy orbit opening. No apartment data is embedded.",
+  "description": "Original list-view snapshots plus a guarded card-only extraction used by both Framer entries. No apartment data is embedded.",
   "originals": {
     "app.js": {
       "sha256": "e9e27b340fb8b79434b1e0f9483547388112f30f0061698390c97a66e5e6015f",
@@ -29,15 +29,31 @@
     }
   },
   "adapter": {
-    "version": 1,
+    "version": 2,
     "changes": [
       "manual mount only",
       "runtime and font-loader names",
       "queued apartment selection",
-      "skip list rendering",
       "dialog lifecycle bridge",
       "loading and retry bridge",
-      "controller lifecycle"
+      "controller lifecycle",
+      "guarded card-only extraction",
+      "shared loaded dataset",
+      "favorites synchronization"
     ]
+  },
+  "cardOnly": {
+    "card-runtime.js": {
+      "sha256": "c6729ed3bbc2df6c9e88b7d7cf8d7ce6914c2723b88df89d8371dbabaf435b32",
+      "bytes": 45830
+    },
+    "card.css": {
+      "sha256": "fe6f476aa0882575b8de6eeab71cd3623759e5f2a7d54112f9ab307cb1889cb6",
+      "bytes": 41921
+    },
+    "card-shell.html": {
+      "sha256": "93638e8f18b7a11da371804032266ac9c76932c21baeea10fa7bfe6068308370",
+      "bytes": 250
+    }
   }
 }

@@ -1,6 +1,7 @@
 import * as React from "react"
 import type { ComponentType } from "react"
 import { addPropertyControls, ControlType, useIsStaticRenderer } from "framer"
+import AdmiralApartmentDetailCard from "./AdmiralApartmentDetailCard"
 
 const HOMEPAGE_HERO_NAMES: string[] = __HERO_NAMES__
 const HOMEPAGE_CONNECTION_NAMES: string[] = __CONNECTION_NAMES__
@@ -61,7 +62,6 @@ function homepageImageRect(progress: number, bounds: { width: number; height: nu
 // @ORBIT_STORY_INSERT
 // @ORBIT_APARTMENT_DATA_INSERT
 // @ORBIT_APARTMENT_STUDIO_INSERT
-// @ORBIT_APARTMENT_CARD_INSERT
 
 /**
  * @framerSupportedLayoutWidth any-prefer-fixed
@@ -597,7 +597,7 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
             </div>}
             {!useStudio && detailsMode !== "off" && <ApartmentDetailsStrip apartment={detailsData} language={detailsLanguage} visible={detailsVisible} preview={!jsonDetails && detailsMode === "preview"}
                 bottom={detailsBottom} inset={detailsInset} onHeightChange={setDetailsHeight} onOpen={jsonDetails && selectedApartment ? () => openApartmentDetails() : undefined} />}
-            {!staticRenderer && <OrbitApartmentCard openId={detailApartmentId} dataUrl={detailDataUrl} assetBase={apartmentAssetBase} inquiryUrl={inquiryUrl} pageUrl={detailPageUrl}
+            {!staticRenderer && <AdmiralApartmentDetailCard openId={detailApartmentId} dataUrl={detailDataUrl} assetBase={apartmentAssetBase} inquiryUrl={inquiryUrl} pageUrl={detailPageUrl}
                 onOpenChange={reportDetailOpen} onClosed={closeApartmentDetails} />}
             {!staticRenderer && !useStudio && jsonDetails && orbitVisible && apartmentData.status === "error" && <div data-orbit-ignore="" role="status" style={{ position: "absolute", left: "4%", bottom: 24, zIndex: 4 }}>
                 <button type="button" style={homepageButton} onClick={apartmentData.retry}>{detailsLanguage === "en" ? "Retry apartment data" : "Lakásadatok újratöltése"}</button>
