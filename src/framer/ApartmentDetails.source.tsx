@@ -216,7 +216,7 @@ function ApartmentDetailsStrip({ apartment, language, visible, preview, bottom, 
     const sampleLabel = hu ? "MINTA" : "SAMPLE"
     const statusCode = data.availability.toLowerCase()
     const status = statusCode === "available" ? hu ? "Szabad" : "Available" : statusCode === "reserved" ? hu ? "Foglalt" : "Reserved" : statusCode === "sold" ? hu ? "Eladva" : "Sold" : data.availability
-    const formatter = new Intl.NumberFormat(hu ? "hu-HU" : "en-GB", { maximumFractionDigits: 1 })
+    const formatter = new Intl.NumberFormat(hu ? "hu-HU" : "en-GB", { maximumFractionDigits: 2 })
     const root = React.useRef<HTMLDivElement>(null)
     const heightCallback = React.useRef(onHeightChange), measuredHeight = React.useRef(-1)
     heightCallback.current = onHeightChange
