@@ -167,34 +167,42 @@ export function createHeroSequence(options) {
     const abort = new AbortController(), signal = abort.signal;
     const context = canvas.getContext("2d", { alpha: false });
     const preservePresentation = options.preservePresentation === true && canvas.style.opacity === "1" && canvas.width > 1 && canvas.height > 1;
-    const initialFrame = options.startAtEnd ? last : 0;
-    let disposed = false, state = options.startAtEnd ? "arrival" : "opening", displayed = initialFrame, clock = options.startAtEnd ? totalDuration : 0;
-    let displayedProgress = options.startAtEnd ? 1 : 0;
-    let rendered = { index: initialFrame, next: initialFrame, mix: 0 };
+    const restoration = options.restoration && Number.isFinite(options.restoration.time) ? options.restoration : null;
+    const initialClock = restoration ? sequenceClamp(restoration.time, 0, totalDuration) : options.startAtEnd ? totalDuration : 0;
+    const initialVisual = frameAt(initialClock);
+    const initialFrame = initialVisual.mix === 1 ? initialVisual.next : initialVisual.index;
+    const initialDirection = restoration?.direction && Number.isFinite(restoration.direction) ? Math.sign(restoration.direction) : 1;
+    const restoredPlaying = !!restoration?.playing && !(initialDirection > 0 ? initialClock >= totalDuration : initialClock <= 0);
+    let disposed = false, state = restoredPlaying ? "moving" : initialClock <= 0 ? "opening" : initialClock >= totalDuration ? "arrival" : "paused", displayed = initialFrame, clock = initialClock;
+    let displayedProgress = (initialVisual.index + (initialVisual.next - initialVisual.index) * initialVisual.mix) / Math.max(1, last);
+    let rendered = initialVisual;
     let renderedGeometry = "";
     // An opaque canvas may belong to the preceding sequence, so this controller must still paint once.
     let hasPainted = false;
-    let direction = 1, velocity = 0, boost = 0, held = false, playing = false;
-    let active = false, raf = 0, previousTime = 0, waitingSince = 0;
+    let direction = initialDirection, velocity = 0, boost = 0, held = false, playing = restoredPlaying;
+    let active = false, raf = 0, previousTime = 0, waitingSince = 0, suspended = options.suspended === true;
     let holdY = 0, holdX = 0, holdTimer;
     let intent = 0, intentAt = 0, lastIntentAt = -Infinity, drainUntil = 0, drainDirection = 0;
-    let scrollGuard = false, warmed = false, bypass = false;
+    let scrollGuard = false, warmed = false, bypass = !!restoration && !restoredPlaying && initialClock > 0 && initialClock < totalDuration;
     let touch = null;
     let warmTimer;
     const width = sequenceClamp(options.decodeWidth ?? 1920, 640, 1920);
     const frames = createSequenceFrames(urls, width, sequenceClamp(options.cacheFrames ?? 14, 8, 24), wake);
     function snapshot() {
-        return { state, progress: displayedProgress, frame: displayed, direction, held, ...frames.counts() };
+        return { state, progress: displayedProgress, frame: displayed, direction, held, time: clock, playing, ...frames.counts() };
     }
     function publish() {
         if (disposed)
             return;
         root.dataset.sequenceState = state;
+        root.dataset.sequenceTime = String(clock);
+        root.dataset.sequencePlaying = String(playing);
         root.dataset.frame = String(displayed);
         root.dataset.progress = String(displayedProgress);
         root.dataset.crossfade = rendered.index !== rendered.next ? (rendered.index === 0 ? "opening" : "arrival") : "";
         root.dataset.crossfadeMix = String(rendered.mix);
         root.dataset.scrollHeld = String(held);
+        root.dataset.sequenceSuspended = String(suspended);
         root.dataset.decoded = String(frames.counts().decoded);
         options.onUpdate?.(snapshot());
     }
@@ -216,7 +224,7 @@ export function createHeroSequence(options) {
         root.dataset.scrollRelease = reason;
     }
     function hold() {
-        if (held || options.holdScroll === false || motion.matches || !atHero())
+        if (suspended || held || options.holdScroll === false || motion.matches || !atHero())
             return;
         if (sequenceScrollOwner && sequenceScrollOwner !== root)
             return;
@@ -315,7 +323,7 @@ export function createHeroSequence(options) {
         frames.request(displayed, direction, true);
     }
     function wake() {
-        if (disposed || raf || document.hidden)
+        if (disposed || (suspended && !(active && !hasPainted)) || raf || document.hidden)
             return;
         if (playing || (motion.matches && displayed !== last) || (active && (!hasPainted || canvas.style.opacity !== "1")))
             raf = requestAnimationFrame(tick);
@@ -344,6 +352,28 @@ export function createHeroSequence(options) {
         raf = 0;
         if (disposed || document.hidden)
             return;
+        // A replacement breakpoint needs its saved image, even while the rotation
+        // overlay is holding input. This paint never advances the restored clock.
+        if (suspended) {
+            if (active && !hasPainted) {
+                if (frames.failed(rendered.index) || frames.failed(rendered.next))
+                    fail("frame-error");
+                else
+                    redraw();
+            }
+            return;
+        }
+        if (restoration && active && !hasPainted) {
+            if (frames.failed(rendered.index) || frames.failed(rendered.next)) {
+                fail("frame-error");
+                return;
+            }
+            redraw();
+            previousTime = 0;
+            if (playing)
+                wake();
+            return;
+        }
         if (motion.matches) {
             if (frames.failed(last)) {
                 state = "reduced";
@@ -384,8 +414,9 @@ export function createHeroSequence(options) {
             fail("frame-error");
             return;
         }
+        const previousClock = clock;
+        clock = proposed;
         if (draw(frame.index, false, frame.next, frame.mix)) {
-            clock = proposed;
             waitingSince = 0;
             if (state !== "moving") {
                 state = "moving";
@@ -397,6 +428,7 @@ export function createHeroSequence(options) {
             }
         }
         else {
+            clock = previousClock;
             if (!hasPainted || canvas.style.opacity !== "1")
                 draw(displayed);
             if (!waitingSince)
@@ -413,7 +445,7 @@ export function createHeroSequence(options) {
         wake();
     }
     function start(nextDirection, manual = false) {
-        if (disposed || document.hidden || motion.matches || !context || last < 1)
+        if (disposed || suspended || document.hidden || motion.matches || !context || last < 1)
             return;
         if (!manual && (!atHero() || (sequenceScrollOwner && sequenceScrollOwner !== root)))
             return;
@@ -447,6 +479,8 @@ export function createHeroSequence(options) {
         publish();
     }
     function skip() {
+        if (disposed || suspended)
+            return;
         direction = 1;
         clock = totalDuration;
         active = true;
@@ -475,6 +509,8 @@ export function createHeroSequence(options) {
         return false;
     }
     function scrollIntent(event, delta) {
+        if (suspended)
+            return;
         if (options.inputFilter && !options.inputFilter(event))
             return;
         if (disposed || bypass || motion.matches || document.hidden || event.defaultPrevented || Math.abs(delta) < 1 || nestedScroll(event.target, delta))
@@ -519,7 +555,11 @@ export function createHeroSequence(options) {
         }
     }
     function wheel(event) {
-        if (event.ctrlKey || event.metaKey || Math.abs(event.deltaX) > Math.abs(event.deltaY))
+        if (event.ctrlKey || event.metaKey)
+            return;
+        if (suspendedInput(event, event.clientX, event.clientY))
+            return;
+        if (Math.abs(event.deltaX) > Math.abs(event.deltaY))
             return;
         scrollIntent(event, event.deltaY * (event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? innerHeight : 1));
     }
@@ -540,10 +580,53 @@ export function createHeroSequence(options) {
         const delta = event.key === "ArrowDown" ? 45 : event.key === "ArrowUp" ? -45 :
             ["PageDown", "End"].includes(event.key) ? innerHeight : ["PageUp", "Home"].includes(event.key) ? -innerHeight :
                 event.key === " " ? (event.shiftKey ? -innerHeight : innerHeight) : 0;
-        if (delta)
+        if (delta) {
+            if (suspendedInput(event))
+                return;
             scrollIntent(event, delta);
+        }
+    }
+    function suspendedInput(event, x, y) {
+        if (!suspended || disposed || !visible())
+            return false;
+        if (event.target instanceof Element && event.target.closest('nav,header,input,textarea,select,button,a,[contenteditable="true"],[role="slider"],[role="button"],[role="link"],[data-orbit-ignore]'))
+            return false;
+        const box = root.getBoundingClientRect();
+        if (x !== undefined && y !== undefined && (x < box.left || x > box.right || y < box.top || y > box.bottom))
+            return false;
+        if (event.cancelable)
+            event.preventDefault();
+        return true;
+    }
+    function setSuspended(value) {
+        if (disposed || suspended === value)
+            return;
+        suspended = value;
+        // Rotation must not retain a swipe origin, wheel intent, or hold timeout.
+        touch = null;
+        intent = 0;
+        intentAt = 0;
+        lastIntentAt = -Infinity;
+        drainUntil = 0;
+        drainDirection = 0;
+        previousTime = 0;
+        waitingSince = 0;
+        if (suspended) {
+            if (raf)
+                cancelAnimationFrame(raf);
+            raf = 0;
+            release("orientation");
+        }
+        else {
+            if (playing && !bypass)
+                hold();
+            wake();
+        }
+        publish();
     }
     function onScroll() {
+        if (suspended)
+            return;
         if (held) {
             if (!scrollGuard && (scrollY !== holdY || scrollX !== holdX)) {
                 scrollGuard = true;
@@ -585,16 +668,26 @@ export function createHeroSequence(options) {
             if (poster.complete)
                 warm();
         }
-        else if (playing)
+        else if (playing && !suspended)
             pause("offscreen");
     });
     intersection.observe(root);
     window.addEventListener("wheel", wheel, { passive: false, signal });
     window.addEventListener("keydown", key, { signal });
     window.addEventListener("touchstart", event => {
+        if (suspended) {
+            touch = null;
+            return;
+        }
         touch = event.touches.length === 1 ? { x: event.touches[0].clientX, y: event.touches[0].clientY } : null;
     }, { passive: true, signal });
     window.addEventListener("touchmove", event => {
+        if (suspended && event.touches.length === 1) {
+            const point = event.touches[0];
+            suspendedInput(event, point.clientX, point.clientY);
+            touch = null;
+            return;
+        }
         if (!touch || event.touches.length !== 1) {
             touch = null;
             return;
@@ -627,7 +720,16 @@ export function createHeroSequence(options) {
         poster.style.opacity = "1";
     }
     // A restored endpoint is parked, not skipped: reverse input stays enabled and the opening copy never flashes.
-    if (options.startAtEnd) {
+    if (restoration) {
+        active = true;
+        frames.request(initialVisual.index, direction, restoredPlaying);
+        if (restoredPlaying) {
+            warm(true);
+            hold();
+        }
+        wake();
+    }
+    else if (options.startAtEnd) {
         active = true;
         frames.request(last, 1, false, true);
         wake();
@@ -636,7 +738,7 @@ export function createHeroSequence(options) {
     if (motion.matches)
         reducedChanged();
     return {
-        start: () => start(1, true), reverse: () => start(-1, true), pause, skip, snapshot, redraw,
+        start: () => start(1, true), reverse: () => start(-1, true), pause, skip, snapshot, redraw, setSuspended,
         destroy() {
             if (disposed)
                 return;

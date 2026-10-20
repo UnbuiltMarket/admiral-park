@@ -4,7 +4,11 @@ export interface OrbitSnapshot {
     state: OrbitState; frame: number; checkpoint: number; direction: number;
     ready: number; total: number; decoded: number; downloaded: number;
     buffered: number; bufferTotal: number; requiredReady: number; requiredTotal: number;
-    position: number; error?: string;
+    position: number; target?: number; userPaused: boolean; suspended: boolean; error?: string;
+}
+
+export interface OrbitRestoration {
+    position: number; target?: number; paused?: boolean; direction?: number;
 }
 
 export interface OrbitOptions {
@@ -53,14 +57,15 @@ export function createOrbitPlayer(options: OrbitOptions) {
     let lastPaint = "", lastNotification = "";
     let drag: { id: number; x: number; y: number; moved: boolean; triggered: boolean } | null = null;
     let touchDragging = false;
+    let suspended = false, suspendedAt = 0;
     let settling: { start: number; target: number; time: number; duration: number } | null = null;
     let pendingMove: { start: number; target: number; indices: number[] } | null = null;
     let desired = new Set<number>(), required = new Set<number>(), priority: number[] = [];
     let preparationRequired: number[] = [], errorWasPaused = false;
     const waiters: Array<{ indices: number[]; token: number; allDownloads: boolean; resolve: () => void; reject: (reason: Error) => void }> = [];
     const frameAt = () => total ? orbitModulo(Math.round(position), total) : 0;
-    const canRun = () => active && !destroyed && visible && !document.hidden && state !== "error";
-    const inputAvailable = () => active && prepared && !destroyed && visible && !document.hidden;
+    const canRun = () => active && !suspended && !destroyed && visible && !document.hidden && state !== "error";
+    const inputAvailable = () => active && prepared && !suspended && !destroyed && visible && !document.hidden;
     const fullyReady = () => prepared;
     const reduced = () => !!reducedQuery?.matches;
 
@@ -74,7 +79,8 @@ export function createOrbitPlayer(options: OrbitOptions) {
         return { state, frame: frameAt(), checkpoint: checkpointAt(), direction, ready: blobs.size, total,
             decoded: frames.size + (inspection ? 1 : 0), downloaded: blobs.size, buffered: frames.size,
             bufferTotal: desired.size, requiredReady: [...required].filter(index => frames.has(index)).length,
-            requiredTotal: required.size, position, ...(error ? { error } : {}) };
+            requiredTotal: required.size, position, target: pendingMove?.target ?? settling?.target,
+            userPaused: state === "paused" && !automaticPause, suspended, ...(error ? { error } : {}) };
     }
 
     function notify() {
@@ -87,6 +93,7 @@ export function createOrbitPlayer(options: OrbitOptions) {
         root.dataset.orbitTarget = (pendingMove?.target ?? settling?.target ?? position).toFixed(4);
         root.dataset.orbitFrameBlend = String(frameBlend);
         root.dataset.orbitLocked = String(!!settling || !!pendingMove);
+        root.dataset.orbitSuspended = String(suspended);
         root.dataset.orbitBuffered = String(value.buffered); root.dataset.orbitBufferTotal = String(value.bufferTotal);
         root.dataset.orbitRequiredReady = String(value.requiredReady); root.dataset.orbitRequiredTotal = String(value.requiredTotal);
         root.dataset.orbitDecoding = String(nativeDecodes);
@@ -94,7 +101,7 @@ export function createOrbitPlayer(options: OrbitOptions) {
         root.dataset.orbitResidentFrames = [...frames.keys()].sort((a, b) => a - b).join(",");
         root.dataset.orbitRequiredFrames = [...required].sort((a, b) => a - b).join(",");
         const signature = [state, value.frame, value.checkpoint, direction, value.ready, value.decoded, value.bufferTotal,
-            value.requiredReady, value.requiredTotal, position.toFixed(4), error].join("|");
+            value.requiredReady, value.requiredTotal, position.toFixed(4), value.target, value.userPaused, suspended, error].join("|");
         if (signature !== lastNotification) { lastNotification = signature; options.onUpdate?.(value); }
     }
 
@@ -469,7 +476,37 @@ export function createOrbitPlayer(options: OrbitOptions) {
         return false;
     }
 
+    function suspendedInput(event: Event, x?: number, y?: number) {
+        if (!suspended || !active || destroyed || !visible || ignored(event.target)) return false;
+        if (x !== undefined && y !== undefined && !insideViewer(x, y)) return false;
+        if (event.cancelable) event.preventDefault();
+        return true;
+    }
+
+    function setSuspended(value: boolean) {
+        if (destroyed || suspended === value) return;
+        const now = performance.now();
+        suspended = value;
+        releaseDrag();
+        // Forget the old gesture and consume its immediate inertial tail after rotation.
+        lastWheelAt = lastInputAt = now; wheelLatched = true; suppressClickUntil = now + 400;
+        if (suspended) {
+            suspendedAt = now;
+            if (raf) cancelAnimationFrame(raf); raf = 0;
+        } else {
+            // The committed arc resumes from the same point. A manual pause owns its
+            // own timestamp and remains paused until the visitor explicitly resumes.
+            if (settling && state !== "paused") settling.time += now - suspendedAt;
+            suspendedAt = 0;
+            if (!visible || document.hidden || (state === "paused" && automaticPause)) visibilityChanged();
+            if (pendingMove) tryStartPending();
+            requestPaint();
+        }
+        notify();
+    }
+
     function onWheel(event: WheelEvent) {
+        if (!event.ctrlKey && !event.metaKey && suspendedInput(event, event.clientX, event.clientY)) return;
         if (!inputAvailable() || event.defaultPrevented || event.ctrlKey || event.metaKey || !insideViewer(event.clientX, event.clientY) || ignored(event.target)) return;
         if (nestedScroll(event.target, event.deltaX, event.deltaY)) return;
         const scale = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? Math.max(1, root.clientHeight) : 1;
@@ -489,6 +526,7 @@ export function createOrbitPlayer(options: OrbitOptions) {
 
     function onPointerDown(event: PointerEvent) {
         if (event.pointerType === "touch") return;
+        if (suspendedInput(event, event.clientX, event.clientY)) return;
         if (!event.isPrimary) { if (drag) releaseDrag(); return; }
         if (!inputAvailable() || event.defaultPrevented || event.button !== 0 || !insideViewer(event.clientX, event.clientY) || coveredTrialControl(event.clientX, event.clientY) || ignored(event.target)) return;
         if (nestedScroll(event.target, 1, 0) || nestedScroll(event.target, 0, 1)) return;
@@ -518,6 +556,7 @@ export function createOrbitPlayer(options: OrbitOptions) {
     }
 
     function onClick(event: MouseEvent) {
+        if (suspendedInput(event, event.clientX, event.clientY)) { event.stopPropagation(); return; }
         if (coveredTrialControl(event.clientX, event.clientY)) return;
         // A drag must not accidentally activate a picking listener attached by the wrapper.
         const now = performance.now();
@@ -527,6 +566,7 @@ export function createOrbitPlayer(options: OrbitOptions) {
     }
 
     function onTouchStart(event: TouchEvent) {
+        if (suspended) { releaseDrag(); return; }
         if (event.touches.length !== 1) {
             if (touchDragging) releaseDrag();
             return;
@@ -539,6 +579,7 @@ export function createOrbitPlayer(options: OrbitOptions) {
     }
 
     function onTouchMove(event: TouchEvent) {
+        if (suspended && event.touches.length === 1) { const point = event.touches[0]; suspendedInput(event, point.clientX, point.clientY); return; }
         if (!touchDragging || !drag || !inputAvailable() || event.touches.length !== 1) return;
         const touch = event.touches[0];
         const dx = touch.clientX - drag.x, dy = touch.clientY - drag.y;
@@ -584,13 +625,13 @@ export function createOrbitPlayer(options: OrbitOptions) {
     function pauseInternal(automatic: boolean) {
         if (!active || destroyed || state === "error" || state === "loading") return;
         automaticPause = automatic; releaseDrag();
-        if (state !== "paused") pausedAt = performance.now();
+        if (state !== "paused") pausedAt = suspended ? suspendedAt : performance.now();
         if (raf) cancelAnimationFrame(raf); raf = 0;
         state = "paused"; notify();
     }
 
     function resume() {
-        if (!active || destroyed || !fullyReady() || !visible || document.hidden || state === "error") return;
+        if (!active || suspended || destroyed || !fullyReady() || !visible || document.hidden || state === "error") return;
         automaticPause = false;
         if (pendingMove) { pausedAt = 0; state = "buffering"; resourcesChanged(); return; }
         if (settling) {
@@ -604,12 +645,13 @@ export function createOrbitPlayer(options: OrbitOptions) {
     }
 
     function visibilityChanged() {
-        if (!active) return;
+        if (!active || suspended) return;
         if ((!visible || document.hidden) && state !== "paused") pauseInternal(true);
         else if (visible && !document.hidden && automaticPause) resume();
     }
 
     function onKeyDown(event: KeyboardEvent) {
+        if (!event.ctrlKey && !event.metaKey && !event.altKey && ["ArrowRight", "ArrowDown", "PageDown", "ArrowLeft", "ArrowUp", "PageUp", " ", "Spacebar", "Home", "End"].includes(event.key) && suspendedInput(event)) return;
         if (!inputAvailable() || event.defaultPrevented || event.ctrlKey || event.metaKey || event.altKey || ignored(event.target)) return;
         const heading = ["ArrowRight", "ArrowDown", "PageDown"].includes(event.key) ? 1 :
             ["ArrowLeft", "ArrowUp", "PageUp"].includes(event.key) ? -1 :
@@ -621,16 +663,25 @@ export function createOrbitPlayer(options: OrbitOptions) {
         if (event.key === "Escape" && !event.defaultPrevented && active && visible && !document.hidden) pauseInternal(false);
     }
 
-    async function activate(frame = startFrame) {
+    async function activate(frame = startFrame, restoration?: OrbitRestoration) {
         const token = ++activation;
         await prepare();
         if (destroyed || token !== activation) return;
         active = false; automaticPause = false;
-        position = entryFrame = orbitModulo(Math.round(Number.isFinite(frame) ? frame : startFrame), total); direction = 1;
+        position = Number.isFinite(restoration?.position) ? restoration!.position : orbitModulo(Math.round(Number.isFinite(frame) ? frame : startFrame), total);
+        entryFrame = orbitModulo(Math.round(position), total);
+        direction = restoration?.direction && Number.isFinite(restoration.direction) ? Math.sign(restoration.direction) : 1;
         settling = null; pendingMove = null; pausedAt = 0; dropInspection();
         state = "loading";
-        const initial = nearestFirst(windowIndices(position, 1), position);
-        setRestBuffer(position, true);
+        const target = Number.isFinite(restoration?.target) && Math.abs(restoration!.target! - position) > .0001 ? restoration!.target! : undefined;
+        const initial = target === undefined ? nearestFirst(windowIndices(position, 1), position) : indicesBetween(position, target);
+        if (target === undefined) setRestBuffer(position, true);
+        else {
+            direction = Math.sign(target - position);
+            pendingMove = { start: position, target, indices: initial };
+            const wanted = [...new Set([...windowIndices(target, bufferCheckpoints), ...initial])];
+            setBuffer(wanted, initial, [...initial, ...nearestFirst(wanted, target)]);
+        }
         try { await waitForFrames(initial, token); }
         catch (reason) {
             if (!destroyed && token === activation) { fail(failedIndex(initial) ?? frameAt()); notify(); }
@@ -640,10 +691,13 @@ export function createOrbitPlayer(options: OrbitOptions) {
         active = true; canvas.style.touchAction = "pinch-zoom";
         // Do not interpret the approach's remaining wheel momentum as an orbit move.
         lastWheelAt = performance.now(); wheelLatched = true;
-        state = "checkpoint";
+        state = restoration?.paused ? "paused" : target === undefined ? "checkpoint" : "buffering";
+        if (state === "paused") pausedAt = suspended ? suspendedAt : performance.now();
         // A custom entry frame is parked exactly; the eight selectable cameras stay fixed.
-        setRestBuffer(position); paint(performance.now()); notify(); void prepareInspection();
-        if (!visible || document.hidden) pauseInternal(true);
+        if (target === undefined) setRestBuffer(position);
+        paint(performance.now()); notify(); void prepareInspection();
+        if (!suspended && (!visible || document.hidden)) pauseInternal(true);
+        else if (target !== undefined) resourcesChanged();
     }
 
     function deactivate() {
@@ -679,7 +733,7 @@ export function createOrbitPlayer(options: OrbitOptions) {
 
     const resizeObserver = typeof ResizeObserver === "function" ? new ResizeObserver(() => {
         lastPaint = "";
-        if (active && state === "paused") paint(performance.now()); else requestPaint();
+        if (active && (state === "paused" || suspended)) paint(performance.now()); else requestPaint();
     }) : null;
     resizeObserver?.observe(canvas);
     const intersectionObserver = typeof IntersectionObserver === "function" ? new IntersectionObserver(entries => {
@@ -687,9 +741,9 @@ export function createOrbitPlayer(options: OrbitOptions) {
         if (entry) { visible = entry.isIntersecting && entry.intersectionRatio > 0; visibilityChanged(); }
     }) : null;
     intersectionObserver?.observe(root);
-    const resize = () => { lastPaint = ""; if (active && state === "paused") paint(performance.now()); else requestPaint(); };
+    const resize = () => { lastPaint = ""; if (active && (state === "paused" || suspended)) paint(performance.now()); else requestPaint(); };
     const reducedChanged = () => {
-        if (reduced() && active && fullyReady() && (state === "moving" || state === "settling")) arrive(settling?.target ?? nextCheckpoint(position, direction));
+        if (!suspended && reduced() && active && fullyReady() && (state === "moving" || state === "settling")) arrive(settling?.target ?? nextCheckpoint(position, direction));
     };
     window.addEventListener("wheel", onWheel, { passive: false, capture: true });
     window.addEventListener("pointerdown", onPointerDown, true);
@@ -705,7 +759,7 @@ export function createOrbitPlayer(options: OrbitOptions) {
     notify();
 
     return {
-        prepare, activate, deactivate, go, setCheckpoint, pause: () => pauseInternal(false), resume, retry, snapshot, redraw: () => paint(performance.now()),
+        prepare, activate, deactivate, go, setCheckpoint, pause: () => pauseInternal(false), resume, retry, snapshot, setSuspended, redraw: () => paint(performance.now()),
         destroy() {
             if (destroyed) return;
             destroyed = true; deactivate(); cancellation.abort();

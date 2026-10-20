@@ -178,7 +178,7 @@ function createOrbitStoryOverlay(Component: ComponentType<any>, viewIndex: numbe
                 if (selected !== root) { hide(); selected = root; observeSource(root) }
                 const channel = root && homepageChannels.get(root)
                 positionForMobile(root, channel)
-                if (!channel || channel.stage !== "orbit" || !channel.story.enabled) { hide(); return }
+                if (!channel || channel.rotationBlocked || channel.stage !== "orbit" || !channel.story.enabled) { hide(); return }
                 const settings = channel.story, motion = settings.views[viewIndex] || DEFAULT_ORBIT_STORY_VIEWS[viewIndex]
                 const enterFrom = direction(motion.enterFrom), exitTo = direction(motion.exitTo)
                 const distance = clampSetting(motion.distance as number, 24, 300)

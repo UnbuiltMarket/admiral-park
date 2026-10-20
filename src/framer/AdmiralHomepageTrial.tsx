@@ -13,7 +13,7 @@ const HOMEPAGE_ASSETS = "https://raw.githubusercontent.com/UnbuiltMarket/admiral
 type HomepageStage = "opening" | "approach" | "building" | "connection" | "handoff" | "orbit"
 interface HomepageTiming { openingOut: number; buildingIn: number; buildingFull: number; ctaIn: number; rise: number }
 interface HomepageMobileLayout { enabled: boolean; storyTop: number; storyMaxHeight: number }
-interface HomepageChannel { snapshot: SequenceSnapshot; timing: HomepageTiming; enabled: boolean; stage: HomepageStage; orbit: OrbitSnapshot; story: OrbitStorySettings; static: boolean; mobile: HomepageMobileLayout | null }
+interface HomepageChannel { snapshot: SequenceSnapshot; timing: HomepageTiming; enabled: boolean; stage: HomepageStage; orbit: OrbitSnapshot; story: OrbitStorySettings; static: boolean; mobile: HomepageMobileLayout | null; rotationBlocked?: boolean }
 const homepageChannels = new Map<HTMLElement, HomepageChannel>()
 const homepageSubscribers = new Set<() => void>()
 const notifyHomepage = () => homepageSubscribers.forEach(update => update())
@@ -23,7 +23,7 @@ interface AdmiralHomepageTrialProps {
     duration?: number; connectionDuration?: number; maxSpeed?: number; momentum?: number; triggerDistance?: number
     checkpointCount?: number; motionWidth?: number; orbitMobileWidth?: number; inspectionWidth?: number
     desktopBuffer?: number; phoneBuffer?: number
-    phoneFraming?: boolean; phoneImageWidth?: number; phoneImageTop?: number
+    phoneOrbitMode?: "landscape" | "inline"; phoneFraming?: boolean; phoneImageWidth?: number; phoneImageTop?: number
     snapDuration?: number; frameBlend?: number
     orbitStories?: boolean; storyIn?: number; storyOut?: number; storyDelay?: number
     storyView1?: OrbitStoryViewMotion; storyView2?: OrbitStoryViewMotion; storyView3?: OrbitStoryViewMotion; storyView4?: OrbitStoryViewMotion
@@ -34,7 +34,43 @@ interface AdmiralHomepageTrialProps {
     detailsBottom?: number; detailsInset?: number; apartmentPreview?: ApartmentDetailsPreview
     background?: string; alt?: string; style?: React.CSSProperties
 }
-interface HomepageActions { explore: () => void; overview: () => void; skip: () => void; resumeHero: () => void; orbit: ReturnType<typeof createOrbitPlayer> | null }
+interface HomepageActions { explore: () => void; overview: () => void; skip: () => void; resumeHero: () => void; continuePhone: () => void; portraitPhone: () => void; orbit: ReturnType<typeof createOrbitPlayer> | null }
+interface HomepagePhoneView { phone: boolean; enabled: boolean; state: "off" | "portrait" | "turning" | "ready"; blocked: boolean }
+interface HomepagePhoneScene { owner: HTMLElement; at: number; stage: HomepageStage; orbit: OrbitSnapshot; hero: SequenceSnapshot; pending: "connection" | "orbit" | null; portrait: boolean }
+const homepagePhoneScenes = new Map<string, HomepagePhoneScene>()
+const homepagePhoneSceneTimers = new Map<string, number>()
+function expireHomepagePhoneScene(key: string) {
+    if (homepagePhoneSceneTimers.has(key)) return
+    const check = () => {
+        const scene = homepagePhoneScenes.get(key)
+        if (!scene) { homepagePhoneSceneTimers.delete(key); return }
+        const bounds = scene.owner.isConnected ? scene.owner.getBoundingClientRect() : null
+        if (bounds && bounds.width > 0 && bounds.height > 0) scene.at = Date.now()
+        const remaining = 10000 - (Date.now() - scene.at)
+        if (remaining <= 0) { homepagePhoneScenes.delete(key); homepagePhoneSceneTimers.delete(key) }
+        else homepagePhoneSceneTimers.set(key, window.setTimeout(check, remaining))
+    }
+    homepagePhoneSceneTimers.set(key, window.setTimeout(check, 10000))
+}
+// A temporary document-level cover survives Framer swapping hidden breakpoint instances.
+let homepageTurnCover: { element: HTMLDivElement; owner: HTMLElement; timer: number } | null = null
+function showHomepageTurnCover(owner: HTMLElement, english: boolean) {
+    if (!homepageTurnCover) {
+        const element = document.createElement("div")
+        element.dataset.phoneTurnCover = ""; element.setAttribute("role", "status")
+        Object.assign(element.style, { position: "fixed", inset: "0", zIndex: "2147483000", background: "#101820", color: "white", display: "grid", placeItems: "center", font: "16px/1.5 system-ui,sans-serif", touchAction: "none" })
+        document.body.appendChild(element)
+        homepageTurnCover = { element, owner, timer: 0 }
+    }
+    const cover = homepageTurnCover
+    cover.owner = owner; cover.element.textContent = english ? "Adjusting your view…" : "Nézet igazítása…"
+    clearTimeout(cover.timer)
+    cover.timer = window.setTimeout(() => { if (homepageTurnCover === cover) { cover.element.remove(); homepageTurnCover = null } }, 10000)
+}
+function hideHomepageTurnCover(owner: HTMLElement) {
+    if (!homepageTurnCover || homepageTurnCover.owner !== owner) return
+    clearTimeout(homepageTurnCover.timer); homepageTurnCover.element.remove(); homepageTurnCover = null
+}
 const homepageButton: React.CSSProperties = {
     appearance: "none", border: "1px solid rgba(255,255,255,.45)", borderRadius: 6,
     background: "rgba(10,20,28,.78)", color: "#fff", padding: "9px 12px", font: "500 12px/1.3 system-ui,sans-serif", cursor: "pointer",
@@ -237,7 +273,7 @@ function createOrbitStoryOverlay(Component: ComponentType<any>, viewIndex: numbe
                 if (selected !== root) { hide(); selected = root; observeSource(root) }
                 const channel = root && homepageChannels.get(root)
                 positionForMobile(root, channel)
-                if (!channel || channel.stage !== "orbit" || !channel.story.enabled) { hide(); return }
+                if (!channel || channel.rotationBlocked || channel.stage !== "orbit" || !channel.story.enabled) { hide(); return }
                 const settings = channel.story, motion = settings.views[viewIndex] || DEFAULT_ORBIT_STORY_VIEWS[viewIndex]
                 const enterFrom = direction(motion.enterFrom), exitTo = direction(motion.exitTo)
                 const distance = clampSetting(motion.distance as number, 24, 300)
@@ -315,7 +351,7 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
         useGitHubAssets = true, heroBaseUrl = "", connectionBaseUrl = "", orbitBaseUrl = "", startView = "opening", editorView = "opening", editorOrbitView = "entry", orbitStartFrame = 45,
         duration = 2.5, connectionDuration = 2.5, maxSpeed = 1.8, momentum = .22, triggerDistance = 28, checkpointCount = 8,
         motionWidth = 960, orbitMobileWidth = 640, inspectionWidth = 1920, desktopBuffer = 2, phoneBuffer = 1, snapDuration = 1.5, frameBlend = 0,
-        phoneFraming = true, phoneImageWidth = 80, phoneImageTop = 80,
+        phoneOrbitMode = "landscape", phoneFraming = true, phoneImageWidth = 80, phoneImageTop = 80,
         orbitStories = true, storyIn = .6, storyOut = .3, storyDelay = .12,
         storyView1, storyView2, storyView3, storyView4, storyView5, storyView6, storyView7, storyView8,
         focalX = 50, focalY = 50, darken = 0,
@@ -344,11 +380,19 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
     const [stage, setStage] = React.useState<HomepageStage>(previewStage)
     const [posterUrl, setPosterUrl] = React.useState(initialPoster)
     const [heroState, setHeroState] = React.useState<SequenceState>("opening")
-    const [orbitInfo, setOrbitInfo] = React.useState<OrbitSnapshot>({ state: "idle", frame: orbitStartIndex, checkpoint: -1, direction: 1, ready: 0, total: orbitUrls.length, decoded: 0, downloaded: 0, buffered: 0, bufferTotal: 0, requiredReady: 0, requiredTotal: 0, position: orbitStartIndex })
+    const [orbitInfo, setOrbitInfo] = React.useState<OrbitSnapshot>({ state: "idle", frame: orbitStartIndex, checkpoint: -1, direction: 1, ready: 0, total: orbitUrls.length, decoded: 0, downloaded: 0, buffered: 0, bufferTotal: 0, requiredReady: 0, requiredTotal: 0, position: orbitStartIndex, userPaused: false, suspended: false })
     const [reduced, setReduced] = React.useState(false)
     const [hostVisible, setHostVisible] = React.useState(false)
     const [hoveredApartment, setHoveredApartment] = React.useState<ApartmentDetailsData | null>(null)
     const [detailsHeight, setDetailsHeight] = React.useState(140)
+    const [phoneView, setPhoneView] = React.useState<HomepagePhoneView>({ phone: false, enabled: false, state: "off", blocked: false })
+    const [pendingPhoneEntry, setPendingPhoneEntry] = React.useState<"connection" | "orbit" | null>(null)
+    const [portraitPhone, setPortraitPhone] = React.useState(false)
+    const phoneViewRef = React.useRef(phoneView), pendingPhoneRef = React.useRef(pendingPhoneEntry), portraitPhoneRef = React.useRef(portraitPhone)
+    const stageRef = React.useRef<HomepageStage>(previewStage)
+    const rotationRefresh = React.useRef<() => void>(() => {})
+    const suspendPlayers = React.useRef<(blocked: boolean) => void>(() => {})
+    const phoneMode = React.useRef(phoneOrbitMode); phoneMode.current = phoneOrbitMode
     const hoveredApartmentRef = React.useRef<ApartmentDetailsData | null>(null)
     const clearApartmentDetails = React.useCallback(() => {
         if (hoveredApartmentRef.current !== null) { hoveredApartmentRef.current = null; setHoveredApartment(null) }
@@ -356,9 +400,11 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
     const sampleApartment = React.useMemo(() => createApartmentPreview(apartmentPreview), [apartmentPreview])
     const rootRef = React.useRef<HTMLDivElement>(null), heroRootRef = React.useRef<HTMLDivElement>(null)
     const heroCanvasRef = React.useRef<HTMLCanvasElement>(null), orbitCanvasRef = React.useRef<HTMLCanvasElement>(null), posterRef = React.useRef<HTMLImageElement>(null)
+    const rotationDialogRef = React.useRef<HTMLDivElement>(null)
     const actions = React.useRef<HomepageActions | null>(null)
-    const framingConfig = React.useRef<HomepageFramingConfig>({ enabled: phoneFraming, sourceWidth: phoneImageWidth, top: phoneImageTop, detailsHeight, detailsBottom, reserveDetails: detailsMode !== "off" })
-    framingConfig.current = { enabled: phoneFraming, sourceWidth: phoneImageWidth, top: phoneImageTop, detailsHeight, detailsBottom, reserveDetails: detailsMode !== "off" }
+    const inlineFraming = phoneFraming && !(phoneOrbitMode === "landscape" && phoneView.phone && !portraitPhone)
+    const framingConfig = React.useRef<HomepageFramingConfig>({ enabled: inlineFraming, sourceWidth: phoneImageWidth, top: phoneImageTop, detailsHeight, detailsBottom, reserveDetails: detailsMode !== "off" })
+    framingConfig.current = { enabled: inlineFraming, sourceWidth: phoneImageWidth, top: phoneImageTop, detailsHeight, detailsBottom, reserveDetails: detailsMode !== "off" }
     const refreshPresentation = React.useRef<() => void>(() => {})
     const timing = React.useRef<HomepageTiming>({ openingOut, buildingIn, buildingFull, ctaIn, rise })
     timing.current = { openingOut, buildingIn, buildingFull, ctaIn, rise }
@@ -372,13 +418,87 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
     React.useEffect(() => {
         const root = rootRef.current
         if (!root || staticRenderer) return
+        const controller = new AbortController(), { signal } = controller
+        let phone = false, turning = false, timer = 0, fingers = 0, releasedAt = -Infinity
+        let width = innerWidth, height = innerHeight, axis = width > height
+        function publishPhone() {
+            const enabled = phone && phoneMode.current === "landscape" && !portraitPhoneRef.current
+            const engaged = !!pendingPhoneRef.current || ["connection", "handoff", "orbit"].includes(stageRef.current)
+            const state: HomepagePhoneView["state"] = !enabled ? "off" : turning ? "turning" : axis ? "ready" : "portrait"
+            const next = { phone, enabled, state, blocked: enabled && engaged && (state !== "ready" || !!pendingPhoneRef.current) }
+            const previous = phoneViewRef.current
+            phoneViewRef.current = next
+            root!.dataset.phoneDevice = String(phone); root!.dataset.phoneOrbitMode = enabled ? "landscape" : "inline"
+            root!.dataset.phoneRotation = state; root!.dataset.phoneRotationBlocked = String(next.blocked)
+            if (next.blocked !== previous.blocked) suspendPlayers.current(next.blocked)
+            if (next.blocked && state === "turning") showHomepageTurnCover(root!, detailsLanguage === "en")
+            else if (state !== "turning" && (["opening", "approach", "building"].includes(stageRef.current) || pendingPhoneRef.current)) hideHomepageTurnCover(root!)
+            if (Object.keys(next).some(key => next[key as keyof HomepagePhoneView] !== previous[key as keyof HomepagePhoneView])) setPhoneView(next)
+        }
+        function identify() {
+            phone ||= (navigator.maxTouchPoints > 0 || matchMedia("(any-pointer: coarse)").matches) && Math.min(innerWidth, innerHeight) <= 767
+        }
+        function settle() {
+            clearTimeout(timer)
+            timer = window.setTimeout(() => {
+                if (fingers || performance.now() - releasedAt < 180) { settle(); return }
+                turning = false; publishPhone()
+            }, 500)
+        }
+        function changed(force = false) {
+            identify()
+            const nextWidth = innerWidth, nextHeight = innerHeight, nextAxis = nextWidth > nextHeight
+            const keyboard = document.activeElement?.matches("input,textarea,[contenteditable='true']")
+            const changedAxis = !keyboard && nextAxis !== axis
+            const wideChange = Math.abs(nextWidth - width) > 80
+            width = nextWidth; height = nextHeight
+            if (!keyboard) axis = nextAxis
+            if (phone && (force || changedAxis || wideChange || turning)) { turning = true; settle() }
+            publishPhone()
+        }
+        const resize = () => changed(), orientation = () => changed(true)
+        window.addEventListener("resize", resize, { signal })
+        window.visualViewport?.addEventListener("resize", resize, { signal })
+        screen.orientation?.addEventListener("change", orientation, { signal })
+        window.addEventListener("orientationchange", orientation, { signal })
+        window.addEventListener("touchstart", event => { fingers = event.touches.length }, { capture: true, passive: true, signal })
+        const released = (event: TouchEvent) => { fingers = event.touches.length; releasedAt = performance.now(); if (turning) settle() }
+        window.addEventListener("touchend", released, { capture: true, passive: true, signal })
+        window.addEventListener("touchcancel", released, { capture: true, passive: true, signal })
+        const blockScroll = (event: Event) => {
+            if (!phoneViewRef.current.blocked || !root!.getBoundingClientRect().width || homepageBlocked(event.target)) return
+            if (event instanceof TouchEvent && event.touches.length !== 1) return
+            if (event.cancelable) event.preventDefault()
+        }
+        window.addEventListener("touchmove", blockScroll, { capture: true, passive: false, signal })
+        window.addEventListener("wheel", blockScroll, { capture: true, passive: false, signal })
+        rotationRefresh.current = () => { identify(); publishPhone() }
+        identify(); if (phone && axis) { turning = true; settle() }; publishPhone()
+        return () => { clearTimeout(timer); controller.abort(); rotationRefresh.current = () => {} }
+    }, [staticRenderer, detailsLanguage])
+    React.useEffect(() => { rotationRefresh.current() }, [phoneOrbitMode, portraitPhone])
+    React.useEffect(() => {
+        if (!phoneView.blocked) return
+        const previous = document.activeElement as HTMLElement | null
+        rotationDialogRef.current?.querySelector<HTMLButtonElement>("button:not(:disabled)")?.focus({ preventScroll: true })
+        return () => { if (previous?.isConnected && !previous.closest("[inert]")) previous.focus({ preventScroll: true }) }
+    }, [phoneView.blocked])
+
+    React.useEffect(() => {
+        const root = rootRef.current
+        if (!root || staticRenderer) return
+        let visibilityTimer = 0
         const update = () => {
             const box = root.getBoundingClientRect()
-            setHostVisible(box.width > 0 && box.height > 0 && box.bottom > 0 && box.top < innerHeight)
+            const visible = box.width > 0 && box.height > 0 && box.bottom > 0 && box.top < innerHeight
+            clearTimeout(visibilityTimer)
+            if (visible) setHostVisible(true)
+            else if (phoneViewRef.current.enabled) visibilityTimer = window.setTimeout(() => setHostVisible(false), 550)
+            else setHostVisible(false)
         }
         const resize = new ResizeObserver(update), intersection = new IntersectionObserver(update)
         resize.observe(root); intersection.observe(root); update()
-        return () => { resize.disconnect(); intersection.disconnect() }
+        return () => { clearTimeout(visibilityTimer); resize.disconnect(); intersection.disconnect() }
     }, [staticRenderer])
 
     React.useEffect(() => {
@@ -395,10 +515,19 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
         const editorCheckpoint = Array.from({ length: cameraCount }, (_, index) => Math.round(index * orbitUrls.length / cameraCount)).indexOf(editorPreviewFrame)
         let orbitSnapshot: OrbitSnapshot = { state: staticRenderer && previewStage === "orbit" ? "checkpoint" : "idle", frame: editorPreviewFrame,
             checkpoint: staticRenderer && previewStage === "orbit" ? editorCheckpoint : -1, direction: 1, ready: 0, total: orbitUrls.length, decoded: 0, downloaded: 0,
-            buffered: 0, bufferTotal: 0, requiredReady: 0, requiredTotal: 0, position: editorPreviewFrame }
+            buffered: 0, bufferTotal: 0, requiredReady: 0, requiredTotal: 0, position: editorPreviewFrame, userPaused: false, suspended: false }
+        const sessionKey = location.pathname + "|" + orbitUrls[0] + "|" + orbitStartIndex + "|" + checkpointCount
+        const priorScene = homepagePhoneScenes.get(sessionKey)
+        const restoreScene = !staticRenderer && phoneViewRef.current.phone && phoneMode.current === "landscape" && priorScene &&
+            (Date.now() - priorScene.at < 10000 || priorScene.owner.isConnected) ? priorScene : null
+        if (restoreScene) {
+            portraitPhoneRef.current = restoreScene.portrait; setPortraitPhone(restoreScene.portrait)
+            pendingPhoneRef.current = restoreScene.pending; setPendingPhoneEntry(restoreScene.pending)
+            if (homepageTurnCover) homepageTurnCover.owner = root
+        }
         let arrivedAt = -Infinity, lastWheelAt = -Infinity, wheelIntent = 0, lastUI = 0, lastOrbitUI = ""
         const abort = new AbortController(), signal = abort.signal
-        const phone = window.matchMedia("(max-width: 767px)").matches
+        const phone = phoneViewRef.current.phone || window.matchMedia("(max-width: 767px)").matches
         const reducedMedia = window.matchMedia("(prefers-reduced-motion: reduce)")
         setReduced(reducedMedia.matches)
         reducedMedia.addEventListener("change", () => setReduced(reducedMedia.matches), { signal })
@@ -416,8 +545,21 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
                 width: local.width * bounds.width / width, height: local.height * bounds.height / height } : null
         }
         function publish() {
-            homepageChannels.set(root!, { snapshot: heroSnapshot, timing: timing.current, stage: currentStage, orbit: orbitSnapshot, story: story.current, static: staticRenderer, mobile: mobileLayout, enabled: currentStage === "opening" || currentStage === "approach" || currentStage === "building" })
+            root!.querySelectorAll<HTMLElement>("[data-homepage-controls]").forEach(control => { control.inert = phoneViewRef.current.blocked })
+            homepageChannels.set(root!, { snapshot: heroSnapshot, timing: timing.current, stage: currentStage, orbit: orbitSnapshot, story: story.current, static: staticRenderer, mobile: mobileLayout, rotationBlocked: phoneViewRef.current.blocked, enabled: !phoneViewRef.current.blocked && (currentStage === "opening" || currentStage === "approach" || currentStage === "building") })
+            savePhoneScene()
+            if (!phoneViewRef.current.blocked && currentStage === "connection" && heroCanvas!.width > 1 && heroCanvas!.style.opacity === "1") hideHomepageTurnCover(root!)
             notifyHomepage()
+        }
+        function savePhoneScene() {
+            if (disposed || staticRenderer || !phoneViewRef.current.phone || phoneMode.current !== "landscape") return
+            if (!isVisible() && homepagePhoneScenes.get(sessionKey)?.owner !== root) return
+            if (!["building", "connection", "handoff", "orbit"].includes(currentStage)) { homepagePhoneScenes.delete(sessionKey); return }
+            const owner = homepagePhoneScenes.get(sessionKey)?.owner
+            if (owner && owner !== root && owner.isConnected) { const box = owner.getBoundingClientRect(); if (box.width > 0 && box.height > 0) return }
+            homepagePhoneScenes.set(sessionKey, { owner: root!, at: Date.now(), stage: currentStage, orbit: orbitSnapshot, hero: heroSnapshot,
+                pending: pendingPhoneRef.current, portrait: portraitPhoneRef.current })
+            expireHomepagePhoneScene(sessionKey)
         }
         function applyPresentation() {
             const bounds = root!.getBoundingClientRect()
@@ -446,7 +588,7 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
             } else mobileLayout = null
         }
         function changeStage(next: HomepageStage) {
-            currentStage = next; root!.dataset.homepageStage = next; setStage(next); publish()
+            currentStage = next; stageRef.current = next; root!.dataset.homepageStage = next; setStage(next); rotationRefresh.current(); publish()
         }
         function changePoster(url: string) { poster!.src = url; setPosterUrl(url) }
         function destroyHero() { heroGeneration++; hero?.destroy(); hero = null }
@@ -512,30 +654,35 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
                     else publish()
                 },
             })
+            hero.setSuspended(phoneViewRef.current.blocked)
         }
-        async function activateOrbit() {
+        async function activateOrbit(restoration?: HomepagePhoneScene["orbit"]) {
             if (disposed || !orbit || !isVisible()) return
             const token = ++enterToken
             destroyHero(); changeStage("handoff")
             try {
-                await orbit.activate()
+                await orbit.activate(restoration?.frame ?? orbitStartIndex, restoration ? { position: restoration.position, target: restoration.target, paused: restoration.userPaused, direction: restoration.direction } : undefined)
                 if (disposed || token !== enterToken) return
                 presentationProgress = 1; applyPresentation()
                 changeStage("orbit")
+                hideHomepageTurnCover(root!)
             } catch { /* The orbit reports a visible retry state. The completed sequence remains visible. */ }
         }
-        function explore() {
-            if (disposed || !orbit || !isVisible() || currentStage !== "building") return
+        function explore(restoration?: SequenceSnapshot) {
+            if (disposed || !orbit || !isVisible() || (!restoration && currentStage !== "building")) return
+            if (!restoration && requirePhoneTurn("connection")) return
             if (reducedMedia.matches) { void activateOrbit(); return }
             enterToken++; destroyHero(); clearApartmentDetails()
-            presentationProgress = 0; applyPresentation()
+            presentationProgress = restoration?.progress ?? 0; applyPresentation()
             activeSequence = "SEQ_02"; root!.dataset.activeSequence = activeSequence
-            changePoster(heroUrls[heroUrls.length - 1]); changeStage("connection")
+            changePoster(restoration ? connectionPlaybackUrls[restoration.frame] : heroUrls[heroUrls.length - 1]); changeStage("connection")
             const generation = ++heroGeneration
             let completed = false
             hero = createHeroSequence({
                 root: heroRoot!, canvas: heroCanvas!, poster: poster!, urls: connectionPlaybackUrls,
                 duration: connectionDuration, maxSpeed, momentum, triggerDistance, preservePresentation: true,
+                restoration: restoration?.time === undefined ? undefined : { time: restoration.time, direction: restoration.direction, playing: restoration.playing, frame: restoration.frame, progress: restoration.progress },
+                suspended: phoneViewRef.current.blocked,
                 viewport: (progress, bounds) => viewportFor(progress, bounds),
                 holdScroll: true, preload: true, cacheFrames: phone ? 10 : 14, decodeWidth: phone ? 1280 : 1920, focalX, focalY,
                 inputFilter: event => !homepageBlocked(event.target),
@@ -557,9 +704,32 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
                     }
                 },
             })
-            hero.start()
+            if (!restoration) hero.start()
         }
-        function overview() { mountHero(false) }
+        function setPendingPhone(kind: "connection" | "orbit" | null) {
+            pendingPhoneRef.current = kind; setPendingPhoneEntry(kind); rotationRefresh.current(); savePhoneScene()
+        }
+        function requirePhoneTurn(kind: "connection" | "orbit") {
+            const view = phoneViewRef.current
+            if (!view.enabled || (view.state === "ready" && !pendingPhoneRef.current)) return false
+            setPendingPhone(kind); return true
+        }
+        function continuePhone() {
+            if (phoneViewRef.current.enabled && phoneViewRef.current.state !== "ready") return
+            const pending = pendingPhoneRef.current
+            setPendingPhone(null)
+            if (pending === "connection") explore()
+            else if (pending === "orbit") void activateOrbit(restoreScene?.stage === "orbit" ? restoreScene.orbit : undefined)
+        }
+        function usePortraitPhone() {
+            portraitPhoneRef.current = true; setPortraitPhone(true); rotationRefresh.current()
+            continuePhone()
+        }
+        function overview(fromNavigation = false) {
+            if (phoneViewRef.current.blocked && !fromNavigation) return
+            setPendingPhone(null); portraitPhoneRef.current = false; setPortraitPhone(false)
+            homepagePhoneScenes.delete(sessionKey); hideHomepageTurnCover(root!); mountHero(false)
+        }
         const retry = async () => {
             if (!orbit) return
             const token = enterToken
@@ -583,6 +753,7 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
         }
         window.addEventListener("click", relayControlClick, { capture: true, signal })
         function wheel(event: WheelEvent) {
+            if (phoneViewRef.current.blocked) return
             const now = performance.now(), gap = now - lastWheelAt; lastWheelAt = now
             const box = root!.getBoundingClientRect()
             if (!isVisible() || event.clientX < box.left || event.clientX > box.right || event.clientY < box.top || event.clientY > box.bottom || homepageBlocked(event.target) || event.ctrlKey || event.metaKey || Math.abs(event.deltaX) > Math.abs(event.deltaY)) return
@@ -595,12 +766,14 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
         }
         let touchY: number | null = null, touchCanEnter = false, touchInside = false
         window.addEventListener("touchstart", event => {
+            if (phoneViewRef.current.blocked) { touchInside = false; touchCanEnter = false; touchY = null; return }
             const touch = event.touches.length === 1 ? event.touches[0] : null, box = root!.getBoundingClientRect()
             touchInside = !!touch && isVisible() && touch.clientX >= box.left && touch.clientX <= box.right && touch.clientY >= box.top && touch.clientY <= box.bottom && !homepageBlocked(event.target)
             touchCanEnter = touchInside && currentStage === "building" && performance.now() - arrivedAt > 200
             touchY = touch ? touch.clientY : null
         }, { passive: true, signal })
         window.addEventListener("touchmove", event => {
+            if (phoneViewRef.current.blocked) return
             if (!touchInside || !isVisible()) return
             if (currentStage === "handoff" && event.touches.length === 1 && !homepageBlocked(event.target)) { if (event.cancelable) event.preventDefault(); return }
             if (!touchCanEnter || touchY === null || event.touches.length !== 1) return
@@ -608,6 +781,7 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
         }, { passive: false, signal })
         window.addEventListener("wheel", wheel, { passive: false, signal })
         window.addEventListener("keydown", event => {
+            if (phoneViewRef.current.blocked) return
             if (!isVisible() || homepageBlocked(event.target) || event.ctrlKey || event.metaKey || event.altKey) return
             if (currentStage === "handoff") {
                 if (event.key === "Escape") { mountHero(true); return }
@@ -616,10 +790,12 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
             }
             if (currentStage === "building" && ["ArrowDown", "PageDown", " "].includes(event.key)) { event.preventDefault(); void explore() }
         }, { signal })
-        root.addEventListener("admiral:overview", overview, { signal })
-        window.addEventListener("admiral:overview", event => { if (event.target === window && root!.getBoundingClientRect().width > 0) overview() }, { signal })
+        root.addEventListener("admiral:overview", () => overview(true), { signal })
+        window.addEventListener("admiral:overview", event => { if (event.target === window && root!.getBoundingClientRect().width > 0) overview(true) }, { signal })
         root.addEventListener("admiral:explore", () => { void explore() }, { signal })
-        actions.current = { explore: () => { void explore() }, overview, skip: () => { if (activeSequence === "SEQ_02" && reducedMedia.matches) void activateOrbit(); else hero?.skip() }, resumeHero: () => { if (heroSnapshot.direction < 0) hero?.reverse(); else hero?.start() }, orbit }
+        actions.current = { explore: () => { void explore() }, overview, continuePhone, portraitPhone: usePortraitPhone, skip: () => { if (activeSequence === "SEQ_02" && reducedMedia.matches) void activateOrbit(); else hero?.skip() }, resumeHero: () => { if (heroSnapshot.direction < 0) hero?.reverse(); else hero?.start() }, orbit }
+        suspendPlayers.current = blocked => { hero?.setSuspended(blocked); orbit?.setSuspended(blocked); publish() }
+        orbit?.setSuspended(phoneViewRef.current.blocked)
         ;(root as HTMLElement & { retryOrbit?: () => Promise<void> }).retryOrbit = retry
         const refresh = () => { if (!disposed) { applyPresentation(); hero?.redraw(); orbit?.redraw(); publish() } }
         refreshPresentation.current = refresh
@@ -628,16 +804,25 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
         applyPresentation()
         if (staticRenderer) { changeStage(previewStage); changePoster(initialPoster) }
         else {
-            changeStage("opening")
-            if (startView === "orbit") { changePoster(orbitPoster); void activateOrbit() }
-            else mountHero()
+            if (!restoreScene) changeStage("opening")
+            if (restoreScene?.stage === "orbit") {
+                orbitSnapshot = restoreScene.orbit; presentationProgress = 1
+                changePoster(orbitUrls[restoreScene.orbit.frame]); void activateOrbit(restoreScene.orbit)
+            } else if (restoreScene?.stage === "connection") explore(restoreScene.hero)
+            else if (restoreScene?.stage === "building" || restoreScene?.pending === "connection") mountHero(true)
+            else if (startView === "orbit" || restoreScene?.stage === "handoff") {
+                changePoster(orbitPoster); changeStage("handoff")
+                if (!requirePhoneTurn("orbit")) void activateOrbit()
+            } else mountHero()
             // The opening picture wins the first network requests; preload the entire orbit behind it.
             const warm = window.setTimeout(() => { if (!disposed && isVisible()) void orbit!.prepare().catch(() => {}) }, 300)
             signal.addEventListener("abort", () => clearTimeout(warm), { once: true })
         }
         publish()
         return () => {
+            savePhoneScene()
             disposed = true; enterToken++; clearApartmentDetails(); destroyHero(); orbit?.destroy(); abort.abort()
+            suspendPlayers.current = () => {}
             presentationResize.disconnect(); refreshPresentation.current = () => {}
             actions.current = null; delete (root as HTMLElement & { retryOrbit?: () => Promise<void> }).retryOrbit
             homepageChannels.delete(root); notifyHomepage()
@@ -645,7 +830,7 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
     }, [heroUrls, connectionUrls, connectionPlaybackUrls, orbitUrls, staticRenderer, hostVisible, startView, editorView, duration, connectionDuration, maxSpeed, momentum, triggerDistance, checkpointCount,
         motionWidth, orbitMobileWidth, inspectionWidth, desktopBuffer, phoneBuffer, orbitStartIndex, editorPreviewFrame, snapDuration, frameBlend, focalX, focalY, showDiagnostics, clearApartmentDetails])
 
-    React.useEffect(() => { refreshPresentation.current() }, [phoneFraming, phoneImageWidth, phoneImageTop, detailsHeight, detailsBottom, detailsMode, showControls, showViewpoints, stage, orbitInfo.state])
+    React.useEffect(() => { refreshPresentation.current() }, [phoneOrbitMode, phoneView, portraitPhone, phoneFraming, phoneImageWidth, phoneImageTop, detailsHeight, detailsBottom, detailsMode, showControls, showViewpoints, stage, orbitInfo.state])
 
     React.useEffect(() => {
         const root = rootRef.current, channel = root && homepageChannels.get(root)
@@ -679,14 +864,17 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
     const paused = orbitInfo.state === "paused"
     const orbitMoving = orbitInfo.state !== "checkpoint"
     const orbitButtonStyle: React.CSSProperties = { ...homepageButton, opacity: orbitMoving ? .45 : 1, cursor: orbitMoving ? "default" : "pointer" }
-    const detailsVisible = detailsMode === "preview" ? (orbitStatic || (orbitVisible && orbitInfo.state === "checkpoint")) :
-        detailsMode === "hover" && orbitVisible && orbitInfo.state === "checkpoint" && orbitInfo.checkpoint >= 0 && hoveredApartment !== null
+    const detailsVisible = !phoneView.blocked && (detailsMode === "preview" ? (orbitStatic || (orbitVisible && orbitInfo.state === "checkpoint")) :
+        detailsMode === "hover" && orbitVisible && orbitInfo.state === "checkpoint" && orbitInfo.checkpoint >= 0 && hoveredApartment !== null)
     const detailsData = detailsMode === "preview" ? sampleApartment : hoveredApartment
     const controlsBottom = detailsVisible ? `calc(${detailsBottom + detailsHeight + 20}px + env(safe-area-inset-bottom, 0px))` : "18px"
     const diagnosticBottom = detailsVisible ? detailsBottom + detailsHeight + (showControls ? 112 : 20) : 94
+    const phoneFullscreen = !staticRenderer && phoneView.enabled && (!!pendingPhoneEntry || ["connection", "handoff", "orbit"].includes(stage))
+    const english = detailsLanguage === "en"
     return (
         <div ref={rootRef} data-admiral-homepage="" data-admiral-orbit="" data-homepage-stage={stage} role="region" aria-label={alt} tabIndex={0}
-            style={{ position: "relative", width: "100%", height: "100%", overflow: "hidden", background, ...style }}>
+            style={{ position: "relative", width: "100%", height: "100%", overflow: "hidden", background, ...style,
+                ...(phoneFullscreen ? { width: "100vw", maxWidth: "none", height: "100dvh" } : {}) }}>
             <div ref={heroRootRef} data-admiral-sequence="" style={{ position: "absolute", inset: 0, pointerEvents: stage === "orbit" || stage === "handoff" ? "none" : "auto" }}>
                 <img ref={posterRef} src={posterUrl} alt={alt} loading="eager" decoding="async" {...{ fetchpriority: "high" }} crossOrigin="anonymous" draggable={false}
                     style={{ position: "absolute", top: "var(--admiral-image-y, 0px)", left: 0, width: "100%", height: "var(--admiral-image-height, 100%)", objectFit: "cover", objectPosition: `${focalX}% ${focalY}%`, pointerEvents: "none" }} />
@@ -726,6 +914,25 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
             {!staticRenderer && showDiagnostics && <output data-homepage-diagnostics="" style={{ position: "absolute", left: 12, bottom: diagnosticBottom, pointerEvents: "none", background: "rgba(0,0,0,.65)", color: "#fff", padding: 8, borderRadius: 4, font: "11px/1.5 monospace", zIndex: 2 }}>
                 {stage} · {orbitInfo.state} · frame {orbitInfo.frame} · downloaded {orbitInfo.downloaded}/{orbitInfo.total} · buffered {orbitInfo.buffered}/{orbitInfo.bufferTotal} · required {orbitInfo.requiredReady}/{orbitInfo.requiredTotal} · decoded {orbitInfo.decoded}
             </output>}
+            {!staticRenderer && phoneView.blocked && <div ref={rotationDialogRef} data-phone-rotation="" data-rotation-state={phoneView.state} data-orbit-ignore="" role="dialog" aria-modal="true" aria-label={english ? "Landscape building view" : "Fekvő épületnézet"}
+                onKeyDown={event => {
+                    if (event.key === "Escape") { event.preventDefault(); actions.current?.portraitPhone(); return }
+                    if (event.key !== "Tab") return
+                    const buttons = Array.from(event.currentTarget.querySelectorAll<HTMLButtonElement>("button:not(:disabled)"))
+                    const first = buttons[0], last = buttons[buttons.length - 1]
+                    if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus() }
+                    else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus() }
+                }}
+                style={{ position: "absolute", inset: 0, zIndex: 100, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 18,
+                    padding: "max(24px, env(safe-area-inset-top, 0px)) max(24px, env(safe-area-inset-right, 0px)) max(24px, env(safe-area-inset-bottom, 0px)) max(24px, env(safe-area-inset-left, 0px))", boxSizing: "border-box", background, color: "white", textAlign: "center", overflowY: "auto", fontFamily: "inherit", touchAction: "pan-y pinch-zoom" }}>
+                <svg width="76" height="64" viewBox="0 0 76 64" fill="none" aria-hidden="true"><rect x="22" y="7" width="29" height="50" rx="5" stroke="currentColor" strokeWidth="2" transform="rotate(-25 36.5 32)" /><path d="M59 21A24 24 0 0 1 56 50m0 0 1-12m-1 12 11-5M17 43A24 24 0 0 1 20 14m0 0-1 12m1-12L9 19" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
+                <div style={{ maxWidth: 430 }}>
+                    <div style={{ fontSize: "clamp(22px, 4vw, 30px)", lineHeight: 1.2, fontWeight: 500 }}>{phoneView.state === "ready" ? (english ? "Your wider view is ready" : "A teljes nézet készen áll") : phoneView.state === "turning" ? (english ? "Adjusting your view…" : "Nézet igazítása…") : (english ? "Turn your phone for the full view" : "A teljes nézetért fordítsa el a telefont")}</div>
+                    <p style={{ fontSize: 14, lineHeight: 1.5, opacity: .78, margin: "14px 0 0" }}>{english ? "Explore the building in landscape. If the screen does not turn, switch off your phone’s rotation lock." : "Fedezze fel az épületet fekvő nézetben. Ha a képernyő nem fordul el, kapcsolja ki a telefon elforgatási zárját."}</p>
+                </div>
+                {!!pendingPhoneEntry && <button data-phone-rotation-continue="" type="button" disabled={phoneView.state !== "ready"} style={{ ...homepageButton, opacity: phoneView.state === "ready" ? 1 : .4, padding: "12px 22px" }} onClick={() => actions.current?.continuePhone()}>{english ? "Continue to orbit" : "Tovább az épülethez"}</button>}
+                <button data-phone-rotation-portrait="" type="button" style={{ ...homepageButton, background: "transparent", borderColor: "transparent", opacity: .75 }} onClick={() => actions.current?.portraitPhone()}>{english ? "Keep portrait view" : "Maradok álló nézetben"}</button>
+            </div>}
             <span role="status" aria-live="polite" style={{ position: "absolute", width: 1, height: 1, overflow: "hidden", clipPath: "inset(50%)" }}>{orbitInfo.state === "error" ? "Orbit unavailable. Retry the images or use the navigation." : ""}</span>
         </div>
     )
@@ -842,6 +1049,7 @@ addPropertyControls(AdmiralHomepageTrial, {
     checkpointCount: { type: ControlType.Number, title: "Viewpoints", defaultValue: 8, min: 2, max: 16, step: 1, description: "Keep 8 for the eight authored OrbitView story groups. Other counts disable these stories to preserve camera-to-content alignment." },
     motionWidth: { type: ControlType.Number, title: "Orbit decode", defaultValue: 960, min: 480, max: 1920, step: 160, unit: "px" },
     orbitMobileWidth: { type: ControlType.Number, title: "Phone decode", defaultValue: 640, min: 480, max: 1280, step: 160, unit: "px" },
+    phoneOrbitMode: { type: ControlType.Enum, title: "Phone orbit", options: ["landscape", "inline"], optionTitles: ["Turn for fullscreen", "Inline portrait"], defaultValue: "landscape", description: "Ask phone visitors to rotate before SEQ_02. Camera input is held while turning, and the landscape orbit fills the viewer. Keep the same setting across Framer breakpoints." },
     phoneFraming: { type: ControlType.Boolean, title: "Phone framing", defaultValue: true, description: "On phones, SEQ_02 opens from fullscreen into a landscape orbit image, with stories and apartment details below." },
     phoneImageWidth: { type: ControlType.Number, title: "Phone image width", defaultValue: 80, min: 80, max: 100, step: 1, unit: "%", hidden: p => p.phoneFraming === false, description: "How much of the original landscape image remains visible. 80% gives a closer view; 100% shows its full width." },
     phoneImageTop: { type: ControlType.Number, title: "Phone image top", defaultValue: 80, min: 0, max: 240, step: 4, unit: "px", hidden: p => p.phoneFraming === false, description: "Space above the parked orbit image, for the mobile header. Clamps on short screens to keep the image and details visible." },
@@ -1204,12 +1412,16 @@ type SequenceState = "opening" | "loading" | "moving" | "arrival" | "paused" | "
 interface SequenceSnapshot {
     state: SequenceState; progress: number; frame: number; direction: number;
     held: boolean; decoded: number; downloaded: number;
+    time?: number; playing?: boolean;
 }
 interface SequenceOptions {
     root: HTMLElement; canvas: HTMLCanvasElement; poster: HTMLImageElement; urls: string[];
     duration?: number; maxSpeed?: number; momentum?: number; triggerDistance?: number;
     preload?: boolean; holdScroll?: boolean; cacheFrames?: number; decodeWidth?: number;
     startAtEnd?: boolean;
+    /** Restore a frozen journey when Framer replaces its active breakpoint component. */
+    restoration?: { time: number; direction?: number; playing?: boolean; frame?: number; progress?: number };
+    suspended?: boolean;
     /** Keep the previous sequence's painted endpoint until this sequence paints successfully. */
     preservePresentation?: boolean;
     focalX?: number; focalY?: number; timeoutMs?: number;
@@ -1341,33 +1553,41 @@ function createHeroSequence(options: SequenceOptions) {
     const abort = new AbortController(), signal = abort.signal;
     const context = canvas.getContext("2d", { alpha: false });
     const preservePresentation = options.preservePresentation === true && canvas.style.opacity === "1" && canvas.width > 1 && canvas.height > 1;
-    const initialFrame = options.startAtEnd ? last : 0;
-    let disposed = false, state: SequenceState = options.startAtEnd ? "arrival" : "opening", displayed = initialFrame, clock = options.startAtEnd ? totalDuration : 0;
-    let displayedProgress = options.startAtEnd ? 1 : 0;
-    let rendered = { index: initialFrame, next: initialFrame, mix: 0 };
+    const restoration = options.restoration && Number.isFinite(options.restoration.time) ? options.restoration : null;
+    const initialClock = restoration ? sequenceClamp(restoration.time, 0, totalDuration) : options.startAtEnd ? totalDuration : 0;
+    const initialVisual = frameAt(initialClock);
+    const initialFrame = initialVisual.mix === 1 ? initialVisual.next : initialVisual.index;
+    const initialDirection = restoration?.direction && Number.isFinite(restoration.direction) ? Math.sign(restoration.direction) : 1;
+    const restoredPlaying = !!restoration?.playing && !(initialDirection > 0 ? initialClock >= totalDuration : initialClock <= 0);
+    let disposed = false, state: SequenceState = restoredPlaying ? "moving" : initialClock <= 0 ? "opening" : initialClock >= totalDuration ? "arrival" : "paused", displayed = initialFrame, clock = initialClock;
+    let displayedProgress = (initialVisual.index + (initialVisual.next - initialVisual.index) * initialVisual.mix) / Math.max(1, last);
+    let rendered = initialVisual;
     let renderedGeometry = "";
     // An opaque canvas may belong to the preceding sequence, so this controller must still paint once.
     let hasPainted = false;
-    let direction = 1, velocity = 0, boost = 0, held = false, playing = false;
-    let active = false, raf = 0, previousTime = 0, waitingSince = 0;
+    let direction = initialDirection, velocity = 0, boost = 0, held = false, playing = restoredPlaying;
+    let active = false, raf = 0, previousTime = 0, waitingSince = 0, suspended = options.suspended === true;
     let holdY = 0, holdX = 0, holdTimer: ReturnType<typeof setTimeout> | undefined;
     let intent = 0, intentAt = 0, lastIntentAt = -Infinity, drainUntil = 0, drainDirection = 0;
-    let scrollGuard = false, warmed = false, bypass = false;
+    let scrollGuard = false, warmed = false, bypass = !!restoration && !restoredPlaying && initialClock > 0 && initialClock < totalDuration;
     let touch: { x: number; y: number } | null = null;
     let warmTimer: ReturnType<typeof setTimeout> | undefined;
     const width = sequenceClamp(options.decodeWidth ?? 1920, 640, 1920);
     const frames = createSequenceFrames(urls, width, sequenceClamp(options.cacheFrames ?? 14, 8, 24), wake);
     function snapshot(): SequenceSnapshot {
-        return { state, progress: displayedProgress, frame: displayed, direction, held, ...frames.counts() };
+        return { state, progress: displayedProgress, frame: displayed, direction, held, time: clock, playing, ...frames.counts() };
     }
     function publish() {
         if (disposed) return;
         root.dataset.sequenceState = state;
+        root.dataset.sequenceTime = String(clock);
+        root.dataset.sequencePlaying = String(playing);
         root.dataset.frame = String(displayed);
         root.dataset.progress = String(displayedProgress);
         root.dataset.crossfade = rendered.index !== rendered.next ? (rendered.index === 0 ? "opening" : "arrival") : "";
         root.dataset.crossfadeMix = String(rendered.mix);
         root.dataset.scrollHeld = String(held);
+        root.dataset.sequenceSuspended = String(suspended);
         root.dataset.decoded = String(frames.counts().decoded);
         options.onUpdate?.(snapshot());
     }
@@ -1386,7 +1606,7 @@ function createHeroSequence(options: SequenceOptions) {
         root.dataset.scrollRelease = reason;
     }
     function hold() {
-        if (held || options.holdScroll === false || motion.matches || !atHero()) return;
+        if (suspended || held || options.holdScroll === false || motion.matches || !atHero()) return;
         if (sequenceScrollOwner && sequenceScrollOwner !== root) return;
         sequenceScrollOwner = root; held = true; holdX = scrollX; holdY = scrollY;
         holdTimer = setTimeout(() => fail("timeout"), options.timeoutMs ?? Math.max(12000, (totalDuration + 2) * 1000));
@@ -1455,7 +1675,7 @@ function createHeroSequence(options: SequenceOptions) {
         frames.request(displayed, direction, true);
     }
     function wake() {
-        if (disposed || raf || document.hidden) return;
+        if (disposed || (suspended && !(active && !hasPainted)) || raf || document.hidden) return;
         if (playing || (motion.matches && displayed !== last) || (active && (!hasPainted || canvas.style.opacity !== "1"))) raf = requestAnimationFrame(tick);
     }
     function finish() {
@@ -1471,6 +1691,21 @@ function createHeroSequence(options: SequenceOptions) {
     function tick(now: number) {
         raf = 0;
         if (disposed || document.hidden) return;
+        // A replacement breakpoint needs its saved image, even while the rotation
+        // overlay is holding input. This paint never advances the restored clock.
+        if (suspended) {
+            if (active && !hasPainted) {
+                if (frames.failed(rendered.index) || frames.failed(rendered.next)) fail("frame-error");
+                else redraw();
+            }
+            return;
+        }
+        if (restoration && active && !hasPainted) {
+            if (frames.failed(rendered.index) || frames.failed(rendered.next)) { fail("frame-error"); return; }
+            redraw(); previousTime = 0;
+            if (playing) wake();
+            return;
+        }
         if (motion.matches) {
             if (frames.failed(last)) { state = "reduced"; publish(); return; }
             if (draw(last)) { state = "reduced"; publish(); }
@@ -1494,11 +1729,14 @@ function createHeroSequence(options: SequenceOptions) {
         const frame = frameAt(proposed);
         frames.request(frame.index, direction, true);
         if (frames.failed(frame.index) || frames.failed(frame.next)) { fail("frame-error"); return; }
+        const previousClock = clock;
+        clock = proposed;
         if (draw(frame.index, false, frame.next, frame.mix)) {
-            clock = proposed; waitingSince = 0;
+            waitingSince = 0;
             if (state !== "moving") { state = "moving"; publish(); }
             if ((direction > 0 && clock >= totalDuration && displayed === last) || (direction < 0 && clock <= 0 && displayed === 0)) { finish(); return; }
         } else {
+            clock = previousClock;
             if (!hasPainted || canvas.style.opacity !== "1") draw(displayed);
             if (!waitingSince) waitingSince = now;
             if (now - waitingSince > 7000) { fail("frame-timeout"); return; }
@@ -1507,7 +1745,7 @@ function createHeroSequence(options: SequenceOptions) {
         wake();
     }
     function start(nextDirection: number, manual = false) {
-        if (disposed || document.hidden || motion.matches || !context || last < 1) return;
+        if (disposed || suspended || document.hidden || motion.matches || !context || last < 1) return;
         if (!manual && (!atHero() || (sequenceScrollOwner && sequenceScrollOwner !== root))) return;
         bypass = false;
         direction = nextDirection > 0 ? 1 : -1;
@@ -1523,6 +1761,7 @@ function createHeroSequence(options: SequenceOptions) {
         release(reason); drainUntil = 0; publish();
     }
     function skip() {
+        if (disposed || suspended) return;
         direction = 1; clock = totalDuration; active = true; playing = true; previousTime = 0; bypass = true;
         velocity = 0; boost = 0; frames.retry(); frames.request(last, 1, false, true);
         // Skipping always releases navigation immediately, even on a failed connection.
@@ -1539,6 +1778,7 @@ function createHeroSequence(options: SequenceOptions) {
         return false;
     }
     function scrollIntent(event: Event, delta: number) {
+        if (suspended) return;
         if (options.inputFilter && !options.inputFilter(event)) return;
         if (disposed || bypass || motion.matches || document.hidden || event.defaultPrevented || Math.abs(delta) < 1 || nestedScroll(event.target, delta)) return;
         if (sequenceScrollOwner && sequenceScrollOwner !== root) return;
@@ -1562,7 +1802,9 @@ function createHeroSequence(options: SequenceOptions) {
         }
     }
     function wheel(event: WheelEvent) {
-        if (event.ctrlKey || event.metaKey || Math.abs(event.deltaX) > Math.abs(event.deltaY)) return;
+        if (event.ctrlKey || event.metaKey) return;
+        if (suspendedInput(event, event.clientX, event.clientY)) return;
+        if (Math.abs(event.deltaX) > Math.abs(event.deltaY)) return;
         scrollIntent(event, event.deltaY * (event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? innerHeight : 1));
     }
     function key(event: KeyboardEvent) {
@@ -1573,9 +1815,33 @@ function createHeroSequence(options: SequenceOptions) {
         const delta = event.key === "ArrowDown" ? 45 : event.key === "ArrowUp" ? -45 :
             ["PageDown", "End"].includes(event.key) ? innerHeight : ["PageUp", "Home"].includes(event.key) ? -innerHeight :
             event.key === " " ? (event.shiftKey ? -innerHeight : innerHeight) : 0;
-        if (delta) scrollIntent(event, delta);
+        if (delta) { if (suspendedInput(event)) return; scrollIntent(event, delta); }
+    }
+    function suspendedInput(event: Event, x?: number, y?: number) {
+        if (!suspended || disposed || !visible()) return false;
+        if (event.target instanceof Element && event.target.closest('nav,header,input,textarea,select,button,a,[contenteditable="true"],[role="slider"],[role="button"],[role="link"],[data-orbit-ignore]')) return false;
+        const box = root.getBoundingClientRect();
+        if (x !== undefined && y !== undefined && (x < box.left || x > box.right || y < box.top || y > box.bottom)) return false;
+        if (event.cancelable) event.preventDefault();
+        return true;
+    }
+    function setSuspended(value: boolean) {
+        if (disposed || suspended === value) return;
+        suspended = value;
+        // Rotation must not retain a swipe origin, wheel intent, or hold timeout.
+        touch = null; intent = 0; intentAt = 0; lastIntentAt = -Infinity; drainUntil = 0; drainDirection = 0;
+        previousTime = 0; waitingSince = 0;
+        if (suspended) {
+            if (raf) cancelAnimationFrame(raf); raf = 0;
+            release("orientation");
+        } else {
+            if (playing && !bypass) hold();
+            wake();
+        }
+        publish();
     }
     function onScroll() {
+        if (suspended) return;
         if (held) {
             if (!scrollGuard && (scrollY !== holdY || scrollX !== holdX)) {
                 scrollGuard = true; window.scrollTo({ top: holdY, left: holdX, behavior: "instant" }); scrollGuard = false;
@@ -1600,15 +1866,17 @@ function createHeroSequence(options: SequenceOptions) {
     resize.observe(root);
     const intersection = new IntersectionObserver(entries => {
         if (entries[0]?.isIntersecting) { if (poster.complete) warm(); }
-        else if (playing) pause("offscreen");
+        else if (playing && !suspended) pause("offscreen");
     });
     intersection.observe(root);
     window.addEventListener("wheel", wheel, { passive: false, signal });
     window.addEventListener("keydown", key, { signal });
     window.addEventListener("touchstart", event => {
+        if (suspended) { touch = null; return; }
         touch = event.touches.length === 1 ? { x: event.touches[0].clientX, y: event.touches[0].clientY } : null;
     }, { passive: true, signal });
     window.addEventListener("touchmove", event => {
+        if (suspended && event.touches.length === 1) { const point = event.touches[0]; suspendedInput(event, point.clientX, point.clientY); touch = null; return; }
         if (!touch || event.touches.length !== 1) { touch = null; return; }
         const next = event.touches[0], dx = touch.x - next.clientX, dy = touch.y - next.clientY;
         touch = { x: next.clientX, y: next.clientY };
@@ -1630,11 +1898,16 @@ function createHeroSequence(options: SequenceOptions) {
     // matching sequence endpoints; draw() replaces it atomically when the next image is ready.
     if (!preservePresentation) { canvas.style.opacity = "0"; poster.style.opacity = "1"; }
     // A restored endpoint is parked, not skipped: reverse input stays enabled and the opening copy never flashes.
-    if (options.startAtEnd) { active = true; frames.request(last, 1, false, true); wake(); }
+    if (restoration) {
+        active = true;
+        frames.request(initialVisual.index, direction, restoredPlaying);
+        if (restoredPlaying) { warm(true); hold(); }
+        wake();
+    } else if (options.startAtEnd) { active = true; frames.request(last, 1, false, true); wake(); }
     publish();
     if (motion.matches) reducedChanged();
     return {
-        start: () => start(1, true), reverse: () => start(-1, true), pause, skip, snapshot, redraw,
+        start: () => start(1, true), reverse: () => start(-1, true), pause, skip, snapshot, redraw, setSuspended,
         destroy() {
             if (disposed) return;
             pause("destroy"); disposed = true; abort.abort();
@@ -1650,7 +1923,11 @@ interface OrbitSnapshot {
     state: OrbitState; frame: number; checkpoint: number; direction: number;
     ready: number; total: number; decoded: number; downloaded: number;
     buffered: number; bufferTotal: number; requiredReady: number; requiredTotal: number;
-    position: number; error?: string;
+    position: number; target?: number; userPaused: boolean; suspended: boolean; error?: string;
+}
+
+interface OrbitRestoration {
+    position: number; target?: number; paused?: boolean; direction?: number;
 }
 
 interface OrbitOptions {
@@ -1699,14 +1976,15 @@ function createOrbitPlayer(options: OrbitOptions) {
     let lastPaint = "", lastNotification = "";
     let drag: { id: number; x: number; y: number; moved: boolean; triggered: boolean } | null = null;
     let touchDragging = false;
+    let suspended = false, suspendedAt = 0;
     let settling: { start: number; target: number; time: number; duration: number } | null = null;
     let pendingMove: { start: number; target: number; indices: number[] } | null = null;
     let desired = new Set<number>(), required = new Set<number>(), priority: number[] = [];
     let preparationRequired: number[] = [], errorWasPaused = false;
     const waiters: Array<{ indices: number[]; token: number; allDownloads: boolean; resolve: () => void; reject: (reason: Error) => void }> = [];
     const frameAt = () => total ? orbitModulo(Math.round(position), total) : 0;
-    const canRun = () => active && !destroyed && visible && !document.hidden && state !== "error";
-    const inputAvailable = () => active && prepared && !destroyed && visible && !document.hidden;
+    const canRun = () => active && !suspended && !destroyed && visible && !document.hidden && state !== "error";
+    const inputAvailable = () => active && prepared && !suspended && !destroyed && visible && !document.hidden;
     const fullyReady = () => prepared;
     const reduced = () => !!reducedQuery?.matches;
 
@@ -1720,7 +1998,8 @@ function createOrbitPlayer(options: OrbitOptions) {
         return { state, frame: frameAt(), checkpoint: checkpointAt(), direction, ready: blobs.size, total,
             decoded: frames.size + (inspection ? 1 : 0), downloaded: blobs.size, buffered: frames.size,
             bufferTotal: desired.size, requiredReady: [...required].filter(index => frames.has(index)).length,
-            requiredTotal: required.size, position, ...(error ? { error } : {}) };
+            requiredTotal: required.size, position, target: pendingMove?.target ?? settling?.target,
+            userPaused: state === "paused" && !automaticPause, suspended, ...(error ? { error } : {}) };
     }
 
     function notify() {
@@ -1733,6 +2012,7 @@ function createOrbitPlayer(options: OrbitOptions) {
         root.dataset.orbitTarget = (pendingMove?.target ?? settling?.target ?? position).toFixed(4);
         root.dataset.orbitFrameBlend = String(frameBlend);
         root.dataset.orbitLocked = String(!!settling || !!pendingMove);
+        root.dataset.orbitSuspended = String(suspended);
         root.dataset.orbitBuffered = String(value.buffered); root.dataset.orbitBufferTotal = String(value.bufferTotal);
         root.dataset.orbitRequiredReady = String(value.requiredReady); root.dataset.orbitRequiredTotal = String(value.requiredTotal);
         root.dataset.orbitDecoding = String(nativeDecodes);
@@ -1740,7 +2020,7 @@ function createOrbitPlayer(options: OrbitOptions) {
         root.dataset.orbitResidentFrames = [...frames.keys()].sort((a, b) => a - b).join(",");
         root.dataset.orbitRequiredFrames = [...required].sort((a, b) => a - b).join(",");
         const signature = [state, value.frame, value.checkpoint, direction, value.ready, value.decoded, value.bufferTotal,
-            value.requiredReady, value.requiredTotal, position.toFixed(4), error].join("|");
+            value.requiredReady, value.requiredTotal, position.toFixed(4), value.target, value.userPaused, suspended, error].join("|");
         if (signature !== lastNotification) { lastNotification = signature; options.onUpdate?.(value); }
     }
 
@@ -2115,7 +2395,37 @@ function createOrbitPlayer(options: OrbitOptions) {
         return false;
     }
 
+    function suspendedInput(event: Event, x?: number, y?: number) {
+        if (!suspended || !active || destroyed || !visible || ignored(event.target)) return false;
+        if (x !== undefined && y !== undefined && !insideViewer(x, y)) return false;
+        if (event.cancelable) event.preventDefault();
+        return true;
+    }
+
+    function setSuspended(value: boolean) {
+        if (destroyed || suspended === value) return;
+        const now = performance.now();
+        suspended = value;
+        releaseDrag();
+        // Forget the old gesture and consume its immediate inertial tail after rotation.
+        lastWheelAt = lastInputAt = now; wheelLatched = true; suppressClickUntil = now + 400;
+        if (suspended) {
+            suspendedAt = now;
+            if (raf) cancelAnimationFrame(raf); raf = 0;
+        } else {
+            // The committed arc resumes from the same point. A manual pause owns its
+            // own timestamp and remains paused until the visitor explicitly resumes.
+            if (settling && state !== "paused") settling.time += now - suspendedAt;
+            suspendedAt = 0;
+            if (!visible || document.hidden || (state === "paused" && automaticPause)) visibilityChanged();
+            if (pendingMove) tryStartPending();
+            requestPaint();
+        }
+        notify();
+    }
+
     function onWheel(event: WheelEvent) {
+        if (!event.ctrlKey && !event.metaKey && suspendedInput(event, event.clientX, event.clientY)) return;
         if (!inputAvailable() || event.defaultPrevented || event.ctrlKey || event.metaKey || !insideViewer(event.clientX, event.clientY) || ignored(event.target)) return;
         if (nestedScroll(event.target, event.deltaX, event.deltaY)) return;
         const scale = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? Math.max(1, root.clientHeight) : 1;
@@ -2135,6 +2445,7 @@ function createOrbitPlayer(options: OrbitOptions) {
 
     function onPointerDown(event: PointerEvent) {
         if (event.pointerType === "touch") return;
+        if (suspendedInput(event, event.clientX, event.clientY)) return;
         if (!event.isPrimary) { if (drag) releaseDrag(); return; }
         if (!inputAvailable() || event.defaultPrevented || event.button !== 0 || !insideViewer(event.clientX, event.clientY) || coveredTrialControl(event.clientX, event.clientY) || ignored(event.target)) return;
         if (nestedScroll(event.target, 1, 0) || nestedScroll(event.target, 0, 1)) return;
@@ -2164,6 +2475,7 @@ function createOrbitPlayer(options: OrbitOptions) {
     }
 
     function onClick(event: MouseEvent) {
+        if (suspendedInput(event, event.clientX, event.clientY)) { event.stopPropagation(); return; }
         if (coveredTrialControl(event.clientX, event.clientY)) return;
         // A drag must not accidentally activate a picking listener attached by the wrapper.
         const now = performance.now();
@@ -2173,6 +2485,7 @@ function createOrbitPlayer(options: OrbitOptions) {
     }
 
     function onTouchStart(event: TouchEvent) {
+        if (suspended) { releaseDrag(); return; }
         if (event.touches.length !== 1) {
             if (touchDragging) releaseDrag();
             return;
@@ -2185,6 +2498,7 @@ function createOrbitPlayer(options: OrbitOptions) {
     }
 
     function onTouchMove(event: TouchEvent) {
+        if (suspended && event.touches.length === 1) { const point = event.touches[0]; suspendedInput(event, point.clientX, point.clientY); return; }
         if (!touchDragging || !drag || !inputAvailable() || event.touches.length !== 1) return;
         const touch = event.touches[0];
         const dx = touch.clientX - drag.x, dy = touch.clientY - drag.y;
@@ -2230,13 +2544,13 @@ function createOrbitPlayer(options: OrbitOptions) {
     function pauseInternal(automatic: boolean) {
         if (!active || destroyed || state === "error" || state === "loading") return;
         automaticPause = automatic; releaseDrag();
-        if (state !== "paused") pausedAt = performance.now();
+        if (state !== "paused") pausedAt = suspended ? suspendedAt : performance.now();
         if (raf) cancelAnimationFrame(raf); raf = 0;
         state = "paused"; notify();
     }
 
     function resume() {
-        if (!active || destroyed || !fullyReady() || !visible || document.hidden || state === "error") return;
+        if (!active || suspended || destroyed || !fullyReady() || !visible || document.hidden || state === "error") return;
         automaticPause = false;
         if (pendingMove) { pausedAt = 0; state = "buffering"; resourcesChanged(); return; }
         if (settling) {
@@ -2250,12 +2564,13 @@ function createOrbitPlayer(options: OrbitOptions) {
     }
 
     function visibilityChanged() {
-        if (!active) return;
+        if (!active || suspended) return;
         if ((!visible || document.hidden) && state !== "paused") pauseInternal(true);
         else if (visible && !document.hidden && automaticPause) resume();
     }
 
     function onKeyDown(event: KeyboardEvent) {
+        if (!event.ctrlKey && !event.metaKey && !event.altKey && ["ArrowRight", "ArrowDown", "PageDown", "ArrowLeft", "ArrowUp", "PageUp", " ", "Spacebar", "Home", "End"].includes(event.key) && suspendedInput(event)) return;
         if (!inputAvailable() || event.defaultPrevented || event.ctrlKey || event.metaKey || event.altKey || ignored(event.target)) return;
         const heading = ["ArrowRight", "ArrowDown", "PageDown"].includes(event.key) ? 1 :
             ["ArrowLeft", "ArrowUp", "PageUp"].includes(event.key) ? -1 :
@@ -2267,16 +2582,25 @@ function createOrbitPlayer(options: OrbitOptions) {
         if (event.key === "Escape" && !event.defaultPrevented && active && visible && !document.hidden) pauseInternal(false);
     }
 
-    async function activate(frame = startFrame) {
+    async function activate(frame = startFrame, restoration?: OrbitRestoration) {
         const token = ++activation;
         await prepare();
         if (destroyed || token !== activation) return;
         active = false; automaticPause = false;
-        position = entryFrame = orbitModulo(Math.round(Number.isFinite(frame) ? frame : startFrame), total); direction = 1;
+        position = Number.isFinite(restoration?.position) ? restoration!.position : orbitModulo(Math.round(Number.isFinite(frame) ? frame : startFrame), total);
+        entryFrame = orbitModulo(Math.round(position), total);
+        direction = restoration?.direction && Number.isFinite(restoration.direction) ? Math.sign(restoration.direction) : 1;
         settling = null; pendingMove = null; pausedAt = 0; dropInspection();
         state = "loading";
-        const initial = nearestFirst(windowIndices(position, 1), position);
-        setRestBuffer(position, true);
+        const target = Number.isFinite(restoration?.target) && Math.abs(restoration!.target! - position) > .0001 ? restoration!.target! : undefined;
+        const initial = target === undefined ? nearestFirst(windowIndices(position, 1), position) : indicesBetween(position, target);
+        if (target === undefined) setRestBuffer(position, true);
+        else {
+            direction = Math.sign(target - position);
+            pendingMove = { start: position, target, indices: initial };
+            const wanted = [...new Set([...windowIndices(target, bufferCheckpoints), ...initial])];
+            setBuffer(wanted, initial, [...initial, ...nearestFirst(wanted, target)]);
+        }
         try { await waitForFrames(initial, token); }
         catch (reason) {
             if (!destroyed && token === activation) { fail(failedIndex(initial) ?? frameAt()); notify(); }
@@ -2286,10 +2610,13 @@ function createOrbitPlayer(options: OrbitOptions) {
         active = true; canvas.style.touchAction = "pinch-zoom";
         // Do not interpret the approach's remaining wheel momentum as an orbit move.
         lastWheelAt = performance.now(); wheelLatched = true;
-        state = "checkpoint";
+        state = restoration?.paused ? "paused" : target === undefined ? "checkpoint" : "buffering";
+        if (state === "paused") pausedAt = suspended ? suspendedAt : performance.now();
         // A custom entry frame is parked exactly; the eight selectable cameras stay fixed.
-        setRestBuffer(position); paint(performance.now()); notify(); void prepareInspection();
-        if (!visible || document.hidden) pauseInternal(true);
+        if (target === undefined) setRestBuffer(position);
+        paint(performance.now()); notify(); void prepareInspection();
+        if (!suspended && (!visible || document.hidden)) pauseInternal(true);
+        else if (target !== undefined) resourcesChanged();
     }
 
     function deactivate() {
@@ -2325,7 +2652,7 @@ function createOrbitPlayer(options: OrbitOptions) {
 
     const resizeObserver = typeof ResizeObserver === "function" ? new ResizeObserver(() => {
         lastPaint = "";
-        if (active && state === "paused") paint(performance.now()); else requestPaint();
+        if (active && (state === "paused" || suspended)) paint(performance.now()); else requestPaint();
     }) : null;
     resizeObserver?.observe(canvas);
     const intersectionObserver = typeof IntersectionObserver === "function" ? new IntersectionObserver(entries => {
@@ -2333,9 +2660,9 @@ function createOrbitPlayer(options: OrbitOptions) {
         if (entry) { visible = entry.isIntersecting && entry.intersectionRatio > 0; visibilityChanged(); }
     }) : null;
     intersectionObserver?.observe(root);
-    const resize = () => { lastPaint = ""; if (active && state === "paused") paint(performance.now()); else requestPaint(); };
+    const resize = () => { lastPaint = ""; if (active && (state === "paused" || suspended)) paint(performance.now()); else requestPaint(); };
     const reducedChanged = () => {
-        if (reduced() && active && fullyReady() && (state === "moving" || state === "settling")) arrive(settling?.target ?? nextCheckpoint(position, direction));
+        if (!suspended && reduced() && active && fullyReady() && (state === "moving" || state === "settling")) arrive(settling?.target ?? nextCheckpoint(position, direction));
     };
     window.addEventListener("wheel", onWheel, { passive: false, capture: true });
     window.addEventListener("pointerdown", onPointerDown, true);
@@ -2351,7 +2678,7 @@ function createOrbitPlayer(options: OrbitOptions) {
     notify();
 
     return {
-        prepare, activate, deactivate, go, setCheckpoint, pause: () => pauseInternal(false), resume, retry, snapshot, redraw: () => paint(performance.now()),
+        prepare, activate, deactivate, go, setCheckpoint, pause: () => pauseInternal(false), resume, retry, snapshot, setSuspended, redraw: () => paint(performance.now()),
         destroy() {
             if (destroyed) return;
             destroyed = true; deactivate(); cancellation.abort();
