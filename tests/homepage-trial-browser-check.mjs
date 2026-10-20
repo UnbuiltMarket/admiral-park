@@ -28,9 +28,14 @@ const pause=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 
 async function fixture(options={}){
  const context=await browser.newContext({viewport:{width:1200,height:800},...options.context});
- const page=await context.newPage(),errors=[],heroRequests=[],connectionRequests=[],orbitRequests=[],floorplanRequests=[],apartmentRequests=[],apartmentMediaRequests=[],detailRequests=[];
+ const page=await context.newPage(),errors=[],heroRequests=[],connectionRequests=[],orbitRequests=[],floorplanRequests=[],apartmentRequests=[],apartmentMediaRequests=[],detailRequests=[],pdfLibraryRequests=[];
  let failIndex=options.failOrbit,corruptIndex=options.corruptOrbit,failConnection=options.failConnection,corruptConnection=options.corruptConnection,failApartment=!!options.failApartment,failDetails=!!options.failDetails,detailGateOpen=!options.gateDetails;const detailWaiters=[];
  page.on('pageerror',error=>errors.push(error.message));
+ await page.route(/https:\/\/(?:cdn\.jsdelivr\.net|unpkg\.com)\/(?:npm\/)?(?:pdf-lib@1\.17\.1\/dist\/pdf-lib\.min\.js|@pdf-lib\/fontkit@1\.1\.1\/dist\/fontkit\.umd\.min\.js)(?:\?.*)?$/,async route=>{
+  const url=route.request().url();pdfLibraryRequests.push(url);const name=url.includes('@pdf-lib/fontkit@')?'fontkit-1.1.1.umd.min.js':'pdf-lib-1.17.1.min.js';
+  let body;try{body=await readFile(new URL('tmp/pdf-tools/'+name,root));}catch(error){if(error.code==='ENOENT')return route.continue();throw error;}
+  return route.fulfill({contentType:'application/javascript',headers:{'Access-Control-Allow-Origin':'*'},body});
+ });
  await page.route('http://homepage.test/**',async route=>{
   const url=new URL(route.request().url()),pathname=decodeURIComponent(url.pathname);
   if(pathname==='/apartments.json'){
@@ -52,7 +57,8 @@ async function fixture(options={}){
    apartmentMediaRequests.push(pathname);
    const relative=pathname.slice('/apartment-assets/'.length).replace(/^assets\//,'');
    assert.ok(!relative.split('/').includes('..'),'Apartment media route stays inside the read-only media directory');
-   const file=path.join(apartmentMediaRoot,relative),extension=path.extname(file).toLowerCase(),contentType={'.webp':'image/webp','.png':'image/png','.svg':'image/svg+xml','.woff2':'font/woff2','.pdf':'application/pdf'}[extension]||'application/octet-stream';
+   const file=path.join(apartmentMediaRoot,relative),extension=path.extname(file).toLowerCase(),contentType={'.webp':'image/webp','.png':'image/png','.svg':'image/svg+xml','.woff2':'font/woff2','.ttf':'font/ttf','.pdf':'application/pdf'}[extension]||'application/octet-stream';
+   if(extension==='.ttf'){try{return route.fulfill({contentType,body:await readFile(new URL('assets/apartment-list/'+relative,root))});}catch(error){if(error.code!=='ENOENT')throw error;}}
    try{return route.fulfill({contentType,body:await readFile(file)});}catch(error){if(error.code!=='ENOENT')throw error;return route.fulfill({status:404,body:'Missing local studio media'});}
   }
   if(pathname==='/floorplan.svg'){
@@ -161,7 +167,7 @@ async function fixture(options={}){
  if(options.listMode)await page.locator('[data-detail="A001"]').first().waitFor({state:'visible'});
  else{await page.waitForSelector('[data-admiral-homepage]');await page.waitForFunction(()=>[...document.images].some(image=>image.naturalWidth>0));}
  await page.mouse.move(450,500);
- return {context,page,errors,heroRequests,connectionRequests,orbitRequests,floorplanRequests,apartmentRequests,apartmentMediaRequests,detailRequests,releaseDetails(){detailGateOpen=true;detailWaiters.splice(0).forEach(resolve=>resolve());},restoreDetails(){failDetails=false;},restoreApartment(){failApartment=false;},restoreOrbit(){failIndex=undefined;corruptIndex=undefined;},restoreConnection(){failConnection=undefined;corruptConnection=undefined;},async close(){detailGateOpen=true;detailWaiters.splice(0).forEach(resolve=>resolve());if(options.props?.orbitLayout==='studio'){await page.screenshot({path:fileURLToPath(new URL('studio-last-state.png',out))}).catch(()=>{});await writeFile(new URL('studio-last-state.json',out),JSON.stringify(await page.evaluate(()=>({root:{...document.querySelector('[data-admiral-homepage]')?.dataset},studio:{...document.querySelector('[data-orbit-studio]')?.dataset},text:document.querySelector('[data-orbit-studio]')?.innerText})).catch(()=>({})),null,2));}await page.evaluate(()=>{window.releaseDecodeGates?.();window.releaseNativeDecodeGates?.();window.releaseSequenceDecodeGates?.();}).catch(()=>{});assert.deepEqual(errors,[]);await context.close();}};
+ return {context,page,errors,heroRequests,connectionRequests,orbitRequests,floorplanRequests,apartmentRequests,apartmentMediaRequests,detailRequests,pdfLibraryRequests,releaseDetails(){detailGateOpen=true;detailWaiters.splice(0).forEach(resolve=>resolve());},restoreDetails(){failDetails=false;},restoreApartment(){failApartment=false;},restoreOrbit(){failIndex=undefined;corruptIndex=undefined;},restoreConnection(){failConnection=undefined;corruptConnection=undefined;},async close(){detailGateOpen=true;detailWaiters.splice(0).forEach(resolve=>resolve());if(options.props?.orbitLayout==='studio'){await page.screenshot({path:fileURLToPath(new URL('studio-last-state.png',out))}).catch(()=>{});await writeFile(new URL('studio-last-state.json',out),JSON.stringify(await page.evaluate(()=>({root:{...document.querySelector('[data-admiral-homepage]')?.dataset},studio:{...document.querySelector('[data-orbit-studio]')?.dataset},text:document.querySelector('[data-orbit-studio]')?.innerText})).catch(()=>({})),null,2));}await page.evaluate(()=>{window.releaseDecodeGates?.();window.releaseNativeDecodeGates?.();window.releaseSequenceDecodeGates?.();}).catch(()=>{});assert.deepEqual(errors,[]);await context.close();}};
 }
 const orbitSelector='[data-admiral-orbit]';
 async function orbitData(page){return page.locator(orbitSelector).evaluate(element=>({...element.dataset}));}
@@ -290,6 +296,25 @@ async function waitApartmentCard(page,id='A001'){
 async function closeApartmentCard(page){await page.locator('#detail-dialog').getByRole('button',{name:'Bezárás',exact:true}).click();await page.locator('#detail-dialog').waitFor({state:'hidden'});await waitOrbit(page);}
 function assertSameCamera(before,after,message){for(const key of ['orbitPosition','orbitFrame','orbitTarget'])assert.equal(after[key],before[key],message+' retains '+key);}
 
+let pdfParserPromise;
+async function inspectApartmentPdf(download,id,suffix=''){
+ assert.equal(download.suggestedFilename(),`Admiral-Park-${id}-adatlap.pdf`);
+ const target=new URL(`apartment-card-${id}${suffix}.pdf`,out);await download.saveAs(fileURLToPath(target));
+ const bytes=await readFile(target);assert.equal(bytes.subarray(0,5).toString(),'%PDF-','Download is an actual PDF document');
+ assert.ok(bytes.length>15000,'The floorplan and branding are embedded in the document');assert.ok(bytes.length<2000000,'The individual card stays comfortably below two megabytes');
+ if(!pdfParserPromise){const folder=path.dirname(require.resolve(process.env.PLAYWRIGHT_MODULE_PATH||'playwright'));pdfParserPromise=import(pathToFileURL(process.env.PDFJS_MODULE_PATH||require.resolve('pdfjs-dist/legacy/build/pdf.mjs',{paths:[folder]})).href);}
+ const {getDocument}=await pdfParserPromise,document=await getDocument({data:new Uint8Array(bytes),useSystemFonts:true}).promise;
+ try{
+  assert.equal(document.numPages,1,'The complete apartment card fits on one page');
+  const pdfPage=await document.getPage(1),view=pdfPage.view;
+  assert.ok(view[2]-view[0]>view[3]-view[1],'Phone and desktop downloads share a readable landscape layout');
+  const content=await pdfPage.getTextContent(),text=content.items.map(item=>item.str||'').join(' ').replace(/\s+/g,' ');
+  assert.ok(text.includes(id),'The PDF contains the selected apartment ID as selectable text');
+  for(const item of content.items){if(!item.str?.trim())continue;const x=item.transform[4],y=item.transform[5];assert.ok(x>=view[0]-1&&x+item.width<=view[2]+1&&y>=view[1]-1&&y<=view[3]+1,`Selectable text fits inside the card page: ${item.str}`);}
+  return {text,view,bytes:bytes.length};
+ }finally{await document.destroy();}
+}
+
 const storySelector=view=>`[data-orbit-story="${view}"]`;
 async function waitStory(page,view,state='visible'){
  await page.waitForFunction(({view,state})=>document.querySelector(`[data-orbit-story="${view}"]`)?.dataset.storyState===state,{view,state},{timeout:12000});
@@ -301,6 +326,60 @@ async function assertStoryTarget(page,view){
 }
 
 try{
+ await pass('apartment PDF export contains the selected card and keeps one full landscape layout on phones',async()=>{
+  const f=await fixture({listMode:true,cleanFixture:true,props:{pageUrl:'https://admiralpark.hu/homepage-draft'}}),{page}=f;
+  try{
+   await page.locator('[data-detail="A001"]').first().click();let card=await waitApartmentCard(page);
+   assert.ok(!f.apartmentMediaRequests.some(url=>/\.pdf(?:$|\?)/i.test(url)),'Opening a card never downloads a generic type PDF');
+   assert.ok(!f.apartmentMediaRequests.some(url=>/\.ttf(?:$|\?)/i.test(url)),'PDF-only fonts stay unloaded until the visitor requests a download');
+   assert.equal(f.pdfLibraryRequests.length,0,'PDF generation libraries stay unloaded until the visitor requests a download');
+   const before=f.apartmentMediaRequests.length;
+   const [firstDownload]=await Promise.all([page.waitForEvent('download'),card.locator('[data-download]').click()]);const first=await inspectApartmentPdf(firstDownload,'A001');
+   assert.match(first.text,/68[,.]67/);assert.match(first.text,/248[,.]95|248\s?950\s?000/);assert.match(first.text,/Előtér/);assert.match(first.text,/Fürdőszoba/);assert.match(first.text,/illusztráció/i);
+   assert.ok(!f.apartmentMediaRequests.slice(before).some(url=>/datasheets\/types\//.test(url)),'The export is generated from the actual card instead of fetching its generic type datasheet');
+   assert.equal(await card.locator('[data-download]').getAttribute('aria-busy'),null,'A completed export restores the download control');
+   await card.getByRole('tab',{name:'Szintrajz',exact:true}).click();await card.locator('.detail-floor-image').evaluate(image=>image.decode());const [floorDownload]=await Promise.all([page.waitForEvent('download'),card.locator('[data-download]').click()]);const floor=await inspectApartmentPdf(floorDownload,'A001','-floor');assert.match(floor.text,/Szintrajz/);assert.deepEqual(floor.view,first.view,'The active floor-layout document exports inside the same card design');
+   await card.getByRole('button',{name:'Bezárás',exact:true}).click();await card.waitFor({state:'hidden'});
+   await page.locator('[data-detail="A002"]').first().click();card=await waitApartmentCard(page,'A002');
+   const [secondDownload]=await Promise.all([page.waitForEvent('download'),card.locator('[data-download]').click()]);const second=await inspectApartmentPdf(secondDownload,'A002');
+   assert.match(second.text,/258[,.]44|258\s?440\s?000/);assert.ok(!second.text.includes('A001'),'A second apartment of the same floorplan type does not inherit the previous apartment number');
+   assert.deepEqual(second.view,first.view,'Switching apartments preserves the card design and page geometry');
+   await page.setViewportSize({width:390,height:844});await card.getByRole('tab',{name:'Helyiségek',exact:true}).click();await card.locator('.detail-room-panel').waitFor({state:'visible'});
+   const [phoneDownload]=await Promise.all([page.waitForEvent('download'),card.locator('[data-download]').click()]);const phone=await inspectApartmentPdf(phoneDownload,'A002','-phone');
+   assert.deepEqual(phone.view,first.view,'Downloading from a mobile room tab still exports the entire landscape card');assert.match(phone.text,/258[,.]44|258\s?440\s?000/);assert.match(phone.text,/Előtér/);
+   await card.getByRole('button',{name:'Bezárás',exact:true}).click();await card.waitFor({state:'hidden'});await page.setViewportSize({width:1200,height:800});
+   await page.locator('[data-detail="C303"]').first().click();card=await waitApartmentCard(page,'C303');const [largeDownload]=await Promise.all([page.waitForEvent('download'),card.locator('[data-download]').click()]);const large=await inspectApartmentPdf(largeDownload,'C303');
+   assert.match(large.text,/133[,.]48/);assert.match(large.text,/675[,.]65|675[,.]654|675\s?654\s?000/);assert.match(large.text,/Háztartási|Házt\.h\./);assert.match(large.text,/Erkély/);
+   await card.getByRole('button',{name:'Bezárás',exact:true}).click();await card.waitFor({state:'hidden'});await page.locator('[data-detail="A302"]').first().click();card=await waitApartmentCard(page,'A302');const [soldDownload]=await Promise.all([page.waitForEvent('download'),card.locator('[data-download]').click()]);const sold=await inspectApartmentPdf(soldDownload,'A302');assert.match(sold.text,/Eladva|Elkelt/);assert.match(sold.text,/Nincs megadva/);assert.doesNotMatch(sold.text,/\b0(?:[,.]0+)?\s*M Ft\b/,'An unknown sold-unit price must not become zero');
+   assert.ok(!f.apartmentMediaRequests.some(url=>/datasheets\/types\//.test(url)),'No type PDF is used by any selected-apartment export');
+  }finally{await f.close();}
+ });
+ await pass('apartment PDF export failure restores its control and retries without a generic datasheet fallback',async()=>{
+  const f=await fixture({listMode:true,cleanFixture:true}),{page}=f;
+  try{
+   await page.locator('[data-detail="A001"]').first().click();const card=await waitApartmentCard(page),button=card.locator('[data-download]');let downloads=0;page.on('download',()=>downloads++);
+   await page.evaluate(()=>{const original=HTMLCanvasElement.prototype.toBlob;window.pdfCanvasFailures=0;HTMLCanvasElement.prototype.toBlob=function(callback,...options){if(!window.pdfCanvasFailures++){setTimeout(()=>callback(null),180);return;}return original.call(this,callback,...options);};});
+   await button.click();await button.evaluate(element=>element.click());
+   await page.waitForFunction(()=>window.pdfCanvasFailures>0);await button.evaluate(element=>new Promise(resolve=>{const ready=()=>element.getAttribute('aria-busy')==='true'?requestAnimationFrame(ready):resolve();ready();}));
+   assert.equal(downloads,0,'A failed canvas export cannot download an incomplete document');assert.equal(await button.getAttribute('aria-disabled'),null,'The control is available after failure');
+   assert.equal(await card.locator('.download-fallback').count(),0,'A generation failure never redirects to the old apartment-type PDF');assert.match(await page.locator('[data-orbit-detail-card] #toast').innerText(),/nem sikerült|nem indult|próbál|hiba/i);
+   const [download]=await Promise.all([page.waitForEvent('download'),button.click()]);await inspectApartmentPdf(download,'A001','-retry');assert.equal(downloads,1,'Retry produces exactly one complete apartment download');
+   assert.equal(await button.getAttribute('aria-busy'),null);assert.ok(!f.apartmentMediaRequests.some(url=>/datasheets\/types\//.test(url)));
+  }finally{await f.close();}
+ });
+ await pass('apartment PDF export cancellation prevents stale downloads after closing or unmounting the card',async()=>{
+  for(const action of ['close','dispose']){
+   const f=await fixture({listMode:true,cleanFixture:true}),{page}=f;
+   try{
+    await page.locator('[data-detail="A001"]').first().click();const card=await waitApartmentCard(page);let downloads=0;page.on('download',()=>downloads++);
+    await page.evaluate(()=>{const nativeFetch=window.fetch.bind(window);window.fetch=(input,options)=>{if(!window.pdfFontGateUsed&&String(input).includes('montserrat-pdf-regular.ttf')){window.pdfFontGateUsed=true;window.pdfFontGatePending=true;return new Promise((resolve,reject)=>{const cancel=()=>{window.pdfFontGateAborted=true;reject(new DOMException('Test font request aborted','AbortError'));};if(options?.signal?.aborted)cancel();else options?.signal?.addEventListener('abort',cancel,{once:true});});}return nativeFetch(input,options);};});
+    await card.locator('[data-download]').click();await page.waitForFunction(()=>window.pdfFontGatePending===true);
+    if(action==='close'){await card.getByRole('button',{name:'Bezárás',exact:true}).click();await card.waitFor({state:'hidden'});}else await page.evaluate(()=>window.root.unmount());
+    await page.waitForFunction(()=>window.pdfFontGateAborted===true);await page.waitForTimeout(100);assert.equal(downloads,0,`${action} aborts a pending export instead of downloading stale apartment data`);
+    if(action==='close'){await page.locator('[data-detail="A002"]').first().click();const next=await waitApartmentCard(page,'A002');const [download]=await Promise.all([page.waitForEvent('download'),next.locator('[data-download]').click()]);await inspectApartmentPdf(download,'A002','-after-cancel');assert.equal(downloads,1,'Cancelling the first apartment does not block a deliberate export of the next apartment');}
+   }finally{await f.close();}
+  }
+ });
  await pass('list compare and media dialogs preserve filters and cannot control an orbit behind them',async()=>{
   const f=await fixture({listMode:true,bothEntries:true,cleanFixture:true,context:{hasTouch:true}}),{page}=f;
   try{
@@ -349,7 +428,7 @@ try{
    await card.locator('[data-save="A001"]').click();assert.equal(await card.locator('[data-save="A001"]').getAttribute('aria-pressed'),'true');assert.ok(JSON.parse(await page.evaluate(()=>localStorage.getItem('admiral-park:favorites:v1'))).includes('A001'));
    await card.locator('[data-inquiry-placeholder]').click();await card.locator('.inquiry-pending').waitFor({state:'visible'});assert.match(await card.locator('.inquiry-pending').innerText(),/hamarosan/);
    await page.evaluate(()=>{Object.defineProperty(navigator,'share',{configurable:true,value:undefined});Object.defineProperty(navigator,'clipboard',{configurable:true,value:{writeText:async value=>{window.sharedCardUrl=value;}}});});await card.locator('[data-share="A001"]').click();await card.locator('[data-share-copy="A001"]').click();assert.match(await page.evaluate(()=>window.sharedCardUrl),/apartment=A001/);await card.locator('[data-share-close]').click();
-   const [download]=await Promise.all([page.waitForEvent('download'),card.locator('[data-download]').click()]);assert.match(download.suggestedFilename(),/Admiral-Park-B-tipus-adatlap\.pdf/);
+   const [download]=await Promise.all([page.waitForEvent('download'),card.locator('[data-download]').click()]);assert.equal(download.suggestedFilename(),'Admiral-Park-A001-adatlap.pdf');
    assertSameCamera(before,await orbitData(page),'Native card actions');await closeApartmentCard(page);assert.equal((await orbitData(page)).orbitState,'checkpoint');
   }finally{await f.close();}
  });

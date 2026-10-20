@@ -12,7 +12,21 @@ Create or update these three Framer code files at the same folder level, using t
 
 Both entry files import `./AdmiralApartmentDetailCard`. If you deliberately place the shared file in another folder, update both import paths. An unresolved-import error means the shared file is missing or its name/path differs.
 
-All code stays inside the Framer project. No GitHub script loader is involved. Code edits remain available to Framer's editor immediately. Publish the Framer project normally after reviewing the result.
+The component code stays inside the Framer project. No GitHub component loader is involved. Code edits remain available to Framer's editor immediately. Publish the Framer project normally after reviewing the result.
+
+## Apartment PDF download
+
+The `Adatlap` button creates a one-page landscape PDF of the selected apartment's detail card. It uses the same branding, colours, cropped drawing, plan markers, room data, price and status. It no longer downloads the generic apartment-type datasheet. Files are named `Admiral-Park-A001-adatlap.pdf`, using the selected ID.
+
+The PDF uses the same full layout on phones and desktop, regardless of the mobile card's hidden tabs. The selected drawing tab is respected: Alaprajz exports the apartment plan; Szintrajz exports the floor layout. Numbered type-plan rooms are joined to actual areas only when their explicit `planNumber` mappings are complete. Other apartments show the type legend and actual room areas as separate columns.
+
+Text, logo paths and room markers are vectors. The drawing is compressed as a high-quality JPEG, retaining up to 1800 pixels along its longest cropped edge. Background gradients are rasterised separately. Price and availability are a snapshot at download time; the PDF includes the date and a link back to the apartment.
+
+Only `AdmiralApartmentDetailCard.tsx` needs replacing for this update if the three-file shared setup is already installed. Do not replace the list or homepage just for PDF export, and do not add a separate shared-card canvas instance.
+
+Export code is included in the shared component. PDF-Lib 1.17.1 and Fontkit 1.1.1 are loaded from jsDelivr only after a download click, with pinned SHA-384 integrity hashes. The two small static Montserrat print-font subsets are also fetched only on export. No PDF renderer, print font, canvas, or per-apartment PDF is prepared on page load. No apartment data is sent to an export server. Network failures show a retryable message and never silently download the old type PDF.
+
+Maintain the renderer in `src/shared/apartment-card/pdf-export.js` and the button/snapshot handler in `card-pdf-actions.js`. The guarded extractor applies those two handler replacements, preserving the upstream design snapshot. Recreate the print fonts, if needed, with `scripts/prepare-pdf-fonts.py`; its official font source and checksum are pinned and it checks Hungarian character coverage. The existing Montserrat OFL licence applies.
 
 ## Data and loading
 

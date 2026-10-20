@@ -29,7 +29,7 @@
     }
   },
   "adapter": {
-    "version": 2,
+    "version": 3,
     "changes": [
       "manual mount only",
       "runtime and font-loader names",
@@ -39,13 +39,14 @@
       "controller lifecycle",
       "guarded card-only extraction",
       "shared loaded dataset",
-      "favorites synchronization"
+      "favorites synchronization",
+      "apartment-specific PDF export actions"
     ]
   },
   "cardOnly": {
     "card-runtime.js": {
-      "sha256": "c6729ed3bbc2df6c9e88b7d7cf8d7ce6914c2723b88df89d8371dbabaf435b32",
-      "bytes": 45830
+      "sha256": "6ec8550f1c533de883b0b927b04f8cc30e8d6bafd60a64bc63d7edba71d5d84c",
+      "bytes": 49336
     },
     "card.css": {
       "sha256": "fe6f476aa0882575b8de6eeab71cd3623759e5f2a7d54112f9ab307cb1889cb6",

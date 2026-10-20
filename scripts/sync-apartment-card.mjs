@@ -58,7 +58,7 @@ const manifest = {
     originals: Object.fromEntries(Object.entries(originals).map(([name, content]) => [name, { sha256: sha(content), bytes: Buffer.byteLength(content) }])),
     adapted: { 'app.js': { sha256: sha(runtime), bytes: Buffer.byteLength(runtime) }, 'styles.css': { sha256: sha(originals['styles.css']) }, 'shell.html': { sha256: sha(shell) } },
     cardOnly: Object.fromEntries(Object.entries(cardOnly).map(([name, text]) => [name, {sha256: sha(text), bytes: Buffer.byteLength(text)}])),
-    adapter: { version: 2, changes: ['manual mount only', 'runtime and font-loader names', 'queued apartment selection', 'dialog lifecycle bridge', 'loading and retry bridge', 'controller lifecycle', 'guarded card-only extraction', 'shared loaded dataset', 'favorites synchronization'] },
+    adapter: { version: 3, changes: ['manual mount only', 'runtime and font-loader names', 'queued apartment selection', 'dialog lifecycle bridge', 'loading and retry bridge', 'controller lifecycle', 'guarded card-only extraction', 'shared loaded dataset', 'favorites synchronization', 'apartment-specific PDF export actions'] },
 };
 await mkdir(target, { recursive: true });
 await Promise.all([

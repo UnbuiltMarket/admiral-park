@@ -159,7 +159,18 @@ for(const statement of mount.body.statements){
 const fonts=file.statements.filter(s=>ts.isFunctionDeclaration(s)&&s.name?.text==='ensureOrbitApartmentCardFont');
 if(fonts.length!==1)fail('font loader changed');
 const font=fonts[0].getText(file);
-const runtime='// Card-only runtime. Shared by the list and orbit; no list/filter/comparison renderer.\n'+font+'\n\nfunction mountOrbitApartmentCardRuntime(root=document,config={}){\n'+body.join('\n')+'\n'+load+'\n}\n';
+const pdfActions=await readFile(new URL('card-pdf-actions.js',folder),'utf8');
+const pdfFile=ts.createSourceFile('card-pdf-actions.js',pdfActions,ts.ScriptTarget.ES2020,true,ts.ScriptKind.JS);
+if(pdfFile.parseDiagnostics.length)fail('PDF actions are not valid JavaScript');
+const replacements=new Map(pdfFile.statements.filter(ts.isFunctionDeclaration).map(node=>[node.name.text,node.getText(pdfFile)]));
+if(replacements.size!==2||!replacements.has('downloadLink')||!replacements.has('downloadDatasheet'))fail('unexpected PDF action replacement');
+body=body.flatMap(text=>{
+  const match=/^(?:async )?function (\w+)\(/.exec(text),name=match?.[1];
+  if(name==='datasheet')return [];
+  return [replacements.get(name)||text];
+});
+const pdfState="let pdfExportJob=null;const pdfDownloadTimers=new Set();\n$('detail-dialog').addEventListener('close',()=>{pdfExportJob?.controller.abort();pdfExportJob=null;},events);\nsignal.addEventListener('abort',()=>{pdfExportJob?.controller.abort();for(const timer of pdfDownloadTimers)clearTimeout(timer);pdfDownloadTimers.clear();},{once:true});";
+const runtime='// Card-only runtime. Shared by the list and orbit; no list/filter/comparison renderer.\n'+font+'\n\nfunction mountOrbitApartmentCardRuntime(root=document,config={}){\n'+body.join('\n')+'\n'+pdfState+'\n'+load+'\n}\n';
 // Unescape template literals embedded in the String.raw source above.
 const cardRuntime=runtime.replace(/\\`/g,'`').replace(/\\\$\{/g,'${');
 const outputFile=ts.createSourceFile('card-runtime.js',cardRuntime,ts.ScriptTarget.ES2020,true,ts.ScriptKind.JS);

@@ -5,6 +5,266 @@ import * as React from "react"
 const ORBIT_APARTMENT_CARD_STYLES = "/* Shared detail and media card styles; list-only selectors removed. */\n:root, :host {\n  --paper: #fbfaf8;\n  --surface: #f1f0eb;\n  --filter-background: #f1f0eb;\n  --ink: #242824;\n  --muted: #70736d;\n  --accent: #a38c69;\n  --line: #deded6;\n  --button: #242824;\n  --button-text: #ffffff;\n  --available: #4f7959;\n  --negotiating: #b28a2f;\n  --sold: #b4564f;\n  --hover: color-mix(in srgb, var(--ink) 3%, var(--paper));\n  --detail-top: #fdfbfb;\n  --detail-bottom: #e4e9ec;\n  --detail-ink: #242824;\n  --detail-muted: #687074;\n  --detail-watermark-top: #f2f0f1;\n  --detail-watermark-bottom: #d9dfe2;\n  font-family: 'Montserrat', Arial, sans-serif;\n  font-size: 14px;\n  font-synthesis: none;\n  color: var(--ink);\n  background: var(--paper);\n  color-scheme: light;\n  -webkit-font-smoothing: antialiased;\n}\n:host { display: block; width: 100%; }\n* { box-sizing: border-box; }\nbody { margin: 0; background: var(--paper); }\nbody.dialog-open { overflow: hidden; }\nbutton, input, select { font: inherit; color: inherit; }\nbutton, select, input[type=\"checkbox\"], summary { cursor: pointer; }\nbutton, a, input, select, summary { -webkit-tap-highlight-color: color-mix(in srgb, var(--ink) 0%, transparent); }\nbutton, a { touch-action: manipulation; }\nbutton { border: 0; background: none; }\nbutton:disabled { cursor: default; opacity: .4; }\na { color: inherit; text-decoration: none; }\ninput, select { min-width: 0; border-radius: 0; }\ninput[type=\"number\"] { appearance: textfield; -moz-appearance: textfield; }\ninput::-webkit-inner-spin-button, input::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }\nbutton:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible, summary:focus-visible { outline: 1px solid var(--accent); outline-offset: 5px; }\ninput:focus-visible, select:focus-visible { outline-offset: 2px; }\n[hidden] { display: none !important; }\n.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }\nselect option { background: var(--surface); color: var(--ink); }\ninput[aria-invalid=\"true\"] { border-color: var(--negotiating); }\n.media-preview { display: flex; flex-direction: column; align-items: stretch; width: 100px; min-width: 0; padding: 0; border: 0; background: none; text-align: left; }\n.preview-visual { display: flex; align-items: center; justify-content: center; width: 100%; height: 90px; overflow: hidden; border: 0; background: none; transition: opacity .15s; }\n.preview-visual img { display: block; min-width: 0; min-height: 0; width: 100%; height: 100%; border: 0; object-fit: contain; background: none; }\n.media-preview:hover .preview-visual { opacity: .8; }\n.preview-unavailable { color: var(--muted); font-size: 8px; text-align: center; }\n.datasheet-link { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 34px; padding: 8px 13px; border: 1px solid var(--line); border-radius: 999px; background: none; color: var(--ink); font-size: 10px; line-height: 1.5; white-space: nowrap; transition: border-color .15s, background .15s; }\n.datasheet-large { min-height: 40px; padding: 10px 17px; font-size: 11px; }\n.datasheet-link > svg { color: var(--accent); flex-shrink: 0; }\n.datasheet-link:hover { border-color: var(--accent); background: var(--hover); }\n.datasheet-link[aria-busy=\"true\"] { opacity: .45; pointer-events: none; }\n.action-pill { display: inline-flex; align-items: center; justify-content: center; gap: 6px; width: 102px; min-width: 102px; max-width: 102px; height: 34px; min-height: 34px; max-height: 34px; margin: 0; padding: 0 9px; border: 1px solid var(--line); border-radius: 999px; background: none; color: var(--ink); font-size: 10px; font-weight: 400; line-height: 1.4; text-align: center; white-space: nowrap; cursor: pointer; transition: border-color .15s, background .15s, color .15s; }\n.action-pill:hover { border-color: var(--accent); background: var(--hover); }\n.action-pill > svg { width: 14px; height: 14px; flex-shrink: 0; }\n.download-wrap { display: inline-flex; flex-direction: column; align-items: flex-start; min-width: 0; }\n.download-fallback { display: inline-flex; gap: 5px; margin-top: 6px; color: var(--muted); font-size: 9px; text-decoration: underline; text-underline-offset: 3px; }\n.heading-rooms { text-align: center; }\n.status-pill { display: inline-flex; align-items: center; gap: 7px; color: var(--muted); font-size: 10px; line-height: 1.5; white-space: nowrap; }\n.status-pill::before { content: ''; width: 4px; height: 4px; flex-shrink: 0; border-radius: 50%; background: currentColor; }\n.status-available { color: var(--available); }\n.status-under_negotiation { color: var(--negotiating); }\n.status-sold { color: var(--sold); }\n.status-unknown { color: var(--muted); }\n.save-button { display: inline-grid; place-items: center; width: 31px; height: 34px; vertical-align: middle; padding: 6px; color: color-mix(in srgb, var(--muted) 65%, var(--paper)); }\n.save-button svg { display: block; width: 18px; height: 18px; }\n.save-button:hover, .save-button.is-saved { color: var(--accent); }\n.save-button.is-saved svg path { fill: currentColor; }\n.button-primary, .button-secondary { display: inline-flex; align-items: center; justify-content: center; gap: 20px; min-height: 43px; padding: 12px 19px; border: 1px solid var(--button); font-size: 11px; line-height: 1.5; text-align: center; }\n.button-primary { background: var(--button); color: var(--button-text); }\n.button-primary:hover { background: color-mix(in srgb, var(--button) 88%, var(--paper)); }\n.button-secondary { border-color: var(--line); background: none; color: var(--ink); }\n.button-secondary:hover { border-color: var(--accent); }\n.toast { position: fixed; bottom: 26px; left: 50%; z-index: 80; transform: translate(-50%, 12px); max-width: calc(100% - 32px); padding: 13px 21px; background: var(--button); color: var(--button-text); font-size: 11px; line-height: 1.7; text-align: center; opacity: 0; pointer-events: none; transition: opacity .2s, transform .2s; }\n.toast.visible { opacity: 1; transform: translate(-50%, 0); }\n.apartment-dialog { width: min(930px, calc(100% - 40px)); max-height: calc(100% - 40px); margin: auto; padding: 0; overflow: auto; border: 1px solid var(--line); color: var(--ink); background: var(--paper); box-shadow: 0 20px 90px color-mix(in srgb, var(--ink) 15%, transparent); }\n.apartment-dialog::backdrop { background: color-mix(in srgb, var(--ink) 42%, transparent); backdrop-filter: blur(3px); }\n.dialog-inner { padding: 34px 38px; }\n.dialog-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 22px; padding-bottom: 25px; margin-bottom: 28px; border-bottom: 1px solid var(--line); }\n.eyebrow { color: var(--muted); font-size: 9px; letter-spacing: 1.3px; line-height: 1.6; margin-bottom: 13px; }\n.dialog-head h2 { margin: 0; font-family: 'Montserrat', Arial, sans-serif; font-size: 39px; font-weight: 400; letter-spacing: -.8px; line-height: 1.1; }\n.dialog-head h2 > span { color: var(--muted); }\n.dialog-close { display: grid; place-items: center; width: 33px; height: 33px; flex-shrink: 0; padding: 0; color: var(--muted); font-size: 25px; font-weight: 300; line-height: 1; }\n.dialog-close:hover { color: var(--accent); }\n.empty-plan { padding: 0 0 23px; border-bottom: 1px solid var(--line); color: var(--muted); }\n.empty-plan h3 { margin: 0 0 11px; font-family: 'Montserrat', Arial, sans-serif; font-size: 24px; font-weight: 400; line-height: 1.4; color: var(--ink); }\n.empty-plan p { margin: 0; font-size: 11px; line-height: 1.8; }\n#detail-dialog { width: 90vw; max-width: none; height: 90dvh; max-height: 90dvh; padding: 0; overflow: hidden; overscroll-behavior: contain; border: 1px solid color-mix(in srgb, var(--detail-muted) 20%, var(--detail-top)); color: var(--detail-ink); background: linear-gradient(180deg, var(--detail-top), var(--detail-bottom)); box-shadow: 0 24px 100px color-mix(in srgb, var(--detail-ink) 22%, transparent); font-family: 'Montserrat', Arial, Helvetica, sans-serif; }\n#detail-dialog::backdrop { background: color-mix(in srgb, var(--detail-ink) 47%, transparent); backdrop-filter: blur(5px); }\n#detail-dialog .detail-shell { position: relative; width: 100%; height: 100%; min-height: 0; isolation: isolate; }\n#detail-dialog .detail-brand-motif { position: absolute; z-index: -1; inset: 0 0 0 auto; width: 67%; pointer-events: none; background: linear-gradient(180deg, var(--detail-watermark-top), var(--detail-watermark-bottom)); -webkit-mask-image: var(--detail-monogram-image, none); mask-image: var(--detail-monogram-image, none); -webkit-mask-position: center; mask-position: center; -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat; -webkit-mask-size: contain; mask-size: contain; opacity: .6; }\n#detail-dialog .detail-topbar { position: absolute; z-index: 50; top: 9px; right: 11px; height: 42px; pointer-events: none; }\n#detail-dialog .detail-top-actions { display: flex; align-items: center; justify-content: flex-end; gap: 7px; pointer-events: auto; }\n#detail-dialog .detail-drawing-save { display: flex; align-items: center; flex-shrink: 0; }\n#detail-dialog .detail-drawing-save .save-button.save-with-label { display: inline-flex; align-items: center; justify-content: center; gap: 5px; width: auto; height: 34px; min-height: 34px; padding: 2px 0; color: var(--detail-muted); }\n#detail-dialog .detail-drawing-save .save-button:hover, #detail-dialog .detail-drawing-save .save-button.is-saved { color: var(--detail-ink); }\n#detail-dialog .detail-drawing-save svg { width: 18px; height: 18px; }\n#detail-dialog .detail-save-label { display: block; max-width: 100px; font-size: 10px; font-weight: 400; line-height: 1.25; text-align: left; }\n#detail-dialog .dialog-close { width: 38px; height: 40px; color: var(--detail-ink); font-size: 29px; font-weight: 300; }\n#detail-dialog .dialog-close:hover { color: var(--detail-muted); }\n#detail-dialog :is(button, a, summary, input):focus-visible { outline: 2px solid var(--detail-ink); outline-offset: 4px; }\n#detail-dialog .detail-layout { position: relative; display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); column-gap: clamp(20px, 2vw, 42px); width: 100%; height: 100%; min-width: 0; min-height: 0; padding: 22px clamp(18px, 2vw, 42px) 34px; }\n#detail-dialog .detail-sidebar { grid-column: 2; grid-row: 1; display: grid; grid-template-rows: auto 1px minmax(0, 1fr) auto; row-gap: 16px; min-width: 0; min-height: 0; }\n#detail-dialog .detail-core { display: grid; grid-template-columns: minmax(0, .95fr) minmax(0, 1.05fr); align-items: center; column-gap: 20px; min-width: 0; padding-block: 16px; }\n#detail-dialog .detail-identity { min-width: 0; text-align: center; }\n#detail-dialog .detail-brand-group { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0; min-width: 0; }\n#detail-dialog .detail-logo { display: block; width: 200px; max-width: 100%; aspect-ratio: 1232.62 / 523.833007; margin-inline: auto; background: var(--detail-ink); -webkit-mask-image: var(--detail-logo-image, none); mask-image: var(--detail-logo-image, none); -webkit-mask-position: center; mask-position: center; -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat; -webkit-mask-size: contain; mask-size: contain; }\n#detail-dialog .detail-apartment-number { margin: 0; color: var(--detail-ink); font-size: 48px; font-weight: 600; letter-spacing: -1.7px; line-height: 1.05; text-align: center; white-space: nowrap; }\n#detail-dialog .detail-area-row { display: flex; flex-direction: column; gap: 8px; min-width: 0; padding-top: 0; }\n#detail-dialog .detail-metrics { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin: 0; }\n#detail-dialog .detail-metrics.has-garden { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }\n#detail-dialog .detail-core:has(.detail-metrics.has-garden) { grid-template-columns: minmax(0, .7fr) minmax(0, 1.3fr); }\n#detail-dialog .detail-metrics > div { display: block; min-width: 0; text-align: center; }\n#detail-dialog .detail-metrics dt { margin: 0 0 4px; color: var(--detail-muted); font-size: 15px; font-weight: 400; line-height: 1.4; }\n#detail-dialog .detail-metrics dd { margin: 0; font-size: 30px; font-weight: 600; letter-spacing: -.8px; line-height: 1.05; white-space: nowrap; }\n#detail-dialog .detail-metrics.has-garden dd { white-space: normal; }\n#detail-dialog .detail-metrics dd small { display: inline-block; margin-left: 3px; color: var(--detail-muted); font-size: 14px; font-weight: 400; letter-spacing: 0; line-height: 1.3; vertical-align: baseline; }\n#detail-dialog .detail-drawing-toolbar { display: flex; align-items: center; justify-content: flex-start; flex-shrink: 0; gap: 10px; min-width: 0; min-height: 27px; margin-bottom: 10px; }\n#detail-dialog .detail-drawing-toolbar .detail-document-tabs { flex-shrink: 0; margin: 0; }\n#detail-dialog .detail-unit-meta { flex: 1; min-width: 0; margin: 0; padding: 0; color: var(--detail-muted); font-size: 10px; font-weight: 400; line-height: 1.4; text-align: right; }\n#detail-dialog .detail-unit-meta strong { font-weight: 600; }\n#detail-dialog .detail-unit-meta span { display: inline-block; margin-inline: 3px; }\n#detail-dialog .detail-layout-label { margin-left: 7px; color: var(--detail-muted); font-size: 10px; font-weight: 300; letter-spacing: 0; line-height: 1.3; }\n#detail-dialog .detail-illustration-note { position: absolute; z-index: 10; left: 10px; bottom: 6px; max-width: calc(100% - 20px); margin: 0; padding: 0; color: var(--detail-muted); font-size: 9px; font-weight: 300; line-height: 1.3; text-align: left; pointer-events: none; }\n#detail-dialog .detail-divider { display: block; width: 100%; height: 1px; margin: 0; border: 0; background: color-mix(in srgb, var(--detail-muted) 25%, transparent); }\n#detail-dialog .detail-room-panel { position: relative; }\n#detail-dialog .detail-room-tabs { position: absolute; top: 0; right: 0; gap: 12px; margin: 0; padding: 0; }\n#detail-dialog .detail-panel-nav { display: none; }\n#detail-dialog .detail-drawing { grid-column: 1; grid-row: 1; }\n#detail-dialog .detail-drawing, #detail-dialog .detail-room-panel { display: flex; flex-direction: column; min-width: 0; min-height: 0; }\n#detail-dialog .detail-document-tabs, #detail-dialog .detail-room-tabs { display: flex; align-items: center; gap: 16px; flex-shrink: 0; min-width: 0; min-height: 27px; margin-bottom: 10px; }\n#detail-dialog :is(.detail-document-tabs, .detail-room-tabs, .detail-summary-tabs) button { min-height: 27px; margin: 0; padding: 3px 0 6px; border: 0; border-bottom: 1px solid transparent; color: var(--detail-muted); background: none; font-size: 11px; line-height: 1.4; text-align: left; }\n#detail-dialog :is(.detail-document-tabs, .detail-room-tabs, .detail-summary-tabs) button[aria-selected=\"true\"], #detail-dialog :is(.detail-document-tabs, .detail-room-tabs) button.is-active { border-bottom-color: var(--detail-ink); color: var(--detail-ink); }\n#detail-dialog .detail-plan, #detail-dialog .detail-floor-plan { display: flex; flex: 1; flex-direction: column; min-width: 0; min-height: 0; margin: 0; }\n#detail-dialog .detail-section-label { flex-shrink: 0; margin: 0 0 9px; color: var(--detail-muted); font-size: 10px; font-weight: 400; letter-spacing: 1.1px; line-height: 1.4; text-transform: uppercase; }\n#detail-dialog .detail-plan-stage { position: relative; container-type: size; display: grid; flex: 1; place-items: center; min-width: 0; min-height: 0; margin: 0; padding: 0; border: 0; background: none; }\n#detail-dialog .detail-plan-canvas { position: relative; width: min(100cqw, calc(100cqh * var(--plan-aspect, 1))); max-width: 100%; max-height: 100%; aspect-ratio: var(--plan-aspect, 1); overflow: hidden; border: 0; background: none; }\n#detail-dialog .detail-plan-surface { position: absolute; }\n#detail-dialog .detail-plan-image { display: block; width: 100%; height: 100%; max-width: none; margin: 0; border: 0; object-fit: contain; background: none; }\n#detail-dialog .detail-plan-markers { position: absolute; inset: 0; }\n#detail-dialog .room-marker { position: absolute; z-index: 2; display: grid; place-items: center; width: 28px; height: 28px; margin: 0; padding: 0; border: 0; border-radius: 50%; color: var(--detail-ink); background: none; font-family: inherit; font-size: 11px; font-weight: 400; line-height: 1; transform: translate(-50%, -50%); isolation: isolate; cursor: pointer; }\n#detail-dialog .room-marker::before { content: ''; position: absolute; z-index: -1; inset: 4px; border: 1px solid color-mix(in srgb, var(--detail-ink) 48%, var(--detail-top)); border-radius: 50%; background: color-mix(in srgb, var(--detail-top) 96%, transparent); box-shadow: 0 1px 5px color-mix(in srgb, var(--detail-ink) 9%, transparent); transition: background .15s, border-color .15s; }\n#detail-dialog .room-marker.is-active { z-index: 5; color: var(--detail-top); }\n#detail-dialog .room-marker.is-active::before { border-color: var(--detail-ink); background: var(--detail-ink); }\n#detail-dialog .room-marker:focus-visible { outline-offset: 0; }\n#detail-dialog .detail-plan-note { flex-shrink: 0; margin: 9px 0 0; color: var(--detail-muted); font-size: 10px; line-height: 1.5; }\n#detail-dialog .detail-floor-plan > .detail-floor-image { display: block; flex: 1; min-width: 0; min-height: 0; width: 100%; height: 100%; margin: 0; border: 0; object-fit: contain; background: none; }\n#detail-dialog .empty-plan { display: flex; flex: 1; flex-direction: column; justify-content: center; min-height: 0; padding: 0; border: 0; color: var(--detail-muted); }\n#detail-dialog .empty-plan h3 { color: var(--detail-ink); }\n#detail-dialog .detail-rooms, #detail-dialog .unit-room-section { display: flex; flex: 1; flex-direction: column; min-width: 0; min-height: 0; margin: 0; }\n#detail-dialog :is(.detail-rooms, .unit-room-section) > h3 { flex-shrink: 0; min-height: 28px; margin: 0 0 6px; padding-right: 190px; color: var(--detail-ink); font-family: inherit; font-size: 20px; font-weight: 400; letter-spacing: -.4px; line-height: 1.3; }\n#detail-dialog .room-page { flex: 1; min-width: 0; min-height: 0; }\n#detail-dialog .type-room-list, #detail-dialog .unit-room-list { display: grid; grid-template-columns: repeat(var(--room-columns, 1), minmax(0, 1fr)); gap: 0 10px; margin: 0; padding: 0; list-style: none; }\n#detail-dialog .type-room-list > li { min-width: 0; }\n#detail-dialog .room-legend-button { display: grid; grid-template-columns: var(--room-circle, 18px) minmax(0, 1fr) auto; align-items: center; gap: 6px; width: 100%; min-height: 0; margin: 0; padding: var(--room-padding, 4px) 0; border: 0; border-bottom: 1px solid color-mix(in srgb, var(--detail-muted) 20%, transparent); background: none; color: var(--detail-ink); text-align: left; }\n#detail-dialog .room-number { display: grid; place-items: center; width: var(--room-circle, 18px); height: var(--room-circle, 18px); border: 1px solid color-mix(in srgb, var(--detail-muted) 36%, var(--detail-top)); border-radius: 50%; color: var(--detail-muted); font-size: 10px; line-height: 1; transition: background .15s, color .15s; }\n#detail-dialog .room-name { min-width: 0; font-size: 11px; line-height: 1.4; }\n#detail-dialog .room-area { font-size: 10px; font-variant-numeric: tabular-nums; line-height: 1.4; white-space: nowrap; }\n#detail-dialog .room-legend-button.is-active .room-number { border-color: var(--detail-ink); background: var(--detail-ink); color: var(--detail-top); }\n#detail-dialog .unit-room-list li { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: baseline; gap: 8px; min-width: 0; min-height: 0; padding: var(--room-padding, 4px) 0; border-bottom: 1px solid color-mix(in srgb, var(--detail-muted) 20%, transparent); color: var(--detail-muted); font-size: 11px; line-height: 1.4; }\n#detail-dialog .unit-room-list li > :last-child { color: var(--detail-ink); font-size: 10px; font-weight: 400; white-space: nowrap; }\n#detail-dialog .detail-conversion { display: grid; grid-template-rows: auto auto auto; row-gap: 10px; min-width: 0; }\n#detail-dialog .detail-price { margin: 0; padding: 6px 10px; border-radius: 8px; background: color-mix(in srgb, var(--detail-ink) 4%, transparent); text-align: center; }\n#detail-dialog .detail-price > span { display: block; margin: 0 0 5px; color: var(--detail-muted); font-size: 11px; line-height: 1.4; }\n#detail-dialog .detail-price > p { display: flex; align-items: baseline; justify-content: center; flex-wrap: wrap; gap: 6px; margin: 0; }\n#detail-dialog .price-value { font-size: clamp(38px, 3.5vw, 58px); font-weight: 400; letter-spacing: -1.6px; line-height: 1.05; }\n#detail-dialog .price-unit { color: var(--detail-ink); font-size: 12px; font-weight: 400; line-height: 1.4; }\n#detail-dialog .price-unavailable { font-size: 24px; font-weight: 400; letter-spacing: -.7px; line-height: 1.2; }\n#detail-dialog .detail-inquiry { position: relative; min-width: 0; min-height: 60px; margin: 0; }\n#detail-dialog .detail-inquiry > .inquiry-button { width: 100%; }\n#detail-dialog .inquiry-pending { position: absolute; z-index: 40; bottom: calc(100% + 8px); left: 0; right: 0; margin: 0; padding: 13px 15px; border: 1px solid color-mix(in srgb, var(--detail-muted) 28%, var(--detail-top)); border-radius: 3px; color: var(--detail-muted); background: var(--detail-top); box-shadow: 0 7px 25px color-mix(in srgb, var(--detail-ink) 12%, transparent); font-size: 11px; line-height: 1.6; }\n#detail-dialog .inquiry-pending p { margin: 0; }\n#detail-dialog .inquiry-pending button { display: inline; margin: 4px 0 0; padding: 0; color: var(--detail-ink); font-size: inherit; text-decoration: underline; text-underline-offset: 4px; }\n#detail-dialog .detail-footer { display: grid; grid-template-columns: minmax(0, 1fr) minmax(100px, .85fr) minmax(0, 1fr); align-items: center; gap: 12px; margin: 0; min-width: 0; }\n#detail-dialog .detail-footer > :is(.download-wrap, .detail-share-wrap) { display: block; width: 100%; min-width: 0; }\n#detail-dialog .detail-footer .footer-pill { display: flex; align-items: center; justify-content: center; gap: 6px; width: 100%; min-width: 0; max-width: none; height: 44px; min-height: 44px; max-height: 44px; margin: 0; padding: 8px 11px; border: 1px solid var(--detail-ink); border-radius: 999px; color: var(--detail-ink); background: none; font-size: 11px; font-weight: 500; line-height: 1.2; text-align: center; white-space: normal; cursor: pointer; }\n#detail-dialog .detail-footer .datasheet-link { color: var(--detail-ink); background: none; }\n#detail-dialog .detail-footer .datasheet-link:hover { background: color-mix(in srgb, var(--detail-top) 40%, transparent); }\n#detail-dialog .detail-footer .footer-pill > svg { display: block; width: 15px; height: 15px; flex-shrink: 0; color: currentColor; }\n#detail-dialog .detail-footer .share-button:hover, #detail-dialog .detail-footer .share-button[aria-expanded=\"true\"] { background: color-mix(in srgb, var(--detail-top) 40%, transparent); }\n#detail-dialog .detail-status { display: flex; align-items: center; justify-content: center; min-width: 0; min-height: 44px; margin: 0; padding: 0; border: 0; text-align: center; }\n#detail-dialog .detail-status .status-pill { display: inline-flex; align-items: center; justify-content: center; gap: 6px; max-width: 100%; color: var(--detail-ink); font-size: 18px; font-weight: 400; line-height: 1.15; white-space: normal; }\n#detail-dialog .detail-status .status-pill::before { display: block; width: 6px; height: 6px; flex-shrink: 0; border-radius: 50%; background: currentColor; }\n#detail-dialog .detail-status .status-available { color: var(--available); }\n#detail-dialog .detail-status .status-sold { color: var(--sold); }\n#detail-dialog .detail-status .status-under_negotiation { color: var(--negotiating); }\n#detail-dialog .detail-status .status-available::before { animation: detail-availability-pulse 2.3s ease-in-out infinite; }\n@keyframes detail-availability-pulse { 0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--available) 24%, transparent); } 50% { box-shadow: 0 0 0 4px color-mix(in srgb, var(--available) 8%, transparent); } }\n@media (prefers-reduced-motion: reduce) {\n#detail-dialog .detail-status .status-available::before { animation: none; box-shadow: none; }\n}\n#detail-dialog .detail-share-wrap { position: relative; }\n#detail-dialog .download-fallback { color: var(--detail-muted); }\n#detail-dialog .share-popover { position: fixed; z-index: 100; width: min(280px, calc(90vw - 24px)); margin: 0; padding: 14px; border: 1px solid color-mix(in srgb, var(--detail-muted) 28%, var(--detail-top)); border-radius: 8px; color: var(--detail-ink); background: var(--detail-top); box-shadow: 0 10px 38px color-mix(in srgb, var(--detail-ink) 16%, transparent); }\n#detail-dialog .share-heading { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin-bottom: 9px; }\n#detail-dialog .share-heading > div { display: flex; flex-direction: column; gap: 4px; }\n#detail-dialog .share-heading span { color: var(--detail-muted); font-size: 10px; line-height: 1.4; }\n#detail-dialog .share-heading strong { font-family: 'Montserrat', Arial, sans-serif; font-size: 23px; font-weight: 400; line-height: 1.1; }\n#detail-dialog .share-heading > button { display: grid; place-items: center; width: 30px; height: 30px; padding: 0; color: var(--detail-ink); font-size: 22px; line-height: 1; }\n#detail-dialog .share-options { display: grid; }\n#detail-dialog .share-options > :is(button, a) { display: flex; align-items: center; gap: 11px; min-height: 33px; margin: 0; padding: 7px 0; border-bottom: 1px solid color-mix(in srgb, var(--detail-muted) 16%, transparent); color: var(--detail-ink); font-size: 12px; line-height: 1.4; text-align: left; }\n#detail-dialog .share-options > :is(button, a) > span { width: 18px; color: var(--detail-muted); text-align: center; }\n#detail-dialog .share-options > :is(button, a):hover { color: var(--detail-muted); }\n#detail-dialog .share-url { display: block; width: 100%; min-width: 0; height: 31px; margin-top: 11px; padding: 6px 8px; border: 1px solid color-mix(in srgb, var(--detail-muted) 25%, transparent); border-radius: 3px; color: var(--detail-muted); background: none; font-size: 10px; line-height: 1.4; }\n#detail-dialog .share-feedback { display: block; min-height: 14px; margin-top: 7px; color: var(--detail-muted); font-size: 10px; line-height: 1.4; }\n.inquiry-button { --inquiry-gold-shadow: #b1935c; --inquiry-gold-mid: #d4bd8e; --inquiry-gold-light: #ecdbb5; --inquiry-gold-edge: #bda36f; --inquiry-ink: #2c281f; --inquiry-shine: #fffdf4; box-sizing: border-box; position: relative; display: inline-flex; align-items: center; justify-content: center; gap: 22px; width: 100%; min-width: 0; height: 60px; min-height: 60px; margin: 0; padding: 15px 24px; overflow: hidden; border: 1px solid var(--inquiry-gold-edge); border-radius: 999px; color: var(--inquiry-ink); background: linear-gradient(112deg, var(--inquiry-gold-shadow) 0%, var(--inquiry-gold-mid) 30%, var(--inquiry-gold-light) 57%, var(--inquiry-gold-shadow) 100%); box-shadow: inset 0 1px 0 color-mix(in srgb, var(--inquiry-shine) 55%, transparent), 0 3px 11px color-mix(in srgb, var(--inquiry-gold-shadow) 12%, transparent); font-family: 'Montserrat', Arial, sans-serif; font-size: 22px; font-weight: 600; letter-spacing: .2px; line-height: 1.3; text-align: center; text-decoration: none; cursor: pointer; -webkit-tap-highlight-color: transparent; transition: transform .2s, box-shadow .2s; }\n.inquiry-button:hover { transform: translateY(-1px); box-shadow: inset 0 1px 0 color-mix(in srgb, var(--inquiry-shine) 70%, transparent), 0 5px 15px color-mix(in srgb, var(--inquiry-gold-shadow) 18%, transparent); }\n.inquiry-button:active { transform: translateY(0); }\n.inquiry-button:focus-visible { outline: 2px solid var(--inquiry-ink); outline-offset: 5px; }\n.inquiry-button > svg { display: none; }\n@media (prefers-reduced-motion: reduce) {\n.inquiry-button { transition: none; }\n.inquiry-button:hover { transform: none; }\n}\n@media (min-width: 1101px) and (min-height: 601px) {\n#detail-dialog .detail-room-tabs, #detail-dialog .detail-room-panel :is(.detail-rooms, .unit-room-section) > h3, #detail-dialog .detail-room-panel :is(.type-room-list, .unit-room-list) { transform: translateY(calc(var(--room-slack, 0px) * .5)); }\n}\n@media (min-width: 1700px) and (min-height: 900px) {\n#detail-dialog .detail-layout { padding-block: 28px 40px; }\n#detail-dialog .detail-sidebar { row-gap: 16px; }\n#detail-dialog .detail-core { column-gap: 24px; padding-block: 24px; }\n#detail-dialog .detail-logo { width: 230px; }\n#detail-dialog .detail-apartment-number { font-size: 56px; }\n#detail-dialog .detail-metrics dd { font-size: 34px; }\n#detail-dialog .room-name { font-size: 12px; }\n}\n@media (max-height: 800px) {\n#detail-dialog .detail-layout { padding-block: 16px 28px; }\n#detail-dialog .detail-sidebar { row-gap: 8px; }\n#detail-dialog .detail-core { column-gap: 16px; padding-block: 4px; }\n#detail-dialog .detail-logo { width: 200px; }\n#detail-dialog .detail-metrics { gap: 8px; }\n#detail-dialog .detail-metrics dd { font-size: 28px; }\n#detail-dialog .detail-conversion { row-gap: 6px; }\n#detail-dialog .detail-price { padding: 4px 8px; }\n#detail-dialog .detail-price > span { margin-bottom: 3px; font-size: 10px; }\n#detail-dialog .price-value { font-size: 32px; }\n}\n@media (max-width: 1100px), (max-height: 600px) {\n#detail-dialog .detail-layout { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto 1px 32px minmax(0, 1fr) auto; gap: 8px 0; padding: 13px 15px 25px; }\n#detail-dialog .detail-sidebar { display: contents; }\n#detail-dialog .detail-core { grid-column: 1; grid-row: 1; grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr); column-gap: 14px; padding-block: 0; }\n#detail-dialog .detail-logo { width: 160px; }\n#detail-dialog .detail-core:has(.detail-metrics.has-garden) { grid-template-columns: minmax(0, .6fr) minmax(0, 1.4fr); }\n#detail-dialog .detail-apartment-number { font-size: 34px; letter-spacing: -1.3px; }\n#detail-dialog .detail-area-row { gap: 6px; padding-top: 0; }\n#detail-dialog .detail-metrics { gap: 8px; }\n#detail-dialog .detail-metrics dt { font-size: 14px; }\n#detail-dialog .detail-metrics dd { font-size: 22px; letter-spacing: -.8px; white-space: normal; }\n#detail-dialog .detail-metrics dd small { font-size: 14px; }\n#detail-dialog .detail-divider { grid-column: 1; grid-row: 2; }\n#detail-dialog .detail-panel-nav { grid-column: 1; grid-row: 3; display: flex; align-items: stretch; justify-content: center; gap: 26px; border-bottom: 1px solid color-mix(in srgb, var(--detail-muted) 18%, transparent); }\n#detail-dialog .detail-panel-nav button { min-width: 75px; min-height: 32px; margin: 0; padding: 0 4px; border: 0; border-bottom: 1px solid transparent; color: var(--detail-muted); background: none; font-size: 11px; line-height: 1.4; }\n#detail-dialog .detail-panel-nav button[aria-selected=\"true\"] { border-bottom-color: var(--detail-ink); color: var(--detail-ink); }\n#detail-dialog .detail-layout [data-detail-panel] { grid-column: 1; grid-row: 4; display: none; }\n#detail-dialog .detail-shell[data-panel=\"plan\"] .detail-drawing { display: flex; }\n#detail-dialog .detail-shell[data-panel=\"rooms\"] .detail-room-panel { display: flex; }\n#detail-dialog .detail-room-panel { width: 100%; min-height: 0; padding-top: 26px; }\n#detail-dialog .detail-room-panel h3 { display: block; min-height: 0; margin: 0 0 4px; padding: 0; font-size: 16px; line-height: 1.25; }\n#detail-dialog .detail-room-tabs { min-height: 24px; }\n#detail-dialog .detail-drawing-toolbar { gap: 8px; }\n#detail-dialog .detail-drawing-toolbar .detail-document-tabs { gap: 10px; }\n#detail-dialog .detail-drawing-toolbar .detail-document-tabs button { font-size: 10px; }\n#detail-dialog .detail-unit-meta { font-size: 9px; }\n#detail-dialog .detail-unit-meta span { margin-inline: 1px; }\n#detail-dialog .detail-conversion { grid-column: 1; grid-row: 5; row-gap: 8px; }\n#detail-dialog .detail-price > span { font-size: 10px; margin-bottom: 4px; }\n#detail-dialog .price-value { font-size: 34px; }\n#detail-dialog .price-unit { font-size: 10px; }\n#detail-dialog .price-unavailable { font-size: 20px; }\n#detail-dialog .detail-inquiry { min-height: 52px; }\n#detail-dialog .detail-inquiry > .inquiry-button { height: 52px; min-height: 52px; padding: 12px 20px; font-size: 20px; }\n#detail-dialog .detail-footer { grid-template-columns: minmax(0, 1fr) minmax(80px, .95fr) minmax(0, 1fr); gap: 6px; }\n#detail-dialog .detail-footer .footer-pill { gap: 4px; padding: 6px; font-size: 10px; }\n#detail-dialog .detail-footer .footer-pill > svg { width: 13px; height: 13px; }\n#detail-dialog .detail-status .status-pill { gap: 4px; font-size: 14px; }\n#detail-dialog .detail-status .status-pill::before { width: 5px; height: 5px; }\n#detail-dialog .detail-brand-motif { width: 100%; }\n#detail-dialog .detail-illustration-note { left: 8px; bottom: 5px; font-size: 8.5px; }\n}\n@media (max-width: 600px) {\n#detail-dialog .detail-metrics dd small { display: block; margin-left: 0; }\n#detail-dialog .detail-topbar { top: 8px; right: 8px; }\n#detail-dialog .detail-top-actions { gap: 8px; }\n#detail-dialog .detail-drawing-toolbar { flex-wrap: wrap; justify-content: flex-start; row-gap: 4px; column-gap: 10px; }\n#detail-dialog .detail-drawing-save .save-button.save-with-label { gap: 4px; }\n#detail-dialog .detail-save-label { max-width: 70px; font-size: 9.5px; overflow-wrap: anywhere; }\n#detail-dialog .detail-drawing-toolbar .detail-unit-meta { flex-basis: 100%; font-size: 9px; text-align: left; }\n#detail-dialog .dialog-close { width: 32px; height: 38px; font-size: 28px; }\n}\n@media (max-width: 600px) and (max-height: 700px) {\n#detail-dialog .detail-layout { grid-template-rows: auto 1px 28px minmax(0, 1fr) auto; row-gap: 3px; padding: 6px 15px 20px; }\n#detail-dialog .detail-core { column-gap: 12px; }\n#detail-dialog .detail-logo { width: 130px; }\n#detail-dialog .detail-apartment-number { font-size: 28px; letter-spacing: -1px; }\n#detail-dialog .detail-area-row { gap: 4px; padding-top: 0; }\n#detail-dialog .detail-metrics { gap: 6px; }\n#detail-dialog .detail-metrics.has-garden { gap: 4px; }\n#detail-dialog .detail-metrics dt { margin-bottom: 2px; }\n#detail-dialog .detail-metrics dd { font-size: 18px; }\n#detail-dialog .detail-conversion { row-gap: 4px; }\n#detail-dialog .detail-price > span { margin-bottom: 2px; }\n#detail-dialog .price-value { font-size: 28px; }\n#detail-dialog .price-unavailable { font-size: 18px; }\n#detail-dialog .detail-inquiry { min-height: 44px; }\n#detail-dialog .detail-inquiry > .inquiry-button { height: 44px; min-height: 44px; padding: 10px 18px; font-size: 18px; }\n#detail-dialog .detail-status .status-pill { font-size: 13px; }\n#detail-dialog .detail-panel-nav { gap: 8px; }\n#detail-dialog .detail-panel-nav button { min-width: 45px; min-height: 28px; font-size: 10px; }\n#detail-dialog .detail-shell[data-panel=\"rooms\"] .detail-panel-nav { justify-content: flex-start; padding-right: 140px; }\n#detail-dialog .detail-room-panel { padding-top: 0; }\n#detail-dialog .detail-room-tabs { top: -31px; min-height: 28px; gap: 8px; }\n#detail-dialog .detail-room-panel h3 { margin: 0; font-size: 13px; line-height: 1.2; }\n#detail-dialog .detail-layout-label { margin-left: 5px; font-size: 10px; }\n#detail-dialog .detail-illustration-note { font-size: 8px; line-height: 1.2; }\n#detail-dialog .detail-room-tabs button { min-height: 28px; padding: 0; font-size: 10px; }\n}\n@media (max-width: 360px) and (max-height: 700px) {\n#detail-dialog .detail-layout { row-gap: 2px; }\n}\n@media (max-width: 360px) {\n#detail-dialog .detail-core { column-gap: 10px; }\n#detail-dialog .detail-drawing-toolbar { gap: 6px; }\n#detail-dialog .detail-drawing-toolbar .detail-document-tabs { gap: 8px; }\n#detail-dialog .detail-drawing-toolbar .detail-document-tabs button { font-size: 9px; }\n#detail-dialog .detail-unit-meta { font-size: 8px; }\n#detail-dialog .type-room-list, #detail-dialog .unit-room-list { column-gap: 8px; }\n#detail-dialog .room-legend-button { grid-template-columns: 14px minmax(0, 1fr) auto; gap: 2px; }\n#detail-dialog .room-number { width: 14px; height: 14px; font-size: 9px; }\n#detail-dialog .room-area { font-size: 9px; }\n}\n@media (max-height: 600px) and (min-width: 601px) {\n#detail-dialog .detail-layout { --detail-landscape-rail: 300px; grid-template-columns: var(--detail-landscape-rail) minmax(0, 1fr); grid-template-rows: 28px minmax(0, 1fr); gap: 8px 20px; padding: 14px 18px 26px; }\n#detail-dialog .detail-sidebar { grid-column: 1; grid-row: 1 / 3; display: grid; grid-template-rows: auto 1px minmax(0, 1fr) auto; row-gap: 6px; }\n#detail-dialog .detail-core { grid-column: 1; grid-row: 1; grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr); column-gap: 10px; }\n#detail-dialog .detail-logo { width: 140px; }\n#detail-dialog .detail-apartment-number { font-size: 30px; }\n#detail-dialog .detail-area-row { gap: 6px; padding-top: 0; }\n#detail-dialog .detail-metrics { gap: 6px; }\n#detail-dialog .detail-metrics dd { font-size: 20px; }\n#detail-dialog .detail-room-panel h3 { margin: 0 0 3px; font-size: 14px; line-height: 1.2; }\n#detail-dialog .detail-conversion { grid-column: 1; grid-row: 4; row-gap: 4px; }\n#detail-dialog .detail-price > span { margin-bottom: 2px; }\n#detail-dialog .price-value { font-size: 29px; }\n#detail-dialog .detail-inquiry { min-height: 44px; }\n#detail-dialog .detail-inquiry > .inquiry-button { height: 44px; min-height: 44px; padding: 10px 18px; font-size: 18px; }\n#detail-dialog .detail-panel-nav { grid-column: 2; grid-row: 1; padding-right: 66px; gap: 16px; }\n#detail-dialog .detail-layout > .detail-drawing { grid-column: 2; grid-row: 2; }\n#detail-dialog .detail-room-panel { position: absolute; left: calc(18px + var(--detail-landscape-rail) + 20px); right: 18px; top: 50px; bottom: 14px; width: auto; padding-top: 26px; }\n}\n.media-dialog { position: fixed; inset: 0; width: 100vw; max-width: none; height: 100dvh; max-height: none; margin: 0; padding: 0; border: 0; overflow: hidden; background: var(--paper); color: var(--ink); }\n.media-dialog::backdrop { background: var(--paper); }\n.media-shell { display: grid; grid-template-rows: auto minmax(0, 1fr) auto; width: 100%; height: 100%; }\n.media-header { display: grid; grid-template-columns: 1fr auto auto; align-items: center; gap: 32px; padding: 20px 32px; border-bottom: 1px solid var(--line); }\n.media-heading { min-width: 0; }\n.media-heading .eyebrow { margin: 0 0 6px; font-size: 8px; }\n.media-heading h2 { margin: 0; font-family: 'Montserrat', Arial, sans-serif; font-size: 27px; font-weight: 400; line-height: 1.2; }\n.media-description { margin: 7px 0 0; color: var(--muted); font-size: 10px; line-height: 1.6; }\n.media-tabs { display: flex; align-items: center; gap: 25px; }\n.media-tabs button { min-height: 40px; padding: 7px 0; border-bottom: 1px solid color-mix(in srgb, var(--line) 0%, transparent); color: var(--muted); font-size: 11px; }\n.media-tabs button[aria-selected=\"true\"] { border-color: var(--accent); color: var(--ink); }\n.media-stage { position: relative; min-width: 0; min-height: 0; overflow: hidden; user-select: none; touch-action: pan-x pan-y pinch-zoom; outline-offset: -5px; }\n.media-canvas { position: absolute; inset: 24px; pointer-events: none; }\n.media-image { display: block; width: 100%; height: 100%; object-fit: contain; transform-origin: center; transition: transform .1s ease-out; }\n.media-stage[data-zoomed=\"true\"] { cursor: grab; touch-action: none; }\n.media-stage[data-dragging=\"true\"] { cursor: grabbing; }\n.media-stage[data-dragging=\"true\"] .media-image { transition: none; }\n.media-dialog[data-loading=\"true\"] .media-image, .media-dialog[data-error=\"true\"] .media-image { opacity: 0; }\n.media-load-status { position: absolute; inset: 20px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; color: var(--muted); font-size: 12px; line-height: 1.8; text-align: center; }\n.media-load-status:empty { display: none; }\n.media-load-status p { margin: 0; }\n.media-load-status > div { display: flex; justify-content: center; flex-wrap: wrap; gap: 12px; }\n.media-footer { display: flex; align-items: center; justify-content: space-between; gap: 24px; padding: 13px 32px; border-top: 1px solid var(--line); }\n.media-footer > p { margin: 0; color: var(--muted); font-size: 10px; line-height: 1.7; }\n.media-zoom { display: flex; flex-shrink: 0; align-items: center; border: 1px solid var(--line); }\n.media-zoom button { display: grid; place-items: center; min-width: 37px; height: 36px; padding: 0 10px; color: var(--ink); font-size: 17px; }\n.media-zoom .zoom-level { min-width: 65px; font-size: 10px; border-inline: 1px solid var(--line); }\n.media-zoom button:hover { background: var(--hover); }\n@media (max-width: 760px) {\n.apartment-dialog { width: calc(100% - 24px); max-height: calc(100% - 24px); }\n.dialog-inner { padding: 26px 23px; }\n.dialog-head { padding-bottom: 23px; margin-bottom: 24px; }\n.dialog-head h2 { font-size: 34px; }\n.eyebrow { font-size: 8px; letter-spacing: 1.1px; }\n.toast { font-size: 10px; padding: 12px 17px; }\n.media-header { grid-template-columns: 1fr auto; gap: 12px 20px; padding: 18px 20px 0; }\n.media-header .dialog-close { grid-column: 2; grid-row: 1; align-self: start; }\n.media-heading h2 { font-size: 25px; }\n.media-tabs { grid-column: 1 / -1; gap: 25px; }\n.media-tabs button { min-height: 39px; font-size: 10px; }\n.media-canvas { inset: 15px; }\n.media-footer { gap: 15px; padding: 12px 18px; }\n.media-footer > p { font-size: 9px; max-width: 180px; }\n.media-zoom button { min-width: 33px; padding-inline: 8px; }\n.media-zoom .zoom-level { min-width: 54px; }\n}\n@media (prefers-reduced-motion: reduce) {\n*, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }\n}\n"
 const ORBIT_APARTMENT_CARD_SHELL = "<dialog id=\"detail-dialog\" class=\"apartment-dialog\" aria-label=\"Lakás részletei\"></dialog>\n<dialog id=\"media-dialog\" class=\"media-dialog\" aria-labelledby=\"media-title\"></dialog>\n<div id=\"toast\" class=\"toast\" role=\"status\" aria-live=\"polite\"></div>\n"
 
+// Export-only renderer. Inlined into the shared Framer card, never mounted as UI.
+// Libraries and print fonts load on demand; apartment data is never uploaded.
+async function loadAdmiralPdfTools(): Promise<any> {
+    const key: any = Symbol.for('admiral-park:pdf-tools:v1');
+    if ((window as any)[key])
+        return (window as any)[key];
+    const load: any = (url: any, integrity: any, name: any): any => new Promise((resolve: any, reject: any): any => {
+        const script: any = (document as any).createElement('script');
+        script.src = url;
+        script.integrity = integrity;
+        script.crossOrigin = 'anonymous';
+        script.async = true;
+        const finish: any = (error: any): any => { clearTimeout(timer); script.onload = null; script.onerror = null; script.remove(); error ? reject(error) : resolve((window as any)[name]); };
+        const timer: any = setTimeout((): any => finish(new Error('PDF library timeout')), 20000);
+        script.onload = (): any => finish((window as any)[name] ? null : new Error('Invalid PDF library'));
+        script.onerror = (): any => finish(new Error('PDF library unavailable'));
+        (document as any).head.append(script);
+    });
+    const promise: any = Promise.all(([
+        load('https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js', 'sha384-weMABwrltA6jWR8DDe9Jp5blk+tZQh7ugpCsF3JwSA53WZM9/14PjS5LAJNHNjAI', 'PDFLib'),
+        load('https://cdn.jsdelivr.net/npm/@pdf-lib/fontkit@1.1.1/dist/fontkit.umd.min.js', 'sha384-2p6U+1mmqF10USehFeRiyG2ESG9FwIqN+jxULn5w9jjQIihSn9Pt13dVCn/Hawjn', 'fontkit'),
+    ] as any)).then(([pdf, fontkit]: any): any => (({ pdf, fontkit } as any)));
+    (window as any)[key] = promise;
+    try {
+        return await promise;
+    }
+    catch (error: any) {
+        if ((window as any)[key] === promise)
+            delete (window as any)[key];
+        throw error;
+    }
+}
+async function createAdmiralApartmentPdf(snapshot: any, options: any): Promise<any> {
+    const { signal }: any = options;
+    const check: any = (): any => { if (signal.aborted)
+        throw new DOMException('Export cancelled', 'AbortError'); };
+    const resources: any = ([] as any), canvases: any = ([] as any);
+    const canvas: any = (width: any, height: any): any => { const c: any = (document as any).createElement('canvas'); c.width = width; c.height = height; canvases.push(c); return c; };
+    async function bytes(url: any): Promise<any> {
+        if (!url)
+            throw new Error('Missing PDF asset');
+        const response: any = await fetch(url, ({ signal, credentials: 'omit' } as any));
+        if (!response.ok)
+            throw new Error('PDF asset unavailable: ' + response.status);
+        return new Uint8Array(await response.arrayBuffer());
+    }
+    async function image(content: any, type: any): Promise<any> {
+        check();
+        const url: any = URL.createObjectURL(new Blob(([content] as any), ({ type } as any)));
+        resources.push(url);
+        const img: any = new Image();
+        img.src = url;
+        await img.decode();
+        check();
+        return img;
+    }
+    async function jpeg(c: any, quality: any): Promise<any> {
+        const blob: any = await new Promise((resolve: any): any => c.toBlob(resolve, 'image/jpeg', quality));
+        if (!blob)
+            throw new Error('Image compression failed');
+        check();
+        return new Uint8Array(await blob.arrayBuffer());
+    }
+    try {
+        const [{ pdf: lib, fontkit }, regularBytes, semiboldBytes, planBytes, logoBytes, monogramBytes]: any = await Promise.all(([
+            loadAdmiralPdfTools(), bytes(snapshot.fontRegular), bytes(snapshot.fontSemibold),
+            snapshot.imageUrl ? bytes(snapshot.imageUrl) : null, bytes(snapshot.logoUrl), bytes(snapshot.monogramUrl),
+        ] as any));
+        check();
+        const pdf: any = await lib.PDFDocument.create();
+        pdf.registerFontkit(fontkit);
+        const [regular, semibold]: any = await Promise.all(([pdf.embedFont(regularBytes, ({ subset: true } as any)), pdf.embedFont(semiboldBytes, ({ subset: true } as any))] as any));
+        const W: any = 1120, H: any = 700, page: any = pdf.addPage(([W, H] as any));
+        pdf.setTitle('Admiral Park - ' + snapshot.id + ' lakás');
+        pdf.setAuthor('Admiral Park');
+        pdf.setSubject(snapshot.id + ' - egyedi lakásadatlap');
+        pdf.setCreator('Admiral Park apartment detail card');
+        pdf.setCreationDate(snapshot.date);
+        const swatch: any = canvas(1, 1), sc: any = swatch.getContext('2d');
+        function color(value: any, fallback: any): any { sc.clearRect(0, 0, 1, 1); sc.fillStyle = fallback; sc.fillStyle = value || fallback; sc.fillRect(0, 0, 1, 1); return ([...sc.getImageData(0, 0, 1, 1).data] as any).slice(0, 3).map((v: any): any => v / 255); }
+        const colors: any = ({ top: color(snapshot.colors.top, '#fdfbfb'), bottom: color(snapshot.colors.bottom, '#e4e9ec'), ink: color(snapshot.colors.ink, '#242824'), muted: color(snapshot.colors.muted, '#687074'), watermarkTop: color(snapshot.colors.watermarkTop, '#f2f0f1'), watermarkBottom: color(snapshot.colors.watermarkBottom, '#d9dfe2'), accent: color(snapshot.colors.accent, '#a38c69'), status: color(snapshot.colors.status, '#4f7959') } as any);
+        const rgb: any = (value: any): any => lib.rgb(...value);
+        const css: any = (value: any): any => 'rgb(' + value.map((v: any): any => Math.round(v * 255)).join(',') + ')';
+        const mix: any = (a: any, b: any, t: any): any => a.map((v: any, i: any): any => v + (b[i] - v) * t);
+        const ink: any = rgb(colors.ink), muted: any = rgb(colors.muted);
+        function text(value: any, x: any, top: any, size: any = 10, font: any = regular, tone: any = ink): any {
+            const str: any = String(value ?? '').replace(/\u00a0|\u202f/g, ' ');
+            // Unknown characters use an explicit replacement glyph; never drop ő/ű.
+            const supported: any = font.getCharacterSet(), safe: any = ([...str] as any).map((c: any): any => supported.includes(c.codePointAt(0)) ? c : '?').join('');
+            page.drawText(safe, ({ x, y: H - top - size, size, font, color: tone } as any));
+            return font.widthOfTextAtSize(safe, size);
+        }
+        function centered(value: any, cx: any, top: any, size: any = 10, font: any = regular, tone: any = ink): any { return text(value, cx - font.widthOfTextAtSize(String(value), size) / 2, top, size, font, tone); }
+        function right(value: any, x: any, top: any, size: any = 10, font: any = regular, tone: any = ink): any { return text(value, x - font.widthOfTextAtSize(String(value), size), top, size, font, tone); }
+        function line(x: any, y: any, width: any, opacity: any = .18): any { page.drawLine(({ start: ({ x, y: H - y } as any), end: ({ x: x + width, y: H - y } as any), thickness: .55, color: muted, opacity } as any)); }
+        function fit(value: any, width: any, size: any = 10, font: any = regular): any { return Math.min(size, width / Math.max(1, font.widthOfTextAtSize(String(value), size)) * size); }
+        function wrap(value: any, width: any, size: any = 10, font: any = regular): any {
+            const rows: any = ([] as any);
+            let row: any = '';
+            for (const word of String(value).split(/\s+/)) {
+                const next: any = row ? row + ' ' + word : word;
+                if (row && font.widthOfTextAtSize(next, size) > width) {
+                    rows.push(row);
+                    row = word;
+                }
+                else
+                    row = next;
+            }
+            if (row)
+                rows.push(row);
+            return rows;
+        }
+        // Only the soft gradient and watermark are rasterised; text and logo stay vectors.
+        const background: any = canvas(W, H), bg: any = background.getContext('2d'), gradient: any = bg.createLinearGradient(0, 0, 0, H);
+        gradient.addColorStop(0, css(colors.top));
+        gradient.addColorStop(1, css(colors.bottom));
+        bg.fillStyle = gradient;
+        bg.fillRect(0, 0, W, H);
+        const monogram: any = await image(monogramBytes, 'image/png'), motif: any = canvas(W, H), mc: any = motif.getContext('2d');
+        const motifGradient: any = mc.createLinearGradient(0, 0, 0, H);
+        motifGradient.addColorStop(0, css(colors.watermarkTop));
+        motifGradient.addColorStop(1, css(colors.watermarkBottom));
+        mc.fillStyle = motifGradient;
+        mc.fillRect(0, 0, W, H);
+        mc.globalCompositeOperation = 'destination-in';
+        const scale: any = Math.min(W * .67 / monogram.naturalWidth, H / monogram.naturalHeight), mw: any = monogram.naturalWidth * scale, mh: any = monogram.naturalHeight * scale;
+        mc.drawImage(monogram, W - W * .67 + (W * .67 - mw) / 2, (H - mh) / 2, mw, mh);
+        bg.globalAlpha = .6;
+        bg.drawImage(motif, 0, 0);
+        bg.globalAlpha = 1;
+        const backgroundImage: any = await pdf.embedJpg(await jpeg(background, .92));
+        page.drawImage(backgroundImage, ({ x: 0, y: 0, width: W, height: H } as any));
+        const rx: any = 638, rw: any = 454;
+        // Logo uses the same SVG paths as the card's CSS mask.
+        const logoDocument: any = new DOMParser().parseFromString(new TextDecoder().decode(logoBytes), 'image/svg+xml');
+        if (logoDocument.querySelector('parsererror'))
+            throw new Error('Invalid brand SVG');
+        const vb: any = (logoDocument.documentElement.getAttribute('viewBox') || '0 0 1232 524').trim().split(/[\s,]+/).map(Number), logoW: any = 188, logoScale: any = logoW / vb[2], logoX: any = rx + 7, logoY: any = 42;
+        const paths: any = ([...logoDocument.querySelectorAll('path')] as any);
+        if (paths.length && !logoDocument.querySelector('[transform]')) {
+            for (const path of paths)
+                page.drawSvgPath(path.getAttribute('d'), ({ x: logoX - vb[0] * logoScale, y: H - logoY + vb[1] * logoScale, scale: logoScale, color: ink } as any));
+        }
+        else {
+            const logo: any = await image(logoBytes, 'image/svg+xml'), lc: any = canvas(752, Math.round(752 * vb[3] / vb[2])), ctx: any = lc.getContext('2d');
+            ctx.drawImage(logo, 0, 0, lc.width, lc.height);
+            ctx.globalCompositeOperation = 'source-in';
+            ctx.fillStyle = css(colors.ink);
+            ctx.fillRect(0, 0, lc.width, lc.height);
+            const png: any = await new Promise((resolve: any): any => lc.toBlob(resolve, 'image/png'));
+            if (!png)
+                throw new Error('Logo encoding failed');
+            page.drawImage(await pdf.embedPng(await png.arrayBuffer()), ({ x: logoX, y: H - logoY - logoW * vb[3] / vb[2], width: logoW, height: logoW * vb[3] / vb[2] } as any));
+        }
+        centered(snapshot.id, rx + rw * .77, 32, 40, semibold);
+        const metrics: any = snapshot.metrics, metricsX: any = rx + rw * .49, metricsW: any = rw * .51;
+        metrics.forEach((metric: any, i: any): any => { const cx: any = metricsX + metricsW * (i + .5) / metrics.length; centered(metric.label, cx, 84, 12, regular, muted); centered(metric.value, cx, 103, fit(metric.value, metricsW / metrics.length - 9, 24, semibold), semibold); });
+        line(rx, 160, rw);
+        text(snapshot.documentLabel, 28, 27, 10, regular);
+        line(28, 45, snapshot.documentLabel === 'Alaprajz' ? 42 : 44, .9);
+        right(snapshot.meta, 607, 28, fit(snapshot.meta, 450, 9), regular, muted);
+        // Crop and fit the same plan as the detail card; no live viewport/tab clipping.
+        const frame: any = ({ x: 28, top: 66, width: 579, height: 584 } as any);
+        if (planBytes) {
+            const img: any = await image(planBytes, 'image/*'), v: any = snapshot.viewBox, iw: any = img.naturalWidth, ih: any = img.naturalHeight;
+            const sx: any = iw * v.x, sy: any = ih * v.y, sw: any = iw * v.width, sh: any = ih * v.height;
+            if (!(sw > 0 && sh > 0 && iw > 0 && ih > 0))
+                throw new Error('Invalid floorplan dimensions');
+            const scale: any = Math.min(frame.width / sw, frame.height / sh), pw: any = sw * scale, ph: any = sh * scale, px: any = frame.x + (frame.width - pw) / 2, pt: any = frame.top + (frame.height - ph) / 2;
+            const rasterScale: any = Math.min(1, 1800 / Math.max(sw, sh)), plan: any = canvas(Math.round(sw * rasterScale), Math.round(sh * rasterScale)), ctx: any = plan.getContext('2d');
+            const pg: any = ctx.createLinearGradient(0, 0, 0, plan.height);
+            pg.addColorStop(0, css(mix(colors.top, colors.bottom, pt / H)));
+            pg.addColorStop(1, css(mix(colors.top, colors.bottom, (pt + ph) / H)));
+            ctx.fillStyle = pg;
+            ctx.fillRect(0, 0, plan.width, plan.height);
+            ctx.drawImage(img, sx, sy, sw, sh, 0, 0, plan.width, plan.height);
+            const embedded: any = await pdf.embedJpg(await jpeg(plan, .94));
+            page.drawImage(embedded, ({ x: px, y: H - pt - ph, width: pw, height: ph } as any));
+            for (const marker of snapshot.markers) {
+                const mx: any = (marker.x - v.x) / v.width, my: any = (marker.y - v.y) / v.height;
+                if (mx < 0 || mx > 1 || my < 0 || my > 1)
+                    continue;
+                const x: any = px + pw * mx, y: any = pt + ph * my;
+                page.drawCircle(({ x, y: H - y, size: 7.5, color: lib.rgb(1, 1, 1), opacity: .94, borderColor: muted, borderWidth: .35, borderOpacity: .5 } as any));
+                centered(String(marker.number), x, y - 4.6, 8.5, regular);
+            }
+        }
+        else {
+            text('Az alaprajz még nem érhető el.', frame.x + 40, frame.top + 150, 13, regular, muted);
+        }
+        text('Helyiségek.', rx, 186, 18, regular);
+        if (snapshot.layoutLabel)
+            text(snapshot.layoutLabel, rx + 112, 193, fit(snapshot.layoutLabel, rw - 112, 8), regular, muted);
+        // Mapped plans share one numbered list. Unmapped unit areas remain a separate
+        // list, never paired with type-plan markers by array index or room name.
+        const groups: any = snapshot.roomGroups, roomTop: any = 222, roomBottom: any = 502, columns: any = groups.length > 1 ? 2 : 1, columnGap: any = 20, columnWidth: any = (rw - columnGap * (columns - 1)) / columns;
+        const nameWidth: any = (row: any): any => columnWidth - (row.number != null ? 22 : 0) - (row.area ? 70 : 5);
+        const maxUnits: any = Math.max(1, ...groups.map((group: any): any => group.rows.reduce((n: any, row: any): any => n + Math.max(1, wrap(row.name, nameWidth(row), 9).length), 0) + 3.6));
+        const rowHeight: any = Math.min(22, (roomBottom - roomTop) / maxUnits), roomSize: any = Math.min(columns > 1 ? 9 : 10, rowHeight * .72);
+        if (roomSize < 7.5)
+            throw new Error('The room list is too long for the export layout');
+        let maxY: any = roomTop;
+        for (const [groupIndex, group] of groups.entries()) {
+            const gx: any = rx + groupIndex * (columnWidth + columnGap);
+            let y: any = roomTop;
+            const headings: any = wrap(group.label, columnWidth, 7.5, semibold);
+            headings.forEach((heading: any, i: any): any => text(heading, gx, y + i * 10, 7.5, semibold, muted));
+            y += Math.max(rowHeight * 1.4, headings.length * 10 + 6);
+            if (!group.rows.length) {
+                text('A helyiséglista még nem érhető el.', gx, y, 8, regular, muted);
+                y += rowHeight;
+            }
+            for (const row of group.rows) {
+                const numbered: any = row.number != null, indent: any = numbered ? 22 : 0, names: any = wrap(row.name, nameWidth(row), roomSize);
+                if (numbered) {
+                    page.drawCircle(({ x: gx + 7, y: H - y - 5.5, size: Math.min(6.5, rowHeight * .42), borderColor: muted, borderWidth: .4, borderOpacity: .5 } as any));
+                    centered(String(row.number).padStart(2, '0'), gx + 7, y + .3, Math.min(6.7, rowHeight * .52), regular, muted);
+                }
+                names.forEach((name: any, i: any): any => text(name, gx + indent, y + i * rowHeight, roomSize, regular, muted));
+                if (row.area)
+                    right(row.area, gx + columnWidth, y, roomSize, regular, muted);
+                y += rowHeight * names.length;
+                line(gx, y - 2, columnWidth, .2);
+            }
+            maxY = Math.max(maxY, y);
+        }
+        if (maxY > 515)
+            throw new Error('The room list is too long for the export layout');
+        // Match the card's price panel and gold action, with a useful PDF link.
+        page.drawRectangle(({ x: rx, y: H - 575, width: rw, height: 64, color: ink, opacity: .035 } as any));
+        centered('Bruttó vételár', rx + rw / 2, 518, 10, regular, muted);
+        centered(snapshot.price, rx + rw / 2, 535, fit(snapshot.price, rw - 30, 33), regular);
+        const actionTop: any = 586, actionHeight: any = 43;
+        page.drawRectangle(({ x: rx + 21, y: H - actionTop - actionHeight, width: rw - 42, height: actionHeight, color: rgb(colors.accent) } as any));
+        page.drawCircle(({ x: rx + 21, y: H - actionTop - actionHeight / 2, size: 21.5, color: rgb(colors.accent) } as any));
+        page.drawCircle(({ x: rx + rw - 21, y: H - actionTop - actionHeight / 2, size: 21.5, color: rgb(colors.accent) } as any));
+        centered(snapshot.actionLabel, rx + rw / 2, actionTop + 10, 17, semibold);
+        const actionLink: any = pdf.context.register(pdf.context.obj(({ Type: 'Annot', Subtype: 'Link', Rect: ([rx, H - actionTop - actionHeight, rx + rw, H - actionTop] as any), Border: ([0, 0, 0] as any), A: ({ Type: 'Action', S: 'URI', URI: lib.PDFString.of(snapshot.actionUrl) } as any) } as any)));
+        page.node.addAnnot(actionLink);
+        page.drawCircle(({ x: rx + 8, y: H - 653, size: 2.2, color: rgb(colors.status) } as any));
+        text(snapshot.status, rx + 18, 646, 11, regular, rgb(colors.status));
+        right('admiralpark.hu', rx + rw, 647, 9, regular, muted);
+        text('Az alaprajz illusztráció. Bútorozatlan átadás.', 9, 680, 7, regular, muted);
+        right('Letöltve: ' + new Intl.DateTimeFormat('hu-HU').format(snapshot.date), W - 12, 680, 7, regular, muted);
+        const online: any = pdf.context.register(pdf.context.obj(({ Type: 'Annot', Subtype: 'Link', Rect: ([rx, H - 664, rx + rw, H - 643] as any), Border: ([0, 0, 0] as any), A: ({ Type: 'Action', S: 'URI', URI: lib.PDFString.of(snapshot.pageUrl) } as any) } as any)));
+        page.node.addAnnot(online);
+        check();
+        const output: any = await pdf.save(({ useObjectStreams: true } as any));
+        check();
+        return new Blob(([output] as any), ({ type: 'application/pdf' } as any));
+    }
+    finally {
+        for (const url of resources)
+            URL.revokeObjectURL(url);
+        for (const c of canvases) {
+            c.width = 1;
+            c.height = 1;
+        }
+    }
+}
 // Card-only runtime. Shared by the list and orbit; no list/filter/comparison renderer.
 function ensureOrbitApartmentCardFont(folder: any): any {
     if (typeof (window as any) === 'undefined' || !(window as any).FontFace || !(document as any).fonts || !folder)
@@ -116,17 +376,8 @@ function mountOrbitApartmentCardRuntime(root: any = (document as any), config: a
             return ([({ key, name, label, full, thumbnail: assetUrl(source.thumbnail), isIllustrative: !!source.isIllustrative } as any)] as any);
         });
     }
-    function datasheet(a: any): any {
-        const source: any = a.media?.datasheet, url: any = assetUrl(source?.url);
-        if (!url)
-            return null;
-        return ({ url, label: typeof source.label === 'string' && source.label.trim() ? source.label : 'Adatlap', filename: (typeof source.filename === 'string' && source.filename.trim() ? source.filename : `Admiral-Park-${a.id}-adatlap.pdf`).replace(/[\\/:*?"<>|]/g, '-') } as any);
-    }
     function downloadLink(a: any, large: any = false): any {
-        const file: any = datasheet(a);
-        if (!file)
-            return '';
-        return `<span class="download-wrap"><a class="datasheet-link action-pill${large ? ' datasheet-large footer-pill' : ''}" href="${esc(file.url)}" download="${esc(file.filename)}" target="_blank" rel="noopener" data-download="${esc(a.id)}" aria-label="${esc(a.id)} – ${esc(file.label)} letöltése PDF formátumban" title="${esc(file.label)}">${downloadIcon}<span>Adatlap</span></a></span>`;
+        return `<span class="download-wrap"><button type="button" class="datasheet-link action-pill${large ? ' datasheet-large footer-pill' : ''}" data-download="${esc(a.id)}" aria-label="${esc(a.id)} lakás adatlapjának letöltése PDF formátumban" title="Lakásadatlap letöltése">${downloadIcon}<span>Adatlap</span></button></span>`;
     }
     function saveButton(a: any, explain: any = false): any { const saved: any = favorites.has(a.id); return `<button type="button" class="save-button ${saved ? 'is-saved' : ''}${explain ? ' save-with-label' : ''}" data-save="${esc(a.id)}" aria-label="${esc(a.id)} ${saved ? 'eltávolítása a kedvencekből' : 'mentése a kedvencekhez'}" aria-pressed="${saved}">${svg('heart')}${explain ? `<span class="detail-save-label">${saved ? 'Kedvencekhez mentve' : 'Mentés a kedvencekhez'}</span>` : ''}</button>`; }
     function syncModalState(): any {
@@ -423,40 +674,87 @@ function mountOrbitApartmentCardRuntime(root: any = (document as any), config: a
         updateMediaTransform();
     }
     async function downloadDatasheet(id: any, trigger: any): Promise<any> {
-        const a: any = byId(id), file: any = a && datasheet(a);
-        if (!file || trigger.getAttribute('aria-busy') === 'true')
+        const a: any = byId(id), dialog: any = $('detail-dialog');
+        if (!a || !dialog.open)
             return;
+        if (pdfExportJob) {
+            if (pdfExportJob.id === id)
+                return;
+            pdfExportJob.controller.abort();
+            pdfExportJob = null;
+        }
+        const shell: any = dialog.querySelector('.detail-shell'), computed: any = getComputedStyle(shell);
+        const colors: any = ({} as any);
+        for (const [key, property] of ([(['top', '--detail-top'] as any), (['bottom', '--detail-bottom'] as any), (['ink', '--detail-ink'] as any), (['muted', '--detail-muted'] as any), (['watermarkTop', '--detail-watermark-top'] as any), (['watermarkBottom', '--detail-watermark-bottom'] as any), (['accent', '--accent'] as any)] as any))
+            colors[key] = computed.getPropertyValue(property).trim();
+        colors.status = getComputedStyle(dialog.querySelector('.status-pill')).color;
+        const layout: any = data.roomLayouts?.[a.apartmentType], markers: any = validPlanMarkers(layout), rooms: any = Array.isArray(a.roomList) ? a.roomList : ([] as any);
+        const mapped: any = markers.length && rooms.length === markers.length && markers.every((marker: any): any => rooms.some((room: any): any => room.planNumber === marker.number));
+        const unitRows: any = rooms.map((room: any): any => (({ name: roomLabel(room.name), area: area(room.area) } as any)));
+        const typeRows: any = markers.map((marker: any): any => (({ number: marker.number, name: roomLabel(marker.name), area: mapped ? area(rooms.find((room: any): any => room.planNumber === marker.number).area) : null } as any)));
+        const roomGroups: any = markers.length ? ([({ label: mapped ? 'Típusterv · Helyiségterületek' : 'Típusterv · Számozott helyiségek', rows: typeRows } as any)] as any) : ([] as any);
+        if (!mapped || !markers.length)
+            roomGroups.push(({ label: markers.length ? 'Lakásterületek · A kiválasztott lakás adatai' : 'Helyiségterületek', rows: unitRows } as any));
+        const floor: any = dialog.querySelector('[data-document-view="floor"][aria-selected="true"]') ? mediaEntries(a).find((item: any): any => item.key === 'floorLayout') : null;
+        const view: any = layout?.viewBox || ({ x: 0, y: 0, width: 1, height: 1 } as any);
+        const validView: any = ([view.x, view.y, view.width, view.height] as any).every(hasNumber) && view.x >= 0 && view.y >= 0 && view.width > 0 && view.height > 0 && view.x + view.width <= 1.001 && view.y + view.height <= 1.001;
+        const source: any = a.media?.floorplan;
+        const pageUrl: any = apartmentLink(a.id), inquiryUrl: any = safeUrl(config.inquiryUrl), actionUrl: any = new URL(inquiryUrl || pageUrl);
+        if (inquiryUrl)
+            actionUrl.searchParams.set('apartment', a.id);
+        const snapshot: any = ({
+            id: String(a.id), date: new Date(), colors,
+            metrics: ([({ label: 'Beltér', value: area(a.areaInterior) } as any), ({ label: 'Erkély', value: area(a.areaTerrace) } as any), ...(a.areaGarden > 0 ? ([({ label: 'Kert', value: area(a.areaGarden) } as any)] as any) : ([] as any))] as any),
+            meta: ([a.apartmentType ? `${a.apartmentType} típus` : null, `${a.building} épület`, floorText(a), a.orientation ? `${a.orientation} tájolás` : null] as any).filter(Boolean).join(' · '),
+            documentLabel: floor ? 'Szintrajz' : 'Alaprajz',
+            imageUrl: floor?.full || assetUrl(source?.original || (layout ? `assets/floorplans/types/${encodeURIComponent(a.apartmentType)}/original.png` : source?.full || a.floorplan)),
+            viewBox: floor || !validView ? ({ x: 0, y: 0, width: 1, height: 1 } as any) : ({ x: view.x, y: view.y, width: view.width, height: view.height } as any),
+            markers: floor ? ([] as any) : markers.map((marker: any): any => (({ number: marker.number, x: marker.x, y: marker.y } as any))),
+            roomGroups, layoutLabel: typeof a.layoutLabel === 'string' ? a.layoutLabel.replace(/hálószoba/giu, 'szoba') : hasNumber(a.rooms) ? `${number.format(a.rooms)} szoba` : '',
+            price: apartmentPrice(a), status: statusText(a), pageUrl, actionUrl: actionUrl.href, actionLabel: inquiryUrl ? 'Érdeklődöm' : 'Lakás megtekintése',
+            fontRegular: assetUrl('assets/fonts/montserrat/montserrat-pdf-regular.ttf'), fontSemibold: assetUrl('assets/fonts/montserrat/montserrat-pdf-semibold.ttf'),
+            logoUrl: assetUrl('assets/brand/admiral-park-full-logo-no-location.svg'), monogramUrl: assetUrl('assets/brand/ap-monogram.png'),
+        } as any);
+        const controller: any = new AbortController(), job: any = ({ controller, id } as any);
+        pdfExportJob = job;
+        const abort: any = (): any => controller.abort();
+        signal.addEventListener('abort', abort, ({ once: true } as any));
+        const timeout: any = setTimeout(abort, 45000), label: any = trigger.querySelector('span'), previous: any = label?.textContent;
         trigger.setAttribute('aria-busy', 'true');
         trigger.setAttribute('aria-disabled', 'true');
+        if (label)
+            label.textContent = 'PDF készül…';
+        toast('A lakás adatlapja készül…');
         try {
-            const response: any = await fetch(file.url, ({ signal, credentials: 'omit' } as any));
-            if (!response.ok)
-                throw new Error('Download unavailable');
-            const blob: any = await response.blob();
-            if (new TextDecoder().decode(await blob.slice(0, 5).arrayBuffer()) !== '%PDF-')
-                throw new Error('Invalid PDF');
+            const blob: any = await createAdmiralApartmentPdf(snapshot, ({ signal: controller.signal } as any));
+            if (signal.aborted || controller.signal.aborted || !dialog.open || dialog.dataset.apartment !== id)
+                return;
             const url: any = URL.createObjectURL(blob);
             downloadUrls.add(url);
             const link: any = (document as any).createElement('a');
             link.href = url;
-            link.download = file.filename;
-            (dialogStack.findLast((dialog: any): any => dialog.open)?.querySelector('.dialog-inner,.detail-shell') || root.querySelector('main') || (document as any).body).append(link);
+            link.download = `Admiral-Park-${String(a.id).replace(/[^A-Za-z0-9_-]/g, '-')}-adatlap.pdf`;
+            shell.append(link);
             link.click();
             link.remove();
-            setTimeout((): any => { URL.revokeObjectURL(url); downloadUrls.delete(url); }, 30000);
-            toast('Az adatlap letöltése elindult.');
+            const timer: any = setTimeout((): any => { URL.revokeObjectURL(url); downloadUrls.delete(url); pdfDownloadTimers.delete(timer); }, 30000);
+            pdfDownloadTimers.add(timer);
+            toast('A lakás adatlapjának letöltése elindult.');
         }
         catch (error: any) {
-            if (signal.aborted)
-                return;
-            const holder: any = trigger.closest('.download-wrap');
-            if (holder && !holder.querySelector('.download-fallback'))
-                holder.insertAdjacentHTML('beforeend', `<a class="download-fallback" href="${esc(file.url)}" target="_blank" rel="noopener">PDF megnyitása ${svg('arrow')}</a>`);
-            toast('A letöltés nem indult el. A PDF külön megnyitható.');
+            if (!signal.aborted && dialog.open && dialog.dataset.apartment === id)
+                toast('Nem sikerült elkészíteni a PDF-et. Próbálja újra.');
         }
         finally {
+            clearTimeout(timeout);
+            controller.abort();
+            signal.removeEventListener('abort', abort);
+            if (pdfExportJob === job)
+                pdfExportJob = null;
             trigger.removeAttribute('aria-busy');
             trigger.removeAttribute('aria-disabled');
+            if (label)
+                label.textContent = previous;
         }
     }
     function apartmentLink(id: any): any { const u: any = new URL(safeUrl(config.pageUrl) || location.href); for (const key of (['building', 'floor', 'rooms', 'status', 'minArea', 'maxArea', 'minPrice', 'maxPrice', 'terrace', 'garden', 'favoritesOnly', 'search', 'sort'] as any))
@@ -776,6 +1074,11 @@ function mountOrbitApartmentCardRuntime(root: any = (document as any), config: a
         updateMediaTransform();
     }, events);
     (window as any).addEventListener('resize', (): any => { updateMediaTransform(); requestAnimationFrame(fitDetailRooms); requestAnimationFrame((): any => { positionInquiryNotice(); positionShareMenu(); }); }, events);
+    let pdfExportJob: any = null;
+    const pdfDownloadTimers: any = new Set();
+    $('detail-dialog').addEventListener('close', (): any => { pdfExportJob?.controller.abort(); pdfExportJob = null; }, events);
+    signal.addEventListener('abort', (): any => { pdfExportJob?.controller.abort(); for (const timer of pdfDownloadTimers)
+        clearTimeout(timer); pdfDownloadTimers.clear(); }, ({ once: true } as any));
     let loadPromise: any = null;
     async function load(): Promise<any> {
         if (loadPromise)
