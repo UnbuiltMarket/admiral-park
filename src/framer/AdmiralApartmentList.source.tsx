@@ -8,12 +8,12 @@ import AdmiralApartmentDetailCard from "./AdmiralApartmentDetailCard.tsx"
 const DEFAULT_DATA_URL = "https://raw.githubusercontent.com/UnbuiltMarket/admiral-park/main/data/apartment-details.json"
 const DEFAULT_ASSET_BASE = "https://raw.githubusercontent.com/UnbuiltMarket/admiral-park/main/assets/apartment-list/"
 const DEFAULT_DETAIL_COLORS = {
-    top: "#fdfbfb", bottom: "#e4e9ec", text: "#242824", muted: "#687074",
+    top: "#fdfbfb", bottom: "#e4e9ec", text: "#242a27", muted: "#687074",
     watermarkTop: "#f2f0f1", watermarkBottom: "#d9dfe2",
 }
 const DEFAULT_COLORS = {
-    background: "#fbfaf8", text: "#242824", muted: "#70736d", accent: "#a38c69",
-    borders: "#deded6", surface: "#f1f0eb", filterHeader: "#f1f0eb", button: "#242824", buttonText: "#ffffff",
+    background: "#fcfcfa", text: "#242a27", muted: "#666d67", accent: "#a38c69",
+    borders: "#e3e4de", surface: "#f4f3ef", filterHeader: "#f4f3ef", button: "#242a27", buttonText: "#ffffff",
     available: "#4f7959", negotiating: "#b28a2f", sold: "#b4564f",
 }
 type ListProps = {

@@ -5,16 +5,16 @@
   "updated": "2026-10-20",
   "canonicalSources": {
     "app.js": {
-      "sha256": "204b23ea30256ed3d017e93dd037c32588085636bc0f60d0e3bb0d14b25be5f7",
-      "bytes": 40192
+      "sha256": "962e96d490f61dcbb1230e7caa391ebf50efbc0efffdbf7967816589a3c71579",
+      "bytes": 40746
     },
     "styles.css": {
-      "sha256": "32f528427f83352f341247ee70904f1b41208b1733a7b3844052d11d75f99740",
-      "bytes": 32758
+      "sha256": "e103ba95735e871be8b1930f7ea5de8332bac98bb9e2a391b0db01697c1e616a",
+      "bytes": 36989
     },
     "shell.html": {
-      "sha256": "ac05ee79d6be7fc283f356662d39cceef28b3aca682eeb32bf87574c8a61ecd3",
-      "bytes": 5167
+      "sha256": "7f848f636add50ea64bde1155fec7442b1a246a81b8cb06a991e4ac7dc9b4a3b",
+      "bytes": 5232
     }
   },
   "detailRenderer": "src/shared/apartment-card/card-runtime.js",

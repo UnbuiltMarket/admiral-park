@@ -72,3 +72,11 @@ The former desktop studio experiment remains saved on the `orbit-apartment-studi
 ## Apartment search and type column
 
 Keresés shares the primary filter row with Épület, Emelet, Szobák and Elérhetőség. It searches apartment IDs, accepts partial values and ignores case, spaces, hyphens and dots. Search combines with the other filters, survives URL reloads, has a removable filter chip, and clears with Alaphelyzet. Shared apartment links omit this search. Típus is its own table column, with a visible label on compact rows.
+
+## Airy desktop list
+
+The desktop list uses eight aligned comparison groups: Lakás (plan, apartment number and favourite), Típus (type, building and floor), Szobák, Beltér, Kültér (Erkély and optional Kert), Bruttó ár (price and availability), Szintrajz, and the equal Adatlap/Összevetés action pills. All apartment data and interactions remain available; building/floor, outdoor areas and availability are grouped to reduce competing columns. Large unboxed plans, restrained warm surfaces, Montserrat and generous row spacing establish the hierarchy. Column headings remain visible in the standard desktop layout, with an intentional grouped layout on narrower containers.
+
+Search and selectors share the first filter band; the area/price sliders and Erkély/Kert/Kedvencek toggles share the second. Alaphelyzet appears when filters or sorting change. Apartment selection keeps the shared closeable card and returns to the same browsing state. No row inquiry button is added: Érdeklődöm stays in the apartment card. The desktop redesign only requires replacing AdmiralApartmentList.tsx when the current shared card and homepage are already installed. Existing Framer colour overrides are preserved; reset the list Colors control to adopt the brighter new defaults.
+
+Official availability references used to assess comparison structure and action placement: [Claremont Hall](https://www.claremonthall.com/availability), [The Vanderbilt Residences](https://www.thevanderbiltresidences.com/availability), and [Fouquet’s Residences Miami](https://www.fouquetsmiami.com/availability/).

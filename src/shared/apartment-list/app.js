@@ -191,23 +191,22 @@ function downloadLink(a) {
   return `<span class="download-wrap"><button type="button" class="datasheet-link action-pill" data-download="${esc(a.id)}" aria-label="${esc(a.id)} lakás adatlapjának letöltése PDF formátumban" title="Lakásadatlap letöltése">${downloadIcon}<span>Adatlap</span></button></span>`;
 }
 function saveButton(a) { const saved=favorites.has(a.id); return `<button type="button" class="save-button ${saved?'is-saved':''}" data-save="${esc(a.id)}" aria-label="${esc(a.id)} ${saved?'eltávolítása a kedvencekből':'mentése a kedvencekhez'}" aria-pressed="${saved}">${svg('heart')}</button>`; }
-function compareToggle(a) { return `<button type="button" class="compare-toggle action-pill" data-compare="${esc(a.id)}" aria-label="${esc(a.id)} összehasonlítása" aria-pressed="${selected.has(a.id)}"><svg viewBox="0 0 20 20" width="14" height="14" fill="none" aria-hidden="true"><path d="m4 10 4 4 8-8" stroke="currentColor" stroke-width="1.2"/></svg><span>Összevetés</span></button>`; }
+function compareToggle(a) { return `<button type="button" class="compare-toggle action-pill" data-compare="${esc(a.id)}" aria-label="${esc(a.id)} összehasonlítása" aria-pressed="${selected.has(a.id)}"><svg viewBox="0 0 20 20" width="14" height="14" fill="none" aria-hidden="true"><path d="${selected.has(a.id)?'m4 10 4 4 8-8':'M10 4v12M4 10h12'}" stroke="currentColor" stroke-width="1.2"/></svg><span>Összevetés</span></button>`; }
+function rowArea(value) {
+  return hasNumber(value) ? `<span class="area-number">${number.format(value)}</span> <span class="area-unit">m²</span>` : '<span class="value-missing">Nincs adat</span>';
+}
 function row(a) {
   const media=mediaEntries(a);
   const floorplan=media.find(item=>item.key==='floorplan'),floorLayout=media.find(item=>item.key==='floorLayout');
   return `<tr class="apartment-row" data-unit="${esc(a.id)}">
-    <td class="cell-unit" data-label="Lakás"><div class="unit-summary"><div class="unit-identification"><button type="button" class="unit-id unit-open" data-detail="${esc(a.id)}" aria-label="${esc(a.id)} lakás részleteinek megnyitása" aria-haspopup="dialog">${esc(a.id)}</button></div>${floorplan?`<div class="unit-media">${previewButton(a,floorplan)}</div>`:''}</div></td>
-    <td class="cell-type" data-label="Típus"><span class="unit-type" aria-label="${esc(a.apartmentType||'')} lakástípus">${esc(a.apartmentType||'')}</span></td>
-    <td class="cell-building" data-label="Épület">${esc(a.building)}</td>
-    <td class="cell-floor" data-label="Emelet">${esc(floorText(a))}</td>
+    <td class="cell-unit" data-label="Lakás"><div class="unit-summary"><div class="unit-media">${floorplan?previewButton(a,floorplan):''}</div><div class="unit-identification"><div class="unit-id-line"><button type="button" class="unit-id unit-open" data-detail="${esc(a.id)}" aria-label="${esc(a.id)} lakás részleteinek megnyitása" aria-haspopup="dialog">${esc(a.id)}</button>${saveButton(a)}</div></div></div></td>
+    <td class="cell-type" data-label="Típus"><span class="unit-type" aria-label="${esc(a.apartmentType||'')} lakástípus">${esc(a.apartmentType||'')}</span><span class="unit-location"><span class="unit-building"><strong>${esc(a.building)}</strong> épület</span><span class="unit-floor">${esc(floorText(a))}</span></span></td>
     <td class="cell-rooms" data-label="Szobák">${a.rooms == null ? `<span title="${esc(a.layoutLabel || 'Nincs adat')}">${esc(a.layoutLabel || 'Nincs adat')}</span>` : number.format(a.rooms)}</td>
-    <td class="cell-area cell-interior" data-label="Nettó alapterület">${area(a.areaInterior)}</td>
-    <td class="cell-area cell-balcony" data-label="Erkély">${area(a.areaTerrace)}</td>
-    <td class="cell-area cell-garden" data-label="Kert"><span class="garden-value">${hasNumber(a.areaGarden)&&a.areaGarden>0?area(a.areaGarden):''}</span></td>
-    <td class="cell-price" data-label="Bruttó ár">${apartmentPrice(a)}</td>
-    <td class="cell-status" data-label="Státusz"><span class="status-pill status-${esc(a.status)}">${esc(statusText(a))}</span></td>
+    <td class="cell-area cell-interior" data-label="Beltér"><span class="interior-value">${rowArea(a.areaInterior)}</span></td>
+    <td class="cell-outdoor" data-label="Kültér"><div class="outdoor-area cell-balcony"><span class="outdoor-label">Erkély</span><span class="outdoor-value">${rowArea(a.areaTerrace)}</span></div>${hasNumber(a.areaGarden)&&a.areaGarden>0?`<div class="outdoor-area cell-garden"><span class="outdoor-label">Kert</span><span class="outdoor-value garden-value">${rowArea(a.areaGarden)}</span></div>`:''}</td>
+    <td class="cell-price" data-label="Bruttó ár"><span class="price-amount">${apartmentPrice(a)}</span><span class="cell-status"><span class="status-pill status-${esc(a.status)}">${esc(statusText(a))}</span></span></td>
     <td class="cell-floor-layout" data-label="Szintrajz">${floorLayout?previewButton(a,floorLayout):''}</td>
-    <td class="cell-actions"><div class="row-actions">${saveButton(a)}<div class="action-pills">${downloadLink(a)}${compareToggle(a)}</div></div></td>
+    <td class="cell-actions"><div class="row-actions"><div class="action-pills">${downloadLink(a)}${compareToggle(a)}</div></div></td>
   </tr>`;
 }
 function renderChips() {
@@ -231,9 +230,10 @@ function render() {
   const invalidArea = state.minArea!=='' && state.maxArea!=='' && Number(state.minArea)>Number(state.maxArea);
   const invalidPrice = state.minPrice!=='' && state.maxPrice!=='' && Number(state.minPrice)>Number(state.maxPrice);
   $('result-count').innerHTML = `<strong>${list.length}</strong> lakás${list.length===apartments.length?'':` <span class="result-total">/ ${apartments.length}</span>`}`;
-  $('results').innerHTML = list.length ? `<table class="apartment-table"><caption class="sr-only">Lakások. A nettó belső terület, az erkély és a kert külön szerepel, az árak bruttó forintárak.</caption><thead><tr><th scope="col">Lakás</th><th scope="col">Típus</th><th scope="col">Épület</th><th scope="col"><button data-sort="floor">Emelet ${state.sort==='floor'?'↑':'↕'}</button></th><th scope="col" class="heading-rooms">Szobák</th><th scope="col"><button data-sort="area">Nettó alapterület ${state.sort.startsWith('area')?(state.sort.endsWith('desc')?'↓':'↑'):'↕'}</button></th><th scope="col">Erkély</th><th scope="col">Kert</th><th scope="col"><button data-sort="price">Bruttó ár ${state.sort.startsWith('price')?(state.sort.endsWith('desc')?'↓':'↑'):'↕'}</button></th><th scope="col">Státusz</th><th scope="col">Szintrajz</th><th scope="col"><span class="sr-only">Műveletek</span></th></tr></thead><tbody>${list.map(row).join('')}</tbody></table>` : `<div class="empty-state"><span class="empty-mark" aria-hidden="true">⌕</span><h2>${invalidArea||invalidPrice?'Ellenőrizze a megadott tartományt.':'Most nincs ilyen lakás.'}</h2><p>${invalidArea||invalidPrice?'A kezdőérték legyen kisebb vagy egyenlő a záróértékkel.':'Módosítsa a szűrőket, vagy nézze meg a teljes kínálatot.'}</p><button class="button-primary" data-reset>Szűrők törlése</button></div>`;
+  $('results').innerHTML = list.length ? `<table class="apartment-table"><caption class="sr-only">Lakások. A nettó belső terület, az erkély és a kert külön szerepel, az árak bruttó forintárak.</caption><thead><tr><th scope="col" class="heading-unit">Lakás</th><th scope="col" class="heading-type">Típus</th><th scope="col" class="heading-rooms">Szobák</th><th scope="col" class="heading-interior"><button data-sort="area">Beltér ${state.sort.startsWith('area')?(state.sort.endsWith('desc')?'↓':'↑'):'↕'}</button></th><th scope="col" class="heading-outdoor">Kültér</th><th scope="col" class="heading-price"><button data-sort="price">Bruttó ár ${state.sort.startsWith('price')?(state.sort.endsWith('desc')?'↓':'↑'):'↕'}</button></th><th scope="col" class="heading-floor-layout">Szintrajz</th><th scope="col" class="heading-actions"><span class="sr-only">Műveletek</span></th></tr></thead><tbody>${list.map(row).join('')}</tbody></table>` : `<div class="empty-state"><span class="empty-mark" aria-hidden="true">⌕</span><h2>${invalidArea||invalidPrice?'Ellenőrizze a megadott tartományt.':'Most nincs ilyen lakás.'}</h2><p>${invalidArea||invalidPrice?'A kezdőérték legyen kisebb vagy egyenlő a záróértékkel.':'Módosítsa a szűrőket, vagy nézze meg a teljes kínálatot.'}</p><button class="button-primary" data-reset>Szűrők törlése</button></div>`;
   $('minArea').setAttribute('aria-invalid', String(invalidArea)); $('maxArea').setAttribute('aria-invalid', String(invalidArea));
   $('minPrice').setAttribute('aria-invalid', String(invalidPrice)); $('maxPrice').setAttribute('aria-invalid', String(invalidPrice));
+  $('reset').hidden=!filterIds.some(id=>state[id]!==''&&state[id]!==false)&&state.sort==='id';
   renderChips(); renderTray(); writeUrl(); resizeEmbed();
   $('results').setAttribute('aria-busy','false');
 }
