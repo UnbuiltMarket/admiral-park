@@ -12,7 +12,7 @@ const HOMEPAGE_ORBIT_VERSION = "15fce8a9d4fe"
 const HOMEPAGE_ASSETS = "https://raw.githubusercontent.com/UnbuiltMarket/admiral-park/main/assets"
 type HomepageStage = "opening" | "approach" | "building" | "connection" | "handoff" | "orbit"
 interface HomepageTiming { openingOut: number; buildingIn: number; buildingFull: number; ctaIn: number; rise: number }
-interface HomepageMobileLayout { enabled: boolean; storyTop: number; storyMaxHeight: number }
+interface HomepageMobileLayout { enabled: boolean; storyTop: number; storyMaxHeight: number; storyLeft?: number; storyWidth?: number }
 interface HomepageChannel { snapshot: SequenceSnapshot; timing: HomepageTiming; enabled: boolean; stage: HomepageStage; orbit: OrbitSnapshot; story: OrbitStorySettings; static: boolean; mobile: HomepageMobileLayout | null }
 const homepageChannels = new Map<HTMLElement, HomepageChannel>()
 const homepageSubscribers = new Set<() => void>()
@@ -32,6 +32,8 @@ interface AdmiralHomepageTrialProps {
     openingOut?: number; buildingIn?: number; buildingFull?: number; ctaIn?: number; rise?: number
     detailsMode?: "preview" | "hover" | "off"; detailsLanguage?: ApartmentDetailsLanguage
     detailsBottom?: number; detailsInset?: number; apartmentPreview?: ApartmentDetailsPreview
+    orbitLayout?: "studio" | "classic"; apartmentDataUrl?: string; apartmentAssetBase?: string; previewApartmentId?: string
+    detailPageUrl?: string; inquiryUrl?: string; orbitBackground?: string
     background?: string; alt?: string; style?: React.CSSProperties
 }
 interface HomepageActions { explore: () => void; overview: () => void; skip: () => void; resumeHero: () => void; orbit: ReturnType<typeof createOrbitPlayer> | null }
@@ -167,13 +169,15 @@ function createOrbitStoryOverlay(Component: ComponentType<any>, viewIndex: numbe
                 const scaleY = !initialBlock && parentBox && parent!.offsetHeight > 0 ? parentBox.height / parent!.offsetHeight : 1
                 const safeScaleX = Number.isFinite(scaleX) && scaleX > 0 ? scaleX : 1
                 const safeScaleY = Number.isFinite(scaleY) && scaleY > 0 ? scaleY : 1
-                const left = initialBlock ? rootBox.left + window.scrollX + 24 : (rootBox.left + 24 - parentBox!.left) / safeScaleX + parent!.scrollLeft - parent!.clientLeft
+                const storyLeft = channel.mobile.storyLeft ?? 24
+                const storyWidth = channel.mobile.storyWidth ?? rootBox.width - 48
+                const left = initialBlock ? rootBox.left + window.scrollX + storyLeft : (rootBox.left + storyLeft - parentBox!.left) / safeScaleX + parent!.scrollLeft - parent!.clientLeft
                 const top = initialBlock ? rootBox.top + window.scrollY + channel.mobile.storyTop : (rootBox.top + channel.mobile.storyTop - parentBox!.top) / safeScaleY + parent!.scrollTop - parent!.clientTop
                 const pixel = (value: number) => `${Math.round(value * 1000) / 1000}px`
                 set("left", pixel(left)); set("top", pixel(top))
                 set("bottom", "auto"); set("right", "auto")
                 set("boxSizing", "border-box")
-                set("width", pixel(Math.max(0, rootBox.width - 48) / safeScaleX))
+                set("width", pixel(Math.max(0, storyWidth) / safeScaleX))
                 set("minWidth", "0px"); set("maxWidth", "none"); set("minHeight", "0px")
                 set("maxHeight", pixel(Math.max(0, channel.mobile.storyMaxHeight) / safeScaleY))
                 set("overflowY", "auto"); set("overscrollBehavior", "contain"); set("touchAction", "pan-y")
@@ -303,6 +307,528 @@ export function OrbitView6(Component: ComponentType<any>): ComponentType<any> { 
 export function OrbitView7(Component: ComponentType<any>): ComponentType<any> { return createOrbitStoryOverlay(Component, 6) }
 export function OrbitView8(Component: ComponentType<any>): ComponentType<any> { return createOrbitStoryOverlay(Component, 7) }
 
+// Canonical apartment JSON adapter. Inlined into the standalone Framer component.
+type OrbitApartmentStatus = "available" | "under_negotiation" | "reserved" | "sold" | "unknown"
+interface OrbitApartmentImage {
+    thumbnail?: string
+    full: string
+    label?: string
+    isIllustrative?: boolean
+    original?: string
+}
+interface OrbitApartmentRecord {
+    id: string
+    name: string
+    building: string
+    floor: number | null
+    floorLabel: string | null
+    rooms: number | null
+    bedrooms: number | null
+    layoutLabel: string | null
+    orientation: string | null
+    areaInterior: number | null
+    areaTerrace: number | null
+    areaGarden: number | null
+    price: number | null
+    currency: string
+    priceIncludesVat: boolean | null
+    status: OrbitApartmentStatus
+    statusLabel: string | null
+    apartmentType: string | null
+    floorplan: string | null
+    note: string | null
+    media?: {
+        floorplan?: OrbitApartmentImage
+        floorLayout?: OrbitApartmentImage
+        datasheet?: { url: string; filename?: string; label?: string; page?: number }
+    }
+}
+interface OrbitApartmentDimensions { width: number; height: number }
+interface OrbitApartmentViewBox { x: number; y: number; width: number; height: number }
+interface OrbitApartmentDataset {
+    schemaVersion: string
+    project: {
+        id: string; name: string; city?: string | null; locale?: string; currency?: string; areaUnit?: string
+        availabilityAsOf?: string | null; priceDefinition?: string
+    }
+    apartments: OrbitApartmentRecord[]
+    roomLayouts: Record<string, { imageDimensions: OrbitApartmentDimensions; viewBox: OrbitApartmentViewBox }>
+}
+interface OrbitApartmentPlan {
+    url: string
+    aspect: number
+    viewBox: OrbitApartmentViewBox
+    dimensions: OrbitApartmentDimensions
+    isIllustrative: boolean
+    label: string
+}
+
+function parseOrbitApartmentDataset(value: unknown): OrbitApartmentDataset {
+    const object = (input: unknown): Record<string, unknown> | null => input !== null && typeof input === "object" && !Array.isArray(input) ? input as Record<string, unknown> : null
+    const text = (input: unknown, maximum = 512): string | null => typeof input === "string" && input.trim() ? input.trim().slice(0, maximum) : null
+    const number = (input: unknown, field: string): number | null => {
+        if (input === null || input === undefined) return null
+        if (typeof input !== "number" || !Number.isFinite(input) || input < 0) throw new Error(`Invalid apartment ${field}.`)
+        return input
+    }
+    const image = (input: unknown): OrbitApartmentImage | undefined => {
+        const entry = object(input), full = text(entry?.full, 4096)
+        if (!entry || !full) return undefined
+        return { full, ...(text(entry.thumbnail, 4096) ? { thumbnail: text(entry.thumbnail, 4096)! } : {}),
+            ...(text(entry.original, 4096) ? { original: text(entry.original, 4096)! } : {}),
+            ...(text(entry.label) ? { label: text(entry.label)! } : {}),
+            ...(typeof entry.isIllustrative === "boolean" ? { isIllustrative: entry.isIllustrative } : {}) }
+    }
+    const input = object(value)
+    if (!input || !Array.isArray(input.apartments) || input.apartments.length < 1 || input.apartments.length > 10000) throw new Error("Apartment JSON must contain an apartment list.")
+    const ids = new Set<string>(), statuses = new Set<OrbitApartmentStatus>(["available", "under_negotiation", "reserved", "sold", "unknown"])
+    const apartments = input.apartments.map((candidate): OrbitApartmentRecord => {
+        const apartment = object(candidate), id = text(apartment?.id, 128)
+        if (!apartment || !id || !/^[A-Za-z0-9._-]+$/.test(id) || ids.has(id)) throw new Error("Apartment JSON contains an invalid or repeated apartment ID.")
+        ids.add(id)
+        const status = text(apartment.status, 64) as OrbitApartmentStatus | null
+        if (!status || !statuses.has(status)) throw new Error(`Invalid availability for apartment ${id}.`)
+        const floor = number(apartment.floor, "floor")
+        if (floor !== null && !Number.isSafeInteger(floor)) throw new Error(`Invalid floor for apartment ${id}.`)
+        const price = number(apartment.price, "price")
+        if (price !== null && !Number.isSafeInteger(price)) throw new Error(`Invalid price for apartment ${id}.`)
+        const sourceMedia = object(apartment.media), plan = image(sourceMedia?.floorplan), floorLayout = image(sourceMedia?.floorLayout)
+        const sourceSheet = object(sourceMedia?.datasheet), sheetUrl = text(sourceSheet?.url, 4096)
+        const media = { ...(plan ? { floorplan: plan } : {}), ...(floorLayout ? { floorLayout } : {}),
+            ...(sheetUrl ? { datasheet: { url: sheetUrl, ...(text(sourceSheet?.filename) ? { filename: text(sourceSheet?.filename)! } : {}),
+                ...(text(sourceSheet?.label) ? { label: text(sourceSheet?.label)! } : {}),
+                ...(typeof sourceSheet?.page === "number" && Number.isSafeInteger(sourceSheet.page) && sourceSheet.page > 0 ? { page: sourceSheet.page } : {}) } } : {}) }
+        return { id, name: text(apartment.name) || id, building: text(apartment.building, 64) || "", floor,
+            floorLabel: text(apartment.floorLabel), rooms: number(apartment.rooms, "rooms"), bedrooms: number(apartment.bedrooms, "bedrooms"),
+            layoutLabel: text(apartment.layoutLabel), orientation: text(apartment.orientation),
+            areaInterior: number(apartment.areaInterior, "interior area"), areaTerrace: number(apartment.areaTerrace, "balcony area"), areaGarden: number(apartment.areaGarden, "garden area"),
+            price, currency: text(apartment.currency, 12) || "HUF", priceIncludesVat: typeof apartment.priceIncludesVat === "boolean" ? apartment.priceIncludesVat : null,
+            status, statusLabel: text(apartment.statusLabel), apartmentType: text(apartment.apartmentType, 64), floorplan: text(apartment.floorplan, 4096),
+            note: text(apartment.note, 2048), ...(Object.keys(media).length ? { media } : {}) }
+    })
+    const roomLayouts: OrbitApartmentDataset["roomLayouts"] = {}
+    const layouts = object(input.roomLayouts)
+    for (const [key, candidate] of Object.entries(layouts || {})) {
+        if (!/^[A-Za-z0-9_-]{1,64}$/.test(key) || key === "__proto__" || key === "constructor" || key === "prototype") continue
+        const layout = object(candidate), sourceDimensions = object(layout?.imageDimensions), sourceBox = object(layout?.viewBox)
+        if (!layout || !sourceDimensions || !sourceBox) continue
+        const width = number(sourceDimensions.width, "drawing width"), height = number(sourceDimensions.height, "drawing height")
+        const x = number(sourceBox.x, "drawing crop"), y = number(sourceBox.y, "drawing crop"), cropWidth = number(sourceBox.width, "drawing crop"), cropHeight = number(sourceBox.height, "drawing crop")
+        if (width === null || height === null || width <= 0 || height <= 0 || x === null || y === null || cropWidth === null || cropHeight === null || cropWidth <= 0 || cropHeight <= 0 || x + cropWidth > 1.000001 || y + cropHeight > 1.000001) throw new Error(`Invalid drawing dimensions for type ${key}.`)
+        roomLayouts[key] = { imageDimensions: { width, height }, viewBox: { x, y, width: cropWidth, height: cropHeight } }
+    }
+    const sourceProject = object(input.project)
+    return { schemaVersion: text(input.schemaVersion, 64) || "1.0", apartments, roomLayouts,
+        project: { id: text(sourceProject?.id, 128) || "admiral-park", name: text(sourceProject?.name) || "Admiral Park",
+            ...(text(sourceProject?.city) ? { city: text(sourceProject?.city)! } : {}), ...(text(sourceProject?.locale, 32) ? { locale: text(sourceProject?.locale, 32)! } : {}),
+            ...(text(sourceProject?.currency, 12) ? { currency: text(sourceProject?.currency, 12)! } : {}), ...(text(sourceProject?.areaUnit, 12) ? { areaUnit: text(sourceProject?.areaUnit, 12)! } : {}),
+            availabilityAsOf: text(sourceProject?.availabilityAsOf, 32), ...(text(sourceProject?.priceDefinition) ? { priceDefinition: text(sourceProject?.priceDefinition)! } : {}) } }
+}
+
+function orbitApartmentAssetUrl(path: unknown, base: string): string | null {
+    if (typeof path !== "string" || !path.trim()) return null
+    const value = path.trim()
+    try {
+        if (/^[a-z][a-z\d+.-]*:/i.test(value)) {
+            const direct = new URL(value)
+            return direct.protocol === "http:" || direct.protocol === "https:" ? direct.href : null
+        }
+        const documentBase = typeof document !== "undefined" ? document.baseURI : "https://admiralpark.hu/"
+        const assetBase = new URL(base || documentBase, documentBase)
+        if (assetBase.protocol !== "http:" && assetBase.protocol !== "https:") return null
+        if (base && !assetBase.pathname.endsWith("/")) assetBase.pathname += "/"
+        const resolved = new URL(value.replace(/^\.?\/?assets\//, ""), assetBase)
+        return resolved.protocol === "http:" || resolved.protocol === "https:" ? resolved.href : null
+    } catch { return null }
+}
+
+function orbitApartmentPlan(record: OrbitApartmentRecord, dataset: OrbitApartmentDataset, base: string, view: "floorplan" | "floorLayout" = "floorplan"): OrbitApartmentPlan | null {
+    const source = view === "floorLayout" ? record.media?.floorLayout : record.media?.floorplan
+    const url = orbitApartmentAssetUrl(source?.full || (view === "floorplan" ? record.floorplan : null), base)
+    if (!url) return null
+    const layout = view === "floorplan" && record.apartmentType ? dataset.roomLayouts[record.apartmentType] : null
+    const dimensions = layout?.imageDimensions || (view === "floorLayout" ? { width: 2560, height: 1600 } : { width: 1500, height: 2000 })
+    const viewBox = layout?.viewBox || { x: 0, y: 0, width: 1, height: 1 }
+    return { url, aspect: dimensions.width * viewBox.width / (dimensions.height * viewBox.height), dimensions, viewBox,
+        isIllustrative: view === "floorplan" && source?.isIllustrative !== false,
+        label: source?.label || (view === "floorLayout" ? "Szintrajz" : "Alaprajz · illusztráció") }
+}
+
+const orbitApartmentRequests = new Map<string, Promise<OrbitApartmentDataset>>()
+function orbitApartmentRequestUrl(value: string): string | null {
+    if (!value.trim()) return null
+    try {
+        const url = new URL(value.trim(), typeof document !== "undefined" ? document.baseURI : "https://admiralpark.hu/")
+        return url.protocol === "http:" || url.protocol === "https:" ? url.href : null
+    } catch { return null }
+}
+function requestOrbitApartmentDataset(url: string): Promise<OrbitApartmentDataset> {
+    const previous = orbitApartmentRequests.get(url)
+    if (previous) return previous
+    const request = fetch(url, { mode: "cors", credentials: "omit", headers: { Accept: "application/json" } }).then(response => {
+        if (!response.ok) throw new Error(`Apartment data could not be loaded (${response.status}).`)
+        return response.json()
+    }).then(parseOrbitApartmentDataset).catch(error => {
+        if (orbitApartmentRequests.get(url) === request) orbitApartmentRequests.delete(url)
+        throw error
+    })
+    orbitApartmentRequests.set(url, request)
+    return request
+}
+function useOrbitApartments(url: string, enabled: boolean): { dataset: OrbitApartmentDataset | null; status: "idle" | "loading" | "ready" | "error"; error: string; retry: () => void } {
+    const [attempt, setAttempt] = React.useState(0)
+    const [state, setState] = React.useState<{ url: string; dataset: OrbitApartmentDataset | null; status: "idle" | "loading" | "ready" | "error"; error: string }>({ url: "", dataset: null, status: "idle", error: "" })
+    const resolved = orbitApartmentRequestUrl(url)
+    React.useEffect(() => {
+        if (!enabled) return
+        if (!resolved) { setState({ url: url.trim(), dataset: null, status: "error", error: "Set a valid apartment JSON address." }); return }
+        let active = true
+        setState(previous => previous.url === resolved && previous.dataset ? previous : { url: resolved, dataset: null, status: "loading", error: "" })
+        requestOrbitApartmentDataset(resolved).then(dataset => { if (active) setState({ url: resolved, dataset, status: "ready", error: "" }) }, error => {
+            if (active) setState({ url: resolved, dataset: null, status: "error", error: error instanceof Error ? error.message : "Apartment data could not be loaded." })
+        })
+        return () => { active = false }
+    }, [resolved, url, enabled, attempt])
+    const retry = React.useCallback(() => { setAttempt(value => value + 1) }, [])
+    if (!enabled) return { dataset: state.url === resolved ? state.dataset : null, status: "idle", error: "", retry }
+    if (state.url !== (resolved || url.trim())) return { dataset: null, status: "loading", error: "", retry }
+    return { dataset: state.dataset, status: state.status, error: state.error, retry }
+}
+
+interface OrbitApartmentStudioProps {
+    active: boolean
+    mode: "preview" | "hover" | "off"
+    dataset: OrbitApartmentDataset | null
+    dataStatus: "idle" | "loading" | "ready" | "error"
+    error: string
+    onRetry: () => void
+    apartment: OrbitApartmentRecord | null
+    onSelect: (id: string) => void
+    assetBase: string
+    detailsUrl: string
+    inquiryUrl: string
+    onViewport: (element: HTMLDivElement | null) => void
+    language: "hu" | "en"
+    onLayout?: () => void
+}
+
+const orbitApartmentStudioStyles = `
+[data-orbit-studio] {
+    --studio-ink: #242824; --studio-muted: #687074; --studio-line: rgba(72,81,85,.2);
+    --studio-paper: var(--admiral-orbit-background,#fdfbfb); --studio-base: #e4e9ec;
+    position: absolute; inset: auto 0 0; height: 90%; z-index: 1; box-sizing: border-box;
+    display: grid; grid-template-rows: auto minmax(0,1fr); gap: clamp(14px,1.8vw,26px);
+    padding: clamp(16px,2.2vw,34px) clamp(20px,3vw,52px) 24px;
+    color: var(--studio-ink); background: linear-gradient(180deg,var(--studio-paper),var(--studio-base));
+    font-family: Montserrat,Arial,Helvetica,sans-serif; -webkit-font-smoothing: antialiased;
+    opacity: 0; visibility: hidden; pointer-events: none; transition: opacity .4s ease,visibility 0s linear .4s;
+}
+[data-orbit-studio][data-active="true"] { opacity: 1; visibility: visible; pointer-events: auto; transition-delay: 0s; }
+[data-orbit-studio] *, [data-orbit-studio] *::before, [data-orbit-studio] *::after { box-sizing: border-box; }
+[data-orbit-studio] button,[data-orbit-studio] select,[data-orbit-studio] a { font: inherit; color: inherit; -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
+[data-orbit-studio] button { cursor: pointer; }
+[data-orbit-studio] button:disabled { cursor: default; opacity: .45; }
+[data-orbit-studio] :is(button,a,select):focus-visible { outline: 2px solid var(--studio-ink); outline-offset: 4px; }
+[data-orbit-studio] [hidden] { display: none !important; }
+[data-orbit-studio] .orbit-studio-header { display: flex; justify-content: space-between; align-items: center; gap: 20px; min-width: 0; }
+[data-orbit-studio] .orbit-studio-brand { display: block; width: clamp(130px,13vw,184px); height: auto; flex: 0 0 auto; }
+[data-orbit-studio] .orbit-studio-header-end { display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 14px 24px; min-width: 0; }
+[data-orbit-studio] .orbit-studio-preview { display: flex; align-items: center; gap: 10px; min-width: 0; font-size: 10px; color: var(--studio-muted); }
+[data-orbit-studio] .orbit-studio-preview label { white-space: nowrap; }
+[data-orbit-studio] select { width: 98px; max-width: 100%; min-height: 38px; padding: 5px 24px 5px 10px; border: 1px solid var(--studio-line); border-radius: 0; background: transparent; font-size: 12px; }
+[data-orbit-studio] .orbit-studio-heading { display: flex; align-items: center; gap: 20px; min-width: 0; }
+[data-orbit-studio] .orbit-studio-id { margin: 0; font-size: clamp(27px,3vw,44px); font-weight: 600; line-height: 1; letter-spacing: -.065em; }
+[data-orbit-studio] .orbit-studio-status { display: inline-flex; align-items: center; gap: 8px; color: var(--studio-muted); font-size: 12px; font-weight: 500; line-height: 1.4; }
+[data-orbit-studio] .orbit-studio-status-dot { position: relative; display: block; width: 6px; height: 6px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
+[data-orbit-studio] .orbit-studio-status[data-status="available"] { color: #4f7959; }
+[data-orbit-studio] .orbit-studio-status[data-status="available"] .orbit-studio-status-dot::after { position: absolute; content: ""; inset: -3px; border: 1px solid currentColor; border-radius: 50%; animation: orbitStudioAvailablePulse 2.4s ease-out infinite; }
+[data-orbit-studio] .orbit-studio-status[data-status="under_negotiation"],[data-orbit-studio] .orbit-studio-status[data-status="reserved"] { color: #a77e25; }
+[data-orbit-studio] .orbit-studio-status[data-status="sold"] { color: #b4564f; }
+@keyframes orbitStudioAvailablePulse { 0%,15% { opacity: .55; transform: scale(.6); } 75%,100% { opacity: 0; transform: scale(1.5); } }
+[data-orbit-studio] .orbit-studio-body { display: grid; grid-template-columns: minmax(0,1.5fr) minmax(300px,1fr); gap: clamp(22px,3vw,48px); min-width: 0; min-height: 0; }
+[data-orbit-studio] .orbit-studio-scene { display: grid; grid-template-rows: minmax(0,1fr) auto; gap: 18px; min-width: 0; min-height: 0; }
+[data-orbit-studio] .orbit-studio-image-slot { display: flex; align-items: center; justify-content: center; min-width: 0; min-height: 0; container-type: size; }
+[data-orbit-studio] [data-orbit-viewport] { position: relative; width: 100%; max-width: 100%; max-height: 100%; aspect-ratio: 1920 / 1010; background: transparent; }
+@supports (width: 1cqh) { [data-orbit-studio] [data-orbit-viewport] { width: min(100cqw,calc(100cqh * 1920 / 1010)); } }
+[data-orbit-studio] .orbit-studio-facts { min-width: 0; border-top: 1px solid var(--studio-line); padding-top: 18px; }
+[data-orbit-studio] .orbit-studio-areas { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 16px; margin: 0 0 18px; }
+[data-orbit-studio] .orbit-studio-areas > div { min-width: 0; }
+[data-orbit-studio] .orbit-studio-areas dt { margin: 0 0 8px; color: var(--studio-muted); font-size: 11px; line-height: 1.4; }
+[data-orbit-studio] .orbit-studio-areas dd { margin: 0; font-size: clamp(24px,2.4vw,36px); font-weight: 600; line-height: 1; letter-spacing: -.045em; white-space: nowrap; }
+[data-orbit-studio] .orbit-studio-areas small { margin-left: 4px; color: var(--studio-muted); font-size: 12px; font-weight: 400; letter-spacing: 0; }
+[data-orbit-studio] .orbit-studio-meta { display: flex; align-items: baseline; flex-wrap: wrap; gap: 8px 16px; margin: 0; color: var(--studio-muted); font-size: 11px; line-height: 1.6; }
+[data-orbit-studio] .orbit-studio-meta strong { color: var(--studio-ink); font-weight: 600; }
+[data-orbit-studio] .orbit-studio-mobile-meta { display: none; }
+[data-orbit-studio] .orbit-studio-bottom { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; margin-top: 20px; }
+[data-orbit-studio] .orbit-studio-price { min-width: 0; }
+[data-orbit-studio] .orbit-studio-label { margin: 0 0 6px; color: var(--studio-muted); font-size: 10px; line-height: 1.4; }
+[data-orbit-studio] .orbit-studio-price-value { margin: 0; font-size: clamp(24px,2.6vw,38px); font-weight: 400; letter-spacing: -.055em; line-height: 1.1; }
+[data-orbit-studio] .orbit-studio-price-value small { margin-left: 4px; font-size: 12px; font-weight: 400; letter-spacing: 0; }
+[data-orbit-studio] .orbit-studio-primary { display: inline-flex; align-items: center; justify-content: center; gap: 20px; min-height: 46px; padding: 10px 18px; border: 1px solid var(--studio-ink); border-radius: 0; color: var(--studio-ink); background: transparent; font-size: 12px; line-height: 1.3; text-decoration: none; white-space: nowrap; }
+[data-orbit-studio] .orbit-studio-primary:hover { background: rgba(36,40,36,.05); }
+[data-orbit-studio] .orbit-studio-secondary { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 18px; margin-top: 16px; }
+[data-orbit-studio] .orbit-studio-text-button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 36px; padding: 6px 0; border: 0; border-bottom: 1px solid var(--studio-line); border-radius: 0; color: var(--studio-muted); background: none; font-size: 10px; line-height: 1.4; text-decoration: none; }
+[data-orbit-studio] .orbit-studio-text-button:hover { color: var(--studio-ink); border-bottom-color: var(--studio-ink); }
+[data-orbit-studio] .orbit-studio-share-message { color: var(--studio-muted); font-size: 10px; line-height: 1.5; }
+[data-orbit-studio] .orbit-studio-details { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+[data-orbit-studio] .orbit-studio-drawing-toolbar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px 18px; margin-bottom: 14px; min-height: 32px; flex-shrink: 0; }
+[data-orbit-studio] .orbit-studio-tabs { display: flex; gap: 18px; align-items: center; }
+[data-orbit-studio] .orbit-studio-tab { min-height: 36px; padding: 7px 0; border: 0; border-bottom: 1px solid transparent; border-radius: 0; color: var(--studio-muted); background: none; font-size: 11px; line-height: 1.4; }
+[data-orbit-studio] .orbit-studio-tab[aria-selected="true"] { border-bottom-color: var(--studio-ink); color: var(--studio-ink); }
+[data-orbit-studio] .orbit-studio-plan-section { display: flex; flex: 1; flex-direction: column; min-width: 0; min-height: 0; }
+[data-orbit-studio] .orbit-studio-plan-stage { display: grid; flex: 1; place-items: center; min-width: 0; min-height: 0; container-type: size; }
+[data-orbit-studio] .orbit-studio-plan-crop { position: relative; width: 100%; max-width: 100%; max-height: 100%; aspect-ratio: var(--studio-plan-aspect,1); overflow: hidden; }
+@supports (width: 1cqh) { [data-orbit-studio] .orbit-studio-plan-crop { width: min(100cqw,calc(100cqh * var(--studio-plan-aspect,1))); } }
+[data-orbit-studio] .orbit-studio-plan-image { position: absolute; display: block; max-width: none; border: 0; object-fit: fill; }
+[data-orbit-studio] .orbit-studio-plan-note { flex-shrink: 0; margin: 14px 0 0; color: var(--studio-muted); font-size: 9px; font-weight: 400; line-height: 1.6; }
+[data-orbit-studio] .orbit-studio-empty { margin: auto; max-width: 320px; padding: 24px 0; color: var(--studio-muted); font-size: 12px; line-height: 1.8; text-align: center; }
+[data-orbit-studio] .orbit-studio-empty p { margin: 0 0 12px; }
+[data-orbit-studio] .orbit-studio-loading { color: var(--studio-muted); font-size: 11px; line-height: 1.8; }
+[data-orbit-studio] .orbit-studio-mobile-actions { display: none; }
+[data-orbit-plan-dialog] { width: min(94vw,1450px); max-width: 94vw; height: 92dvh; max-height: 92dvh; margin: auto; padding: 0; border: 1px solid rgba(72,81,85,.2); color: #242824; background: linear-gradient(180deg,#fdfbfb,#e4e9ec); font-family: Montserrat,Arial,Helvetica,sans-serif; overscroll-behavior: contain; }
+[data-orbit-plan-dialog]::backdrop { background: rgba(20,29,34,.6); backdrop-filter: blur(4px); }
+[data-orbit-plan-dialog] .orbit-studio-dialog-shell { display: grid; grid-template-rows: auto minmax(0,1fr) auto; height: 100%; min-height: 0; padding: 16px 22px; gap: 12px; }
+[data-orbit-plan-dialog] .orbit-studio-dialog-header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
+[data-orbit-plan-dialog] .orbit-studio-dialog-title { margin: 0; font-size: 16px; line-height: 1.4; font-weight: 500; }
+[data-orbit-plan-dialog] .orbit-studio-dialog-tools { display: flex; align-items: center; gap: 8px; }
+[data-orbit-plan-dialog] button { display: inline-flex; align-items: center; justify-content: center; min-width: 38px; min-height: 38px; border: 1px solid rgba(72,81,85,.25); border-radius: 0; color: #242824; background: transparent; font: inherit; cursor: pointer; touch-action: manipulation; }
+[data-orbit-plan-dialog] button:focus-visible { outline: 2px solid #242824; outline-offset: 3px; }
+[data-orbit-plan-dialog] .orbit-studio-dialog-zoom { min-width: 48px; font-size: 11px; text-align: center; }
+[data-orbit-plan-dialog] .orbit-studio-zoom-stage { position: relative; display: grid; place-items: center; min-width: 0; min-height: 0; overflow: hidden; container-type: size; touch-action: none; }
+[data-orbit-plan-dialog] .orbit-studio-zoom-plan { position: relative; width: 100%; max-width: 100%; max-height: 100%; aspect-ratio: var(--studio-plan-aspect,1); overflow: hidden; transform-origin: center; }
+@supports (width: 1cqh) { [data-orbit-plan-dialog] .orbit-studio-zoom-plan { width: min(100cqw,calc(100cqh * var(--studio-plan-aspect,1))); } }
+[data-orbit-plan-dialog] img { position: absolute; display: block; max-width: none; object-fit: fill; pointer-events: none; user-select: none; }
+[data-orbit-plan-dialog] .orbit-studio-dialog-note { margin: 0; color: #687074; font-size: 10px; line-height: 1.5; }
+@media (max-width: 1000px) and (min-width: 768px) {
+    [data-orbit-studio] { padding: 18px 24px; gap: 14px; }
+    [data-orbit-studio] .orbit-studio-body { grid-template-columns: minmax(0,1.25fr) minmax(270px,1fr); gap: 22px; }
+    [data-orbit-studio] .orbit-studio-header-end { gap: 12px; }
+    [data-orbit-studio] .orbit-studio-heading { gap: 12px; }
+    [data-orbit-studio] .orbit-studio-bottom { align-items: flex-start; flex-direction: column; gap: 12px; }
+    [data-orbit-studio] .orbit-studio-areas { gap: 10px; }
+}
+@media (max-width: 767px) {
+    [data-orbit-studio] { padding: 14px 16px max(12px,env(safe-area-inset-bottom,0px)); gap: 12px; }
+    [data-orbit-studio] .orbit-studio-header { gap: 12px; align-items: flex-start; }
+    [data-orbit-studio] .orbit-studio-brand { width: 104px; }
+    [data-orbit-studio] .orbit-studio-header-end { flex: 1; gap: 6px 12px; }
+    [data-orbit-studio] .orbit-studio-heading { gap: 8px; justify-content: flex-end; flex-wrap: wrap; }
+    [data-orbit-studio] .orbit-studio-id { font-size: 28px; }
+    [data-orbit-studio] .orbit-studio-status { font-size: 10px; gap: 5px; }
+    [data-orbit-studio] .orbit-studio-preview { gap: 6px; font-size: 9px; }
+    [data-orbit-studio] .orbit-studio-preview select { width: 85px; min-height: 30px; font-size: 10px; }
+    [data-orbit-studio] .orbit-studio-body { display: flex; flex-direction: column; gap: 12px; overflow: hidden; }
+    [data-orbit-studio] .orbit-studio-scene { display: contents; }
+    [data-orbit-studio] .orbit-studio-image-slot { flex: 0 0 auto; width: calc(100% + 32px); margin-inline: -16px; aspect-ratio: 1920 / 1010; container-type: normal; }
+    [data-orbit-studio] [data-orbit-viewport] { width: 100%; height: 100%; max-height: none; }
+    [data-orbit-studio] .orbit-studio-facts { order: 2; flex: 0 0 auto; padding-top: 12px; }
+    [data-orbit-studio] .orbit-studio-areas { margin-bottom: 0; gap: 10px; }
+    [data-orbit-studio] .orbit-studio-areas dt { margin-bottom: 5px; font-size: 9px; }
+    [data-orbit-studio] .orbit-studio-areas dd { font-size: 25px; }
+    [data-orbit-studio] .orbit-studio-areas small { font-size: 10px; }
+    [data-orbit-studio] .orbit-studio-facts > .orbit-studio-meta, [data-orbit-studio] .orbit-studio-facts > .orbit-studio-bottom, [data-orbit-studio] .orbit-studio-facts > .orbit-studio-secondary { display: none; }
+    [data-orbit-studio] .orbit-studio-details { order: 3; display: block; flex: 1 1 auto; overflow-y: auto; overscroll-behavior: contain; touch-action: pan-y; scrollbar-width: thin; scrollbar-color: rgba(72,81,85,.35) transparent; padding-right: 3px; }
+    [data-orbit-studio] .orbit-studio-drawing-toolbar { margin-bottom: 8px; gap: 5px 12px; }
+    [data-orbit-studio] .orbit-studio-tabs { gap: 16px; }
+    [data-orbit-studio] .orbit-studio-tab { font-size: 10px; }
+    [data-orbit-studio] .orbit-studio-drawing-toolbar > .orbit-studio-text-button { font-size: 9px; }
+    [data-orbit-studio] .orbit-studio-mobile-meta { display: flex; margin-bottom: 10px; font-size: 10px; gap: 5px 12px; }
+    [data-orbit-studio] .orbit-studio-plan-section { min-height: 310px; height: 310px; }
+    [data-orbit-studio] .orbit-studio-plan-stage { height: 280px; flex: 0 0 280px; }
+    [data-orbit-studio] .orbit-studio-plan-note { margin-top: 10px; font-size: 8px; }
+    [data-orbit-studio] .orbit-studio-mobile-actions { display: block; border-top: 1px solid var(--studio-line); padding-top: 14px; margin-top: 16px; }
+    [data-orbit-studio] .orbit-studio-mobile-actions .orbit-studio-bottom { margin: 0; align-items: center; }
+    [data-orbit-studio] .orbit-studio-price-value { font-size: 26px; }
+    [data-orbit-studio] .orbit-studio-price-value small { font-size: 10px; }
+    [data-orbit-studio] .orbit-studio-primary { min-height: 42px; gap: 12px; padding: 8px 12px; font-size: 10px; }
+    [data-orbit-studio] .orbit-studio-secondary { gap: 8px 14px; margin-top: 10px; }
+    [data-orbit-plan-dialog] { width: 96vw; max-width: 96vw; height: 94dvh; max-height: 94dvh; }
+    [data-orbit-plan-dialog] .orbit-studio-dialog-shell { padding: 12px; }
+    [data-orbit-plan-dialog] .orbit-studio-dialog-title { font-size: 13px; }
+    [data-orbit-plan-dialog] .orbit-studio-dialog-tools { gap: 4px; }
+    [data-orbit-plan-dialog] .orbit-studio-dialog-note { font-size: 9px; }
+}
+@media (prefers-reduced-motion: reduce) {
+    [data-orbit-studio] { transition: none; }
+    [data-orbit-studio] .orbit-studio-status-dot::after { animation: none !important; }
+}
+@media (min-width: 768px) and (max-height: 600px) {
+    [data-orbit-studio] { padding: 12px 20px; gap: 10px; }
+    [data-orbit-studio] .orbit-studio-brand { width: 110px; }
+    [data-orbit-studio] .orbit-studio-id { font-size: 28px; }
+    [data-orbit-studio] .orbit-studio-body { grid-template-columns: minmax(0,1.2fr) minmax(280px,1fr); gap: 20px; }
+    [data-orbit-studio] .orbit-studio-scene { grid-template-rows: minmax(0,1fr); gap: 0; }
+    [data-orbit-studio] .orbit-studio-details { overflow-y: auto; overscroll-behavior: contain; touch-action: pan-y; padding-right: 6px; }
+    [data-orbit-studio] .orbit-studio-plan-section { flex: 0 0 auto; min-height: 330px; }
+    [data-orbit-studio] .orbit-studio-plan-stage { flex: none; height: 300px; }
+    [data-orbit-studio] .orbit-studio-details .orbit-studio-facts { margin-top: 18px; }
+}
+`
+
+function OrbitApartmentStudio(props: OrbitApartmentStudioProps): React.JSX.Element {
+    const { active, mode, dataset, dataStatus, error, onRetry, apartment, onSelect, assetBase, detailsUrl, inquiryUrl, onViewport, language, onLayout } = props
+    const hu = language !== "en"
+    const [view, setView] = React.useState<"floorplan" | "floorLayout">("floorplan")
+    const [expanded, setExpanded] = React.useState(false), [zoom, setZoom] = React.useState(1)
+    const [pan, setPan] = React.useState({ x: 0, y: 0 })
+    const [shareMessage, setShareMessage] = React.useState("")
+    const [shortLandscape, setShortLandscape] = React.useState(false)
+    const [failedImage, setFailedImage] = React.useState("")
+    const dialog = React.useRef<HTMLDialogElement>(null)
+    const drag = React.useRef<{ pointer: number; x: number; y: number; panX: number; panY: number } | null>(null)
+    const mounted = React.useRef(true), shareGeneration = React.useRef(0)
+    const headingId = React.useId(), planPanelId = React.useId()
+    const labels = hu ? { interior: "Beltér", terrace: "Erkély", garden: "Kert", floorplan: "Alaprajz", floorLayout: "Szintrajz", expand: "Alaprajz nagyítása", preview: "Előnézet", select: "Előnézeti lakás", gross: "Bruttó vételár", details: "Lakás részletei", inquire: "Érdeklődöm", download: "Adatlap PDF", share: "Megosztás", close: "Bezárás", roomCount: "szoba", floor: "emelet", building: "épület", type: "típus", orientation: "tájolás" } :
+        { interior: "Interior", terrace: "Terrace", garden: "Garden", floorplan: "Floor plan", floorLayout: "Floor layout", expand: "Enlarge floor plan", preview: "Preview", select: "Preview apartment", gross: "Gross purchase price", details: "Apartment details", inquire: "Enquire", download: "PDF factsheet", share: "Share", close: "Close", roomCount: "rooms", floor: "floor", building: "building", type: "type", orientation: "orientation" }
+    const number = new Intl.NumberFormat(hu ? "hu-HU" : "en-GB", { maximumFractionDigits: 2 })
+    const plan = active && apartment && dataset ? orbitApartmentPlan(apartment, dataset, assetBase, view) : null
+    const floorLayout = apartment && dataset ? orbitApartmentPlan(apartment, dataset, assetBase, "floorLayout") : null
+    const asset = (path: string) => orbitApartmentAssetUrl(path, assetBase) || ""
+    const logo = asset("assets/brand/admiral-park-full-logo-no-location.svg")
+    const fontLatin = asset("assets/fonts/montserrat/montserrat-latin-variable.woff2")
+    const fontExtended = asset("assets/fonts/montserrat/montserrat-latin-ext-variable.woff2")
+    const cssUrl = (url: string) => url.replace(/["\\\n\r]/g, character => encodeURIComponent(character))
+    const fontStyles = `@font-face{font-family:Montserrat;src:url("${cssUrl(fontLatin)}") format("woff2");font-style:normal;font-weight:100 900;font-display:swap;unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}@font-face{font-family:Montserrat;src:url("${cssUrl(fontExtended)}") format("woff2");font-style:normal;font-weight:100 900;font-display:swap;unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C4,U+2113,U+2C60-2C7F,U+A720-A7FF}`
+    React.useEffect(() => { mounted.current = true; return () => { mounted.current = false; shareGeneration.current++ } }, [])
+    React.useEffect(() => { setView("floorplan"); setFailedImage(""); setExpanded(false); setShareMessage(""); shareGeneration.current++ }, [apartment?.id])
+    React.useEffect(() => { setZoom(1); setPan({ x: 0, y: 0 }); setFailedImage("") }, [view, expanded])
+    React.useEffect(() => { if (!active) setExpanded(false) }, [active])
+    React.useEffect(() => {
+        const element = dialog.current
+        if (!element) return
+        if (expanded && active && !element.open) element.showModal()
+        if ((!expanded || !active) && element.open) element.close()
+    }, [expanded, active])
+    React.useEffect(() => {
+        const query = window.matchMedia("(min-width: 768px) and (max-height: 600px)")
+        const update = () => setShortLandscape(query.matches)
+        update(); query.addEventListener("change", update)
+        return () => query.removeEventListener("change", update)
+    }, [])
+    React.useEffect(() => { onLayout?.() }, [active, apartment?.id, dataStatus, view, shortLandscape, onLayout])
+    const positive = (value: unknown): value is number => typeof value === "number" && Number.isFinite(value) && value >= 0
+    const linkFor = (source: string) => {
+        if (!source || !apartment) return ""
+        try {
+            const url = new URL(source, typeof window !== "undefined" ? window.location.href : "https://admiralpark.hu/")
+            if (url.protocol !== "https:" && url.protocol !== "http:") return ""
+            url.searchParams.set("apartment", apartment.id)
+            return url.href
+        } catch { return "" }
+    }
+    const detailLink = linkFor(detailsUrl), inquiryLink = linkFor(inquiryUrl)
+    const actionLink = inquiryLink || detailLink
+    const record = apartment as unknown as { media?: { datasheet?: { url?: string; label?: string; filename?: string } } } | null
+    const download = record?.media?.datasheet?.url ? asset(record.media.datasheet.url) : ""
+    const availability = apartment?.status || ""
+    const statusText = availability === "available" ? hu ? "Szabad" : "Available" : availability === "sold" ? hu ? "Eladva" : "Sold" : availability === "under_negotiation" ? hu ? "Tárgyalás alatt" : "In negotiation" : availability === "reserved" ? hu ? "Foglalt" : "Reserved" : apartment?.statusLabel || ""
+    const floor = apartment?.floorLabel || (apartment?.floor === 0 ? hu ? "Földszint" : "Ground floor" : positive(apartment?.floor) ? `${apartment!.floor}. ${labels.floor}` : "")
+    const viewportCallback = React.useCallback((element: HTMLDivElement | null) => onViewport(element), [onViewport])
+    const share = async () => {
+        const generation = ++shareGeneration.current
+        const url = detailLink || (typeof window !== "undefined" ? linkFor(window.location.href) : "")
+        if (!apartment || !url) return
+        setShareMessage("")
+        try {
+            const title = `Admiral Park · ${apartment.id}`
+            if (navigator.share) await navigator.share({ title, url })
+            else if (navigator.clipboard?.writeText) { await navigator.clipboard.writeText(url); if (mounted.current && generation === shareGeneration.current) setShareMessage(hu ? "Hivatkozás másolva" : "Link copied") }
+            else if (mounted.current && generation === shareGeneration.current) setShareMessage(hu ? "A hivatkozás a lakás részleteinél érhető el." : "Use the apartment details link to share this home.")
+        } catch (reason) {
+            if ((reason as { name?: string })?.name !== "AbortError" && mounted.current && generation === shareGeneration.current) setShareMessage(hu ? "A megosztás most nem érhető el." : "Sharing is currently unavailable.")
+        }
+    }
+    const meta = (mobile = false) => <p className={`orbit-studio-meta${mobile ? " orbit-studio-mobile-meta" : ""}`}>
+        {apartment?.apartmentType && <span><strong>{apartment.apartmentType}</strong> {labels.type}</span>}
+        {apartment?.building && <span><strong>{apartment.building}</strong> {labels.building}</span>}
+        {floor && <span data-orbit-field="floor"><strong>{floor}</strong></span>}
+        {apartment?.orientation && <span data-orbit-field="orientation"><strong>{apartment.orientation}</strong> {labels.orientation}</span>}
+        {positive(apartment?.rooms) && <span data-orbit-field="rooms"><strong>{number.format(apartment!.rooms!)}</strong> {labels.roomCount}</span>}
+    </p>
+    const conversion = () => <>
+        <div className="orbit-studio-bottom">
+            <div className="orbit-studio-price"><p className="orbit-studio-label">{apartment?.priceIncludesVat === false ? hu ? "Nettó vételár" : "Net purchase price" : labels.gross}</p><p className="orbit-studio-price-value" data-orbit-apartment-price="" data-orbit-field="price">
+                {positive(apartment?.price) ? <>{number.format(apartment!.price! / 1000000)}<small>M Ft</small></> : availability === "sold" ? hu ? "Nincs megadva" : "Not provided" : hu ? "Ár kérésre" : "Price on request"}
+            </p></div>
+            {actionLink && <a className="orbit-studio-primary" href={actionLink} data-orbit-apartment-action="" {...(inquiryLink ? { "data-orbit-inquiry": "" } : { "data-orbit-detail-link": "" })}><span>{inquiryLink ? labels.inquire : labels.details}</span><span aria-hidden="true">↗</span></a>}
+        </div>
+        <div className="orbit-studio-secondary">
+            {download && <a href={download} className="orbit-studio-text-button" target="_blank" rel="noopener noreferrer" download={record?.media?.datasheet?.filename || undefined} data-orbit-apartment-download="" data-orbit-download=""><span aria-hidden="true">↓</span>{labels.download}</a>}
+            {inquiryLink && detailLink && <a href={detailLink} className="orbit-studio-text-button" data-orbit-detail-link="">{labels.details}<span aria-hidden="true">↗</span></a>}
+            {apartment && <button type="button" className="orbit-studio-text-button" onClick={() => { void share() }}>{labels.share}<span aria-hidden="true">↗</span></button>}
+            <span className="orbit-studio-share-message" role="status">{shareMessage}</span>
+        </div>
+    </>
+    const viewBox = plan?.viewBox || { x: 0, y: 0, width: 1, height: 1 }
+    const planStyle: React.CSSProperties = { left: `${-viewBox.x / viewBox.width * 100}%`, top: `${-viewBox.y / viewBox.height * 100}%`, width: `${100 / viewBox.width}%`, height: `${100 / viewBox.height}%` }
+    const aspectStyle = { "--studio-plan-aspect": plan?.aspect || 1 } as React.CSSProperties
+    const planShown = !!plan && failedImage !== plan.url
+    const note = hu ? "Az alaprajz illusztráció. Bútorozatlan átadás." : "Illustrative floor plan. Homes are delivered unfurnished."
+    const tabs = <div className="orbit-studio-tabs" role="tablist" aria-label={hu ? "Rajz kiválasztása" : "Choose drawing"}>
+        {(["floorplan", "floorLayout"] as const).filter(kind => kind === "floorplan" || !!floorLayout).map(kind => <button key={kind} type="button" className="orbit-studio-tab" role="tab" aria-selected={view === kind} aria-controls={planPanelId} tabIndex={view === kind ? 0 : -1}
+            onClick={() => setView(kind)} onKeyDown={event => { if (event.key === "ArrowRight" || event.key === "ArrowLeft" || event.key === "Home" || event.key === "End") { event.preventDefault(); const next = floorLayout && (event.key === "End" || (event.key !== "Home" && view === "floorplan")) ? "floorLayout" : "floorplan"; setView(next); const list = event.currentTarget.parentElement; requestAnimationFrame(() => list?.querySelector<HTMLButtonElement>(`[data-plan-tab="${next}"]`)?.focus()) } }} data-plan-tab={kind}>{labels[kind]}</button>)}
+    </div>
+    const facts = <div className="orbit-studio-facts" data-orbit-ignore="">
+        <dl className="orbit-studio-areas">
+            {([ ["areaInterior", labels.interior, "area"], ["areaTerrace", labels.terrace, "terrace"], ["areaGarden", labels.garden, "garden"] ] as const).map(([key, label, field]) => <div key={key} data-orbit-apartment-metric={key} data-orbit-field={field}><dt>{label}</dt><dd>{positive(apartment?.[key]) && (key === "areaInterior" || apartment![key]! > 0) ? <>{number.format(apartment![key]!)}<small>m²</small></> : "—"}</dd></div>)}
+        </dl>
+        {meta()}{conversion()}
+    </div>
+    return <>
+        <section data-orbit-studio="" data-active={active ? "true" : "false"} data-mode={mode} data-status={dataStatus} data-apartment-id={apartment?.id || ""} aria-hidden={!active} {...(!active ? { inert: "" as any } : {})} aria-labelledby={headingId}>
+            <style>{fontStyles + orbitApartmentStudioStyles}</style>
+            <header className="orbit-studio-header" data-orbit-ignore="">
+                {logo && <img className="orbit-studio-brand" src={logo} alt="Admiral Park" width={184} height={78} draggable={false} />}
+                <div className="orbit-studio-header-end">
+                    <div className="orbit-studio-heading"><h2 id={headingId} className="orbit-studio-id">{apartment?.id || (hu ? "Lakásválasztó" : "Apartments")}</h2>
+                        {statusText && <span className="orbit-studio-status" data-status={availability} data-orbit-field="status"><span className="orbit-studio-status-dot" aria-hidden="true" />{statusText}</span>}
+                    </div>
+                    {mode === "preview" && dataset && <div className="orbit-studio-preview"><label htmlFor={`${headingId}-select`}>{labels.preview}</label><select id={`${headingId}-select`} data-orbit-apartment-select="" aria-label={labels.select} value={apartment?.id || ""} onChange={event => onSelect(event.target.value)}>
+                        {!apartment && <option value="">—</option>}{dataset.apartments.map(unit => <option key={unit.id} value={unit.id}>{unit.id}</option>)}
+                    </select></div>}
+                </div>
+            </header>
+            <div className="orbit-studio-body">
+                <div className="orbit-studio-scene">
+                    <div className="orbit-studio-image-slot"><div ref={viewportCallback} data-orbit-viewport="" aria-hidden="true" /></div>
+                    {!shortLandscape && facts}
+                </div>
+                <div className="orbit-studio-details" data-orbit-studio-details="" data-orbit-ignore="">
+                    {dataStatus === "error" ? <div className="orbit-studio-empty" role="status"><p>{hu ? "A lakásadatok most nem tölthetők be." : "Apartment information could not be loaded."}</p>{error && <p>{error}</p>}<button type="button" className="orbit-studio-text-button" onClick={onRetry}>{hu ? "Újrapróbálom" : "Try again"}</button></div> : !apartment ? <div className="orbit-studio-empty" role="status"><p>{dataStatus === "loading" || dataStatus === "idle" ? hu ? "Lakásadatok betöltése…" : "Loading apartment information…" : hu ? "A lakás adatai a kijelölt otthonnál jelennek meg." : "Point to an apartment to see its details."}</p></div> : <>
+                        <div className="orbit-studio-drawing-toolbar">{tabs}<button type="button" className="orbit-studio-text-button" aria-label={labels.expand} disabled={!planShown} onClick={() => setExpanded(true)}>{hu ? "Nagyítás" : "Enlarge"}<span aria-hidden="true">↗</span></button></div>
+                        {meta(true)}
+                        <section className="orbit-studio-plan-section" id={planPanelId} role="tabpanel" aria-label={labels[view]}>
+                            <div className="orbit-studio-plan-stage" style={aspectStyle}>
+                                {planShown ? <div className="orbit-studio-plan-crop" data-orbit-plan-crop=""><img data-orbit-floorplan="" className="orbit-studio-plan-image" src={plan!.url} style={planStyle} alt={`${apartment.id} · ${labels[view]}`} decoding="async" draggable={false} onLoad={() => onLayout?.()} onError={() => setFailedImage(plan!.url)} /></div> : <p className="orbit-studio-empty">{hu ? "A rajz még nem érhető el." : "This drawing is not available yet."}</p>}
+                            </div>
+                            <p className="orbit-studio-plan-note">{note}</p>
+                        </section>
+                        {shortLandscape && facts}
+                        <div className="orbit-studio-mobile-actions">{conversion()}</div>
+                    </>}
+                </div>
+            </div>
+        </section>
+        <dialog ref={dialog} data-orbit-plan-dialog="" data-orbit-ignore="" aria-label={`${apartment?.id || ""} · ${labels[view]}`} onCancel={event => { event.preventDefault(); setExpanded(false) }} onClose={() => setExpanded(false)} onClick={event => { if (event.target === event.currentTarget) setExpanded(false) }}>
+            <div className="orbit-studio-dialog-shell">
+                <header className="orbit-studio-dialog-header"><h3 className="orbit-studio-dialog-title">{apartment?.id} · {labels[view]}</h3><div className="orbit-studio-dialog-tools">
+                    <button type="button" aria-label={hu ? "Kicsinyítés" : "Zoom out"} disabled={zoom <= 1} onClick={() => { setZoom(value => Math.max(1,value - .5)); setPan({ x: 0, y: 0 }) }}>−</button>
+                    <span className="orbit-studio-dialog-zoom">{Math.round(zoom * 100)}%</span>
+                    <button type="button" aria-label={hu ? "Nagyítás" : "Zoom in"} disabled={zoom >= 3} onClick={() => setZoom(value => Math.min(3,value + .5))}>+</button>
+                    <button type="button" aria-label={labels.close} onClick={() => setExpanded(false)}>×</button>
+                </div></header>
+                <div className="orbit-studio-zoom-stage" style={{ ...aspectStyle, cursor: zoom > 1 ? "grab" : "default" }}
+                    onPointerDown={event => { if (zoom <= 1) return; drag.current = { pointer: event.pointerId, x: event.clientX, y: event.clientY, panX: pan.x, panY: pan.y }; event.currentTarget.setPointerCapture(event.pointerId) }}
+                    onPointerMove={event => { const current = drag.current; if (current?.pointer !== event.pointerId) return; const box = event.currentTarget.getBoundingClientRect(), limitX = box.width * (zoom - 1) / 2, limitY = box.height * (zoom - 1) / 2; setPan({ x: Math.max(-limitX,Math.min(limitX,current.panX + event.clientX - current.x)), y: Math.max(-limitY,Math.min(limitY,current.panY + event.clientY - current.y)) }) }}
+                    onPointerUp={() => { drag.current = null }} onPointerCancel={() => { drag.current = null }}>
+                    {expanded && planShown && <div className="orbit-studio-zoom-plan" style={{ transform: `translate(${pan.x}px,${pan.y}px) scale(${zoom})` }}><img src={plan!.url} style={planStyle} alt={`${apartment?.id} · ${labels[view]}`} draggable={false} /></div>}
+                </div>
+                <p className="orbit-studio-dialog-note">{note}{zoom > 1 ? hu ? " A nagyított rajz húzással mozgatható." : " Drag the enlarged drawing to move it." : ""}</p>
+            </div>
+        </dialog>
+    </>
+}
+
 
 /**
  * @framerSupportedLayoutWidth any-prefer-fixed
@@ -322,6 +848,8 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
         showControls = true, showViewpoints = true, showDiagnostics = false,
         openingOut = 20, buildingIn = 68, buildingFull = 88, ctaIn = 86, rise = 20,
         detailsMode = "preview", detailsLanguage = "hu", detailsBottom = 32, detailsInset = 48, apartmentPreview,
+        orbitLayout = "studio", apartmentDataUrl = "https://raw.githubusercontent.com/UnbuiltMarket/admiral-park/main/data/apartments.json",
+        apartmentAssetBase = HOMEPAGE_ASSETS + "/apartment-list/", previewApartmentId = "A001", detailPageUrl = "/lista", inquiryUrl = "", orbitBackground = "#fdfbfb",
         background = "#101820", alt = "Explore Admiral Park, Balatonfüred", style,
     } = props
     const staticRenderer = useIsStaticRenderer()
@@ -349,6 +877,13 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
     const [hostVisible, setHostVisible] = React.useState(false)
     const [hoveredApartment, setHoveredApartment] = React.useState<ApartmentDetailsData | null>(null)
     const [detailsHeight, setDetailsHeight] = React.useState(140)
+    const useStudio = orbitLayout === "studio" && detailsMode !== "off"
+    const [selectedApartmentId, setSelectedApartmentId] = React.useState<string | null>(null)
+    const apartmentData = useOrbitApartments(apartmentDataUrl, useStudio && (staticRenderer && editorView === "orbit" || hostVisible && ["building", "connection", "handoff", "orbit"].includes(stage)))
+    const selectedApartment = React.useMemo(() => {
+        const records = apartmentData.dataset?.apartments || []
+        return records.find(item => item.id === selectedApartmentId) || (detailsMode === "preview" ? records.find(item => item.id === previewApartmentId) || records[0] || null : null)
+    }, [apartmentData.dataset, selectedApartmentId, previewApartmentId, detailsMode])
     const hoveredApartmentRef = React.useRef<ApartmentDetailsData | null>(null)
     const clearApartmentDetails = React.useCallback(() => {
         if (hoveredApartmentRef.current !== null) { hoveredApartmentRef.current = null; setHoveredApartment(null) }
@@ -357,9 +892,13 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
     const rootRef = React.useRef<HTMLDivElement>(null), heroRootRef = React.useRef<HTMLDivElement>(null)
     const heroCanvasRef = React.useRef<HTMLCanvasElement>(null), orbitCanvasRef = React.useRef<HTMLCanvasElement>(null), posterRef = React.useRef<HTMLImageElement>(null)
     const actions = React.useRef<HomepageActions | null>(null)
+    const studioViewportRef = React.useRef<HTMLDivElement | null>(null)
+    const studioEnabled = React.useRef(useStudio); studioEnabled.current = useStudio
     const framingConfig = React.useRef<HomepageFramingConfig>({ enabled: phoneFraming, sourceWidth: phoneImageWidth, top: phoneImageTop, detailsHeight, detailsBottom, reserveDetails: detailsMode !== "off" })
     framingConfig.current = { enabled: phoneFraming, sourceWidth: phoneImageWidth, top: phoneImageTop, detailsHeight, detailsBottom, reserveDetails: detailsMode !== "off" }
     const refreshPresentation = React.useRef<() => void>(() => {})
+    const setStudioViewport = React.useCallback((element: HTMLDivElement | null) => { studioViewportRef.current = element }, [])
+    const refreshStudioLayout = React.useCallback(() => { refreshPresentation.current() }, [])
     const timing = React.useRef<HomepageTiming>({ openingOut, buildingIn, buildingFull, ctaIn, rise })
     timing.current = { openingOut, buildingIn, buildingFull, ctaIn, rise }
     const storySettings = React.useMemo<OrbitStorySettings>(() => ({
@@ -409,6 +948,15 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
             return box.width > 0 && box.height > 0 && box.bottom > 0 && box.top < innerHeight
         }
         function viewportFor(progress: number, bounds: { width: number; height: number }) {
+            const slot = studioEnabled.current ? studioViewportRef.current?.getBoundingClientRect() : null
+            if (slot && slot.width > 0 && slot.height > 0) {
+                const rootBounds = root!.getBoundingClientRect(), amount = sequenceEase(sequenceClamp(progress))
+                const scale = Math.min(slot.width / 1920, slot.height / 1010)
+                const targetWidth = 1920 * scale, targetHeight = 1010 * scale
+                const x = slot.left - rootBounds.left + (slot.width - targetWidth) / 2
+                const y = slot.top - rootBounds.top + (slot.height - targetHeight) / 2
+                return { x: x * amount, y: y * amount, width: bounds.width + (targetWidth - bounds.width) * amount, height: bounds.height + (targetHeight - bounds.height) * amount }
+            }
             // Core drawing uses screen bounds; CSS clipping uses unscaled local pixels.
             const width = root!.clientWidth || bounds.width, height = root!.clientHeight || bounds.height
             const local = homepageImageRect(progress, { width, height }, framingConfig.current)
@@ -425,14 +973,26 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
             const rect = requested || { x: 0, y: 0, width: bounds.width, height: bounds.height }
             const setStyle = (name: string, value: string) => { if (root!.style.getPropertyValue(name) !== value) root!.style.setProperty(name, value) }
             const cssScaleY = bounds.height > 0 ? (root!.clientHeight || bounds.height) / bounds.height : 1
+            const cssScaleX = bounds.width > 0 ? (root!.clientWidth || bounds.width) / bounds.width : 1
+            setStyle("--admiral-image-x", rect.x * cssScaleX + "px")
+            setStyle("--admiral-image-width", rect.width * cssScaleX + "px")
+            setStyle("--admiral-image-right", Math.max(0, bounds.width - rect.x - rect.width) * cssScaleX + "px")
             setStyle("--admiral-image-y", rect.y * cssScaleY + "px")
             setStyle("--admiral-image-height", rect.height * cssScaleY + "px")
             setStyle("--admiral-image-cut", Math.max(0, bounds.height - rect.y - rect.height) * cssScaleY + "px")
+            const studioAmount = studioEnabled.current && (currentStage === "orbit" || currentStage === "handoff") ? 1 : studioEnabled.current && currentStage === "connection" ? sequenceEase(sequenceClamp((presentationProgress - .65) / .35)) : 0
+            setStyle("--admiral-studio-light", String(studioAmount))
+            const controls = root!.querySelector<HTMLElement>("[data-homepage-controls]")
+            setStyle("--admiral-controls-left", (rect.x + rect.width / 2) * cssScaleX + "px")
+            setStyle("--admiral-controls-top", Math.max(rect.y + 8, rect.y + rect.height - (controls?.offsetHeight || 48) / cssScaleY - 12) * cssScaleY + "px")
+            setStyle("--admiral-controls-width", Math.max(100, rect.width * cssScaleX - 24) + "px")
             root!.dataset.mobileFraming = String(!!requested)
             root!.dataset.imageX = String(rect.x); root!.dataset.imageY = String(rect.y)
             root!.dataset.imageWidth = String(rect.width); root!.dataset.imageHeight = String(rect.height)
             root!.dataset.visibleImageWidth = String(Math.min(100, 100 * rect.width / Math.max(1, rect.height) / (1920 / 1010)))
-            if (requested) {
+            if (studioEnabled.current && requested) {
+                mobileLayout = { enabled: true, storyLeft: rect.x + 24, storyWidth: Math.max(0, rect.width - 48), storyTop: rect.y + 24, storyMaxHeight: Math.max(0, rect.height - 116) }
+            } else if (requested) {
                 const details = root!.querySelector<HTMLElement>("[data-apartment-details]")
                 const config = framingConfig.current
                 // Ignore the strip's entrance translate: its parked position defines the story's space.
@@ -446,7 +1006,7 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
             } else mobileLayout = null
         }
         function changeStage(next: HomepageStage) {
-            currentStage = next; root!.dataset.homepageStage = next; setStage(next); publish()
+            currentStage = next; root!.dataset.homepageStage = next; setStage(next); applyPresentation(); publish()
         }
         function changePoster(url: string) { poster!.src = url; setPosterUrl(url) }
         function destroyHero() { heroGeneration++; hero?.destroy(); hero = null }
@@ -625,6 +1185,7 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
         refreshPresentation.current = refresh
         const presentationResize = new ResizeObserver(refresh)
         presentationResize.observe(root)
+        if (studioViewportRef.current) presentationResize.observe(studioViewportRef.current)
         applyPresentation()
         if (staticRenderer) { changeStage(previewStage); changePoster(initialPoster) }
         else {
@@ -645,7 +1206,21 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
     }, [heroUrls, connectionUrls, connectionPlaybackUrls, orbitUrls, staticRenderer, hostVisible, startView, editorView, duration, connectionDuration, maxSpeed, momentum, triggerDistance, checkpointCount,
         motionWidth, orbitMobileWidth, inspectionWidth, desktopBuffer, phoneBuffer, orbitStartIndex, editorPreviewFrame, snapDuration, frameBlend, focalX, focalY, showDiagnostics, clearApartmentDetails])
 
-    React.useEffect(() => { refreshPresentation.current() }, [phoneFraming, phoneImageWidth, phoneImageTop, detailsHeight, detailsBottom, detailsMode, showControls, showViewpoints, stage, orbitInfo.state])
+    React.useEffect(() => { refreshPresentation.current() }, [phoneFraming, phoneImageWidth, phoneImageTop, detailsHeight, detailsBottom, detailsMode, useStudio, showControls, showViewpoints, stage, orbitInfo.state])
+
+    React.useEffect(() => {
+        const root = rootRef.current
+        if (!root || !useStudio) return
+        function selectFromMask(event: Event) {
+            if (root!.dataset.homepageStage !== "orbit" || root!.dataset.orbitState !== "checkpoint") return
+            const detail = (event as CustomEvent<unknown>).detail
+            const values = detail && typeof detail === "object" ? detail as { id?: unknown; apartmentId?: unknown; number?: unknown } : null
+            const value = typeof detail === "string" ? detail : values?.id ?? values?.apartmentId ?? values?.number
+            if (typeof value === "string" && apartmentData.dataset?.apartments.some(item => item.id === value)) setSelectedApartmentId(value)
+        }
+        root.addEventListener("admiral:apartment-hover", selectFromMask)
+        return () => root.removeEventListener("admiral:apartment-hover", selectFromMask)
+    }, [useStudio, apartmentData.dataset])
 
     React.useEffect(() => {
         const root = rootRef.current, channel = root && homepageChannels.get(root)
@@ -679,23 +1254,29 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
     const paused = orbitInfo.state === "paused"
     const orbitMoving = orbitInfo.state !== "checkpoint"
     const orbitButtonStyle: React.CSSProperties = { ...homepageButton, opacity: orbitMoving ? .45 : 1, cursor: orbitMoving ? "default" : "pointer" }
-    const detailsVisible = detailsMode === "preview" ? (orbitStatic || (orbitVisible && orbitInfo.state === "checkpoint")) :
-        detailsMode === "hover" && orbitVisible && orbitInfo.state === "checkpoint" && orbitInfo.checkpoint >= 0 && hoveredApartment !== null
+    const detailsVisible = !useStudio && (detailsMode === "preview" ? (orbitStatic || (orbitVisible && orbitInfo.state === "checkpoint")) :
+        detailsMode === "hover" && orbitVisible && orbitInfo.state === "checkpoint" && orbitInfo.checkpoint >= 0 && hoveredApartment !== null)
     const detailsData = detailsMode === "preview" ? sampleApartment : hoveredApartment
     const controlsBottom = detailsVisible ? `calc(${detailsBottom + detailsHeight + 20}px + env(safe-area-inset-bottom, 0px))` : "18px"
     const diagnosticBottom = detailsVisible ? detailsBottom + detailsHeight + (showControls ? 112 : 20) : 94
+    const studioControls = useStudio && (stage === "orbit" || stage === "handoff")
+    const imageClip = "inset(var(--admiral-image-y, 0px) var(--admiral-image-right, 0px) var(--admiral-image-cut, 0px) var(--admiral-image-x, 0px))"
     return (
         <div ref={rootRef} data-admiral-homepage="" data-admiral-orbit="" data-homepage-stage={stage} role="region" aria-label={alt} tabIndex={0}
-            style={{ position: "relative", width: "100%", height: "100%", overflow: "hidden", background, ...style }}>
-            <div ref={heroRootRef} data-admiral-sequence="" style={{ position: "absolute", inset: 0, pointerEvents: stage === "orbit" || stage === "handoff" ? "none" : "auto" }}>
+            style={{ position: "relative", width: "100%", height: "100%", overflow: "hidden", background, "--admiral-orbit-background": orbitBackground, ...style } as React.CSSProperties}>
+            <div aria-hidden="true" style={{ position: "absolute", inset: 0, background: orbitBackground, opacity: "var(--admiral-studio-light, 0)" as unknown as number, pointerEvents: "none" }} />
+            {useStudio && <OrbitApartmentStudio active={orbitVisible || orbitStatic} mode={detailsMode} dataset={apartmentData.dataset} dataStatus={apartmentData.status} error={apartmentData.error}
+                onRetry={apartmentData.retry} apartment={selectedApartment} onSelect={setSelectedApartmentId} assetBase={apartmentAssetBase} detailsUrl={detailPageUrl} inquiryUrl={inquiryUrl}
+                onViewport={setStudioViewport} language={detailsLanguage} onLayout={refreshStudioLayout} />}
+            <div ref={heroRootRef} data-admiral-sequence="" style={{ position: "absolute", inset: 0, zIndex: 2, pointerEvents: stage === "orbit" || stage === "handoff" ? "none" : "auto", clipPath: imageClip }}>
                 <img ref={posterRef} src={posterUrl} alt={alt} loading="eager" decoding="async" {...{ fetchpriority: "high" }} crossOrigin="anonymous" draggable={false}
-                    style={{ position: "absolute", top: "var(--admiral-image-y, 0px)", left: 0, width: "100%", height: "var(--admiral-image-height, 100%)", objectFit: "cover", objectPosition: `${focalX}% ${focalY}%`, pointerEvents: "none" }} />
+                    style={{ position: "absolute", top: "var(--admiral-image-y, 0px)", left: "var(--admiral-image-x, 0px)", width: "var(--admiral-image-width, 100%)", height: "var(--admiral-image-height, 100%)", objectFit: "cover", objectPosition: `${focalX}% ${focalY}%`, pointerEvents: "none" }} />
                 <canvas ref={heroCanvasRef} aria-hidden="true" width={1} height={1} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", opacity: 0, clipPath: "inset(var(--admiral-image-y, 0px) 0px var(--admiral-image-cut, 0px) 0px)" }} />
             </div>
-            <canvas ref={orbitCanvasRef} aria-hidden="true" width={1} height={1} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", opacity: orbitVisible ? 1 : 0, transition: reduced ? "none" : "opacity .35s", touchAction: "pan-y pinch-zoom", pointerEvents: orbitVisible ? "auto" : "none", clipPath: "inset(var(--admiral-image-y, 0px) 0px var(--admiral-image-cut, 0px) 0px)" }} />
+            <canvas ref={orbitCanvasRef} aria-hidden="true" width={1} height={1} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", zIndex: 2, opacity: orbitVisible ? 1 : 0, transition: reduced ? "none" : "opacity .35s", touchAction: "pan-y pinch-zoom", pointerEvents: orbitVisible ? "auto" : "none", clipPath: imageClip }} />
             {orbitStatic && <span style={{ position: "absolute", inset: 0, pointerEvents: "none" }} />}
-            <div aria-hidden="true" style={{ position: "absolute", top: "var(--admiral-image-y, 0px)", left: 0, width: "100%", height: "var(--admiral-image-height, 100%)", background: "#000", opacity: darken, pointerEvents: "none" }} />
-            {!staticRenderer && showControls && <div data-homepage-controls="" data-orbit-ignore="" style={{ position: "absolute", bottom: controlsBottom, left: "50%", transform: "translateX(-50%)", display: "flex", alignItems: "center", justifyContent: "center", flexWrap: "wrap", gap: 7, width: "max-content", maxWidth: "94%", zIndex: 3 }}>
+            <div aria-hidden="true" style={{ position: "absolute", top: "var(--admiral-image-y, 0px)", left: "var(--admiral-image-x, 0px)", width: "var(--admiral-image-width, 100%)", height: "var(--admiral-image-height, 100%)", background: "#000", opacity: darken, pointerEvents: "none", zIndex: 2 }} />
+            {!staticRenderer && showControls && <div data-homepage-controls="" data-orbit-ignore="" style={{ position: "absolute", bottom: studioControls ? "auto" : controlsBottom, top: studioControls ? "var(--admiral-controls-top)" : "auto", left: studioControls ? "var(--admiral-controls-left)" : "50%", transform: "translateX(-50%)", display: "flex", alignItems: "center", justifyContent: "center", flexWrap: "wrap", gap: 7, width: "max-content", maxWidth: studioControls ? "var(--admiral-controls-width)" : "94%", zIndex: 3 }}>
                 {(stage === "opening" || stage === "approach") && <button type="button" style={homepageButton} onClick={() => actions.current?.skip()}>Skip approach</button>}
                 {stage === "approach" && (heroState === "paused" || heroState === "error") && <button type="button" style={homepageButton} onClick={() => actions.current?.resumeHero()}>{heroState === "error" ? "Retry approach" : "Continue approach"}</button>}
                 {stage === "connection" && <button type="button" style={homepageButton} onClick={() => actions.current?.skip()}>Skip connection</button>}
@@ -721,7 +1302,7 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
             {!staticRenderer && !showControls && orbitInfo.state === "error" && <div data-homepage-controls="" data-orbit-ignore="" style={{ position: "absolute", bottom: 18, left: "50%", transform: "translateX(-50%)", zIndex: 3 }}>
                 <button type="button" style={homepageButton} onClick={() => { void (rootRef.current as (HTMLElement & { retryOrbit?: () => Promise<void> }) | null)?.retryOrbit?.() }}>Retry orbit</button>
             </div>}
-            {detailsMode !== "off" && <ApartmentDetailsStrip apartment={detailsData} language={detailsLanguage} visible={detailsVisible} preview={detailsMode === "preview"}
+            {!useStudio && detailsMode !== "off" && <ApartmentDetailsStrip apartment={detailsData} language={detailsLanguage} visible={detailsVisible} preview={detailsMode === "preview"}
                 bottom={detailsBottom} inset={detailsInset} onHeightChange={setDetailsHeight} />}
             {!staticRenderer && showDiagnostics && <output data-homepage-diagnostics="" style={{ position: "absolute", left: 12, bottom: diagnosticBottom, pointerEvents: "none", background: "rgba(0,0,0,.65)", color: "#fff", padding: 8, borderRadius: 4, font: "11px/1.5 monospace", zIndex: 2 }}>
                 {stage} · {orbitInfo.state} · frame {orbitInfo.frame} · downloaded {orbitInfo.downloaded}/{orbitInfo.total} · buffered {orbitInfo.buffered}/{orbitInfo.bufferTotal} · required {orbitInfo.requiredReady}/{orbitInfo.requiredTotal} · decoded {orbitInfo.decoded}
@@ -842,7 +1423,7 @@ addPropertyControls(AdmiralHomepageTrial, {
     checkpointCount: { type: ControlType.Number, title: "Viewpoints", defaultValue: 8, min: 2, max: 16, step: 1, description: "Keep 8 for the eight authored OrbitView story groups. Other counts disable these stories to preserve camera-to-content alignment." },
     motionWidth: { type: ControlType.Number, title: "Orbit decode", defaultValue: 960, min: 480, max: 1920, step: 160, unit: "px" },
     orbitMobileWidth: { type: ControlType.Number, title: "Phone decode", defaultValue: 640, min: 480, max: 1280, step: 160, unit: "px" },
-    phoneFraming: { type: ControlType.Boolean, title: "Phone framing", defaultValue: true, description: "On phones, SEQ_02 opens from fullscreen into a landscape orbit image, with stories and apartment details below." },
+    phoneFraming: { type: ControlType.Boolean, title: "Phone framing", defaultValue: true, hidden: p => p.orbitLayout !== "classic", description: "On phones, SEQ_02 opens from fullscreen into a landscape orbit image, with stories and apartment details below." },
     phoneImageWidth: { type: ControlType.Number, title: "Phone image width", defaultValue: 100, min: 80, max: 100, step: 1, unit: "%", hidden: p => p.phoneFraming === false, description: "How much of the original landscape image remains visible. 80% gives a closer view; 100% shows its full width." },
     phoneImageTop: { type: ControlType.Number, title: "Phone image top", defaultValue: 80, min: 0, max: 240, step: 4, unit: "px", hidden: p => p.phoneFraming === false, description: "Space above the parked orbit image, for the mobile header. Clamps on short screens to keep the image and details visible." },
     inspectionWidth: { type: ControlType.Number, title: "Stopped detail", defaultValue: 1920, min: 960, max: 1920, step: 160, unit: "px" },
@@ -905,11 +1486,18 @@ addPropertyControls(AdmiralHomepageTrial, {
     showControls: { type: ControlType.Boolean, title: "Trial controls", defaultValue: true },
     showViewpoints: { type: ControlType.Boolean, title: "View buttons", defaultValue: true },
     showDiagnostics: { type: ControlType.Boolean, title: "Diagnostics", defaultValue: false },
-    detailsMode: { type: ControlType.Enum, title: "Apartment details", options: ["preview", "hover", "off"], optionTitles: ["Sample", "Hover", "Off"], defaultValue: "preview", description: "Sample previews the design with example values. Hover waits for apartment data from the future picking masks. Off hides the strip." },
+    orbitLayout: { type: ControlType.Enum, title: "Orbit layout", options: ["studio", "classic"], optionTitles: ["Apartment studio", "Classic"], defaultValue: "studio", description: "Light apartment workspace using 90% of the component height. Keep the component itself at 100vh for the full journey." },
+    orbitBackground: { type: ControlType.Color, title: "Orbit background", defaultValue: "#fdfbfb", hidden: p => p.orbitLayout === "classic" },
+    apartmentDataUrl: { type: ControlType.String, title: "Apartment JSON", defaultValue: "https://raw.githubusercontent.com/UnbuiltMarket/admiral-park/main/data/apartments.json", hidden: p => p.orbitLayout === "classic", description: "Apartment facts and media paths. All 69 records are small; only the selected plan is loaded." },
+    apartmentAssetBase: { type: ControlType.String, title: "Media base", defaultValue: HOMEPAGE_ASSETS + "/apartment-list/", hidden: p => p.orbitLayout === "classic" },
+    previewApartmentId: { type: ControlType.String, title: "Preview apartment", defaultValue: "A001", hidden: p => p.orbitLayout === "classic" || p.detailsMode === "hover" || p.detailsMode === "off", description: "A real JSON apartment ID, used until picking masks are connected. You can also change it in the preview selector." },
+    detailPageUrl: { type: ControlType.String, title: "Details page", defaultValue: "/lista", hidden: p => p.orbitLayout === "classic", description: "Your Framer apartment page path. Links add ?apartment=ID to open this apartment." },
+    inquiryUrl: { type: ControlType.String, title: "Inquiry page", defaultValue: "", hidden: p => p.orbitLayout === "classic", description: "Optional enquiry page URL. If empty, the action opens the apartment details page." },
+    detailsMode: { type: ControlType.Enum, title: "Apartment details", options: ["preview", "hover", "off"], optionTitles: ["Preview", "Hover", "Off"], defaultValue: "preview", description: "Preview shows real JSON data with a trial apartment selector. Hover waits for a selected apartment ID from the future masks. Off hides the apartment workspace." },
     detailsLanguage: { type: ControlType.Enum, title: "Details language", options: ["hu", "en"], optionTitles: ["Magyar", "English"], defaultValue: "hu", hidden: p => p.detailsMode === "off" },
-    detailsBottom: { type: ControlType.Number, title: "Details bottom", defaultValue: 32, min: 0, max: 160, step: 1, unit: "px", hidden: p => p.detailsMode === "off" },
-    detailsInset: { type: ControlType.Number, title: "Details margin", defaultValue: 48, min: 0, max: 120, step: 1, unit: "px", hidden: p => p.detailsMode === "off" },
-    apartmentPreview: { type: ControlType.Object, title: "Sample apartment", hidden: p => p.detailsMode !== undefined && p.detailsMode !== "preview", controls: {
+    detailsBottom: { type: ControlType.Number, title: "Details bottom", defaultValue: 32, min: 0, max: 160, step: 1, unit: "px", hidden: p => p.detailsMode === "off" || p.orbitLayout !== "classic" },
+    detailsInset: { type: ControlType.Number, title: "Details margin", defaultValue: 48, min: 0, max: 120, step: 1, unit: "px", hidden: p => p.detailsMode === "off" || p.orbitLayout !== "classic" },
+    apartmentPreview: { type: ControlType.Object, title: "Sample apartment", hidden: p => p.orbitLayout !== "classic" || p.detailsMode !== undefined && p.detailsMode !== "preview", controls: {
         number: { type: ControlType.String, title: "Apartment", defaultValue: "A.204" },
         area: { type: ControlType.Number, title: "Area", defaultValue: 66.4, min: 0, max: 500, step: .1, unit: "m²" },
         terrace: { type: ControlType.Number, title: "Terrace", defaultValue: 12.8, min: 0, max: 500, step: .1, unit: "m²" },
@@ -2410,7 +2998,7 @@ function createOrbitPlayer(options: OrbitOptions) {
     }
 
     function onEscape(event: KeyboardEvent) {
-        if (event.key === "Escape" && !event.defaultPrevented && active && visible && !document.hidden) pauseInternal(false);
+        if (event.key === "Escape" && !event.defaultPrevented && !ignored(event.target) && active && visible && !document.hidden) pauseInternal(false);
     }
 
     async function activate(frame = startFrame, restoration?: OrbitRestoration) {

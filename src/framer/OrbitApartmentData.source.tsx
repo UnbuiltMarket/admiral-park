@@ -1,0 +1,187 @@
+// Canonical apartment JSON adapter. Inlined into the standalone Framer component.
+type OrbitApartmentStatus = "available" | "under_negotiation" | "reserved" | "sold" | "unknown"
+interface OrbitApartmentImage {
+    thumbnail?: string
+    full: string
+    label?: string
+    isIllustrative?: boolean
+    original?: string
+}
+interface OrbitApartmentRecord {
+    id: string
+    name: string
+    building: string
+    floor: number | null
+    floorLabel: string | null
+    rooms: number | null
+    bedrooms: number | null
+    layoutLabel: string | null
+    orientation: string | null
+    areaInterior: number | null
+    areaTerrace: number | null
+    areaGarden: number | null
+    price: number | null
+    currency: string
+    priceIncludesVat: boolean | null
+    status: OrbitApartmentStatus
+    statusLabel: string | null
+    apartmentType: string | null
+    floorplan: string | null
+    note: string | null
+    media?: {
+        floorplan?: OrbitApartmentImage
+        floorLayout?: OrbitApartmentImage
+        datasheet?: { url: string; filename?: string; label?: string; page?: number }
+    }
+}
+interface OrbitApartmentDimensions { width: number; height: number }
+interface OrbitApartmentViewBox { x: number; y: number; width: number; height: number }
+interface OrbitApartmentDataset {
+    schemaVersion: string
+    project: {
+        id: string; name: string; city?: string | null; locale?: string; currency?: string; areaUnit?: string
+        availabilityAsOf?: string | null; priceDefinition?: string
+    }
+    apartments: OrbitApartmentRecord[]
+    roomLayouts: Record<string, { imageDimensions: OrbitApartmentDimensions; viewBox: OrbitApartmentViewBox }>
+}
+interface OrbitApartmentPlan {
+    url: string
+    aspect: number
+    viewBox: OrbitApartmentViewBox
+    dimensions: OrbitApartmentDimensions
+    isIllustrative: boolean
+    label: string
+}
+
+function parseOrbitApartmentDataset(value: unknown): OrbitApartmentDataset {
+    const object = (input: unknown): Record<string, unknown> | null => input !== null && typeof input === "object" && !Array.isArray(input) ? input as Record<string, unknown> : null
+    const text = (input: unknown, maximum = 512): string | null => typeof input === "string" && input.trim() ? input.trim().slice(0, maximum) : null
+    const number = (input: unknown, field: string): number | null => {
+        if (input === null || input === undefined) return null
+        if (typeof input !== "number" || !Number.isFinite(input) || input < 0) throw new Error(`Invalid apartment ${field}.`)
+        return input
+    }
+    const image = (input: unknown): OrbitApartmentImage | undefined => {
+        const entry = object(input), full = text(entry?.full, 4096)
+        if (!entry || !full) return undefined
+        return { full, ...(text(entry.thumbnail, 4096) ? { thumbnail: text(entry.thumbnail, 4096)! } : {}),
+            ...(text(entry.original, 4096) ? { original: text(entry.original, 4096)! } : {}),
+            ...(text(entry.label) ? { label: text(entry.label)! } : {}),
+            ...(typeof entry.isIllustrative === "boolean" ? { isIllustrative: entry.isIllustrative } : {}) }
+    }
+    const input = object(value)
+    if (!input || !Array.isArray(input.apartments) || input.apartments.length < 1 || input.apartments.length > 10000) throw new Error("Apartment JSON must contain an apartment list.")
+    const ids = new Set<string>(), statuses = new Set<OrbitApartmentStatus>(["available", "under_negotiation", "reserved", "sold", "unknown"])
+    const apartments = input.apartments.map((candidate): OrbitApartmentRecord => {
+        const apartment = object(candidate), id = text(apartment?.id, 128)
+        if (!apartment || !id || !/^[A-Za-z0-9._-]+$/.test(id) || ids.has(id)) throw new Error("Apartment JSON contains an invalid or repeated apartment ID.")
+        ids.add(id)
+        const status = text(apartment.status, 64) as OrbitApartmentStatus | null
+        if (!status || !statuses.has(status)) throw new Error(`Invalid availability for apartment ${id}.`)
+        const floor = number(apartment.floor, "floor")
+        if (floor !== null && !Number.isSafeInteger(floor)) throw new Error(`Invalid floor for apartment ${id}.`)
+        const price = number(apartment.price, "price")
+        if (price !== null && !Number.isSafeInteger(price)) throw new Error(`Invalid price for apartment ${id}.`)
+        const sourceMedia = object(apartment.media), plan = image(sourceMedia?.floorplan), floorLayout = image(sourceMedia?.floorLayout)
+        const sourceSheet = object(sourceMedia?.datasheet), sheetUrl = text(sourceSheet?.url, 4096)
+        const media = { ...(plan ? { floorplan: plan } : {}), ...(floorLayout ? { floorLayout } : {}),
+            ...(sheetUrl ? { datasheet: { url: sheetUrl, ...(text(sourceSheet?.filename) ? { filename: text(sourceSheet?.filename)! } : {}),
+                ...(text(sourceSheet?.label) ? { label: text(sourceSheet?.label)! } : {}),
+                ...(typeof sourceSheet?.page === "number" && Number.isSafeInteger(sourceSheet.page) && sourceSheet.page > 0 ? { page: sourceSheet.page } : {}) } } : {}) }
+        return { id, name: text(apartment.name) || id, building: text(apartment.building, 64) || "", floor,
+            floorLabel: text(apartment.floorLabel), rooms: number(apartment.rooms, "rooms"), bedrooms: number(apartment.bedrooms, "bedrooms"),
+            layoutLabel: text(apartment.layoutLabel), orientation: text(apartment.orientation),
+            areaInterior: number(apartment.areaInterior, "interior area"), areaTerrace: number(apartment.areaTerrace, "balcony area"), areaGarden: number(apartment.areaGarden, "garden area"),
+            price, currency: text(apartment.currency, 12) || "HUF", priceIncludesVat: typeof apartment.priceIncludesVat === "boolean" ? apartment.priceIncludesVat : null,
+            status, statusLabel: text(apartment.statusLabel), apartmentType: text(apartment.apartmentType, 64), floorplan: text(apartment.floorplan, 4096),
+            note: text(apartment.note, 2048), ...(Object.keys(media).length ? { media } : {}) }
+    })
+    const roomLayouts: OrbitApartmentDataset["roomLayouts"] = {}
+    const layouts = object(input.roomLayouts)
+    for (const [key, candidate] of Object.entries(layouts || {})) {
+        if (!/^[A-Za-z0-9_-]{1,64}$/.test(key) || key === "__proto__" || key === "constructor" || key === "prototype") continue
+        const layout = object(candidate), sourceDimensions = object(layout?.imageDimensions), sourceBox = object(layout?.viewBox)
+        if (!layout || !sourceDimensions || !sourceBox) continue
+        const width = number(sourceDimensions.width, "drawing width"), height = number(sourceDimensions.height, "drawing height")
+        const x = number(sourceBox.x, "drawing crop"), y = number(sourceBox.y, "drawing crop"), cropWidth = number(sourceBox.width, "drawing crop"), cropHeight = number(sourceBox.height, "drawing crop")
+        if (width === null || height === null || width <= 0 || height <= 0 || x === null || y === null || cropWidth === null || cropHeight === null || cropWidth <= 0 || cropHeight <= 0 || x + cropWidth > 1.000001 || y + cropHeight > 1.000001) throw new Error(`Invalid drawing dimensions for type ${key}.`)
+        roomLayouts[key] = { imageDimensions: { width, height }, viewBox: { x, y, width: cropWidth, height: cropHeight } }
+    }
+    const sourceProject = object(input.project)
+    return { schemaVersion: text(input.schemaVersion, 64) || "1.0", apartments, roomLayouts,
+        project: { id: text(sourceProject?.id, 128) || "admiral-park", name: text(sourceProject?.name) || "Admiral Park",
+            ...(text(sourceProject?.city) ? { city: text(sourceProject?.city)! } : {}), ...(text(sourceProject?.locale, 32) ? { locale: text(sourceProject?.locale, 32)! } : {}),
+            ...(text(sourceProject?.currency, 12) ? { currency: text(sourceProject?.currency, 12)! } : {}), ...(text(sourceProject?.areaUnit, 12) ? { areaUnit: text(sourceProject?.areaUnit, 12)! } : {}),
+            availabilityAsOf: text(sourceProject?.availabilityAsOf, 32), ...(text(sourceProject?.priceDefinition) ? { priceDefinition: text(sourceProject?.priceDefinition)! } : {}) } }
+}
+
+function orbitApartmentAssetUrl(path: unknown, base: string): string | null {
+    if (typeof path !== "string" || !path.trim()) return null
+    const value = path.trim()
+    try {
+        if (/^[a-z][a-z\d+.-]*:/i.test(value)) {
+            const direct = new URL(value)
+            return direct.protocol === "http:" || direct.protocol === "https:" ? direct.href : null
+        }
+        const documentBase = typeof document !== "undefined" ? document.baseURI : "https://admiralpark.hu/"
+        const assetBase = new URL(base || documentBase, documentBase)
+        if (assetBase.protocol !== "http:" && assetBase.protocol !== "https:") return null
+        if (base && !assetBase.pathname.endsWith("/")) assetBase.pathname += "/"
+        const resolved = new URL(value.replace(/^\.?\/?assets\//, ""), assetBase)
+        return resolved.protocol === "http:" || resolved.protocol === "https:" ? resolved.href : null
+    } catch { return null }
+}
+
+function orbitApartmentPlan(record: OrbitApartmentRecord, dataset: OrbitApartmentDataset, base: string, view: "floorplan" | "floorLayout" = "floorplan"): OrbitApartmentPlan | null {
+    const source = view === "floorLayout" ? record.media?.floorLayout : record.media?.floorplan
+    const url = orbitApartmentAssetUrl(source?.full || (view === "floorplan" ? record.floorplan : null), base)
+    if (!url) return null
+    const layout = view === "floorplan" && record.apartmentType ? dataset.roomLayouts[record.apartmentType] : null
+    const dimensions = layout?.imageDimensions || (view === "floorLayout" ? { width: 2560, height: 1600 } : { width: 1500, height: 2000 })
+    const viewBox = layout?.viewBox || { x: 0, y: 0, width: 1, height: 1 }
+    return { url, aspect: dimensions.width * viewBox.width / (dimensions.height * viewBox.height), dimensions, viewBox,
+        isIllustrative: view === "floorplan" && source?.isIllustrative !== false,
+        label: source?.label || (view === "floorLayout" ? "Szintrajz" : "Alaprajz · illusztráció") }
+}
+
+const orbitApartmentRequests = new Map<string, Promise<OrbitApartmentDataset>>()
+function orbitApartmentRequestUrl(value: string): string | null {
+    if (!value.trim()) return null
+    try {
+        const url = new URL(value.trim(), typeof document !== "undefined" ? document.baseURI : "https://admiralpark.hu/")
+        return url.protocol === "http:" || url.protocol === "https:" ? url.href : null
+    } catch { return null }
+}
+function requestOrbitApartmentDataset(url: string): Promise<OrbitApartmentDataset> {
+    const previous = orbitApartmentRequests.get(url)
+    if (previous) return previous
+    const request = fetch(url, { mode: "cors", credentials: "omit", headers: { Accept: "application/json" } }).then(response => {
+        if (!response.ok) throw new Error(`Apartment data could not be loaded (${response.status}).`)
+        return response.json()
+    }).then(parseOrbitApartmentDataset).catch(error => {
+        if (orbitApartmentRequests.get(url) === request) orbitApartmentRequests.delete(url)
+        throw error
+    })
+    orbitApartmentRequests.set(url, request)
+    return request
+}
+function useOrbitApartments(url: string, enabled: boolean): { dataset: OrbitApartmentDataset | null; status: "idle" | "loading" | "ready" | "error"; error: string; retry: () => void } {
+    const [attempt, setAttempt] = React.useState(0)
+    const [state, setState] = React.useState<{ url: string; dataset: OrbitApartmentDataset | null; status: "idle" | "loading" | "ready" | "error"; error: string }>({ url: "", dataset: null, status: "idle", error: "" })
+    const resolved = orbitApartmentRequestUrl(url)
+    React.useEffect(() => {
+        if (!enabled) return
+        if (!resolved) { setState({ url: url.trim(), dataset: null, status: "error", error: "Set a valid apartment JSON address." }); return }
+        let active = true
+        setState(previous => previous.url === resolved && previous.dataset ? previous : { url: resolved, dataset: null, status: "loading", error: "" })
+        requestOrbitApartmentDataset(resolved).then(dataset => { if (active) setState({ url: resolved, dataset, status: "ready", error: "" }) }, error => {
+            if (active) setState({ url: resolved, dataset: null, status: "error", error: error instanceof Error ? error.message : "Apartment data could not be loaded." })
+        })
+        return () => { active = false }
+    }, [resolved, url, enabled, attempt])
+    const retry = React.useCallback(() => { setAttempt(value => value + 1) }, [])
+    if (!enabled) return { dataset: state.url === resolved ? state.dataset : null, status: "idle", error: "", retry }
+    if (state.url !== (resolved || url.trim())) return { dataset: null, status: "loading", error: "", retry }
+    return { dataset: state.dataset, status: state.status, error: state.error, retry }
+}

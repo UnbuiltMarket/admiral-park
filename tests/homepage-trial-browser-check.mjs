@@ -19,16 +19,31 @@ const dom=await readFile(path.join(path.dirname(requireDev.resolve('react-dom/pa
 const heroes=await Promise.all(Array.from({length:65},(_,i)=>readFile(new URL('assets/images/AVIF 30_1920x1010 DESKTOP HERO SEQUENCE/'+encodeURIComponent(`raw sequence${String(i).padStart(2,'0')}.avif`),root))));
 const connections=await Promise.all(Array.from({length:73},(_,i)=>readFile(new URL('assets/images/SEQ_02_V01/'+encodeURIComponent(`02 sequence${String(i).padStart(2,'0')} copy.avif`),root))));
 const orbits=await Promise.all(Array.from({length:120},(_,i)=>readFile(new URL('assets/ORBIT PICKER/BEAUTY sequence_Desktop/'+encodeURIComponent(`adjusted sequence${String(i).padStart(4,'0')} copy.avif`),root))));
+const apartmentMediaRoot=process.env.APARTMENT_MEDIA_ROOT||'G:/Egyéb számítógépek/Saját számítógép/UMA_visual/01_Projektek/2026-06-04_Balatonfüred/13_Repostory Admiral Park/assets/apartment-list';
 const browser=await chromium.launch({headless:true,channel:process.env.PLAYWRIGHT_CHANNEL||'chrome'}),results=[];
 const pause=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 
 async function fixture(options={}){
  const context=await browser.newContext({viewport:{width:1200,height:800},...options.context});
- const page=await context.newPage(),errors=[],heroRequests=[],connectionRequests=[],orbitRequests=[],floorplanRequests=[];
- let failIndex=options.failOrbit,corruptIndex=options.corruptOrbit,failConnection=options.failConnection,corruptConnection=options.corruptConnection;
+ const page=await context.newPage(),errors=[],heroRequests=[],connectionRequests=[],orbitRequests=[],floorplanRequests=[],apartmentRequests=[],apartmentMediaRequests=[];
+ let failIndex=options.failOrbit,corruptIndex=options.corruptOrbit,failConnection=options.failConnection,corruptConnection=options.corruptConnection,failApartment=!!options.failApartment;
  page.on('pageerror',error=>errors.push(error.message));
  await page.route('http://homepage.test/**',async route=>{
   const url=new URL(route.request().url()),pathname=decodeURIComponent(url.pathname);
+  if(pathname==='/apartments.json'){
+   apartmentRequests.push(pathname);
+   if(options.delayApartment)await pause(options.delayApartment);
+   if(failApartment)return route.fulfill({status:503,body:'Deliberate apartment data outage'});
+   const body=options.apartmentPayload===undefined?await readFile(new URL('data/apartments.json',root),'utf8'):JSON.stringify(options.apartmentPayload);
+   return route.fulfill({contentType:'application/json',body});
+  }
+  if(pathname.startsWith('/apartment-assets/')){
+   apartmentMediaRequests.push(pathname);
+   const relative=pathname.slice('/apartment-assets/'.length).replace(/^assets\//,'');
+   assert.ok(!relative.split('/').includes('..'),'Apartment media route stays inside the read-only media directory');
+   const file=path.join(apartmentMediaRoot,relative),extension=path.extname(file).toLowerCase(),contentType={'.webp':'image/webp','.png':'image/png','.svg':'image/svg+xml','.woff2':'font/woff2','.pdf':'application/pdf'}[extension]||'application/octet-stream';
+   try{return route.fulfill({contentType,body:await readFile(file)});}catch(error){if(error.code!=='ENOENT')throw error;return route.fulfill({status:404,body:'Missing local studio media'});}
+  }
   if(pathname==='/floorplan.svg'){
    floorplanRequests.push(pathname);
    if(options.brokenFloorplan)return route.fulfill({status:404,body:'Missing trial floorplan'});
@@ -102,7 +117,7 @@ async function fixture(options={}){
   const Intro=module.exports[storyAliases?'BalatonfuredContent':'OpeningContent'](Frame),Building=module.exports[storyAliases?'AranyhidContent':'BuildingContent'](Frame),CTA=module.exports.ArrivalCTA(Frame);
   const Stories=storyOverlays?Array.from({length:8},(_,index)=>module.exports[`OrbitView${index+1}`](Frame)):[];
   window.component=module.exports.default;
-  window.props={useGitHubAssets:publicMode,heroBaseUrl:'http://homepage.test/hero',connectionBaseUrl:'http://homepage.test/connection',connectionDuration:.6,orbitBaseUrl:'http://homepage.test/orbit',orbitStartFrame:0,detailsMode:'off',snapDuration:.3,phoneImageWidth:80,...props};
+  window.props={orbitLayout:'classic',useGitHubAssets:publicMode,heroBaseUrl:'http://homepage.test/hero',connectionBaseUrl:'http://homepage.test/connection',connectionDuration:.6,orbitBaseUrl:'http://homepage.test/orbit',orbitStartFrame:0,detailsMode:'off',snapDuration:.3,phoneImageWidth:80,...props};
   if(useDefaultOrbitStart)delete window.props.orbitStartFrame;
   if(useDefaultPhoneWidth)delete window.props.phoneImageWidth;
   window.root=ReactDOM.createRoot(document.querySelector('#mount'));
@@ -122,7 +137,7 @@ async function fixture(options={}){
  await page.waitForSelector('[data-admiral-homepage]');
  await page.waitForFunction(()=>[...document.images].some(image=>image.naturalWidth>0));
  await page.mouse.move(450,500);
- return {context,page,errors,heroRequests,connectionRequests,orbitRequests,floorplanRequests,restoreOrbit(){failIndex=undefined;corruptIndex=undefined;},restoreConnection(){failConnection=undefined;corruptConnection=undefined;},async close(){await page.evaluate(()=>{window.releaseDecodeGates?.();window.releaseNativeDecodeGates?.();window.releaseSequenceDecodeGates?.();}).catch(()=>{});assert.deepEqual(errors,[]);await context.close();}};
+ return {context,page,errors,heroRequests,connectionRequests,orbitRequests,floorplanRequests,apartmentRequests,apartmentMediaRequests,restoreApartment(){failApartment=false;},restoreOrbit(){failIndex=undefined;corruptIndex=undefined;},restoreConnection(){failConnection=undefined;corruptConnection=undefined;},async close(){if(options.props?.orbitLayout==='studio'){await page.screenshot({path:fileURLToPath(new URL('studio-last-state.png',out))}).catch(()=>{});await writeFile(new URL('studio-last-state.json',out),JSON.stringify(await page.evaluate(()=>({root:{...document.querySelector('[data-admiral-homepage]')?.dataset},studio:{...document.querySelector('[data-orbit-studio]')?.dataset},text:document.querySelector('[data-orbit-studio]')?.innerText})).catch(()=>({})),null,2));}await page.evaluate(()=>{window.releaseDecodeGates?.();window.releaseNativeDecodeGates?.();window.releaseSequenceDecodeGates?.();}).catch(()=>{});assert.deepEqual(errors,[]);await context.close();}};
 }
 const orbitSelector='[data-admiral-orbit]';
 async function orbitData(page){return page.locator(orbitSelector).evaluate(element=>({...element.dataset}));}
@@ -216,6 +231,32 @@ function assertMonotonicFraming(samples,forward){
 }
 
 
+const studioSelector='[data-orbit-studio]';
+const studioProps={orbitLayout:'studio',orbitBackground:'#fdfbfb',apartmentDataUrl:'http://homepage.test/apartments.json',apartmentAssetBase:'http://homepage.test/apartment-assets',previewApartmentId:'A001',detailsMode:'preview',startView:'orbit',showControls:false,showViewpoints:false};
+async function waitStudio(page,id='A001'){
+ await waitOrbit(page);
+ await page.waitForFunction(id=>{const studio=document.querySelector('[data-orbit-studio]'),plan=studio?.querySelector('[data-orbit-floorplan]');return studio?.dataset.active==='true'&&studio.dataset.apartmentId===id&&plan?.complete&&plan.naturalWidth>0;},id,{timeout:20000});
+}
+async function studioGeometry(page){return page.locator(studioSelector).evaluate(studio=>{
+ const bounds=element=>{const rect=element.getBoundingClientRect();return {x:rect.x,y:rect.y,width:rect.width,height:rect.height,right:rect.right,bottom:rect.bottom};};
+ const root=studio.closest('[data-admiral-homepage]'),viewport=studio.querySelector('[data-orbit-viewport]'),plan=studio.querySelector('[data-orbit-floorplan]'),details=studio.querySelector('[data-orbit-studio-details]'),canvas=root.querySelector('canvas[data-orbit-canvas]')||[...root.querySelectorAll('canvas')].find(item=>!item.closest('[data-admiral-sequence]'));
+ const box=bounds(root),target=bounds(viewport),style=getComputedStyle(studio),pixels=[],context=canvas?.getContext('2d');
+ if(context&&canvas.width>1){for(const fy of [.3,.5,.7])for(const fx of [.3,.5,.7]){const px=(target.x-box.x+target.width*fx)/box.width*canvas.width,py=(target.y-box.y+target.height*fy)/box.height*canvas.height;pixels.push(...context.getImageData(Math.max(0,Math.min(canvas.width-1,Math.floor(px))),Math.max(0,Math.min(canvas.height-1,Math.floor(py))),1,1).data);}}
+ return {root:box,studio:bounds(studio),viewport:target,plan:bounds(studio.querySelector('[data-orbit-plan-crop]')||plan),details:details?bounds(details):null,background:style.backgroundImage,transform:style.transform,pixels,image:{x:Number(root.dataset.imageX),y:Number(root.dataset.imageY),width:Number(root.dataset.imageWidth),height:Number(root.dataset.imageHeight)},bodyOverflow:document.documentElement.scrollWidth-innerWidth,planSource:plan.currentSrc,planNaturalWidth:plan.naturalWidth};
+ });}
+function assertStudioViewport(geometry){
+ for(const [dataset,physical]of [['x','x'],['y','y'],['width','width'],['height','height']]){
+  const scale=Math.min(geometry.viewport.width/1920,geometry.viewport.height/1010),width=1920*scale,height=1010*scale;
+  const expected=physical==='x'?geometry.viewport.x-geometry.root.x+(geometry.viewport.width-width)/2:physical==='y'?geometry.viewport.y-geometry.root.y+(geometry.viewport.height-height)/2:physical==='width'?width:height;
+  assert.ok(Math.abs(geometry.image[dataset]-expected)<2,'Canvas '+dataset+' matches the visible studio image slot');
+ }
+ assert.ok(geometry.pixels.some((value,index)=>index%4!==3&&value>45),'Orbit viewport contains actual decoded image pixels');
+ assert.equal(geometry.bodyOverflow,0,'The studio has no horizontal page overflow');
+}
+async function studioField(page,name){return page.locator('[data-orbit-field="'+name+'"]').first().innerText();}
+async function apartmentSelect(page,id){await page.locator('[data-orbit-apartment-select]').selectOption(id);await waitStudio(page,id);}
+async function hoverStudioId(page,id){await page.locator('[data-admiral-homepage]').evaluate((root,id)=>root.dispatchEvent(new CustomEvent('admiral:apartment-hover',{detail:{id}})),id);await waitStudio(page,id);}
+
 const storySelector=view=>`[data-orbit-story="${view}"]`;
 async function waitStory(page,view,state='visible'){
  await page.waitForFunction(({view,state})=>document.querySelector(`[data-orbit-story="${view}"]`)?.dataset.storyState===state,{view,state},{timeout:12000});
@@ -227,6 +268,92 @@ async function assertStoryTarget(page,view){
 }
 
 try{
+ await pass('studio desktop uses a light 90vh composition with a readable cropped plan and an unoccluded orbit',async()=>{
+  for(const viewport of [{width:1440,height:900},{width:1200,height:800}]){
+   const f=await fixture({cleanFixture:true,context:{viewport},props:studioProps}),{page}=f;
+   try{
+    await waitStudio(page);const geometry=await studioGeometry(page);assertStudioViewport(geometry);
+    assert.match(geometry.background,/rgb\(253, 251, 251\)/,'The orbit studio has a light paper background');assert.ok(Math.abs(geometry.studio.height-geometry.root.height*.9)<2,'The light studio occupies 90% of the stable outer viewport');
+    assert.ok(geometry.plan.height>=300,'The selected floorplan is large enough to read on desktop');assert.ok(geometry.plan.width>=250,'The selected floorplan has useful desktop width');
+    assert.ok(geometry.planNaturalWidth>=1000,'The full selected drawing loads instead of a tiny thumbnail');assert.match(geometry.planSource,/floorplans\/types\/B\/full\.webp/);
+    assert.equal(await page.locator('[data-orbit-apartment-select] option').count(),69,'All real JSON apartments are available in the temporary preview selector');
+    assert.equal(await page.locator('[data-room-list],[data-room-marker],[data-orbit-room-list]').count(),0,'No room-by-room detail list is added to the studio');
+    await page.getByRole('button',{name:'Alaprajz nagyítása',exact:true}).click();await page.locator('[data-orbit-plan-dialog]').waitFor({state:'visible'});
+    assert.equal(Number((await orbitData(page)).orbitFrame),0,'The plan action remains clickable and cannot rotate the orbit');await page.keyboard.press('Escape');
+    await componentScreenshot(page,'studio-desktop-'+viewport.width+'.png');
+   }finally{await f.close();}
+  }
+ });
+ await pass('studio phone keeps the upright full-width orbit above a large independently scrollable plan',async()=>{
+  for(const viewport of [{width:390,height:844},{width:375,height:667}]){
+   const f=await fixture({cleanFixture:true,context:{viewport,isMobile:true,hasTouch:true,deviceScaleFactor:2},props:{...studioProps,phoneImageWidth:100}}),{page}=f;
+   try{
+    await waitStudio(page);const geometry=await studioGeometry(page);assertStudioViewport(geometry);
+    assert.equal(geometry.transform,'none','The phone layout does not rotate the scene');assert.ok(Math.abs(geometry.image.width-viewport.width)<2,'The phone image uses its entire available width');
+    assert.ok(Math.abs(geometry.image.height-viewport.width*1010/1920)<2,'The complete landscape source stays upright');assert.ok(geometry.plan.height>=279,'The phone floorplan retains a readable size inside the detail scroller: '+JSON.stringify(geometry.plan));
+    assert.ok(geometry.details.y>=geometry.viewport.bottom-2,'Apartment details start below the orbit image');
+    const scroller=page.locator('[data-orbit-studio-details]');assert.ok(await scroller.evaluate(element=>element.scrollHeight>element.clientHeight),'Details have an independent vertical scroll area on a short phone');
+    const before=await orbitData(page);await scroller.evaluate(element=>{element.scrollTop=element.scrollHeight;});await page.waitForTimeout(100);
+    const after=await orbitData(page);assert.equal(after.orbitFrame,before.orbitFrame,'Reading apartment details does not turn the orbit');
+    await page.getByRole('button',{name:'Alaprajz nagyítása',exact:true}).click();await page.locator('[data-orbit-plan-dialog]').waitFor({state:'visible'});await page.keyboard.press('Escape');
+    const cdp=await page.context().newCDPSession(page),x=geometry.viewport.x+geometry.viewport.width*.8,y=geometry.viewport.y+geometry.viewport.height*.5;
+    await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x,y}]});await cdp.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x:x-180,y}]});await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});await waitFrame(page,15);
+    await componentScreenshot(page,'studio-phone-'+viewport.width+'.png');
+   }finally{await f.close();}
+  }
+ });
+ await pass('studio short landscape phone preserves the image and readable details through rotation',async()=>{
+  for(const beginPortrait of [false,true]){
+   const f=await fixture({cleanFixture:true,context:{viewport:beginPortrait?{width:390,height:844}:{width:844,height:390},isMobile:true,hasTouch:true,deviceScaleFactor:2},props:{...studioProps,phoneImageWidth:100}}),{page}=f;
+   try{
+    await waitStudio(page);if(beginPortrait){await page.setViewportSize({width:844,height:390});await page.waitForTimeout(280);}
+    await page.waitForFunction(()=>{const viewport=document.querySelector('[data-orbit-viewport]')?.getBoundingClientRect();return viewport?.width>100&&viewport?.height>100;});
+    const geometry=await studioGeometry(page);assertStudioViewport(geometry);assert.ok(geometry.plan.height>=279,'The landscape phone keeps a readable plan inside the detail scroller');
+    const details=page.locator('[data-orbit-studio-details]');assert.ok(await details.evaluate(element=>element.scrollHeight>element.clientHeight&&/auto|scroll/.test(getComputedStyle(element).overflowY)),'Facts and large plan share a native scroller on a short landscape phone');
+    await page.getByRole('button',{name:'Alaprajz nagyítása',exact:true}).click();await page.locator('[data-orbit-plan-dialog]').waitFor({state:'visible'});await page.keyboard.press('Escape');
+    const cdp=await page.context().newCDPSession(page),x=geometry.viewport.x+geometry.viewport.width*.8,y=geometry.viewport.y+geometry.viewport.height*.5;
+    await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x,y}]});await cdp.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x:x-150,y}]});await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});await waitFrame(page,15);
+    await componentScreenshot(page,'studio-landscape-phone-844.png');await page.setViewportSize({width:390,height:844});await page.waitForTimeout(280);await waitStudio(page);
+    const portrait=await studioGeometry(page);assertStudioViewport(portrait);assert.ok(Math.abs(portrait.image.width-390)<2);assert.equal(Number((await orbitData(page)).orbitFrame),15,'Returning to portrait retains the camera viewpoint');assert.equal(await page.locator(studioSelector).getAttribute('data-apartment-id'),'A001','Rotation retains the selected apartment details');
+   }finally{await f.close();}
+  }
+ });
+ await pass('studio apartment JSON retries independently and preserves unknown facts without inventing zeroes',async()=>{
+  const f=await fixture({cleanFixture:true,failApartment:true,delayApartment:180,props:studioProps}),{page}=f;
+  try{
+   await waitOrbit(page);await page.waitForFunction(()=>document.querySelector('[data-orbit-studio]')?.dataset.status==='error');
+   assert.equal(Number((await orbitData(page)).orbitFrame),0,'A JSON outage leaves the camera and image usable');
+   f.restoreApartment();await page.getByRole('button',{name:'Újrapróbálom',exact:true}).click();await waitStudio(page);assert.ok(f.apartmentRequests.length>=2,'Retry requests the failed JSON again');
+   await apartmentSelect(page,'B105');assert.match(await studioField(page,'status'),/Elkelt|Eladva/);assert.doesNotMatch(await studioField(page,'price'),/(^|\D)0\s*Ft/,'A sold unit with a null price does not become free');
+   await apartmentSelect(page,'A201');assert.match(await studioField(page,'area'),/115[,.]66/);assert.equal(await page.locator('[data-orbit-field=rooms]').count(),0,'A missing room count is not coerced to zero');assert.doesNotMatch(await studioField(page,'garden'),/^0/,'A missing garden is not published as a zero-sized known garden');
+  }finally{await f.close();}
+ });
+ await pass('studio hover IDs switch all canonical JSON facts without resetting the orbit or losing the selected unit',async()=>{
+  const f=await fixture({cleanFixture:true,props:studioProps}),{page}=f;
+  try{
+   await waitStudio(page);const before=await orbitData(page),requests=f.orbitRequests.length;
+   await hoverStudioId(page,'A101');assert.match(await studioField(page,'status'),/Tárgyalás alatt/);assert.match(await studioField(page,'area'),/47[,.]48/);assert.match(await studioField(page,'terrace'),/11[,.]51/);assert.match((await studioField(page,'price')).replace(/\s/g,''),/159[,.]38MFt/);assert.match(await studioField(page,'orientation'),/NY/);
+   await page.mouse.move(5,5);await sendApartment(page,null);await page.waitForTimeout(160);assert.equal(await page.locator(studioSelector).getAttribute('data-apartment-id'),'A101','Leaving the building preserves the selected useful detail view');
+   await hoverStudioId(page,'B105');assert.match(await studioField(page,'status'),/Elkelt|Eladva/);assert.match(await studioField(page,'area'),/89[,.]65/);assert.match(await page.locator('[data-orbit-floorplan]').getAttribute('src'),/types\/C\/full\.webp/);
+   const after=await orbitData(page);assert.equal(after.orbitFrame,before.orbitFrame);assert.equal(after.orbitPosition,before.orbitPosition);assert.equal(after.orbitState,'checkpoint');assert.ok(f.orbitRequests.length-requests<5,'Switching apartment facts does not create a new orbit download');
+  }finally{await f.close();}
+ });
+ await pass('studio selected media tabs expansion and actions remain native and SEQ_02 arrives at the same photo geometry',async()=>{
+  const f=await fixture({cleanFixture:true,props:{...studioProps,startView:'opening',showControls:true,inquiryUrl:'/erdeklodes',duration:.5,connectionDuration:1.1}}),{page}=f;
+  try{
+   await coveredClick(page,'Skip approach');await waitStage(page,'building');await installFramingCapture(page);await coveredClick(page,'Explore building');await waitStudio(page);
+   const geometry=await studioGeometry(page);assertStudioViewport(geometry);
+   const last=await page.evaluate(()=>window.framingSamples.filter(item=>item.sequence==='SEQ_02'&&item.paintedSequence==='SEQ_02').at(-1));assert.ok(last,'The connection sequence reaches a painted final frame');
+   for(const key of ['x','y','width','height'])assert.ok(Math.abs(last[key]-geometry.image[key])<2,'SEQ_02 and the orbit share their final '+key);
+   const firstPlans=[...new Set(f.apartmentMediaRequests.filter(url=>/floorplans\/types\//.test(url)))];assert.equal(firstPlans.length,1,'Only the selected apartment type plan is downloaded');assert.match(firstPlans[0],/types\/B\/full\.webp/);assert.ok(!f.apartmentMediaRequests.some(url=>/original\.png/.test(url)),'Original production PNGs are never requested');
+   const crop=await page.locator('[data-orbit-plan-crop]').first().evaluate(element=>({width:element.clientWidth,height:element.clientHeight}));assert.ok(Math.abs(crop.width/crop.height-(1500*.9306666666666666)/(2000*.7895))<.025,'The initial B drawing uses the JSON crop instead of wasting the page margins');
+   await page.getByRole('tab',{name:'Szintrajz',exact:true}).click();await page.waitForFunction(()=>document.querySelector('[data-orbit-floorplan]')?.currentSrc.includes('/floor-layouts/00/full.webp'));await page.waitForFunction(()=>document.querySelector('[data-orbit-floorplan]')?.complete&&document.querySelector('[data-orbit-floorplan]')?.naturalWidth>0);
+   assert.equal(Number((await orbitData(page)).orbitFrame),0,'The floor-layout tab cannot trigger camera motion');await page.getByRole('tab',{name:'Alaprajz',exact:true}).click();
+   await page.getByRole('button',{name:'Alaprajz nagyítása',exact:true}).click();const dialog=page.locator('[data-orbit-plan-dialog]');await dialog.waitFor({state:'visible'});assert.ok((await dialog.boundingBox()).height>geometry.plan.height,'Expanded plan gets a larger reading area');await page.keyboard.press('Escape');
+   for(const selector of ['[data-orbit-inquiry]','[data-orbit-download]','[data-orbit-detail-link]']){const action=page.locator(selector+':visible').first();assert.ok(await action.getAttribute('href'),'Native action has a concrete destination');await action.evaluate(element=>element.addEventListener('click',event=>{event.preventDefault();window.studioActionClick=(window.studioActionClick||0)+1;},{once:true}));await action.click();}
+   assert.equal(await page.evaluate(()=>window.studioActionClick),3);await page.evaluate(()=>{Object.defineProperty(navigator,'share',{configurable:true,value:undefined});Object.defineProperty(navigator,'clipboard',{configurable:true,value:{writeText:async value=>{window.sharedStudioUrl=value;}}});});await page.getByRole('button',{name:'Megosztás',exact:false}).click();assert.match(await page.evaluate(()=>window.sharedStudioUrl),/\/lista\?apartment=A001/,'Sharing uses the selected apartment detail link');assert.equal(Number((await orbitData(page)).orbitFrame),0,'Detail actions never rotate the orbit');
+  }finally{await f.close();}
+ });
  await pass('upright full-width phone defaults ignore the old turning setting and preserve buttons and swipes',async()=>{
   for(const viewport of [{width:390,height:844},{width:375,height:667}]){
    const f=await fixture({cleanFixture:true,useDefaultPhoneWidth:true,context:{viewport,isMobile:true,hasTouch:true,deviceScaleFactor:2},props:{phoneOrbitMode:'landscape',duration:.6,connectionDuration:1.2,maxSpeed:1,snapDuration:.2,detailsMode:'preview',showViewpoints:false}}),{page}=f;

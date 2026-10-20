@@ -63,7 +63,9 @@ test('paste-in homepage registers its controls and server-renders without loadin
  vm.runInNewContext(compiled,{module,exports:module.exports,require:name=>name==='framer'?stub:requireDev(name)});
  assert.deepEqual(Object.keys(module.exports).sort(),['AranyhidContent','ArrivalCTA','BalatonfuredContent','BuildingContent','OpeningContent',...Array.from({length:8},(_,i)=>`OrbitView${i+1}`),'default'].sort());
  assert.equal(registered,module.exports.default);
- for(const key of ['startView','editorView','connectionBaseUrl','connectionDuration','checkpointCount','motionWidth','orbitMobileWidth','snapDuration','frameBlend','desktopBuffer','phoneBuffer','orbitStartFrame','detailsMode','detailsLanguage','detailsBottom','detailsInset','apartmentPreview','editorOrbitView','orbitStories','storyIn','storyOut','storyDelay','phoneFraming','phoneImageWidth','phoneImageTop',...Array.from({length:8},(_,i)=>`storyView${i+1}`)])assert.ok(controls[key],`Framer control ${key}`);
+ for(const key of ['startView','editorView','connectionBaseUrl','connectionDuration','checkpointCount','motionWidth','orbitMobileWidth','snapDuration','frameBlend','desktopBuffer','phoneBuffer','orbitStartFrame','detailsMode','detailsLanguage','detailsBottom','detailsInset','apartmentPreview','editorOrbitView','orbitStories','storyIn','storyOut','storyDelay','phoneFraming','phoneImageWidth','phoneImageTop','orbitLayout','orbitBackground','apartmentDataUrl','apartmentAssetBase','previewApartmentId','detailPageUrl','inquiryUrl',...Array.from({length:8},(_,i)=>`storyView${i+1}`)])assert.ok(controls[key],`Framer control ${key}`);
+ assert.equal(controls.orbitLayout.defaultValue,'studio');assert.deepEqual(Array.from(controls.orbitLayout.options),['studio','classic']);assert.equal(controls.orbitBackground.defaultValue,'#fdfbfb');
+ assert.equal(controls.apartmentDataUrl.defaultValue,'https://raw.githubusercontent.com/UnbuiltMarket/admiral-park/main/data/apartments.json');assert.equal(controls.apartmentAssetBase.defaultValue.replace(/\/$/,''),'https://raw.githubusercontent.com/UnbuiltMarket/admiral-park/main/assets/apartment-list');assert.equal(controls.previewApartmentId.defaultValue,'A001');assert.equal(controls.detailPageUrl.defaultValue,'/lista');assert.equal(controls.inquiryUrl.defaultValue,'');
  assert.equal(controls.duration.title,'SEQ_01 duration');assert.equal(controls.connectionDuration.title,'SEQ_02 duration');assert.equal(controls.connectionDuration.defaultValue,2.5);assert.equal(controls.connectionBaseUrl.defaultValue,'');
  assert.ok(Array.from(controls.editorView.options).includes('connection'),'Editor exposes a static connection preview');
  assert.equal(controls.snapDuration.title,'Settle time');assert.equal(controls.snapDuration.defaultValue,1.5);assert.equal(controls.snapDuration.max,10);
@@ -83,23 +85,25 @@ test('paste-in homepage registers its controls and server-renders without loadin
   assert.equal(control.controls.enterFrom.defaultValue,'bottom');assert.equal(control.controls.exitTo.defaultValue,'bottom');assert.equal(control.controls.distance.defaultValue,24);
  }
  for(const removed of ['wheelSensitivity','dragSensitivity','orbitMomentum','phoneOrbitMode'])assert.equal(controls[removed],undefined,`Obsolete speed control ${removed} is hidden`);
- const html=requireDev('react-dom/server').renderToStaticMarkup(requireDev('react').createElement(module.exports.default));
+ const html=requireDev('react-dom/server').renderToStaticMarkup(requireDev('react').createElement(module.exports.default,{orbitLayout:'classic'}));
  assert.match(html,/raw%20sequence00\.avif/);
  assert.doesNotMatch(html,/<script|<iframe|<nav|<video/);assert.doesNotMatch(html,/data-orbit-story=/,'The component does not invent or duplicate the eight native Framer content groups');
  assert.doesNotMatch(source,/hero-manifest\.json|__admiralHeroFactoriesV1|AdmiralHeroLoader/);
  assert.doesNotMatch(html,/data-homepage-scene|data-phone-rotation|aria-modal="true"/,'The mobile fallback has no rotating scene or rotation prompt');
- const oldTurnSetting=requireDev('react-dom/server').renderToStaticMarkup(requireDev('react').createElement(module.exports.default,{phoneOrbitMode:'landscape'}));
+ const studioSSR=requireDev('react-dom/server').renderToStaticMarkup(requireDev('react').createElement(module.exports.default,{editorView:'orbit'}));
+ assert.match(studioSSR,/data-orbit-studio=""/,'The default orbit preview uses the new studio');assert.match(studioSSR,/data-orbit-viewport=""/,'The default studio reserves a real orbit viewport');assert.doesNotMatch(studioSSR,/data-apartment-details/,'The classic overlay is not duplicated beneath the studio');assert.doesNotMatch(studioSSR,/data-room-list|data-room-marker/,'Room lists and markers are excluded from the orbit details design');
+ const oldTurnSetting=requireDev('react-dom/server').renderToStaticMarkup(requireDev('react').createElement(module.exports.default,{orbitLayout:'classic',phoneOrbitMode:'landscape'}));
  assert.equal(oldTurnSetting,html,'A stored Framer turning setting is safely ignored after the fallback');
- const connectionPreview=requireDev('react-dom/server').renderToStaticMarkup(requireDev('react').createElement(module.exports.default,{editorView:'connection'}));
+ const connectionPreview=requireDev('react-dom/server').renderToStaticMarkup(requireDev('react').createElement(module.exports.default,{orbitLayout:'classic',editorView:'connection'}));
  assert.match(connectionPreview,/02%20sequence36%20copy\.avif/,'Connection editor displays its middle frame');assert.match(connectionPreview,/data-homepage-stage="connection"/);
- const orbitPreview=requireDev('react-dom/server').renderToStaticMarkup(requireDev('react').createElement(module.exports.default,{editorView:'orbit'}));
+ const orbitPreview=requireDev('react-dom/server').renderToStaticMarkup(requireDev('react').createElement(module.exports.default,{orbitLayout:'classic',editorView:'orbit'}));
  assert.match(orbitPreview,/adjusted%20sequence0045%20copy\.avif/,'Editor orbit preview uses the new default fourth camera');
  assert.match(orbitPreview,/data-apartment-details/);assert.match(orbitPreview,/MINTA/);assert.match(orbitPreview,/A\.204/);
- const authoredView=requireDev('react-dom/server').renderToStaticMarkup(requireDev('react').createElement(module.exports.default,{editorView:'orbit',editorOrbitView:'2',orbitStartFrame:45}));assert.match(authoredView,/adjusted%20sequence0015%20copy\.avif/,'Static story editing can select camera 2 independently of the live entry camera');
- const englishPreview=requireDev('react-dom/server').renderToStaticMarkup(requireDev('react').createElement(module.exports.default,{editorView:'orbit',detailsLanguage:'en'}));assert.match(englishPreview,/SAMPLE/);assert.match(englishPreview,/Available/);
- const hiddenDetails=requireDev('react-dom/server').renderToStaticMarkup(requireDev('react').createElement(module.exports.default,{editorView:'orbit',detailsMode:'off'}));assert.doesNotMatch(hiddenDetails,/data-apartment-details/);
+ const authoredView=requireDev('react-dom/server').renderToStaticMarkup(requireDev('react').createElement(module.exports.default,{orbitLayout:'classic',editorView:'orbit',editorOrbitView:'2',orbitStartFrame:45}));assert.match(authoredView,/adjusted%20sequence0015%20copy\.avif/,'Static story editing can select camera 2 independently of the live entry camera');
+ const englishPreview=requireDev('react-dom/server').renderToStaticMarkup(requireDev('react').createElement(module.exports.default,{orbitLayout:'classic',editorView:'orbit',detailsLanguage:'en'}));assert.match(englishPreview,/SAMPLE/);assert.match(englishPreview,/Available/);
+ const hiddenDetails=requireDev('react-dom/server').renderToStaticMarkup(requireDev('react').createElement(module.exports.default,{orbitLayout:'classic',editorView:'orbit',detailsMode:'off'}));assert.doesNotMatch(hiddenDetails,/data-apartment-details/);
  for(const [input,expected] of [[42.7,43],[-2,0],[125,119],[NaN,45],[Infinity,45]]){
-  const preview=requireDev('react-dom/server').renderToStaticMarkup(requireDev('react').createElement(module.exports.default,{editorView:'orbit',orbitStartFrame:input}));
+  const preview=requireDev('react-dom/server').renderToStaticMarkup(requireDev('react').createElement(module.exports.default,{orbitLayout:'classic',editorView:'orbit',orbitStartFrame:input}));
   assert.ok(preview.includes(`adjusted%20sequence${String(expected).padStart(4,'0')}%20copy.avif`),`Orbit start ${String(input)} resolves to ${expected}`);
  }
 });

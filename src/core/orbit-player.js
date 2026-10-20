@@ -886,7 +886,7 @@ export function createOrbitPlayer(options) {
         }
     }
     function onEscape(event) {
-        if (event.key === "Escape" && !event.defaultPrevented && active && visible && !document.hidden)
+        if (event.key === "Escape" && !event.defaultPrevented && !ignored(event.target) && active && visible && !document.hidden)
             pauseInternal(false);
     }
     async function activate(frame = startFrame, restoration) {

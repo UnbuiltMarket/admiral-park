@@ -108,13 +108,15 @@ function createOrbitStoryOverlay(Component: ComponentType<any>, viewIndex: numbe
                 const scaleY = !initialBlock && parentBox && parent!.offsetHeight > 0 ? parentBox.height / parent!.offsetHeight : 1
                 const safeScaleX = Number.isFinite(scaleX) && scaleX > 0 ? scaleX : 1
                 const safeScaleY = Number.isFinite(scaleY) && scaleY > 0 ? scaleY : 1
-                const left = initialBlock ? rootBox.left + window.scrollX + 24 : (rootBox.left + 24 - parentBox!.left) / safeScaleX + parent!.scrollLeft - parent!.clientLeft
+                const storyLeft = channel.mobile.storyLeft ?? 24
+                const storyWidth = channel.mobile.storyWidth ?? rootBox.width - 48
+                const left = initialBlock ? rootBox.left + window.scrollX + storyLeft : (rootBox.left + storyLeft - parentBox!.left) / safeScaleX + parent!.scrollLeft - parent!.clientLeft
                 const top = initialBlock ? rootBox.top + window.scrollY + channel.mobile.storyTop : (rootBox.top + channel.mobile.storyTop - parentBox!.top) / safeScaleY + parent!.scrollTop - parent!.clientTop
                 const pixel = (value: number) => `${Math.round(value * 1000) / 1000}px`
                 set("left", pixel(left)); set("top", pixel(top))
                 set("bottom", "auto"); set("right", "auto")
                 set("boxSizing", "border-box")
-                set("width", pixel(Math.max(0, rootBox.width - 48) / safeScaleX))
+                set("width", pixel(Math.max(0, storyWidth) / safeScaleX))
                 set("minWidth", "0px"); set("maxWidth", "none"); set("minHeight", "0px")
                 set("maxHeight", pixel(Math.max(0, channel.mobile.storyMaxHeight) / safeScaleY))
                 set("overflowY", "auto"); set("overscrollBehavior", "contain"); set("touchAction", "pan-y")

@@ -687,7 +687,7 @@ export function createOrbitPlayer(options: OrbitOptions) {
     }
 
     function onEscape(event: KeyboardEvent) {
-        if (event.key === "Escape" && !event.defaultPrevented && active && visible && !document.hidden) pauseInternal(false);
+        if (event.key === "Escape" && !event.defaultPrevented && !ignored(event.target) && active && visible && !document.hidden) pauseInternal(false);
     }
 
     async function activate(frame = startFrame, restoration?: OrbitRestoration) {
