@@ -1,6 +1,26 @@
 {
-  "source": "Apartment list site snapshot",
-  "description": "List-only runtime snapshot. Apartment detail rendering is delegated to the shared Framer component.",
-  "upstreamAppSha256": "9290a561b4c4d96b6cafa8ab205b83ba285b875109d2525cb9d45b4bf85afa98",
-  "updated": "2026-10-20"
+  "schemaVersion": "2.0",
+  "sourceProject": "admiral-park",
+  "description": "Canonical list-only runtime. Apartment selection delegates to AdmiralApartmentDetailCard and reuses the loaded dataset.",
+  "updated": "2026-10-20",
+  "canonicalSources": {
+    "app.js": {
+      "sha256": "0332fcd07cefefd47be869fc09dff84f33f7f4284961a136fad7f982319924a9",
+      "bytes": 41169
+    },
+    "styles.css": {
+      "sha256": "273375ab7f91118269d1505a56fe5358aaa742a649ee2568dc72b2ade81a7f58",
+      "bytes": 32144
+    },
+    "shell.html": {
+      "sha256": "ee004e940c38e2f3f74476b3086069128b216bdb20f519d59db1ca5de31bb9d3",
+      "bytes": 4890
+    }
+  },
+  "detailRenderer": "src/shared/apartment-card/card-runtime.js",
+  "historicalOrigin": {
+    "description": "Apartment list site snapshot",
+    "upstreamAppSha256": "9290a561b4c4d96b6cafa8ab205b83ba285b875109d2525cb9d45b4bf85afa98"
+  },
+  "maintenance": "Edit these sources directly. sync-apartment-list.mjs is retired and changes no files."
 }

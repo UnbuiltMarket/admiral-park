@@ -39,16 +39,14 @@ Until the picking masks exist, open the selected unit with the floorplan thumbna
 
 **Detail card JSON** defaults to `data/apartment-details.json`. Its 69 records include the public room lists and plan markers needed by the full card. This larger dataset and the card's selected drawing are fetched on demand after the first click. The compact orbit data remains separate and small. No list rows or all-apartment thumbnails are loaded behind the card.
 
-Refresh the card data and shared presentation after changes in the apartment-list project:
+Refresh the card data from canonical JSON, edit the shared card source directly, then regenerate the Framer files:
 
 ```text
 node scripts/sync-apartment-details.mjs --source <canonical-apartments.json>
-node scripts/sync-apartment-card.mjs --source <apartment-list-project-folder>
-node scripts/sync-apartment-list.mjs --source <apartment-list-project-folder>
 node scripts/build.mjs
 ```
 
-The presentation sync records hashes and checks its adapter anchors. If the other project's source changes substantially, it stops for a code review instead of silently generating a different card. It never edits the apartment-list project. The **Details page** setting provides share-link destinations; clicking a unit opens the local card without navigating to that page.
+The shared presentation is maintained in `src/shared/apartment-card/card-runtime.js`, `card.css`, `card-shell.html` and `pdf-export.js`; see `FRAMER-SHARED-CARD.md`. The old presentation sync commands are retired and cannot overwrite these sources. Historical snapshots remain only for adapter tests. The **Details page** setting provides share-link destinations; clicking a unit opens the local card without navigating to that page.
 
 ## Future picking masks
 

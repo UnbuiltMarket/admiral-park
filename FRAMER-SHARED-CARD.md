@@ -26,7 +26,7 @@ Only `AdmiralApartmentDetailCard.tsx` needs replacing for this update if the thr
 
 Export code is included in the shared component. PDF-Lib 1.17.1 and Fontkit 1.1.1 are loaded from jsDelivr only after a download click, with pinned SHA-384 integrity hashes. The two small static Montserrat print-font subsets are also fetched only on export. No PDF renderer, print font, canvas, or per-apartment PDF is prepared on page load. No apartment data is sent to an export server. Network failures show a retryable message and never silently download the old type PDF.
 
-Maintain the renderer in `src/shared/apartment-card/pdf-export.js` and the button/snapshot handler in `card-pdf-actions.js`. The guarded extractor applies those two handler replacements, preserving the upstream design snapshot. Recreate the print fonts, if needed, with `scripts/prepare-pdf-fonts.py`; its official font source and checksum are pinned and it checks Hungarian character coverage. The existing Montserrat OFL licence applies.
+Maintain the renderer in `src/shared/apartment-card/pdf-export.js` and the active button/snapshot handlers in `card-runtime.js`. Keep their matching `card-pdf-actions.js` fixture aligned; the build reads the maintained runtime directly. Recreate the print fonts, if needed, with `scripts/prepare-pdf-fonts.py`; its official font source and checksum are pinned and it checks Hungarian character coverage. The existing Montserrat OFL licence applies.
 
 ## Data and loading
 
@@ -38,18 +38,31 @@ The card renders the selected apartment's drawings. It does not mount an invisib
 
 ## Maintain and build
 
-Generated files in `src/framer/` are the paste-ready deliverables. Edit their source templates and shared runtime, then run `node scripts/build.mjs` to regenerate all three together. Keep the shared file installed whenever updating either entry point.
+The editable source in this repository is authoritative for both Framer entry points:
 
-The separate apartment-list authoring project remains the reference for data and design. Use its canonical JSON with the projection scripts, and review the snapshot sync when bringing over design changes. Avoid repasting the older all-in-one list component from that project's output: it contains a separate copy of the detail card.
+- `src/shared/apartment-card/card-runtime.js` owns the detail markup, room interactions, loading, favourites, sharing and active PDF handlers.
+- `src/shared/apartment-card/card.css` and `card-shell.html` own the detail and media presentation.
+- `src/shared/apartment-card/pdf-export.js` owns the exported PDF. Keep the two PDF action functions in `card-pdf-actions.js` aligned with the active runtime; the canonical invariant test checks them together.
+- `src/framer/OrbitApartmentCard.source.tsx` owns the React wrapper. Both `AdmiralHomepageTrial.source.tsx` and `AdmiralApartmentList.source.tsx` import the resulting shared component.
+- `src/shared/apartment-list/app.js`, `styles.css` and `shell.html` own the list, filters, comparison and list media viewer. Apartment selection calls the shared card with the list's loaded dataset.
+
+The apartment number belongs in the same metrics row as Beltér, Erkély and optional Kert. The price label is carried by the bottom illustration note as “Bruttó vételár.”. Change these shared sources when reviewing a design update; do not copy an older all-in-one list renderer.
+
+The separate apartment-list authoring project remains a source for canonical apartment JSON. The data projection commands remain supported:
 
 ```text
 node scripts/sync-orbit-apartments.mjs --source <canonical-apartments.json>
 node scripts/sync-apartment-details.mjs --source <canonical-apartments.json>
-node scripts/sync-apartment-card.mjs --source <apartment-list-project-folder>
-node scripts/sync-apartment-list.mjs --source <apartment-list-project-folder>
 node scripts/build.mjs
+node --test tests/canonical-shared-card.test.mjs tests/shared-card-runtime.test.mjs tests/apartment-list-shared.test.mjs tests/homepage-trial.test.mjs
 ```
 
-The card sync regenerates its smaller card-only runtime and styles in the same operation. It checks the extraction before replacing files; unsupported changes in the reference source stop for review. The separate list sync regenerates its list-only runtime and styling. The shared card's edited source remains the single presentation used by both Framer entries.
+The build reads the maintained sources directly and regenerates the three paste-ready Framer files. Keep the shared file installed whenever updating either entry point. Update the source manifests when changing their listed source files.
+
+`sync-apartment-card.mjs` and `sync-apartment-list.mjs` are retired. They fail without changing files because regenerating from an old list snapshot would overwrite the shared design and PDF export. `extract-apartment-card.mjs` is a read-only historical adapter utility for tests and in-memory comparisons; its command-line entry also refuses to write.
+
+The private preview is a thin static adapter over the same shared runtime, CSS, shell and PDF renderer. In the private project, run `node scripts/sync-shared.mjs --canonical <public-checkout>` followed by `node scripts/build.mjs`. When that public checkout is available, the adapter checks the recorded source hashes and rejects stale snapshots. Make card changes in the canonical shared sources; do not edit a standalone preview card.
+
+The retained `src/shared/apartment-card/app.js`, `styles.css` and `shell.html` are historical migration fixtures used by those adapter tests. Their hashes remain pinned under `historicalSnapshots` in `source.json`; they do not define the current card and the build never consumes them. The current source hashes are recorded separately under `canonicalSources`.
 
 The former desktop studio experiment remains saved on the `orbit-apartment-studio` branch. Current development continues on `main`.

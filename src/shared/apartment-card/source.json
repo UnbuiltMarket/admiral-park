@@ -1,60 +1,62 @@
 {
-  "schemaVersion": "1.0",
-  "sourceProject": "AdmiralApartmentList",
-  "description": "Original list-view snapshots plus a guarded card-only extraction used by both Framer entries. No apartment data is embedded.",
-  "originals": {
-    "app.js": {
-      "sha256": "e9e27b340fb8b79434b1e0f9483547388112f30f0061698390c97a66e5e6015f",
-      "bytes": 63766
+  "schemaVersion": "2.0",
+  "sourceProject": "admiral-park",
+  "description": "Canonical shared detail and media card used by both the orbit homepage and apartment list. Maintain these sources directly; historical snapshots are test fixtures only.",
+  "updated": "2026-10-20",
+  "canonicalSources": {
+    "card-runtime.js": {
+      "sha256": "e1aa8258ea44496d480bc19dd22508b58867410e0bc0721fdfb3289349d1a3b3",
+      "bytes": 49496
     },
-    "styles.css": {
-      "sha256": "43a8c713e85fdde16379fcd27cd4265d997d102bfee5c539fcc790988207edfa",
-      "bytes": 63971
+    "card.css": {
+      "sha256": "2dd23df88d6cc8f420fdeb120f49967588936962bb4e946f2033aec115f78424",
+      "bytes": 40847
     },
-    "index.html": {
-      "sha256": "7ed09fd95a17cad5f24ad0736614357eca43c92a442ff8d5212526e930baa4d7",
-      "bytes": 5450
+    "card-shell.html": {
+      "sha256": "93638e8f18b7a11da371804032266ac9c76932c21baeea10fa7bfe6068308370",
+      "bytes": 250
+    },
+    "pdf-export.js": {
+      "sha256": "b9c353ebbe58b64a05073377d80ea128e71e1db20d8081dfeb93d2e6ad44a15e",
+      "bytes": 13948
+    },
+    "card-pdf-actions.js": {
+      "sha256": "9726ba72b99e54d1ad86fe632ff0c886ce7b31db4c99e1040cca27ad291acf67",
+      "bytes": 5720
     }
   },
-  "adapted": {
+  "framerWrapper": "src/framer/OrbitApartmentCard.source.tsx",
+  "generatedComponent": "src/framer/AdmiralApartmentDetailCard.tsx",
+  "historicalSnapshots": {
     "app.js": {
       "sha256": "10f0badbd5cd1f59d0481efb44ea2c6ecfa2442bbf9cdefee83ddb2132818381",
       "bytes": 64122
     },
     "styles.css": {
-      "sha256": "43a8c713e85fdde16379fcd27cd4265d997d102bfee5c539fcc790988207edfa"
+      "sha256": "43a8c713e85fdde16379fcd27cd4265d997d102bfee5c539fcc790988207edfa",
+      "bytes": 63971
     },
     "shell.html": {
-      "sha256": "84c2ec55b01fb822efcfde4999afb1c58ba74c141e6a625ee2595d6192c2d414"
+      "sha256": "84c2ec55b01fb822efcfde4999afb1c58ba74c141e6a625ee2595d6192c2d414",
+      "bytes": 4985
     }
   },
-  "adapter": {
-    "version": 3,
-    "changes": [
-      "manual mount only",
-      "runtime and font-loader names",
-      "queued apartment selection",
-      "dialog lifecycle bridge",
-      "loading and retry bridge",
-      "controller lifecycle",
-      "guarded card-only extraction",
-      "shared loaded dataset",
-      "favorites synchronization",
-      "apartment-specific PDF export actions"
-    ]
-  },
-  "cardOnly": {
-    "card-runtime.js": {
-      "sha256": "6ec8550f1c533de883b0b927b04f8cc30e8d6bafd60a64bc63d7edba71d5d84c",
-      "bytes": 49336
-    },
-    "card.css": {
-      "sha256": "fe6f476aa0882575b8de6eeab71cd3623759e5f2a7d54112f9ab307cb1889cb6",
-      "bytes": 41921
-    },
-    "card-shell.html": {
-      "sha256": "93638e8f18b7a11da371804032266ac9c76932c21baeea10fa7bfe6068308370",
-      "bytes": 250
+  "historicalUpstream": {
+    "sourceProject": "AdmiralApartmentList",
+    "originals": {
+      "app.js": {
+        "sha256": "e9e27b340fb8b79434b1e0f9483547388112f30f0061698390c97a66e5e6015f",
+        "bytes": 63766
+      },
+      "styles.css": {
+        "sha256": "43a8c713e85fdde16379fcd27cd4265d997d102bfee5c539fcc790988207edfa",
+        "bytes": 63971
+      },
+      "index.html": {
+        "sha256": "7ed09fd95a17cad5f24ad0736614357eca43c92a442ff8d5212526e930baa4d7",
+        "bytes": 5450
+      }
     }
-  }
+  },
+  "maintenance": "Do not regenerate canonical presentation from historical snapshots. sync-apartment-card.mjs and sync-apartment-list.mjs are retired; extract-apartment-card.mjs is read-only."
 }

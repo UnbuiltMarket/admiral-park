@@ -1,4 +1,4 @@
-import {readFile,writeFile} from 'node:fs/promises';
+import {readFile} from 'node:fs/promises';
 import {createHash} from 'node:crypto';
 import {pathToFileURL} from 'node:url';
 import {ts} from './tooling.mjs';
@@ -11,9 +11,10 @@ const guardedSections={
 };
 const fail=message=>{throw new Error('Apartment-card extraction requires review: '+message);};
 
-// The original project remains read-only. Accept in-memory snapshots so sync can
-// validate every adapter before replacing any checked-in generated artifact.
-export async function extractApartmentCard({runtimeSource,stylesSource,shellSource,writeOutputs=true}={}){
+// Historical migration utility for in-memory comparison and adapter tests only.
+// The snapshots are no longer the source of the directly maintained shared card.
+export async function extractApartmentCard({runtimeSource,stylesSource,shellSource,writeOutputs=false}={}){
+if(writeOutputs)throw new Error('Historical apartment-card extraction is read-only. Edit the canonical shared sources directly; see FRAMER-SHARED-CARD.md.');
 const [source,css,originalShell]=await Promise.all([
   runtimeSource??readFile(new URL('app.js',folder),'utf8'),
   stylesSource??readFile(new URL('styles.css',folder),'utf8'),
@@ -219,11 +220,9 @@ function prune(input){
 }
 const cardStyles='/* Shared detail and media card styles; list-only selectors removed. */\n'+prune(css);
 const outputs={'card-runtime.js':cardRuntime,'card.css':cardStyles,'card-shell.html':cardShell};
-if(writeOutputs)await Promise.all(Object.entries(outputs).map(([name,text])=>writeFile(new URL(name,folder),text)));
 return outputs;
 }
 
 if(process.argv[1]&&pathToFileURL(process.argv[1]).href===import.meta.url){
-  const outputs=await extractApartmentCard();
-  console.log(JSON.stringify({extracted:Object.fromEntries(Object.entries(outputs).map(([name,text])=>[name,{bytes:Buffer.byteLength(text),sha256:sha(text)}]))}));
+  throw new Error('extract-apartment-card.mjs is a read-only historical test utility and changes no files. Edit src/shared/apartment-card/ directly, then run node scripts/build.mjs. See FRAMER-SHARED-CARD.md.');
 }

@@ -25,7 +25,7 @@ async function downloadDatasheet(id,trigger) {
   const pageUrl=apartmentLink(a.id),inquiryUrl=safeUrl(config.inquiryUrl),actionUrl=new URL(inquiryUrl||pageUrl);if(inquiryUrl)actionUrl.searchParams.set('apartment',a.id);
   const snapshot={
     id:String(a.id),date:new Date(),colors,
-    metrics:[{label:'Beltér',value:area(a.areaInterior)},{label:'Erkély',value:area(a.areaTerrace)},...(a.areaGarden>0?[{label:'Kert',value:area(a.areaGarden)}]:[])],
+    metrics:[{label:'Lakásszám',value:String(a.id)},{label:'Beltér',value:area(a.areaInterior).replace('m²','m2')},{label:'Erkély',value:area(a.areaTerrace).replace('m²','m2')},...(a.areaGarden>0?[{label:'Kert',value:area(a.areaGarden).replace('m²','m2')}]:[])],
     meta:[a.apartmentType?`${a.apartmentType} típus`:null,`${a.building} épület`,floorText(a),a.orientation?`${a.orientation} tájolás`:null].filter(Boolean).join(' · '),
     documentLabel:floor?'Szintrajz':'Alaprajz',
     imageUrl:floor?.full||assetUrl(source?.original||(layout?`assets/floorplans/types/${encodeURIComponent(a.apartmentType)}/original.png`:source?.full||a.floorplan)),

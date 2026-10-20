@@ -86,7 +86,7 @@ async function createAdmiralApartmentPdf(snapshot,options) {
     // Logo uses the same SVG paths as the card's CSS mask.
     const logoDocument=new DOMParser().parseFromString(new TextDecoder().decode(logoBytes),'image/svg+xml');
     if(logoDocument.querySelector('parsererror'))throw new Error('Invalid brand SVG');
-    const vb=(logoDocument.documentElement.getAttribute('viewBox')||'0 0 1232 524').trim().split(/[\s,]+/).map(Number),logoW=188,logoScale=logoW/vb[2],logoX=rx+7,logoY=42;
+    const vb=(logoDocument.documentElement.getAttribute('viewBox')||'0 0 1232 524').trim().split(/[\s,]+/).map(Number),logoW=188,logoScale=logoW/vb[2],logoX=rx+(rw-logoW)/2,logoY=16;
     const paths=[...logoDocument.querySelectorAll('path')];
     if(paths.length&&!logoDocument.querySelector('[transform]')){
       for(const path of paths)page.drawSvgPath(path.getAttribute('d'),{x:logoX-vb[0]*logoScale,y:H-logoY+vb[1]*logoScale,scale:logoScale,color:ink});
@@ -95,9 +95,8 @@ async function createAdmiralApartmentPdf(snapshot,options) {
       const png=await new Promise(resolve=>lc.toBlob(resolve,'image/png'));if(!png)throw new Error('Logo encoding failed');
       page.drawImage(await pdf.embedPng(await png.arrayBuffer()),{x:logoX,y:H-logoY-logoW*vb[3]/vb[2],width:logoW,height:logoW*vb[3]/vb[2]});
     }
-    centered(snapshot.id,rx+rw*.77,32,40,semibold);
-    const metrics=snapshot.metrics,metricsX=rx+rw*.49,metricsW=rw*.51;
-    metrics.forEach((metric,i)=>{const cx=metricsX+metricsW*(i+.5)/metrics.length;centered(metric.label,cx,84,12,regular,muted);centered(metric.value,cx,103,fit(metric.value,metricsW/metrics.length-9,24,semibold),semibold);});
+    const metrics=snapshot.metrics,metricsX=rx,metricsW=rw;
+    metrics.forEach((metric,i)=>{const cx=metricsX+metricsW*(i+.5)/metrics.length;centered(metric.label,cx,108,11,regular,muted);centered(metric.value,cx,126,fit(metric.value,metricsW/metrics.length-9,23,semibold),semibold);});
     line(rx,160,rw);
     text(snapshot.documentLabel,28,27,10,regular);line(28,45,snapshot.documentLabel==='Alaprajz'?42:44,.9);
     right(snapshot.meta,607,28,fit(snapshot.meta,450,9),regular,muted);
@@ -143,8 +142,7 @@ async function createAdmiralApartmentPdf(snapshot,options) {
     if(maxY>515)throw new Error('The room list is too long for the export layout');
     // Match the card's price panel and gold action, with a useful PDF link.
     page.drawRectangle({x:rx,y:H-575,width:rw,height:64,color:ink,opacity:.035});
-    centered('Bruttó vételár',rx+rw/2,518,10,regular,muted);
-    centered(snapshot.price,rx+rw/2,535,fit(snapshot.price,rw-30,33),regular);
+    centered(snapshot.price,rx+rw/2,531,fit(snapshot.price,rw-30,28),regular);
     const actionTop=586,actionHeight=43;
     page.drawRectangle({x:rx+21,y:H-actionTop-actionHeight,width:rw-42,height:actionHeight,color:rgb(colors.accent)});
     page.drawCircle({x:rx+21,y:H-actionTop-actionHeight/2,size:21.5,color:rgb(colors.accent)});
@@ -154,7 +152,7 @@ async function createAdmiralApartmentPdf(snapshot,options) {
     page.node.addAnnot(actionLink);
     page.drawCircle({x:rx+8,y:H-653,size:2.2,color:rgb(colors.status)});text(snapshot.status,rx+18,646,11,regular,rgb(colors.status));
     right('admiralpark.hu',rx+rw,647,9,regular,muted);
-    text('Az alaprajz illusztráció. Bútorozatlan átadás.',9,680,7,regular,muted);
+    text('Az alaprajz illusztráció. Bútorozatlan átadás. Bruttó vételár.',9,680,7,regular,muted);
     right('Letöltve: '+new Intl.DateTimeFormat('hu-HU').format(snapshot.date),W-12,680,7,regular,muted);
     const online=pdf.context.register(pdf.context.obj({Type:'Annot',Subtype:'Link',Rect:[rx,H-664,rx+rw,H-643],Border:[0,0,0],A:{Type:'Action',S:'URI',URI:lib.PDFString.of(snapshot.pageUrl)}}));page.node.addAnnot(online);
     check();const output=await pdf.save({useObjectStreams:true});check();

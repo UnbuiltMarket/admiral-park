@@ -168,15 +168,15 @@ function detail(id) {
       <aside class="detail-sidebar" aria-label="A lakás adatai">
         <div class="detail-core">
           <div class="detail-identity"><div class="detail-brand-group"><span class="detail-logo" role="img" aria-label="Admiral Park"></span></div></div>
-          <div class="detail-area-row"><h2 class="detail-apartment-number">${esc(a.id)}</h2><dl class="detail-metrics${a.areaGarden>0?' has-garden':''}">${detailMetric('Beltér',a.areaInterior)}${detailMetric('Erkély',a.areaTerrace)}${hasNumber(a.areaGarden)&&a.areaGarden>0?detailMetric('Kert',a.areaGarden):''}</dl></div>
+          <div class="detail-area-row"><dl class="detail-metrics${a.areaGarden>0?' has-garden':''}"><div class="detail-id-metric"><dt>Lakás<wbr>szám</dt><dd><h2 class="detail-apartment-number">${esc(a.id)}</h2></dd></div>${detailMetric('Beltér',a.areaInterior)}${detailMetric('Erkély',a.areaTerrace)}${hasNumber(a.areaGarden)&&a.areaGarden>0?detailMetric('Kert',a.areaGarden):''}</dl></div>
         </div>
         <hr class="detail-divider">
         ${detailRooms(a)}
-        <div class="detail-conversion"><div class="detail-price"><span>Bruttó vételár</span><p>${hasNumber(a.price)?`<span class="price-value">${priceNumber.format(a.price/1000000)}</span> <small class="price-unit">M Ft</small>`:`<span class="price-unavailable">${esc(apartmentPrice(a))}</span>`}</p></div><div class="detail-inquiry">${inquiry(a)}</div><div class="detail-downloads detail-footer">${downloadLink(a,true)}<div class="detail-status"><span class="status-pill status-${esc(a.status)}">${esc(statusText(a))}</span></div>${shareControl(a)}</div></div>
+        <div class="detail-conversion"><div class="detail-price"><p>${hasNumber(a.price)?`<span class="price-value">${priceNumber.format(a.price/1000000)}</span> <small class="price-unit">M Ft</small>`:`<span class="price-unavailable">${esc(apartmentPrice(a))}</span>`}</p></div><div class="detail-inquiry">${inquiry(a)}</div><div class="detail-downloads detail-footer">${downloadLink(a,true)}<div class="detail-status"><span class="status-pill status-${esc(a.status)}">${esc(statusText(a))}</span></div>${shareControl(a)}</div></div>
       </aside>
       <nav class="detail-panel-nav" role="tablist" aria-label="Rajz és helyiségjegyzék">${[['plan','Rajzok'],['rooms','Helyiségek']].map(([key,label])=>`<button type="button" role="tab" id="detail-tab-${key}" data-detail-tab="${key}" aria-controls="detail-panel-${key}" aria-selected="${key==='plan'}" tabindex="${key==='plan'?0:-1}">${label}</button>`).join('')}</nav>
       <section class="detail-drawing" data-detail-panel="plan" id="detail-panel-plan" role="tabpanel" aria-labelledby="detail-tab-plan"><div class="detail-drawing-toolbar"><div class="detail-document-tabs" role="tablist" aria-label="Rajz kiválasztása"><button type="button" id="detail-document-plan-tab" role="tab" data-document-view="plan" aria-selected="true" aria-controls="detail-document-plan">Alaprajz</button>${floor?'<button type="button" id="detail-document-floor-tab" role="tab" data-document-view="floor" aria-selected="false" tabindex="-1" aria-controls="detail-document-floor">Szintrajz</button>':''}</div><div class="detail-drawing-save">${saveButton(a,true)}</div><p class="detail-unit-meta"><strong>${esc(a.apartmentType||'')}</strong> típus <span>·</span> <strong>${esc(a.building)}</strong> épület <span>·</span> ${floorMeta} <span>·</span> <strong>${esc(a.orientation||'Nincs adat')}</strong> tájolás</p></div>${detailPlan(a)}${floor?`<section class="detail-floor-plan" data-document-panel="floor" id="detail-document-floor" role="tabpanel" aria-labelledby="detail-document-floor-tab" hidden><p class="detail-section-label">${esc(floorText(a))} · A, B, C épület</p><img class="detail-floor-image" src="${esc(floor.full)}" alt="${esc(floorText(a))} szintrajza" decoding="async"><p class="detail-plan-note">${esc(a.id)} · ${esc(a.building)} épület</p></section>`:''}</section>
-    </div><p class="detail-illustration-note">Az alaprajz illusztráció. Bútorozatlan átadás.</p></div>`;
+    </div><p class="detail-illustration-note">Az alaprajz illusztráció. Bútorozatlan átadás. Bruttó vételár.</p></div>`;
   const shell=dialog.querySelector('.detail-shell');
   if(monogram)shell.style.setProperty('--detail-monogram-image',`url("${monogram.replace(/"/g,'%22')}")`);
   if(logo)shell.style.setProperty('--detail-logo-image',`url("${logo.replace(/"/g,'%22')}")`);
@@ -304,7 +304,7 @@ async function downloadDatasheet(id,trigger) {
   const pageUrl=apartmentLink(a.id),inquiryUrl=safeUrl(config.inquiryUrl),actionUrl=new URL(inquiryUrl||pageUrl);if(inquiryUrl)actionUrl.searchParams.set('apartment',a.id);
   const snapshot={
     id:String(a.id),date:new Date(),colors,
-    metrics:[{label:'Beltér',value:area(a.areaInterior)},{label:'Erkély',value:area(a.areaTerrace)},...(a.areaGarden>0?[{label:'Kert',value:area(a.areaGarden)}]:[])],
+    metrics:[{label:'Lakásszám',value:String(a.id)},{label:'Beltér',value:area(a.areaInterior).replace('m²','m2')},{label:'Erkély',value:area(a.areaTerrace).replace('m²','m2')},...(a.areaGarden>0?[{label:'Kert',value:area(a.areaGarden).replace('m²','m2')}]:[])],
     meta:[a.apartmentType?`${a.apartmentType} típus`:null,`${a.building} épület`,floorText(a),a.orientation?`${a.orientation} tájolás`:null].filter(Boolean).join(' · '),
     documentLabel:floor?'Szintrajz':'Alaprajz',
     imageUrl:floor?.full||assetUrl(source?.original||(layout?`assets/floorplans/types/${encodeURIComponent(a.apartmentType)}/original.png`:source?.full||a.floorplan)),

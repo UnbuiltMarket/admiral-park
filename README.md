@@ -1,3 +1,9 @@
+# Shared apartment list and orbit detail card
+
+The homepage and apartment list share one local `AdmiralApartmentDetailCard.tsx` in Framer. Install it alongside `AdmiralHomepageTrial.tsx` and `AdmiralApartmentList.tsx`; see [the shared-card guide](FRAMER-SHARED-CARD.md) for installation, PDF export and maintenance.
+
+Edit the canonical `src/shared/apartment-card/card-runtime.js`, `card.css`, `card-shell.html` and `pdf-export.js`, plus `src/framer/OrbitApartmentCard.source.tsx`, then build the paste-ready files. The list-only source lives in `src/shared/apartment-list/`. Both old presentation sync commands are retired and fail without changing files. Historical snapshot files are test fixtures, not current design sources.
+
 # Current installation: paste the standalone component
 
 Use **src/framer/AdmiralHeroSequence.tsx** for immediate copy-and-paste updates in Framer. Keep the existing code file and component instance to retain the native controls and overrides. The normal build generates the standalone component only. The optional hosted loader below is not installed on the site and remains on its previous release.

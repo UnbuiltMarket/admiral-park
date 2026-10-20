@@ -26,29 +26,6 @@ test('shared card actually removes list/filter/compare code and hidden list DOM'
   assert.doesNotMatch(runtime,/\$\('(?:filters|sort|results|compare-dialog|compare-tray)'\)/);
 });
 
-test('shared card preserves original detail template, room behavior and media interaction',()=>{
-  const current=functions(runtime),previous=functions(original);
-  for(const name of ['inquiry','positionInquiryNotice','detailMetric','validPlanMarkers','detailPlan','detailRooms','selectDetailPanel','selectDetailDocument','selectDetailRoomView','fitDetailRooms','paintPlanRoom','selectPlanRoom','openMedia','showMedia','updateMediaTransform','zoomMedia','shareControl','copyShareLink','copyText']){
-    assert.equal(current.get(name),previous.get(name),name+' must stay visually/functionally identical');
-  }
-  assert.equal(current.get('detail'),previous.get('detail').replace(/  if\(useUrl\)[^\n]+\n/,''),'Detail HTML is unchanged; parent controls the open apartment URL');
-  for(const selector of ['#detail-dialog .detail-layout','#detail-dialog .detail-plan-canvas','#detail-dialog .detail-footer','#detail-dialog .detail-logo','#detail-dialog .room-marker','.media-image']){
-    const escaped=selector.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
-    const pattern=new RegExp(escaped+' \\{([^}]+)\\}','g');
-    const currentRules=[...styles.matchAll(pattern)].map(match=>match[1]);
-    const previousRules=[...originalStyles.matchAll(pattern)].map(match=>match[1]);
-    assert.deepEqual(currentRules,previousRules,selector);
-  }
-  let retained=0;
-  for(const match of originalStyles.matchAll(/([^{}]+)\{([^{}]*)\}/g)){
-    const selector=match[1].trim();
-    if(!selector.startsWith('#detail-dialog'))continue;
-    assert.ok(styles.includes(selector+' {'+match[2]+'}'),'Retained exact responsive detail rule: '+selector);
-    retained++;
-  }
-  assert.ok(retained>150,'Checks the complete responsive detail stylesheet, including mobile rules');
-});
-
 function runtimeFixture(config,fetcher){
   const listeners=new Map(),elements=new Map();
   const classList={toggle(){},add(){},remove(){}};
@@ -110,11 +87,11 @@ test('shared React component remains lazy and theme changes do not rebuild the c
   assert.match(component,/style=\{\{ \.\.\.theme,/);
 });
 
-test('upstream extraction is byte-for-byte repeatable and preflights adapted behavior',async()=>{
+test('historical extraction stays deterministic, read-only and guarded without defining canonical design',async()=>{
   const extracted=await extractApartmentCard({writeOutputs:false});
-  assert.equal(extracted['card-runtime.js'],runtime);
-  assert.equal(extracted['card.css'],styles);
-  assert.equal(extracted['card-shell.html'],shell);
+  assert.deepEqual(await extractApartmentCard(),extracted);
+  await assert.rejects(extractApartmentCard({writeOutputs:true}),/read-only/);
+  assert.deepEqual([...extracted['card-shell.html'].matchAll(/id="([^"]+)"/g)].map(match=>match[1]),['detail-dialog','media-dialog','toast']);
   await assert.rejects(extractApartmentCard({runtimeSource:original.replace("if(t.hasAttribute('data-share'))", "if(t.hasAttribute('data-new-action'))"),writeOutputs:false}),/upstream click behavior changed/);
   await assert.rejects(extractApartmentCard({runtimeSource:original.replace('function detailPlan(a)', 'function changedDetailPlan(a)'),writeOutputs:false}),/missing or duplicate detailPlan/);
   await assert.rejects(extractApartmentCard({runtimeSource:original.replace('function toast(message)', 'function newUpstreamFeature(){}\nfunction toast(message)'),writeOutputs:false}),/new upstream function needs classification/);
