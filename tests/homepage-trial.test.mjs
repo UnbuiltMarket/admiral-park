@@ -115,9 +115,9 @@ test('paste-in homepage registers its controls and server-renders without loadin
  assert.match(connectionPreview,/02%20sequence36%20copy\.avif/,'Connection editor displays its middle frame');assert.match(connectionPreview,/data-homepage-stage="connection"/);
  const orbitPreview=requireDev('react-dom/server').renderToStaticMarkup(requireDev('react').createElement(module.exports.default,{orbitLayout:'classic',editorView:'orbit'}));
  assert.match(orbitPreview,/adjusted%20sequence0045%20copy\.avif/,'Editor orbit preview uses the new default fourth camera');
- assert.match(orbitPreview,/data-apartment-details/);assert.match(orbitPreview,/MINTA/);assert.match(orbitPreview,/A\.204/);
+ assert.match(orbitPreview,/data-apartment-details/);assert.doesNotMatch(orbitPreview,/MINTA|A\.204/,'Classic waits for canonical JSON instead of showing an unclickable sample');
  const authoredView=requireDev('react-dom/server').renderToStaticMarkup(requireDev('react').createElement(module.exports.default,{orbitLayout:'classic',editorView:'orbit',editorOrbitView:'2',orbitStartFrame:45}));assert.match(authoredView,/adjusted%20sequence0015%20copy\.avif/,'Static story editing can select camera 2 independently of the live entry camera');
- const englishPreview=requireDev('react-dom/server').renderToStaticMarkup(requireDev('react').createElement(module.exports.default,{orbitLayout:'classic',editorView:'orbit',detailsLanguage:'en'}));assert.match(englishPreview,/SAMPLE/);assert.match(englishPreview,/Available/);
+ const englishPreview=requireDev('react-dom/server').renderToStaticMarkup(requireDev('react').createElement(module.exports.default,{orbitLayout:'classic',editorView:'orbit',detailsLanguage:'en'}));assert.match(englishPreview,/Floor plan/);assert.doesNotMatch(englishPreview,/SAMPLE/);
  const hiddenDetails=requireDev('react-dom/server').renderToStaticMarkup(requireDev('react').createElement(module.exports.default,{orbitLayout:'classic',editorView:'orbit',detailsMode:'off'}));assert.doesNotMatch(hiddenDetails,/data-apartment-details/);
  for(const [input,expected] of [[42.7,43],[-2,0],[125,119],[NaN,45],[Infinity,45]]){
   const preview=requireDev('react-dom/server').renderToStaticMarkup(requireDev('react').createElement(module.exports.default,{orbitLayout:'classic',editorView:'orbit',orbitStartFrame:input}));

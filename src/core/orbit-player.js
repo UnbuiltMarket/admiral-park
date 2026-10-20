@@ -589,9 +589,14 @@ export function createOrbitPlayer(options) {
         return point && Number.isFinite(point.x) && Number.isFinite(point.y) ? point : { x: clientX, y: clientY };
     }
     function coveredTrialControl(x, y) {
-        return Array.from(root.querySelectorAll("[data-homepage-controls] button")).some(button => {
+        return Array.from(root.querySelectorAll("[data-homepage-controls] button, button[data-apartment-open], button[data-orbit-detail-link]")).some(button => {
+            if (button.disabled || button.getAttribute("aria-disabled") === "true" || button.closest("[inert], [hidden], [aria-hidden='true']"))
+                return false;
+            const css = getComputedStyle(button);
+            if (css.display === "none" || css.visibility === "hidden" || css.visibility === "collapse" || Number(css.opacity) === 0)
+                return false;
             const box = button.getBoundingClientRect();
-            return !button.disabled && box.width > 0 && box.height > 0 && x >= box.left && x <= box.right && y >= box.top && y <= box.bottom;
+            return box.width > 0 && box.height > 0 && x >= box.left && x <= box.right && y >= box.top && y <= box.bottom;
         });
     }
     function nestedScroll(target, deltaX, deltaY) {

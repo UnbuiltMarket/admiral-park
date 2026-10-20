@@ -35,7 +35,11 @@ The browser loads the apartment JSON once and requests the selected plan, rather
 
 Selecting an apartment opens the same native detail card used by `AdmiralApartmentList`: the full logo, large numbered floorplan, room legend, floor layout, status, price, inquiry button, PDF, favourites and sharing. Both entry points import the local `AdmiralApartmentDetailCard.tsx` file; the card is no longer copied inside the homepage or list. Its source is kept in `src/shared/apartment-card/`. No remote script loader or iframe is needed.
 
-Until the picking masks exist, open the selected unit with the floorplan thumbnail in the desktop white strip, **Lakás részletei** in the phone workspace, or **Open apartment details** in the trial controls. The card overlays the current homepage. Closing it restores the same camera and selected apartment; card interactions suspend orbit navigation.
+Until the picking masks exist, open the selected unit with the centred floorplan thumbnail in the desktop white strip, **Lakás részletei** in the phone workspace, or **Open apartment details** in the trial controls. Use **Apartment details → Preview** and choose a real **Preview apartment** ID such as `A001`. Test clicks in Framer Preview or on the published page; the editing canvas displays the composition without mounting a modal.
+
+The fullscreen bar places the apartment number, area and terrace to the left of the plan, and garden, room count and status to its right. A dark gradient fades upward behind the white information, without a solid card background. On narrow Classic views the plan remains centred above the four area/room fields. The gradient does not receive pointer events; drag and scroll still operate through the information fields, while the floorplan button remains clickable.
+
+All fullscreen layouts, including **Classic**, use the canonical JSON and the same shared detail-card opener. Passive Framer overlay frames cannot turn a floorplan click into an orbit drag; genuine navigation links and buttons above the component keep their normal actions. The card overlays the current homepage. Closing it restores the same camera and the opener's keyboard focus; card interactions suspend orbit navigation.
 
 **Detail card JSON** defaults to `data/apartment-details.json`. Its 69 records include the public room lists and plan markers needed by the full card. This larger dataset and the card's selected drawing are fetched on demand after the first click. The compact orbit data remains separate and small. No list rows or all-apartment thumbnails are loaded behind the card.
 
@@ -66,8 +70,8 @@ root.dispatchEvent(new CustomEvent("admiral:apartment-click", {
 }))
 ```
 
-The ID must match an apartment in the loaded JSON. The event is accepted only while the orbit is settled at a checkpoint. Facts and drawings are looked up from the JSON; the mask does not provide its own price, areas or availability. The last selected apartment stays visible while visitors move from the building to the drawing or actions. In **Hover** mode the preview selector is hidden; leave **Preview** selected until a real picking implementation exists.
+The ID must match an apartment in the loaded JSON. The event is accepted only while the orbit is settled at a checkpoint. Hover updates only the compact information; it never opens the card or fetches its full room-level dataset. A click opens that apartment's shared detail card. Facts and drawings are looked up from the JSON; the mask does not provide its own price, areas or availability. The last valid selection stays visible while visitors move from the facade to the floorplan, including when the mask reports empty background. **Hover** mode clears its selection when the camera moves or the pointer leaves the viewer, so an apartment from the previous viewpoint cannot reappear at the next one. The preview selector is hidden in Hover mode; leave **Preview** selected until a real picking implementation exists.
 
 ## Classic fallback
 
-Choose **Classic** for the previous orbit presentation and compact details strip. **Apartment details → Off** also disables the apartment studio. This provides a comparison without removing or changing the underlying sequence assets.
+Choose **Classic** for the previous orbit framing and compact details strip on every screen size. It keeps the real apartment data, centred floorplan and shared detail-card click behaviour. **Apartment details → Off** hides the information and disables the apartment studio. Neither setting removes or changes the underlying sequence assets.
