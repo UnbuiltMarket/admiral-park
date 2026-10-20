@@ -21,6 +21,8 @@ type ListProps = {
     colors?: Partial<typeof DEFAULT_COLORS>; detailColors?: Partial<typeof DEFAULT_DETAIL_COLORS>;
     inset?: number; style?: React.CSSProperties;
 }
+type ListPdfResult = { id: string; status: "downloaded" | "cancelled" | "error" }
+type ListPdfRequest = { id: string; token: number; trigger?: HTMLElement }
 type ListController = {
     destroy: () => void; closeApartment: () => void; refreshFavorites: () => void;
     getData: () => unknown; getState: () => Record<string, unknown>;
@@ -39,6 +41,21 @@ export default function AdmiralApartmentList(props: ListProps) {
     const [dataset, setDataset] = React.useState<unknown>(null)
     const [openId, setOpenId] = React.useState<string | null>(null)
     const [cardActivated, setCardActivated] = React.useState(false)
+    const [downloadRequest, setDownloadRequest] = React.useState<ListPdfRequest | null>(null)
+    const downloadSequence = React.useRef(0)
+    const pendingDownload = React.useRef<{id: string; token: number; resolve: (result: ListPdfResult) => void} | null>(null)
+    const completeDownload = React.useCallback((token: number, result: ListPdfResult) => {
+        const pending = pendingDownload.current
+        if (!pending || pending.token !== token) return
+        pendingDownload.current = null
+        pending.resolve(result)
+        setDownloadRequest(request => request?.token === token ? null : request)
+    }, [])
+    React.useEffect(() => () => {
+        const pending = pendingDownload.current
+        pendingDownload.current = null
+        pending?.resolve({id: pending.id, status: "cancelled"})
+    }, [])
     const palette = { ...DEFAULT_COLORS, ...colors }
     const detailPalette = { ...DEFAULT_DETAIL_COLORS, ...detailColors }
     const theme = {
@@ -63,6 +80,16 @@ export default function AdmiralApartmentList(props: ListProps) {
             onDataLoaded: (value: unknown) => setDataset(value),
             onApartmentOpen: (id: string, value: unknown) => { setDataset(value); setCardActivated(true); setOpenId(id) },
             onApartmentClose: () => setOpenId(null),
+            onApartmentDownload: (id: string, value: unknown, trigger?: HTMLElement) => {
+                const previous = pendingDownload.current
+                previous?.resolve({id: previous.id, status: "cancelled"})
+                const token = ++downloadSequence.current
+                setDataset(value); setCardActivated(true)
+                return new Promise<ListPdfResult>(resolve => {
+                    pendingDownload.current = {id, token, resolve}
+                    setDownloadRequest({id, token, trigger})
+                })
+            },
         }) as ListController
         controller.current = instance
         return () => { if (controller.current === instance) controller.current = null; instance.destroy(); shadow.replaceChildren() }
@@ -70,7 +97,7 @@ export default function AdmiralApartmentList(props: ListProps) {
     const closed = React.useCallback(() => { setOpenId(null); controller.current?.closeApartment() }, [])
     return <>
         <div ref={host} data-admiral-apartment-list="shared" data-orbit-ignore="" style={{...style, ...theme, width: "100%", height: "auto", minHeight: 240, display: "block", background: palette.background, color: palette.text}} />
-        {cardActivated && <AdmiralApartmentDetailCard openId={openId} dataUrl={sourceUrl} assetBase={assetBaseUrl} inquiryUrl={inquiryUrl} pageUrl={pageUrl} dataset={dataset} theme={theme} onOpenChange={open => { if (!open) setOpenId(null) }} onClosed={closed} />}
+        {cardActivated && <AdmiralApartmentDetailCard openId={openId} dataUrl={sourceUrl} assetBase={assetBaseUrl} inquiryUrl={inquiryUrl} pageUrl={pageUrl} dataset={dataset} theme={theme} downloadRequest={downloadRequest} onDownloadComplete={completeDownload} onOpenChange={open => { if (!open) setOpenId(null) }} onClosed={closed} />}
     </>
 }
 

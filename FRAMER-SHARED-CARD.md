@@ -18,13 +18,13 @@ The component code stays inside the Framer project. No GitHub component loader i
 
 ## Apartment PDF download
 
-The `Adatlap` button creates a one-page landscape PDF of the selected apartment's detail card. It uses the same branding, colours, cropped drawing, plan markers, room data, price and status. It no longer downloads the generic apartment-type datasheet. Files are named `Admiral-Park-A001-adatlap.pdf`, using the selected ID.
+The `Adatlap` buttons in both a list row and the detail popup create a one-page landscape PDF of the selected apartment's detail card. It uses the same branding, colours, cropped drawing, plan markers, room data, price and status. It no longer downloads the generic apartment-type datasheet. Files are named `Admiral-Park-A001-adatlap.pdf`, using the selected ID.
 
 The PDF uses the same full layout on phones and desktop, regardless of the mobile card's hidden tabs. The selected drawing tab is respected: Alaprajz exports the apartment plan; Szintrajz exports the floor layout. Numbered type-plan rooms are joined to actual areas only when their explicit `planNumber` mappings are complete. Other apartments show the type legend and actual room areas as separate columns.
 
 Text, logo paths and room markers are vectors. The drawing is compressed as a high-quality JPEG, retaining up to 1800 pixels along its longest cropped edge. Background gradients are rasterised separately. Price and availability are a snapshot at download time; the PDF includes the date and a link back to the apartment.
 
-Only `AdmiralApartmentDetailCard.tsx` needs replacing for this update if the three-file shared setup is already installed. Do not replace the list or homepage just for PDF export, and do not add a separate shared-card canvas instance.
+For the row-download and search update, replace `AdmiralApartmentDetailCard.tsx` and `AdmiralApartmentList.tsx` together. The existing homepage continues importing the same shared card. Do not add a separate shared-card canvas instance.
 
 Export code is included in the shared component. PDF-Lib 1.17.1 and Fontkit 1.1.1 are loaded from jsDelivr only after a download click, with pinned SHA-384 integrity hashes. The two small static Montserrat print-font subsets are also fetched only on export. No PDF renderer, print font, canvas, or per-apartment PDF is prepared on page load. No apartment data is sent to an export server. Network failures show a retryable message and never silently download the old type PDF.
 
@@ -34,7 +34,7 @@ Maintain the renderer in `src/shared/apartment-card/pdf-export.js` and the activ
 
 The homepage uses the small `data/apartments.json` projection for its compact information. Its first apartment click loads `data/apartment-details.json`, containing the public room lists and plan markers needed by the card. The list uses that full public dataset and passes it directly to the shared card, so opening a card from the list does not request it again.
 
-The card is initialized when an apartment is opened and reused afterward. Its code is a normal local module import; this change does not promise a separate on-demand JavaScript download. Confirm published bundle behaviour separately before adding code splitting.
+The card is initialized on the first apartment open or PDF download and reused afterward. Row downloads call its shared controller without opening the detail dialog, reusing the list's loaded dataset and current colours. Its code is a normal local module import; this change does not promise a separate on-demand JavaScript download. Confirm published bundle behaviour separately before adding code splitting.
 
 The card renders the selected apartment's drawings. It does not mount an invisible apartment list or request every apartment's thumbnails. The full plan, room legend, floor layout, status, price, inquiry, PDF, favourites and sharing remain in the shared view. Collapsed orbit information continues to omit the room list.
 
@@ -68,3 +68,7 @@ The private preview is a thin static adapter over the same shared runtime, CSS, 
 The retained `src/shared/apartment-card/app.js`, `styles.css` and `shell.html` are historical migration fixtures used by those adapter tests. Their hashes remain pinned under `historicalSnapshots` in `source.json`; they do not define the current card and the build never consumes them. The current source hashes are recorded separately under `canonicalSources`.
 
 The former desktop studio experiment remains saved on the `orbit-apartment-studio` branch. Current development continues on `main`.
+
+## Apartment search and type column
+
+Keresés shares the primary filter row with Épület, Emelet, Szobák and Elérhetőség. It searches apartment IDs, accepts partial values and ignores case, spaces, hyphens and dots. Search combines with the other filters, survives URL reloads, has a removable filter chip, and clears with Alaphelyzet. Shared apartment links omit this search. Típus is its own table column, with a visible label on compact rows.

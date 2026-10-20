@@ -51,7 +51,7 @@ const montserratFolder=assetUrl('assets/fonts/montserrat/');
 ensureAdmiralFont(montserratFolder);
 const embed = !!config.embed;
 const useUrl = !embed && !config.disableUrl;
-const filterIds = ['building','floor','rooms','status','minArea','maxArea','minPrice','maxPrice','terrace','garden','favoritesOnly'];
+const filterIds = ['search','building','floor','rooms','status','minArea','maxArea','minPrice','maxPrice','terrace','garden','favoritesOnly'];
 const checks = new Set(['terrace','garden','favoritesOnly']);
 const numericFilters = new Set(['minArea','maxArea','minPrice','maxPrice']);
 const rangeGroups = [
@@ -88,7 +88,6 @@ function readUrl() {
 function writeUrl() {
   if (!useUrl) return;
   const u = new URL(location.href);
-  u.searchParams.delete('search');
   for (const id of filterIds) { const v = state[id]; if (v !== '' && v !== false) u.searchParams.set(id, checks.has(id) ? '1' : v); else u.searchParams.delete(id); }
   if(state.sort !== 'id') u.searchParams.set('sort', state.sort); else u.searchParams.delete('sort');
   try { history.replaceState(null, '', u); } catch {}
@@ -144,7 +143,12 @@ function setupOptions(id, options) {
 }
 const byId = (id) => apartments.find(a => a.id === id);
 const hasNumber = (v) => typeof v === 'number' && Number.isFinite(v);
+function normalizeApartmentSearch(value) {
+  return String(value ?? '').normalize('NFKC').replace(/[\s.\-_–—]/g,'').toUpperCase();
+}
 function matches(a) {
+  const query=normalizeApartmentSearch(state.search);
+  if(query&&!normalizeApartmentSearch(a.id).includes(query))return false;
   if (state.building && a.building !== state.building) return false;
   if (state.floor !== '' && a.floor !== Number(state.floor)) return false;
   if (state.rooms && (state.rooms === '4+' ? !(a.rooms >= 4) : a.rooms !== Number(state.rooms))) return false;
@@ -182,13 +186,9 @@ function mediaEntries(a) {
 function previewButton(a,item) {
   return `<button class="media-preview" data-media="${esc(a.id)}" data-media-kind="${item.key}" title="${esc(item.label)}" aria-label="${esc(a.id)} – ${esc(item.name)} megnyitása: ${esc(item.label)}"><span class="preview-visual">${item.thumbnail?`<img src="${esc(item.thumbnail)}" alt="" loading="lazy" decoding="async" data-thumbnail><span class="preview-unavailable" hidden>Megnyitás</span>`:'<span class="preview-unavailable">Megnyitás</span>'}</span></button>`;
 }
-function datasheet(a) {
-  const source=a.media?.datasheet,url=assetUrl(source?.url);if(!url)return null;
-  return {url,label:typeof source.label==='string'&&source.label.trim()?source.label:'Adatlap',filename:(typeof source.filename==='string'&&source.filename.trim()?source.filename:`Admiral-Park-${a.id}-adatlap.pdf`).replace(/[\\/:*?"<>|]/g,'-')};
-}
+
 function downloadLink(a) {
-  const file=datasheet(a);if(!file)return '';
-  return `<span class="download-wrap"><a class="datasheet-link action-pill" href="${esc(file.url)}" download="${esc(file.filename)}" target="_blank" rel="noopener" data-download="${esc(a.id)}" aria-label="${esc(a.id)} – ${esc(file.label)} letöltése PDF formátumban" title="${esc(file.label)}">${downloadIcon}<span>Adatlap</span></a></span>`;
+  return `<span class="download-wrap"><button type="button" class="datasheet-link action-pill" data-download="${esc(a.id)}" aria-label="${esc(a.id)} lakás adatlapjának letöltése PDF formátumban" title="Lakásadatlap letöltése">${downloadIcon}<span>Adatlap</span></button></span>`;
 }
 function saveButton(a) { const saved=favorites.has(a.id); return `<button type="button" class="save-button ${saved?'is-saved':''}" data-save="${esc(a.id)}" aria-label="${esc(a.id)} ${saved?'eltávolítása a kedvencekből':'mentése a kedvencekhez'}" aria-pressed="${saved}">${svg('heart')}</button>`; }
 function compareToggle(a) { return `<button type="button" class="compare-toggle action-pill" data-compare="${esc(a.id)}" aria-label="${esc(a.id)} összehasonlítása" aria-pressed="${selected.has(a.id)}"><svg viewBox="0 0 20 20" width="14" height="14" fill="none" aria-hidden="true"><path d="m4 10 4 4 8-8" stroke="currentColor" stroke-width="1.2"/></svg><span>Összevetés</span></button>`; }
@@ -196,7 +196,8 @@ function row(a) {
   const media=mediaEntries(a);
   const floorplan=media.find(item=>item.key==='floorplan'),floorLayout=media.find(item=>item.key==='floorLayout');
   return `<tr class="apartment-row" data-unit="${esc(a.id)}">
-    <td class="cell-unit" data-label="Lakás"><div class="unit-summary"><div class="unit-identification"><button type="button" class="unit-id unit-open" data-detail="${esc(a.id)}" aria-label="${esc(a.id)} lakás részleteinek megnyitása" aria-haspopup="dialog">${esc(a.id)}</button></div>${floorplan?`<div class="unit-media">${previewButton(a,floorplan)}</div>`:''}<span class="unit-type" aria-label="${esc(a.apartmentType||'')} lakástípus">${esc(a.apartmentType||'')}</span></div></td>
+    <td class="cell-unit" data-label="Lakás"><div class="unit-summary"><div class="unit-identification"><button type="button" class="unit-id unit-open" data-detail="${esc(a.id)}" aria-label="${esc(a.id)} lakás részleteinek megnyitása" aria-haspopup="dialog">${esc(a.id)}</button></div>${floorplan?`<div class="unit-media">${previewButton(a,floorplan)}</div>`:''}</div></td>
+    <td class="cell-type" data-label="Típus"><span class="unit-type" aria-label="${esc(a.apartmentType||'')} lakástípus">${esc(a.apartmentType||'')}</span></td>
     <td class="cell-building" data-label="Épület">${esc(a.building)}</td>
     <td class="cell-floor" data-label="Emelet">${esc(floorText(a))}</td>
     <td class="cell-rooms" data-label="Szobák">${a.rooms == null ? `<span title="${esc(a.layoutLabel || 'Nincs adat')}">${esc(a.layoutLabel || 'Nincs adat')}</span>` : number.format(a.rooms)}</td>
@@ -210,7 +211,7 @@ function row(a) {
   </tr>`;
 }
 function renderChips() {
-  const titles = {building:'Épület',floor:'Emelet',rooms:'Szobák',status:'Státusz',minArea:'Terület ettől',maxArea:'Terület eddig',minPrice:'Ár ettől',maxPrice:'Ár eddig',terrace:'Erkély',garden:'Kert',favoritesOnly:'Kedvencek'};
+  const titles = {search:'Keresés',building:'Épület',floor:'Emelet',rooms:'Szobák',status:'Státusz',minArea:'Terület ettől',maxArea:'Terület eddig',minPrice:'Ár ettől',maxPrice:'Ár eddig',terrace:'Erkély',garden:'Kert',favoritesOnly:'Kedvencek'};
   $('filter-chips').innerHTML = filterIds.filter(id=>state[id]!=='' && state[id]!==false).map(id=>{
     let value=state[id];
     if($(id).tagName==='SELECT') value=$(id).selectedOptions[0]?.textContent||value;
@@ -230,7 +231,7 @@ function render() {
   const invalidArea = state.minArea!=='' && state.maxArea!=='' && Number(state.minArea)>Number(state.maxArea);
   const invalidPrice = state.minPrice!=='' && state.maxPrice!=='' && Number(state.minPrice)>Number(state.maxPrice);
   $('result-count').innerHTML = `<strong>${list.length}</strong> lakás${list.length===apartments.length?'':` <span class="result-total">/ ${apartments.length}</span>`}`;
-  $('results').innerHTML = list.length ? `<table class="apartment-table"><caption class="sr-only">Lakások. A nettó belső terület, az erkély és a kert külön szerepel, az árak bruttó forintárak.</caption><thead><tr><th scope="col">Lakás / típus</th><th scope="col">Épület</th><th scope="col"><button data-sort="floor">Emelet ${state.sort==='floor'?'↑':'↕'}</button></th><th scope="col" class="heading-rooms">Szobák</th><th scope="col"><button data-sort="area">Nettó alapterület ${state.sort.startsWith('area')?(state.sort.endsWith('desc')?'↓':'↑'):'↕'}</button></th><th scope="col">Erkély</th><th scope="col">Kert</th><th scope="col"><button data-sort="price">Bruttó ár ${state.sort.startsWith('price')?(state.sort.endsWith('desc')?'↓':'↑'):'↕'}</button></th><th scope="col">Státusz</th><th scope="col">Szintrajz</th><th scope="col"><span class="sr-only">Műveletek</span></th></tr></thead><tbody>${list.map(row).join('')}</tbody></table>` : `<div class="empty-state"><span class="empty-mark" aria-hidden="true">⌕</span><h2>${invalidArea||invalidPrice?'Ellenőrizze a megadott tartományt.':'Most nincs ilyen lakás.'}</h2><p>${invalidArea||invalidPrice?'A kezdőérték legyen kisebb vagy egyenlő a záróértékkel.':'Módosítsa a szűrőket, vagy nézze meg a teljes kínálatot.'}</p><button class="button-primary" data-reset>Szűrők törlése</button></div>`;
+  $('results').innerHTML = list.length ? `<table class="apartment-table"><caption class="sr-only">Lakások. A nettó belső terület, az erkély és a kert külön szerepel, az árak bruttó forintárak.</caption><thead><tr><th scope="col">Lakás</th><th scope="col">Típus</th><th scope="col">Épület</th><th scope="col"><button data-sort="floor">Emelet ${state.sort==='floor'?'↑':'↕'}</button></th><th scope="col" class="heading-rooms">Szobák</th><th scope="col"><button data-sort="area">Nettó alapterület ${state.sort.startsWith('area')?(state.sort.endsWith('desc')?'↓':'↑'):'↕'}</button></th><th scope="col">Erkély</th><th scope="col">Kert</th><th scope="col"><button data-sort="price">Bruttó ár ${state.sort.startsWith('price')?(state.sort.endsWith('desc')?'↓':'↑'):'↕'}</button></th><th scope="col">Státusz</th><th scope="col">Szintrajz</th><th scope="col"><span class="sr-only">Műveletek</span></th></tr></thead><tbody>${list.map(row).join('')}</tbody></table>` : `<div class="empty-state"><span class="empty-mark" aria-hidden="true">⌕</span><h2>${invalidArea||invalidPrice?'Ellenőrizze a megadott tartományt.':'Most nincs ilyen lakás.'}</h2><p>${invalidArea||invalidPrice?'A kezdőérték legyen kisebb vagy egyenlő a záróértékkel.':'Módosítsa a szűrőket, vagy nézze meg a teljes kínálatot.'}</p><button class="button-primary" data-reset>Szűrők törlése</button></div>`;
   $('minArea').setAttribute('aria-invalid', String(invalidArea)); $('maxArea').setAttribute('aria-invalid', String(invalidArea));
   $('minPrice').setAttribute('aria-invalid', String(invalidPrice)); $('maxPrice').setAttribute('aria-invalid', String(invalidPrice));
   renderChips(); renderTray(); writeUrl(); resizeEmbed();
@@ -350,24 +351,16 @@ function zoomMedia(action) {
   updateMediaTransform();
 }
 async function downloadDatasheet(id,trigger) {
-  const a=byId(id),file=a&&datasheet(a);if(!file||trigger.getAttribute('aria-busy')==='true')return;
-  trigger.setAttribute('aria-busy','true');trigger.setAttribute('aria-disabled','true');
+  if(!byId(id)||trigger.getAttribute("aria-busy")==="true")return;
+  trigger.setAttribute("aria-busy","true");trigger.setAttribute("aria-disabled","true");
   try {
-    const response=await fetch(file.url,{signal,credentials:'omit'});
-    if(!response.ok)throw new Error('Download unavailable');
-    const blob=await response.blob();
-    if(new TextDecoder().decode(await blob.slice(0,5).arrayBuffer())!=='%PDF-')throw new Error('Invalid PDF');
-    const url=URL.createObjectURL(blob);downloadUrls.add(url);
-    const link=document.createElement('a');link.href=url;link.download=file.filename;
-    (dialogStack.findLast(dialog=>dialog.open)?.querySelector('.dialog-inner')||root.querySelector('main')||document.body).append(link);link.click();link.remove();
-    setTimeout(()=>{URL.revokeObjectURL(url);downloadUrls.delete(url);},30000);
-    toast('Az adatlap letöltése elindult.');
+    if(typeof config.onApartmentDownload!=="function")throw new Error("Shared apartment PDF exporter unavailable");
+    await config.onApartmentDownload(id,data,trigger);
   }catch(error){
-    if(signal.aborted)return;
-    const holder=trigger.closest('.download-wrap');
-    if(holder&&!holder.querySelector('.download-fallback'))holder.insertAdjacentHTML('beforeend',`<a class="download-fallback" href="${esc(file.url)}" target="_blank" rel="noopener">PDF megnyitása ${svg('arrow')}</a>`);
-    toast('A letöltés nem indult el. A PDF külön megnyitható.');
-  }finally{trigger.removeAttribute('aria-busy');trigger.removeAttribute('aria-disabled');}
+    if(!signal.aborted)toast("Nem sikerült elkészíteni a lakás adatlapját. Próbálja újra.");
+  }finally{
+    trigger.removeAttribute("aria-busy");trigger.removeAttribute("aria-disabled");
+  }
 }
 function resizeEmbed() { if(embed) requestAnimationFrame(()=>{ parent.postMessage({type:'admiral-list-height',height:document.documentElement.scrollHeight,instance:config.instance},'*'); }); }
 

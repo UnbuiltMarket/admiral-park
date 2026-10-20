@@ -8,7 +8,12 @@ interface OrbitApartmentCardController {
     open: (id: string) => void
     close: () => void
     retry: () => unknown
+    download: (id: string, trigger?: HTMLElement) => Promise<AdmiralApartmentDownloadResult>
     dispose: () => void
+}
+export interface AdmiralApartmentDownloadResult {
+    id: string
+    status: "downloaded" | "cancelled" | "error"
 }
 export interface AdmiralApartmentDetailCardProps {
     openId: string | null
@@ -23,10 +28,13 @@ export interface AdmiralApartmentDetailCardProps {
     dataset?: unknown
     /** Shared card colour variables; updates without rebuilding the runtime. */
     theme?: React.CSSProperties
+    /** Export the selected apartment through the same PDF path, without opening it. */
+    downloadRequest?: { id: string; token: number; trigger?: HTMLElement } | null
+    onDownloadComplete?: (token: number, result: AdmiralApartmentDownloadResult) => void
 }
 
 export default function AdmiralApartmentDetailCard(props: AdmiralApartmentDetailCardProps) {
-    const { openId, dataUrl, assetBase, inquiryUrl, pageUrl, dataset, theme } = props
+    const { openId, dataUrl, assetBase, inquiryUrl, pageUrl, dataset, theme, downloadRequest } = props
     const host = React.useRef<HTMLDivElement | null>(null)
     const controller = React.useRef<OrbitApartmentCardController | null>(null)
     const noticeHost = React.useRef<HTMLDivElement | null>(null)
@@ -65,6 +73,10 @@ export default function AdmiralApartmentDetailCard(props: AdmiralApartmentDetail
         } else if (lastRequestedId.current && !closing.current) { closing.current = true; restoreFocus() }
         lastRequestedId.current = openId
     }, [openId, restoreFocus])
+
+    React.useEffect(() => {
+        if (downloadRequest) setStarted(true)
+    }, [downloadRequest])
 
     React.useEffect(() => {
         if (!started || !host.current) return
@@ -108,6 +120,8 @@ export default function AdmiralApartmentDetailCard(props: AdmiralApartmentDetail
         } catch {
             setState("error")
             setError("Nem sikerült megnyitni a lakás adatait. Próbálja újra.")
+            const request = current.current.downloadRequest
+            if (request) current.current.onDownloadComplete?.(request.token, { id: request.id, status: "error" })
             return () => { alive = false; controller.current = null; shadow.replaceChildren() }
         }
     }, [started, dataUrl, assetBase, inquiryUrl, pageUrl, dataset, restoreFocus])
@@ -116,6 +130,18 @@ export default function AdmiralApartmentDetailCard(props: AdmiralApartmentDetail
         if (openId) controller.current?.open(openId)
         else controller.current?.close()
     }, [openId, started, dataUrl, assetBase, inquiryUrl, pageUrl, dataset])
+
+    React.useEffect(() => {
+        if (!started || !downloadRequest || !controller.current) return
+        let alive = true
+        const request = downloadRequest
+        controller.current.download(request.id, request.trigger).then(result => {
+            if (alive) current.current.onDownloadComplete?.(request.token, result)
+        }).catch(() => {
+            if (alive) current.current.onDownloadComplete?.(request.token, { id: request.id, status: "error" })
+        })
+        return () => { alive = false }
+    }, [downloadRequest, started, dataUrl, assetBase, inquiryUrl, pageUrl, dataset])
 
     const close = React.useCallback(() => {
         if (closing.current) return

@@ -672,88 +672,124 @@ function mountOrbitApartmentCardRuntime(root: any = (document as any), config: a
         updateMediaTransform();
     }
     async function downloadDatasheet(id: any, trigger: any): Promise<any> {
-        const a: any = byId(id), dialog: any = $('detail-dialog');
-        if (!a || !dialog.open)
-            return;
-        if (pdfExportJob) {
-            if (pdfExportJob.id === id)
+        if (signal.aborted)
+            return ({ id, status: 'cancelled' } as any);
+        const dialog: any = $('detail-dialog');
+        const markBusy: any = (job: any): any => {
+            if (!trigger || job.triggers.has(trigger))
                 return;
-            pdfExportJob.controller.abort();
-            pdfExportJob = null;
+            const label: any = trigger.querySelector('span');
+            const previous: any = pdfTriggerOwners.get(trigger)?.triggers.get(trigger);
+            job.triggers.set(trigger, previous || ({ label, text: label?.textContent, busy: trigger.getAttribute('aria-busy'), disabled: trigger.getAttribute('aria-disabled') } as any));
+            pdfTriggerOwners.set(trigger, job);
+            trigger.setAttribute('aria-busy', 'true');
+            trigger.setAttribute('aria-disabled', 'true');
+            if (label)
+                label.textContent = 'PDF készül…';
+        };
+        if (pdfExportJob?.id === id) {
+            markBusy(pdfExportJob);
+            return pdfExportJob.promise;
         }
-        const shell: any = dialog.querySelector('.detail-shell'), computed: any = getComputedStyle(shell);
-        const colors: any = ({} as any);
-        for (const [key, property] of ([(['top', '--detail-top'] as any), (['bottom', '--detail-bottom'] as any), (['ink', '--detail-ink'] as any), (['muted', '--detail-muted'] as any), (['watermarkTop', '--detail-watermark-top'] as any), (['watermarkBottom', '--detail-watermark-bottom'] as any), (['accent', '--accent'] as any)] as any))
-            colors[key] = computed.getPropertyValue(property).trim();
-        colors.status = getComputedStyle(dialog.querySelector('.status-pill')).color;
-        const layout: any = data.roomLayouts?.[a.apartmentType], markers: any = validPlanMarkers(layout), rooms: any = Array.isArray(a.roomList) ? a.roomList : ([] as any);
-        const mapped: any = markers.length && rooms.length === markers.length && markers.every((marker: any): any => rooms.some((room: any): any => room.planNumber === marker.number));
-        const unitRows: any = rooms.map((room: any): any => (({ name: roomLabel(room.name), area: area(room.area) } as any)));
-        const typeRows: any = markers.map((marker: any): any => (({ number: marker.number, name: roomLabel(marker.name), area: mapped ? area(rooms.find((room: any): any => room.planNumber === marker.number).area) : null } as any)));
-        const roomGroups: any = markers.length ? ([({ label: mapped ? 'Típusterv · Helyiségterületek' : 'Típusterv · Számozott helyiségek', rows: typeRows } as any)] as any) : ([] as any);
-        if (!mapped || !markers.length)
-            roomGroups.push(({ label: markers.length ? 'Lakásterületek · A kiválasztott lakás adatai' : 'Helyiségterületek', rows: unitRows } as any));
-        const floor: any = dialog.querySelector('[data-document-view="floor"][aria-selected="true"]') ? mediaEntries(a).find((item: any): any => item.key === 'floorLayout') : null;
-        const view: any = layout?.viewBox || ({ x: 0, y: 0, width: 1, height: 1 } as any);
-        const validView: any = ([view.x, view.y, view.width, view.height] as any).every(hasNumber) && view.x >= 0 && view.y >= 0 && view.width > 0 && view.height > 0 && view.x + view.width <= 1.001 && view.y + view.height <= 1.001;
-        const source: any = a.media?.floorplan;
-        const pageUrl: any = apartmentLink(a.id), inquiryUrl: any = safeUrl(config.inquiryUrl), actionUrl: any = new URL(inquiryUrl || pageUrl);
-        if (inquiryUrl)
-            actionUrl.searchParams.set('apartment', a.id);
-        const snapshot: any = ({
-            id: String(a.id), date: new Date(), colors,
-            metrics: ([({ label: 'Lakásszám', value: String(a.id) } as any), ({ label: 'Beltér', value: area(a.areaInterior).replace('m²', 'm2') } as any), ({ label: 'Erkély', value: area(a.areaTerrace).replace('m²', 'm2') } as any), ...(a.areaGarden > 0 ? ([({ label: 'Kert', value: area(a.areaGarden).replace('m²', 'm2') } as any)] as any) : ([] as any))] as any),
-            meta: ([a.apartmentType ? `${a.apartmentType} típus` : null, `${a.building} épület`, floorText(a), a.orientation ? `${a.orientation} tájolás` : null] as any).filter(Boolean).join(' · '),
-            documentLabel: floor ? 'Szintrajz' : 'Alaprajz',
-            imageUrl: floor?.full || assetUrl(source?.original || (layout ? `assets/floorplans/types/${encodeURIComponent(a.apartmentType)}/original.png` : source?.full || a.floorplan)),
-            viewBox: floor || !validView ? ({ x: 0, y: 0, width: 1, height: 1 } as any) : ({ x: view.x, y: view.y, width: view.width, height: view.height } as any),
-            markers: floor ? ([] as any) : markers.map((marker: any): any => (({ number: marker.number, x: marker.x, y: marker.y } as any))),
-            roomGroups, layoutLabel: typeof a.layoutLabel === 'string' ? a.layoutLabel.replace(/hálószoba/giu, 'szoba') : hasNumber(a.rooms) ? `${number.format(a.rooms)} szoba` : '',
-            price: apartmentPrice(a), status: statusText(a), pageUrl, actionUrl: actionUrl.href, actionLabel: inquiryUrl ? 'Érdeklődöm' : 'Lakás megtekintése',
-            fontRegular: assetUrl('assets/fonts/montserrat/montserrat-pdf-regular.ttf'), fontSemibold: assetUrl('assets/fonts/montserrat/montserrat-pdf-semibold.ttf'),
-            logoUrl: assetUrl('assets/brand/admiral-park-full-logo-no-location.svg'), monogramUrl: assetUrl('assets/brand/ap-monogram.png'),
-        } as any);
-        const controller: any = new AbortController(), job: any = ({ controller, id } as any);
+        pdfExportJob?.controller.abort();
+        const controller: any = new AbortController(), job: any = ({ controller, id, fromDialog: dialog.open && dialog.dataset.apartment === id, triggers: new Map(), promise: null } as any);
         pdfExportJob = job;
+        markBusy(job);
         const abort: any = (): any => controller.abort();
         signal.addEventListener('abort', abort, ({ once: true } as any));
-        const timeout: any = setTimeout(abort, 45000), label: any = trigger.querySelector('span'), previous: any = label?.textContent;
-        trigger.setAttribute('aria-busy', 'true');
-        trigger.setAttribute('aria-disabled', 'true');
-        if (label)
-            label.textContent = 'PDF készül…';
+        const stale: any = (): any => signal.aborted || controller.signal.aborted || pdfExportJob !== job || (job.fromDialog && (!dialog.open || dialog.dataset.apartment !== id));
+        let timedOut: any = false;
+        const timeout: any = setTimeout((): any => { timedOut = true; abort(); }, 45000);
         toast('A lakás adatlapja készül…');
-        try {
-            const blob: any = await createAdmiralApartmentPdf(snapshot, ({ signal: controller.signal } as any));
-            if (signal.aborted || controller.signal.aborted || !dialog.open || dialog.dataset.apartment !== id)
-                return;
-            const url: any = URL.createObjectURL(blob);
-            downloadUrls.add(url);
-            const link: any = (document as any).createElement('a');
-            link.href = url;
-            link.download = `Admiral-Park-${String(a.id).replace(/[^A-Za-z0-9_-]/g, '-')}-adatlap.pdf`;
-            shell.append(link);
-            link.click();
-            link.remove();
-            const timer: any = setTimeout((): any => { URL.revokeObjectURL(url); downloadUrls.delete(url); pdfDownloadTimers.delete(timer); }, 30000);
-            pdfDownloadTimers.add(timer);
-            toast('A lakás adatlapjának letöltése elindult.');
-        }
-        catch (error: any) {
-            if (!signal.aborted && dialog.open && dialog.dataset.apartment === id)
+        job.promise = (async (): Promise<any> => {
+            try {
+                if (!data)
+                    await load();
+                if (stale())
+                    return ({ id, status: 'cancelled' } as any);
+                const a: any = byId(id);
+                if (!a)
+                    throw new Error('A kiválasztott lakás nem található.');
+                // A list-row download never initializes or opens the detail layout. Its theme
+                // is inherited by the closed native dialog, just as it is by an open card.
+                const shell: any = job.fromDialog ? dialog.querySelector('.detail-shell') : null, computed: any = getComputedStyle(shell || dialog);
+                const colors: any = ({} as any);
+                for (const [key, property, fallback] of ([(['top', '--detail-top', '#fdfbfb'] as any), (['bottom', '--detail-bottom', '#e4e9ec'] as any), (['ink', '--detail-ink', '#242824'] as any), (['muted', '--detail-muted', '#687074'] as any), (['watermarkTop', '--detail-watermark-top', '#f2f0f1'] as any), (['watermarkBottom', '--detail-watermark-bottom', '#d9dfe2'] as any), (['accent', '--accent', '#a38c69'] as any)] as any))
+                    colors[key] = computed.getPropertyValue(property).trim() || fallback;
+                const statusProperty: any = ({ available: '--available', sold: '--sold', under_negotiation: '--negotiating' } as any)[a.status] || '--detail-muted';
+                colors.status = job.fromDialog ? getComputedStyle(dialog.querySelector('.status-pill')).color : computed.getPropertyValue(statusProperty).trim() || (({ available: '#4f7959', sold: '#b4564f', under_negotiation: '#b28a2f' } as any)[a.status] || colors.muted);
+                const layout: any = data.roomLayouts?.[a.apartmentType], markers: any = validPlanMarkers(layout), rooms: any = Array.isArray(a.roomList) ? a.roomList : ([] as any);
+                const mapped: any = markers.length && rooms.length === markers.length && markers.every((marker: any): any => rooms.some((room: any): any => room.planNumber === marker.number));
+                const unitRows: any = rooms.map((room: any): any => (({ name: roomLabel(room.name), area: area(room.area) } as any)));
+                const typeRows: any = markers.map((marker: any): any => (({ number: marker.number, name: roomLabel(marker.name), area: mapped ? area(rooms.find((room: any): any => room.planNumber === marker.number).area) : null } as any)));
+                const roomGroups: any = markers.length ? ([({ label: mapped ? 'Típusterv · Helyiségterületek' : 'Típusterv · Számozott helyiségek', rows: typeRows } as any)] as any) : ([] as any);
+                if (!mapped || !markers.length)
+                    roomGroups.push(({ label: markers.length ? 'Lakásterületek · A kiválasztott lakás adatai' : 'Helyiségterületek', rows: unitRows } as any));
+                const floor: any = job.fromDialog && dialog.querySelector('[data-document-view="floor"][aria-selected="true"]') ? mediaEntries(a).find((item: any): any => item.key === 'floorLayout') : null;
+                const view: any = layout?.viewBox || ({ x: 0, y: 0, width: 1, height: 1 } as any);
+                const validView: any = ([view.x, view.y, view.width, view.height] as any).every(hasNumber) && view.x >= 0 && view.y >= 0 && view.width > 0 && view.height > 0 && view.x + view.width <= 1.001 && view.y + view.height <= 1.001;
+                const source: any = a.media?.floorplan;
+                const pageUrl: any = apartmentLink(a.id), inquiryUrl: any = safeUrl(config.inquiryUrl), actionUrl: any = new URL(inquiryUrl || pageUrl);
+                if (inquiryUrl)
+                    actionUrl.searchParams.set('apartment', a.id);
+                const snapshot: any = ({
+                    id: String(a.id), date: new Date(), colors,
+                    metrics: ([({ label: 'Lakásszám', value: String(a.id) } as any), ({ label: 'Beltér', value: area(a.areaInterior).replace('m²', 'm2') } as any), ({ label: 'Erkély', value: area(a.areaTerrace).replace('m²', 'm2') } as any), ...(a.areaGarden > 0 ? ([({ label: 'Kert', value: area(a.areaGarden).replace('m²', 'm2') } as any)] as any) : ([] as any))] as any),
+                    meta: ([a.apartmentType ? `${a.apartmentType} típus` : null, `${a.building} épület`, floorText(a), a.orientation ? `${a.orientation} tájolás` : null] as any).filter(Boolean).join(' · '),
+                    documentLabel: floor ? 'Szintrajz' : 'Alaprajz',
+                    imageUrl: floor?.full || assetUrl(source?.original || (layout ? `assets/floorplans/types/${encodeURIComponent(a.apartmentType)}/original.png` : source?.full || a.floorplan)),
+                    viewBox: floor || !validView ? ({ x: 0, y: 0, width: 1, height: 1 } as any) : ({ x: view.x, y: view.y, width: view.width, height: view.height } as any),
+                    markers: floor ? ([] as any) : markers.map((marker: any): any => (({ number: marker.number, x: marker.x, y: marker.y } as any))),
+                    roomGroups, layoutLabel: typeof a.layoutLabel === 'string' ? a.layoutLabel.replace(/hálószoba/giu, 'szoba') : hasNumber(a.rooms) ? `${number.format(a.rooms)} szoba` : '',
+                    price: apartmentPrice(a), status: statusText(a), pageUrl, actionUrl: actionUrl.href, actionLabel: inquiryUrl ? 'Érdeklődöm' : 'Lakás megtekintése',
+                    fontRegular: assetUrl('assets/fonts/montserrat/montserrat-pdf-regular.ttf'), fontSemibold: assetUrl('assets/fonts/montserrat/montserrat-pdf-semibold.ttf'),
+                    logoUrl: assetUrl('assets/brand/admiral-park-full-logo-no-location.svg'), monogramUrl: assetUrl('assets/brand/ap-monogram.png'),
+                } as any);
+                const blob: any = await createAdmiralApartmentPdf(snapshot, ({ signal: controller.signal } as any));
+                if (stale() && !timedOut)
+                    return ({ id, status: 'cancelled' } as any);
+                if (timedOut)
+                    throw new Error('PDF export timeout');
+                const url: any = URL.createObjectURL(blob);
+                downloadUrls.add(url);
+                const link: any = (document as any).createElement('a');
+                link.href = url;
+                link.download = `Admiral-Park-${String(a.id).replace(/[^A-Za-z0-9_-]/g, '-')}-adatlap.pdf`;
+                (shell || (document as any).body).append(link);
+                link.click();
+                link.remove();
+                const timer: any = setTimeout((): any => { URL.revokeObjectURL(url); downloadUrls.delete(url); pdfDownloadTimers.delete(timer); }, 30000);
+                pdfDownloadTimers.add(timer);
+                toast('A lakás adatlapjának letöltése elindult.');
+                return ({ id, status: 'downloaded' } as any);
+            }
+            catch (error: any) {
+                if (stale() && !timedOut)
+                    return ({ id, status: 'cancelled' } as any);
                 toast('Nem sikerült elkészíteni a PDF-et. Próbálja újra.');
-        }
-        finally {
-            clearTimeout(timeout);
-            controller.abort();
-            signal.removeEventListener('abort', abort);
-            if (pdfExportJob === job)
-                pdfExportJob = null;
-            trigger.removeAttribute('aria-busy');
-            trigger.removeAttribute('aria-disabled');
-            if (label)
-                label.textContent = previous;
-        }
+                return ({ id, status: 'error' } as any);
+            }
+            finally {
+                clearTimeout(timeout);
+                controller.abort();
+                signal.removeEventListener('abort', abort);
+                if (pdfExportJob === job)
+                    pdfExportJob = null;
+                for (const [button, previous] of job.triggers) {
+                    if (pdfTriggerOwners.get(button) !== job)
+                        continue;
+                    pdfTriggerOwners.delete(button);
+                    for (const [attribute, value] of ([(['aria-busy', previous.busy] as any), (['aria-disabled', previous.disabled] as any)] as any))
+                        if (value === null)
+                            button.removeAttribute(attribute);
+                        else
+                            button.setAttribute(attribute, value);
+                    if (previous.label)
+                        previous.label.textContent = previous.text;
+                }
+            }
+        })();
+        return job.promise;
     }
     function apartmentLink(id: any): any { const u: any = new URL(safeUrl(config.pageUrl) || location.href); for (const key of (['building', 'floor', 'rooms', 'status', 'minArea', 'maxArea', 'minPrice', 'maxPrice', 'terrace', 'garden', 'favoritesOnly', 'search', 'sort'] as any))
         u.searchParams.delete(key); u.searchParams.set('apartment', id); return u.href; }
@@ -1073,7 +1109,7 @@ function mountOrbitApartmentCardRuntime(root: any = (document as any), config: a
     }, events);
     (window as any).addEventListener('resize', (): any => { updateMediaTransform(); requestAnimationFrame(fitDetailRooms); requestAnimationFrame((): any => { positionInquiryNotice(); positionShareMenu(); }); }, events);
     let pdfExportJob: any = null;
-    const pdfDownloadTimers: any = new Set();
+    const pdfDownloadTimers: any = new Set(), pdfTriggerOwners: any = new WeakMap();
     $('detail-dialog').addEventListener('close', (): any => { pdfExportJob?.controller.abort(); pdfExportJob = null; }, events);
     signal.addEventListener('abort', (): any => { pdfExportJob?.controller.abort(); for (const timer of pdfDownloadTimers)
         clearTimeout(timer); pdfDownloadTimers.clear(); }, ({ once: true } as any));
@@ -1137,6 +1173,10 @@ function mountOrbitApartmentCardRuntime(root: any = (document as any), config: a
             requestedApartmentId = typeof id === 'string' ? id : null;
             if (!requestedApartmentId)
                 return;
+            if (pdfExportJob && pdfExportJob.id !== requestedApartmentId) {
+                pdfExportJob.controller.abort();
+                pdfExportJob = null;
+            }
             if (data) {
                 if (byId(requestedApartmentId)) {
                     config.onState?.('ready', '');
@@ -1146,8 +1186,9 @@ function mountOrbitApartmentCardRuntime(root: any = (document as any), config: a
                     config.onState?.('error', 'A kiválasztott lakás nem található.');
             }
         },
-        close() { requestedApartmentId = null; for (const dialog of ([...dialogs] as any).reverse())
+        close() { requestedApartmentId = null; pdfExportJob?.controller.abort(); pdfExportJob = null; for (const dialog of ([...dialogs] as any).reverse())
             closeDialog(dialog); },
+        download(id: any, trigger: any) { return downloadDatasheet(id, trigger); },
         retry() { return load(); },
         dispose() { lifecycle.abort(); detailResize?.disconnect(); clearTimeout(toastTimer); for (const d of ([...dialogs] as any).reverse()) {
             if (d.open)
@@ -1165,7 +1206,12 @@ interface OrbitApartmentCardController {
     open: (id: string) => void
     close: () => void
     retry: () => unknown
+    download: (id: string, trigger?: HTMLElement) => Promise<AdmiralApartmentDownloadResult>
     dispose: () => void
+}
+export interface AdmiralApartmentDownloadResult {
+    id: string
+    status: "downloaded" | "cancelled" | "error"
 }
 export interface AdmiralApartmentDetailCardProps {
     openId: string | null
@@ -1180,10 +1226,13 @@ export interface AdmiralApartmentDetailCardProps {
     dataset?: unknown
     /** Shared card colour variables; updates without rebuilding the runtime. */
     theme?: React.CSSProperties
+    /** Export the selected apartment through the same PDF path, without opening it. */
+    downloadRequest?: { id: string; token: number; trigger?: HTMLElement } | null
+    onDownloadComplete?: (token: number, result: AdmiralApartmentDownloadResult) => void
 }
 
 export default function AdmiralApartmentDetailCard(props: AdmiralApartmentDetailCardProps) {
-    const { openId, dataUrl, assetBase, inquiryUrl, pageUrl, dataset, theme } = props
+    const { openId, dataUrl, assetBase, inquiryUrl, pageUrl, dataset, theme, downloadRequest } = props
     const host = React.useRef<HTMLDivElement | null>(null)
     const controller = React.useRef<OrbitApartmentCardController | null>(null)
     const noticeHost = React.useRef<HTMLDivElement | null>(null)
@@ -1222,6 +1271,10 @@ export default function AdmiralApartmentDetailCard(props: AdmiralApartmentDetail
         } else if (lastRequestedId.current && !closing.current) { closing.current = true; restoreFocus() }
         lastRequestedId.current = openId
     }, [openId, restoreFocus])
+
+    React.useEffect(() => {
+        if (downloadRequest) setStarted(true)
+    }, [downloadRequest])
 
     React.useEffect(() => {
         if (!started || !host.current) return
@@ -1265,6 +1318,8 @@ export default function AdmiralApartmentDetailCard(props: AdmiralApartmentDetail
         } catch {
             setState("error")
             setError("Nem sikerült megnyitni a lakás adatait. Próbálja újra.")
+            const request = current.current.downloadRequest
+            if (request) current.current.onDownloadComplete?.(request.token, { id: request.id, status: "error" })
             return () => { alive = false; controller.current = null; shadow.replaceChildren() }
         }
     }, [started, dataUrl, assetBase, inquiryUrl, pageUrl, dataset, restoreFocus])
@@ -1273,6 +1328,18 @@ export default function AdmiralApartmentDetailCard(props: AdmiralApartmentDetail
         if (openId) controller.current?.open(openId)
         else controller.current?.close()
     }, [openId, started, dataUrl, assetBase, inquiryUrl, pageUrl, dataset])
+
+    React.useEffect(() => {
+        if (!started || !downloadRequest || !controller.current) return
+        let alive = true
+        const request = downloadRequest
+        controller.current.download(request.id, request.trigger).then(result => {
+            if (alive) current.current.onDownloadComplete?.(request.token, result)
+        }).catch(() => {
+            if (alive) current.current.onDownloadComplete?.(request.token, { id: request.id, status: "error" })
+        })
+        return () => { alive = false }
+    }, [downloadRequest, started, dataUrl, assetBase, inquiryUrl, pageUrl, dataset])
 
     const close = React.useCallback(() => {
         if (closing.current) return

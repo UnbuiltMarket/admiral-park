@@ -284,20 +284,44 @@ function zoomMedia(action) {
   updateMediaTransform();
 }
 async function downloadDatasheet(id,trigger) {
-  const a=byId(id),dialog=$('detail-dialog');
-  if(!a||!dialog.open)return;
-  if(pdfExportJob){if(pdfExportJob.id===id)return;pdfExportJob.controller.abort();pdfExportJob=null;}
-  const shell=dialog.querySelector('.detail-shell'),computed=getComputedStyle(shell);
+  if(signal.aborted)return {id,status:'cancelled'};
+  const dialog=$('detail-dialog');
+  const markBusy=job=>{
+    if(!trigger||job.triggers.has(trigger))return;
+    const label=trigger.querySelector('span');
+    const previous=pdfTriggerOwners.get(trigger)?.triggers.get(trigger);
+    job.triggers.set(trigger,previous||{label,text:label?.textContent,busy:trigger.getAttribute('aria-busy'),disabled:trigger.getAttribute('aria-disabled')});
+    pdfTriggerOwners.set(trigger,job);
+    trigger.setAttribute('aria-busy','true');trigger.setAttribute('aria-disabled','true');if(label)label.textContent='PDF készül…';
+  };
+  if(pdfExportJob?.id===id){markBusy(pdfExportJob);return pdfExportJob.promise;}
+  pdfExportJob?.controller.abort();
+  const controller=new AbortController(),job={controller,id,fromDialog:dialog.open&&dialog.dataset.apartment===id,triggers:new Map(),promise:null};
+  pdfExportJob=job;markBusy(job);
+  const abort=()=>controller.abort();signal.addEventListener('abort',abort,{once:true});
+  const stale=()=>signal.aborted||controller.signal.aborted||pdfExportJob!==job||(job.fromDialog&&(!dialog.open||dialog.dataset.apartment!==id));
+  let timedOut=false;
+  const timeout=setTimeout(()=>{timedOut=true;abort();},45000);
+  toast('A lakás adatlapja készül…');
+  job.promise=(async()=>{
+  try{
+  if(!data)await load();
+  if(stale())return {id,status:'cancelled'};
+  const a=byId(id);if(!a)throw new Error('A kiválasztott lakás nem található.');
+  // A list-row download never initializes or opens the detail layout. Its theme
+  // is inherited by the closed native dialog, just as it is by an open card.
+  const shell=job.fromDialog?dialog.querySelector('.detail-shell'):null,computed=getComputedStyle(shell||dialog);
   const colors={};
-  for(const [key,property] of [['top','--detail-top'],['bottom','--detail-bottom'],['ink','--detail-ink'],['muted','--detail-muted'],['watermarkTop','--detail-watermark-top'],['watermarkBottom','--detail-watermark-bottom'],['accent','--accent']])colors[key]=computed.getPropertyValue(property).trim();
-  colors.status=getComputedStyle(dialog.querySelector('.status-pill')).color;
+  for(const [key,property,fallback] of [['top','--detail-top','#fdfbfb'],['bottom','--detail-bottom','#e4e9ec'],['ink','--detail-ink','#242824'],['muted','--detail-muted','#687074'],['watermarkTop','--detail-watermark-top','#f2f0f1'],['watermarkBottom','--detail-watermark-bottom','#d9dfe2'],['accent','--accent','#a38c69']])colors[key]=computed.getPropertyValue(property).trim()||fallback;
+  const statusProperty={available:'--available',sold:'--sold',under_negotiation:'--negotiating'}[a.status]||'--detail-muted';
+  colors.status=job.fromDialog?getComputedStyle(dialog.querySelector('.status-pill')).color:computed.getPropertyValue(statusProperty).trim()||({available:'#4f7959',sold:'#b4564f',under_negotiation:'#b28a2f'}[a.status]||colors.muted);
   const layout=data.roomLayouts?.[a.apartmentType],markers=validPlanMarkers(layout),rooms=Array.isArray(a.roomList)?a.roomList:[];
   const mapped=markers.length&&rooms.length===markers.length&&markers.every(marker=>rooms.some(room=>room.planNumber===marker.number));
   const unitRows=rooms.map(room=>({name:roomLabel(room.name),area:area(room.area)}));
   const typeRows=markers.map(marker=>({number:marker.number,name:roomLabel(marker.name),area:mapped?area(rooms.find(room=>room.planNumber===marker.number).area):null}));
   const roomGroups=markers.length?[{label:mapped?'Típusterv · Helyiségterületek':'Típusterv · Számozott helyiségek',rows:typeRows}]:[];
   if(!mapped||!markers.length)roomGroups.push({label:markers.length?'Lakásterületek · A kiválasztott lakás adatai':'Helyiségterületek',rows:unitRows});
-  const floor=dialog.querySelector('[data-document-view="floor"][aria-selected="true"]')?mediaEntries(a).find(item=>item.key==='floorLayout'):null;
+  const floor=job.fromDialog&&dialog.querySelector('[data-document-view="floor"][aria-selected="true"]')?mediaEntries(a).find(item=>item.key==='floorLayout'):null;
   const view=layout?.viewBox||{x:0,y:0,width:1,height:1};
   const validView=[view.x,view.y,view.width,view.height].every(hasNumber)&&view.x>=0&&view.y>=0&&view.width>0&&view.height>0&&view.x+view.width<=1.001&&view.y+view.height<=1.001;
   const source=a.media?.floorplan;
@@ -315,25 +339,30 @@ async function downloadDatasheet(id,trigger) {
     fontRegular:assetUrl('assets/fonts/montserrat/montserrat-pdf-regular.ttf'),fontSemibold:assetUrl('assets/fonts/montserrat/montserrat-pdf-semibold.ttf'),
     logoUrl:assetUrl('assets/brand/admiral-park-full-logo-no-location.svg'),monogramUrl:assetUrl('assets/brand/ap-monogram.png'),
   };
-  const controller=new AbortController(),job={controller,id};pdfExportJob=job;
-  const abort=()=>controller.abort();signal.addEventListener('abort',abort,{once:true});
-  const timeout=setTimeout(abort,45000),label=trigger.querySelector('span'),previous=label?.textContent;
-  trigger.setAttribute('aria-busy','true');trigger.setAttribute('aria-disabled','true');if(label)label.textContent='PDF készül…';
-  toast('A lakás adatlapja készül…');
-  try{
     const blob=await createAdmiralApartmentPdf(snapshot,{signal:controller.signal});
-    if(signal.aborted||controller.signal.aborted||!dialog.open||dialog.dataset.apartment!==id)return;
+    if(stale()&&!timedOut)return {id,status:'cancelled'};
+    if(timedOut)throw new Error('PDF export timeout');
     const url=URL.createObjectURL(blob);downloadUrls.add(url);
     const link=document.createElement('a');link.href=url;link.download=`Admiral-Park-${String(a.id).replace(/[^A-Za-z0-9_-]/g,'-')}-adatlap.pdf`;
-    shell.append(link);link.click();link.remove();
+    (shell||document.body).append(link);link.click();link.remove();
     const timer=setTimeout(()=>{URL.revokeObjectURL(url);downloadUrls.delete(url);pdfDownloadTimers.delete(timer);},30000);pdfDownloadTimers.add(timer);
     toast('A lakás adatlapjának letöltése elindult.');
+    return {id,status:'downloaded'};
   }catch(error){
-    if(!signal.aborted&&dialog.open&&dialog.dataset.apartment===id)toast('Nem sikerült elkészíteni a PDF-et. Próbálja újra.');
+    if(stale()&&!timedOut)return {id,status:'cancelled'};
+    toast('Nem sikerült elkészíteni a PDF-et. Próbálja újra.');
+    return {id,status:'error'};
   }finally{
     clearTimeout(timeout);controller.abort();signal.removeEventListener('abort',abort);if(pdfExportJob===job)pdfExportJob=null;
-    trigger.removeAttribute('aria-busy');trigger.removeAttribute('aria-disabled');if(label)label.textContent=previous;
+    for(const [button,previous] of job.triggers){
+      if(pdfTriggerOwners.get(button)!==job)continue;
+      pdfTriggerOwners.delete(button);
+      for(const [attribute,value] of [['aria-busy',previous.busy],['aria-disabled',previous.disabled]])if(value===null)button.removeAttribute(attribute);else button.setAttribute(attribute,value);
+      if(previous.label)previous.label.textContent=previous.text;
+    }
   }
+  })();
+  return job.promise;
 }
 function apartmentLink(id){const u=new URL(safeUrl(config.pageUrl)||location.href);for(const key of ['building','floor','rooms','status','minArea','maxArea','minPrice','maxPrice','terrace','garden','favoritesOnly','search','sort'])u.searchParams.delete(key);u.searchParams.set('apartment',id);return u.href;}
 const sendIcon='<svg viewBox="0 0 24 24" width="21" height="21" fill="none" aria-hidden="true"><path d="m21 3-7.2 18-3.6-7.2L3 10.2 21 3Zm0 0L10.2 13.8" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/></svg>';
@@ -494,7 +523,7 @@ mediaDialog?.addEventListener('keydown',event=>{
   updateMediaTransform();
 },events);
 window.addEventListener('resize',()=>{updateMediaTransform();requestAnimationFrame(fitDetailRooms);requestAnimationFrame(()=>{positionInquiryNotice();positionShareMenu();});},events);
-let pdfExportJob=null;const pdfDownloadTimers=new Set();
+let pdfExportJob=null;const pdfDownloadTimers=new Set(),pdfTriggerOwners=new WeakMap();
 $('detail-dialog').addEventListener('close',()=>{pdfExportJob?.controller.abort();pdfExportJob=null;},events);
 signal.addEventListener('abort',()=>{pdfExportJob?.controller.abort();for(const timer of pdfDownloadTimers)clearTimeout(timer);pdfDownloadTimers.clear();},{once:true});
 let loadPromise=null;
@@ -534,9 +563,11 @@ async function load(){
 const controller={
   open(id){
     requestedApartmentId=typeof id==='string'?id:null;if(!requestedApartmentId)return;
+    if(pdfExportJob&&pdfExportJob.id!==requestedApartmentId){pdfExportJob.controller.abort();pdfExportJob=null;}
     if(data){if(byId(requestedApartmentId)){config.onState?.('ready','');detail(requestedApartmentId);}else config.onState?.('error','A kiválasztott lakás nem található.');}
   },
-  close(){requestedApartmentId=null;for(const dialog of [...dialogs].reverse())closeDialog(dialog);},
+  close(){requestedApartmentId=null;pdfExportJob?.controller.abort();pdfExportJob=null;for(const dialog of [...dialogs].reverse())closeDialog(dialog);},
+  download(id,trigger){return downloadDatasheet(id,trigger);},
   retry(){return load();},
   dispose(){lifecycle.abort();detailResize?.disconnect();clearTimeout(toastTimer);for(const d of [...dialogs].reverse()){if(d.open)d.close();modalRegistry.delete(d);}for(const url of downloadUrls)URL.revokeObjectURL(url);downloadUrls.clear();mediaView=null;syncModalState();}
 };

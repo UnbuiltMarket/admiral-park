@@ -45,12 +45,14 @@ input:focus-visible, select:focus-visible { outline-offset: 2px; }
 /* A distinct, quiet header groups the filters above the results. */
 .filter-header { padding: 20px 24px 17px; border: 1px solid var(--line); border-radius: 14px; background: var(--filter-background); }
 .filters { margin: 0; }
-.primary-filters { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 30px; }
+.primary-filters { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 30px; }
 .field { min-width: 0; }
 .field > label, .range-field legend { display: block; color: var(--muted); font-size: 10px; font-weight: 400; letter-spacing: 1.15px; line-height: 1.4; text-transform: uppercase; }
 .field > label { margin-bottom: 7px; }
-.field select { display: block; width: 100%; height: 33px; padding: 0 0 8px; border: 0; border-bottom: 1px solid var(--line); background: none; font-size: 14px; line-height: 1.5; transition: border-color .15s; }
-.field select:hover, .field select:focus { border-color: var(--accent); }
+.field select, .search-field input { display: block; width: 100%; height: 33px; padding: 0 0 8px; border: 0; border-bottom: 1px solid var(--line); background: none; font-size: 14px; line-height: 1.5; transition: border-color .15s; }
+.field select:hover, .field select:focus, .search-field input:hover, .search-field input:focus { border-color: var(--accent); }
+.search-field input { appearance: none; -webkit-appearance: none; }
+.search-field input::placeholder { color: var(--muted); opacity: .8; }
 .select-wrap { position: relative; min-width: 0; }
 .select-wrap::after { content: ''; position: absolute; right: 3px; top: 8px; width: 5px; height: 5px; border-right: 1px solid currentColor; border-bottom: 1px solid currentColor; transform: rotate(45deg); pointer-events: none; color: var(--muted); }
 .select-wrap select { appearance: none; padding-right: 23px; }
@@ -110,6 +112,7 @@ input[aria-invalid="true"] { border-color: var(--negotiating); }
 .apartment-row:hover, .apartment-row:focus-within { background: var(--hover); }
 .unit-id, .unit-type { font-family: 'Montserrat', Arial, sans-serif; font-size: 26px; font-weight: 400; letter-spacing: -.6px; line-height: 1.15; white-space: nowrap; }
 .unit-type { flex-shrink: 0; }
+.cell-type { width: 52px; }
 .unit-open { display: inline-block; padding: 0; border: 0; background: none; text-align: left; transition: color .15s; }
 .unit-open:hover { color: var(--accent); }
 .unit-summary { display: flex; align-items: center; gap: 12px; }
@@ -261,6 +264,8 @@ input[aria-invalid="true"] { border-color: var(--negotiating); }
   .apartment-table td::before { content: attr(data-label); display: block; color: var(--muted); font-size: 9px; line-height: 1.4; font-weight: 400; white-space: normal; }
   .apartment-table .cell-unit { grid-column: 1; grid-row: 1 / 3; }
   .apartment-table .cell-unit::before { display: none; }
+  .apartment-table .cell-unit { padding-right: 30px; }
+  .apartment-table .cell-type { grid-column: 1; grid-row: 1 / 3; justify-self: end; align-self: center; align-items: center; width: 28px; }
   .apartment-table .cell-building { grid-column: 2; grid-row: 1; }
   .apartment-table .cell-floor { grid-column: 3; grid-row: 1; }
   .apartment-table .cell-rooms { grid-column: 4; grid-row: 1; }
@@ -286,11 +291,14 @@ input[aria-invalid="true"] { border-color: var(--negotiating); }
 @container apartment-list (max-width: 760px) {
   .filter-header { padding: 18px 20px 15px; }
   .primary-filters { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px 24px; }
+  .search-field { grid-column: 1 / -1; }
   .range-filters { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 11px 24px; margin-top: 17px; }
   .checkbox-filters { grid-column: 1 / -1; justify-content: flex-start; gap: 20px; min-height: 25px; margin-bottom: 0; }
   .apartment-table .apartment-row { grid-template-columns: repeat(12, minmax(0, 1fr)); grid-template-rows: auto auto auto auto; column-gap: 6px; row-gap: 15px; padding: 19px 0; }
   .apartment-table td { font-size: 14px; gap: 4px; }
   .apartment-table .cell-unit { grid-column: 1 / -1; grid-row: 1; }
+  .apartment-table .cell-unit { padding-right: 42px; }
+  .apartment-table .cell-type { grid-column: 1 / -1; grid-row: 1; width: 35px; }
   .unit-summary { gap: 12px; }
   .unit-media { gap: 12px; }
   .unit-media .preview-visual { height: 90px; }

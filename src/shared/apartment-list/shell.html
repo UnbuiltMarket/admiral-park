@@ -5,6 +5,7 @@
     <button class="mobile-filter-button" id="mobile-filters" type="button" aria-expanded="false" aria-controls="filters"><svg width="17" height="17" viewBox="0 0 18 18" fill="none" aria-hidden="true"><path d="M2 5h14M2 13h14M6 2v6M12 10v6" stroke="currentColor" stroke-width="1.2"/></svg><span>Szűrés</span><span class="filter-toggle-icon" aria-hidden="true">+</span></button>
     <form id="filters" class="filters" data-open="false" aria-label="Lakások szűrése">
       <div class="primary-filters">
+        <div class="field search-field"><label for="search">Keresés</label><input id="search" name="search" type="search" placeholder="pl. A001" maxlength="48" autocomplete="off" autocapitalize="characters" spellcheck="false" aria-label="Keresés lakásszám alapján"></div>
         <div class="field"><label for="building">Épület</label><div class="select-wrap"><select id="building"><option value="">Összes épület</option></select></div></div>
         <div class="field"><label for="floor">Emelet</label><div class="select-wrap"><select id="floor"><option value="">Összes emelet</option></select></div></div>
         <div class="field"><label for="rooms">Szobák</label><div class="select-wrap"><select id="rooms"><option value="">Összes</option></select></div></div>
