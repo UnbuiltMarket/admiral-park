@@ -2,6 +2,8 @@
 
 The homepage keeps the cinematic **SEQ01 → SEQ02 → ORBIT** journey. The default **Fullscreen desktop** layout keeps the desktop orbit fullscreen and uses the light apartment workspace on phones. Apartment information is projected from the apartment detail pages' canonical JSON. It does not change or publish the Framer page automatically.
 
+The visible homepage pins the page throughout SEQ01, SEQ02, loading and orbit, on desktop and phones. Scrolling over the header reserve, information bar, buttons or empty image margins cannot move the whole page. Orbit gestures still move the camera, while long story text, apartment information panels and detail dialogs keep their own scrolling. Navigation links and pinch zoom remain native. The last visible homepage instance restores the previous page styles and scroll position when it hides or unmounts, so an inactive Framer breakpoint cannot keep another page locked.
+
 The complete desktop studio experiment is preserved on the GitHub branch [`orbit-apartment-studio`](https://github.com/UnbuiltMarket/admiral-park/tree/orbit-apartment-studio), at commit `a5d4cc4eeceae0abd50e0ea4c282589e56baf6ff`. Work continues on `main` with fullscreen desktop. **Orbit layout → Apartment studio** still previews the alternative on all screen sizes.
 
 ## Framer setup

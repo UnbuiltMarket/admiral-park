@@ -59,6 +59,54 @@ function homepageImageRect(progress: number, bounds: { width: number; height: nu
     return { x: 0, y: top * amount, width: bounds.width, height: bounds.height + (height - bounds.height) * amount }
 }
 
+interface HomepagePagePin { owners: Set<symbol>; release: () => void }
+function pinHomepagePage(): () => void {
+    const key = Symbol.for("admiral-park:homepage-page-pin:v1")
+    const shared = window as typeof window & { [key: symbol]: HomepagePagePin | undefined }
+    let pin = shared[key]
+    if (!pin) {
+        const html = document.documentElement, body = document.body
+        const x = window.scrollX, y = window.scrollY
+        const scrollbar = Math.max(0, window.innerWidth - html.clientWidth)
+        const padding = parseFloat(getComputedStyle(body).paddingRight) || 0
+        const owned: { element: HTMLElement; property: string; before: string; priority: string; value: string }[] = []
+        const set = (element: HTMLElement, property: string, value: string) => {
+            const before = element.style.getPropertyValue(property), priority = element.style.getPropertyPriority(property)
+            element.style.setProperty(property, value, "important")
+            owned.push({ element, property, before, priority, value: element.style.getPropertyValue(property) })
+        }
+        // Pin the page independently of stage and image bounds. Native children
+        // still scroll, and no early preventDefault can swallow orbit gestures.
+        set(html, "overflow-x", "hidden")
+        set(html, "overflow-y", "hidden")
+        set(html, "overscroll-behavior-y", "none")
+        set(body, "position", "fixed")
+        set(body, "top", `${-y}px`)
+        set(body, "left", `${-x}px`)
+        set(body, "width", "100%")
+        set(body, "box-sizing", "border-box")
+        if (scrollbar) set(body, "padding-right", `${padding + scrollbar}px`)
+        pin = { owners: new Set(), release: () => {
+            for (const item of owned.reverse()) {
+                if (item.element.style.getPropertyValue(item.property) !== item.value || item.element.style.getPropertyPriority(item.property) !== "important") continue
+                if (item.before) item.element.style.setProperty(item.property, item.before, item.priority)
+                else item.element.style.removeProperty(item.property)
+            }
+            // The apartment dialog manages body overflow itself; never snapshot
+            // or restore that property here, including when navigating away.
+            window.scrollTo({ left: x, top: y, behavior: "instant" })
+        } }
+        shared[key] = pin
+    }
+    const owner = Symbol("homepage-page-pin")
+    pin.owners.add(owner)
+    return () => {
+        if (!pin!.owners.delete(owner) || pin!.owners.size) return
+        if (shared[key] === pin) delete shared[key]
+        pin!.release()
+    }
+}
+
 // @ORBIT_STORY_INSERT
 // @ORBIT_APARTMENT_DATA_INSERT
 // @ORBIT_APARTMENT_STUDIO_INSERT
@@ -179,14 +227,52 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
     React.useEffect(() => {
         const root = rootRef.current
         if (!root || staticRenderer) return
+        const ancestors: HTMLElement[] = []
+        for (let element: HTMLElement | null = root; element; element = element.parentElement) ancestors.push(element)
+        const watched = new Set(ancestors), inlineVisibility = new WeakMap<HTMLElement, string>()
+        const visibilityKey = (element: HTMLElement) => [element.style.display, element.style.visibility, element.style.opacity].join("|")
+        ancestors.forEach(element => inlineVisibility.set(element, visibilityKey(element)))
+        let frame: number | null = null
         const update = () => {
+            frame = null
             const box = root.getBoundingClientRect()
-            setHostVisible(box.width > 0 && box.height > 0 && box.bottom > 0 && box.top < innerHeight)
+            const hidden = !root.isConnected || ancestors.some(element => {
+                const css = getComputedStyle(element)
+                return element.hidden || css.display === "none" || css.visibility === "hidden" || css.visibility === "collapse" || Number(css.opacity) === 0
+            })
+            setHostVisible(!hidden && box.width > 0 && box.height > 0 && box.bottom > 0 && box.top < innerHeight && box.right > 0 && box.left < innerWidth)
         }
-        const resize = new ResizeObserver(update), intersection = new IntersectionObserver(update)
+        const schedule = () => { if (frame === null) frame = requestAnimationFrame(update) }
+        const resize = new ResizeObserver(schedule), intersection = new IntersectionObserver(schedule)
+        const mutations = new MutationObserver(records => {
+            let changed = false
+            for (const record of records) {
+                const element = record.target as HTMLElement, current = visibilityKey(element)
+                if (record.attributeName !== "style" || current !== inlineVisibility.get(element)) changed = true
+                inlineVisibility.set(element, current)
+            }
+            if (changed) schedule()
+        })
+        ancestors.forEach(element => mutations.observe(element, { attributes: true, attributeFilter: ["style", "class", "hidden"] }))
+        const end = (event: Event) => { if (watched.has(event.target as HTMLElement)) schedule() }
+        window.addEventListener("resize", schedule)
+        window.addEventListener("transitionend", end, true); window.addEventListener("animationend", end, true)
         resize.observe(root); intersection.observe(root); update()
-        return () => { resize.disconnect(); intersection.disconnect() }
+        return () => {
+            resize.disconnect(); intersection.disconnect(); mutations.disconnect()
+            window.removeEventListener("resize", schedule)
+            window.removeEventListener("transitionend", end, true); window.removeEventListener("animationend", end, true)
+            if (frame !== null) cancelAnimationFrame(frame)
+        }
     }, [staticRenderer])
+
+    React.useEffect(() => {
+        if (!staticRenderer && hostVisible) return pinHomepagePage()
+    }, [staticRenderer, hostVisible])
+
+    React.useEffect(() => {
+        if (!hostVisible && detailApartmentId) closeApartmentDetails()
+    }, [hostVisible, detailApartmentId, closeApartmentDetails])
 
     React.useEffect(() => {
         const root = rootRef.current, heroRoot = heroRootRef.current, heroCanvas = heroCanvasRef.current, orbitCanvas = orbitCanvasRef.current, poster = posterRef.current
