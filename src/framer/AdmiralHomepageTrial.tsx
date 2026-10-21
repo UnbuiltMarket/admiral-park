@@ -945,6 +945,15 @@ function useOrbitFullscreen(onLayout: () => void, modalOpen: React.MutableRefObj
     const [active, setActive] = React.useState(false)
     const [geometry, setGeometry] = React.useState<OrbitFullscreenGeometry | null>(null)
     const activeRef = React.useRef(false)
+    const mountedRef = React.useRef(false)
+    const nativeTarget = React.useRef<HTMLElement | null>(null)
+    const nativeEntered = React.useRef(false)
+    const requestGeneration = React.useRef(0)
+    const [nativePhase, setNativePhase] = React.useState<"pending" | "active" | "fallback">("fallback")
+    const exitOwnedFullscreen = React.useCallback((target: HTMLElement | null) => {
+        if (!target || document.fullscreenElement !== target) return
+        try { void document.exitFullscreen?.().catch(() => {}) } catch { /* Browser exit remains available. */ }
+    }, [])
     const callbackRef = React.useRef(onLayout)
     callbackRef.current = onLayout
     const previousFocus = React.useRef<HTMLElement | null>(null)
@@ -965,10 +974,49 @@ function useOrbitFullscreen(onLayout: () => void, modalOpen: React.MutableRefObj
         const next = readGeometry()
         activeRef.current = true; geometryRef.current = next
         setGeometry(next); setActive(true)
-    }, [readGeometry])
+        const target = surfaceRef.current?.closest<HTMLElement>("[data-admiral-homepage]") || null
+        const generation = ++requestGeneration.current
+        nativeEntered.current = false
+        // Fullscreen must be requested during this click, before any deferred
+        // effect. The root also contains the shared apartment-card dialogs.
+        if (target && document.fullscreenElement === target) {
+            nativeTarget.current = target; nativeEntered.current = true; setNativePhase("active")
+        } else if (target && !document.fullscreenElement && document.fullscreenEnabled !== false && typeof target.requestFullscreen === "function") {
+            nativeTarget.current = target; setNativePhase("pending")
+            const failed = () => {
+                if (!mountedRef.current || !activeRef.current || requestGeneration.current !== generation || nativeTarget.current !== target) return
+                // An older request on this root may have succeeded after a
+                // close/reopen. A newer rejection must not discard that owner.
+                if (document.fullscreenElement === target) {
+                    nativeEntered.current = true; setNativePhase("active")
+                    const actual = readGeometry(); geometryRef.current = actual; setGeometry(actual)
+                    return
+                }
+                nativeTarget.current = null; nativeEntered.current = false; setNativePhase("fallback")
+            }
+            try {
+                const request = target.requestFullscreen({ navigationUI: "hide" })
+                void Promise.resolve(request).then(() => {
+                    // A late result may belong to a closed/unmounted viewer.
+                    // A newer active request on the same root may adopt it.
+                    if (!mountedRef.current || !activeRef.current || nativeTarget.current !== target) { exitOwnedFullscreen(target); return }
+                    if (document.fullscreenElement !== target) { failed(); return }
+                    nativeEntered.current = true; setNativePhase("active")
+                    const actual = readGeometry(); geometryRef.current = actual; setGeometry(actual)
+                }, failed)
+            } catch { failed() }
+        } else {
+            nativeTarget.current = null; setNativePhase("fallback")
+        }
+    }, [readGeometry, exitOwnedFullscreen])
     const close = React.useCallback(() => {
         if (!activeRef.current) return
         activeRef.current = false; geometryRef.current = null
+        requestGeneration.current++
+        const target = nativeTarget.current
+        nativeTarget.current = null; nativeEntered.current = false
+        exitOwnedFullscreen(target)
+        setNativePhase("fallback")
         const surface = surfaceRef.current as (HTMLDivElement & { hidePopover?: () => void }) | null
         if (surface) {
             try { surface.hidePopover?.() } catch { /* Fixed positioning is the browser fallback. */ }
@@ -985,18 +1033,47 @@ function useOrbitFullscreen(onLayout: () => void, modalOpen: React.MutableRefObj
             if (target?.isConnected && !modalOpen.current) target.focus({ preventScroll: true })
             previousFocus.current = null
         })
-    }, [modalOpen])
+    }, [modalOpen, exitOwnedFullscreen])
+
+    React.useEffect(() => {
+        mountedRef.current = true
+        const changed = () => {
+            const target = nativeTarget.current
+            if (!target) return
+            if (document.fullscreenElement === target) {
+                if (!activeRef.current) { exitOwnedFullscreen(target); return }
+                nativeEntered.current = true; setNativePhase("active")
+                const actual = readGeometry(); geometryRef.current = actual; setGeometry(actual)
+            } else if (nativeEntered.current) {
+                // Browser Back, Escape and its own exit control restore the
+                // compact workspace, without affecting somebody else's root.
+                close()
+            }
+        }
+        document.addEventListener("fullscreenchange", changed)
+        return () => {
+            mountedRef.current = false; activeRef.current = false; requestGeneration.current++
+            const target = nativeTarget.current
+            nativeTarget.current = null; nativeEntered.current = false; geometryRef.current = null
+            document.removeEventListener("fullscreenchange", changed)
+            exitOwnedFullscreen(target)
+        }
+    }, [close, readGeometry, exitOwnedFullscreen])
 
     React.useEffect(() => {
         const surface = surfaceRef.current
         if (!active || !surface) return
-        surface.setAttribute("popover", "manual")
         surface.dataset.orbitFullscreen = "true"
-        try {
-            const show = (surface as HTMLDivElement & { showPopover?: () => void }).showPopover
-            if (show) show.call(surface)
-            else surface.removeAttribute("popover")
-        } catch { surface.removeAttribute("popover") /* Retain the fixed fullscreen fallback. */ }
+        // Native fullscreen promotes the whole root to the top layer. Its fixed
+        // child needs no popover; promoting both could reorder them mid-entry.
+        if (nativePhase === "fallback") {
+            surface.setAttribute("popover", "manual")
+            try {
+                const show = (surface as HTMLDivElement & { showPopover?: () => void }).showPopover
+                if (show) show.call(surface)
+                else surface.removeAttribute("popover")
+            } catch { surface.removeAttribute("popover") /* Retain the fixed fullscreen fallback. */ }
+        } else surface.removeAttribute("popover")
         if (focusFrame.current !== null) cancelAnimationFrame(focusFrame.current)
         focusFrame.current = requestAnimationFrame(() => {
             focusFrame.current = null
@@ -1033,13 +1110,14 @@ function useOrbitFullscreen(onLayout: () => void, modalOpen: React.MutableRefObj
             surface.removeAttribute("popover")
             surface.dataset.orbitFullscreen = "false"
         }
-    }, [active, close, modalOpen, readGeometry])
+    }, [active, nativePhase, close, modalOpen, readGeometry])
 
     React.useEffect(() => {
         const surface = surfaceRef.current
         if (surface) {
             surface.setAttribute("data-orbit-fullscreen-surface", "")
             surface.dataset.active = active ? "true" : "false"
+            surface.dataset.orbitFullscreenNative = active ? nativePhase : "off"
             surface.dataset.orbitFullscreen = active ? "true" : "false"
             surface.dataset.orbitFullscreenRotated = geometry?.rotated ? "true" : "false"
             if (geometry) { surface.dataset.orbitFullscreenWidth = String(geometry.width); surface.dataset.orbitFullscreenHeight = String(geometry.height) }
@@ -1048,7 +1126,7 @@ function useOrbitFullscreen(onLayout: () => void, modalOpen: React.MutableRefObj
         // Layout callbacks run after the mode and dimensions have been committed.
         const frame = requestAnimationFrame(() => callbackRef.current())
         return () => cancelAnimationFrame(frame)
-    }, [active, geometry])
+    }, [active, geometry, nativePhase])
     React.useEffect(() => () => {
         if (focusFrame.current !== null) cancelAnimationFrame(focusFrame.current)
         activeRef.current = false; geometryRef.current = null
