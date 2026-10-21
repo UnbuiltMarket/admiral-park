@@ -5,6 +5,7 @@
 import { readFile, mkdir, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { getApartmentMaskColor } from './apartment-mask-colors.mjs';
 
 const assert = (condition, message) => { if (!condition) throw new Error(message); };
 const plain = value => value !== null && typeof value === 'object' && !Array.isArray(value);
@@ -76,6 +77,7 @@ export function createApartmentDetailDataset(source) {
         assert(apartment.priceIncludesVat === null || typeof apartment.priceIncludesVat === 'boolean', `Invalid VAT field for ${apartment.id}.`);
         assert(roomLayouts[apartment.apartmentType], `Missing confirmed plan geometry for ${apartment.id}.`);
         const output = Object.fromEntries(apartmentFields.map(key => [key, apartment[key] ?? null]));
+        output.maskColor = getApartmentMaskColor(apartment.id);
         if (output.floorplan !== null) output.floorplan = publicAsset(output.floorplan, `${apartment.id} floorplan`);
         assert(Array.isArray(apartment.roomList), `Missing room list for ${apartment.id}.`);
         const roomKeys = new Set(), linkedNumbers = new Set();

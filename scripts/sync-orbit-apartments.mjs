@@ -6,6 +6,7 @@
 import { readFile, mkdir, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { getApartmentMaskColor } from './apartment-mask-colors.mjs';
 
 const args = process.argv.slice(2);
 const sourceFlag = args.indexOf('--source');
@@ -42,6 +43,7 @@ const apartments = source.apartments.map(apartment => {
     assert(apartment.currency === 'HUF', `Invalid currency for ${apartment.id}.`);
     assert(apartment.priceIncludesVat === null || typeof apartment.priceIncludesVat === 'boolean', `Invalid VAT field for ${apartment.id}.`);
     const record = Object.fromEntries(fields.map(key => [key, apartment[key] ?? null]));
+    record.maskColor = getApartmentMaskColor(apartment.id);
     if (plain(apartment.media)) {
         record.media = {};
         if (apartment.media.floorplan) record.media.floorplan = mediaImage(apartment.media.floorplan, true);

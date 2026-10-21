@@ -1,0 +1,295 @@
+{
+  "schemaVersion": "1.0",
+  "projectId": "admiral-park",
+  "paletteVersion": 1,
+  "encoding": "RGB8",
+  "colorSpace": "sRGB",
+  "backgroundColor": "#000000",
+  "reservedColors": [
+    "#000000",
+    "#FFFFFF"
+  ],
+  "boxDimensionsCm": {
+    "height": 315,
+    "length": 500,
+    "width": 1000
+  },
+  "apartments": [
+    {
+      "id": "A001",
+      "maskColor": "#2080E0"
+    },
+    {
+      "id": "A002",
+      "maskColor": "#E08020"
+    },
+    {
+      "id": "A003",
+      "maskColor": "#20E020"
+    },
+    {
+      "id": "A004",
+      "maskColor": "#E020E0"
+    },
+    {
+      "id": "A005",
+      "maskColor": "#502080"
+    },
+    {
+      "id": "A006",
+      "maskColor": "#80B080"
+    },
+    {
+      "id": "A101",
+      "maskColor": "#208050"
+    },
+    {
+      "id": "A102",
+      "maskColor": "#20E0B0"
+    },
+    {
+      "id": "A103",
+      "maskColor": "#802020"
+    },
+    {
+      "id": "A104",
+      "maskColor": "#8050E0"
+    },
+    {
+      "id": "A105",
+      "maskColor": "#80E0E0"
+    },
+    {
+      "id": "A106",
+      "maskColor": "#B05080"
+    },
+    {
+      "id": "A107",
+      "maskColor": "#B0E020"
+    },
+    {
+      "id": "A201",
+      "maskColor": "#E0B0B0"
+    },
+    {
+      "id": "A202",
+      "maskColor": "#2020E0"
+    },
+    {
+      "id": "A203",
+      "maskColor": "#808020"
+    },
+    {
+      "id": "A204",
+      "maskColor": "#E02020"
+    },
+    {
+      "id": "A205",
+      "maskColor": "#202050"
+    },
+    {
+      "id": "A301",
+      "maskColor": "#205020"
+    },
+    {
+      "id": "A302",
+      "maskColor": "#205080"
+    },
+    {
+      "id": "A303",
+      "maskColor": "#20B080"
+    },
+    {
+      "id": "A304",
+      "maskColor": "#505050"
+    },
+    {
+      "id": "B001",
+      "maskColor": "#5050B0"
+    },
+    {
+      "id": "B002",
+      "maskColor": "#508080"
+    },
+    {
+      "id": "B003",
+      "maskColor": "#50B020"
+    },
+    {
+      "id": "B004",
+      "maskColor": "#50B0B0"
+    },
+    {
+      "id": "B005",
+      "maskColor": "#50E050"
+    },
+    {
+      "id": "B006",
+      "maskColor": "#8020B0"
+    },
+    {
+      "id": "B101",
+      "maskColor": "#8080B0"
+    },
+    {
+      "id": "B102",
+      "maskColor": "#B02050"
+    },
+    {
+      "id": "B103",
+      "maskColor": "#B05020"
+    },
+    {
+      "id": "B104",
+      "maskColor": "#B08050"
+    },
+    {
+      "id": "B105",
+      "maskColor": "#B080E0"
+    },
+    {
+      "id": "B106",
+      "maskColor": "#B0E080"
+    },
+    {
+      "id": "B107",
+      "maskColor": "#E02080"
+    },
+    {
+      "id": "B201",
+      "maskColor": "#E05050"
+    },
+    {
+      "id": "B202",
+      "maskColor": "#E050B0"
+    },
+    {
+      "id": "B203",
+      "maskColor": "#E08080"
+    },
+    {
+      "id": "B204",
+      "maskColor": "#E0B050"
+    },
+    {
+      "id": "B205",
+      "maskColor": "#E0E0E0"
+    },
+    {
+      "id": "B206",
+      "maskColor": "#202020"
+    },
+    {
+      "id": "B207",
+      "maskColor": "#202080"
+    },
+    {
+      "id": "B301",
+      "maskColor": "#2020B0"
+    },
+    {
+      "id": "B302",
+      "maskColor": "#205050"
+    },
+    {
+      "id": "B303",
+      "maskColor": "#2050B0"
+    },
+    {
+      "id": "B304",
+      "maskColor": "#2050E0"
+    },
+    {
+      "id": "C001",
+      "maskColor": "#208020"
+    },
+    {
+      "id": "C002",
+      "maskColor": "#208080"
+    },
+    {
+      "id": "C003",
+      "maskColor": "#2080B0"
+    },
+    {
+      "id": "C004",
+      "maskColor": "#20B020"
+    },
+    {
+      "id": "C005",
+      "maskColor": "#20B050"
+    },
+    {
+      "id": "C006",
+      "maskColor": "#20B0B0"
+    },
+    {
+      "id": "C007",
+      "maskColor": "#20B0E0"
+    },
+    {
+      "id": "C008",
+      "maskColor": "#20E050"
+    },
+    {
+      "id": "C101",
+      "maskColor": "#20E080"
+    },
+    {
+      "id": "C102",
+      "maskColor": "#20E0E0"
+    },
+    {
+      "id": "C103",
+      "maskColor": "#502020"
+    },
+    {
+      "id": "C104",
+      "maskColor": "#502050"
+    },
+    {
+      "id": "C105",
+      "maskColor": "#5020B0"
+    },
+    {
+      "id": "C106",
+      "maskColor": "#5020E0"
+    },
+    {
+      "id": "C201",
+      "maskColor": "#505020"
+    },
+    {
+      "id": "C202",
+      "maskColor": "#505080"
+    },
+    {
+      "id": "C203",
+      "maskColor": "#5050E0"
+    },
+    {
+      "id": "C204",
+      "maskColor": "#508020"
+    },
+    {
+      "id": "C205",
+      "maskColor": "#508050"
+    },
+    {
+      "id": "C301",
+      "maskColor": "#5080B0"
+    },
+    {
+      "id": "C302",
+      "maskColor": "#5080E0"
+    },
+    {
+      "id": "C303",
+      "maskColor": "#50B050"
+    },
+    {
+      "id": "C304",
+      "maskColor": "#50B080"
+    }
+  ]
+}
