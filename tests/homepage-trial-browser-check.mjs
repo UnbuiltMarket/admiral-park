@@ -289,6 +289,16 @@ function assertStudioViewport(geometry){
  assert.ok(geometry.pixels.some((value,index)=>index%4!==3&&value>45),'Orbit viewport contains actual decoded image pixels');
  assert.equal(geometry.bodyOverflow,0,'The studio has no horizontal page overflow');
 }
+function assertNaturalWidthMobileOrbit(geometry,message){
+ const expectedHeight=geometry.root.width*1010/1920;
+ assert.ok(Math.abs(geometry.viewport.x-geometry.root.x)<1,message+' image slot begins at the phone left edge: '+JSON.stringify(geometry.viewport));
+ assert.ok(Math.abs(geometry.viewport.width-geometry.root.width)<1,message+' image slot fills 100% of the phone width: '+JSON.stringify(geometry.viewport));
+ assert.ok(Math.abs(geometry.viewport.height-expectedHeight)<1,message+' reserves the complete natural image height: '+JSON.stringify(geometry.viewport));
+ assert.ok(Math.abs(geometry.image.x)<1,message+' painted image starts at the left edge');
+ assert.ok(Math.abs(geometry.image.width-geometry.root.width)<1,message+' paints the image across the whole phone width: '+JSON.stringify(geometry.image));
+ assert.ok(Math.abs(geometry.image.height-expectedHeight)<1,message+' paints the full 1920:1010 image without a short contain box or distortion: '+JSON.stringify(geometry.image));
+ assert.ok(Math.abs(geometry.image.y-(geometry.viewport.y-geometry.root.y))<1,message+' painted image aligns vertically with its natural-height slot');
+}
 async function studioField(page,name){return page.locator('[data-orbit-field="'+name+'"]').first().innerText();}
 async function compactStudioGeometry(page){
  await page.evaluate(()=>document.fonts.ready);
@@ -512,13 +522,13 @@ try{
   }
  });
  await pass('compact mobile orbit fits the floorplan facts and details action without scrolling',async()=>{
-  for(const viewport of [{width:320,height:568},{width:390,height:844},{width:430,height:932},{width:844,height:390}]){
+  for(const viewport of [{width:320,height:568},{width:360,height:640},{width:375,height:667},{width:390,height:844},{width:430,height:932},{width:844,height:390}]){
    const f=await fixture({cleanFixture:true,useDefaultOrbitLayout:true,context:{viewport,isMobile:true,hasTouch:true,deviceScaleFactor:2},props:{...studioProps,phoneImageWidth:100}}),{page}=f;
    try{
     await waitStudio(page);const geometry=await studioGeometry(page);assertStudioViewport(geometry);
     assert.equal(geometry.transform,'none','The ordinary mobile layout remains upright');
     const compact=await compactStudioGeometry(page);assertCompactStudioFit(compact,viewport,'Phone '+viewport.width+'×'+viewport.height);
-    if(viewport.height>viewport.width){assert.ok(geometry.image.width>=viewport.width*.75,'The portrait orbit keeps a useful image width while making room for the complete plan');assert.ok(compact.plan.y>=compact.viewport.bottom-2,'The readable floorplan sits below the portrait orbit');}
+    if(viewport.height>viewport.width){assertNaturalWidthMobileOrbit(geometry,'Phone '+viewport.width+'×'+viewport.height);assert.ok(compact.plan.y>=compact.viewport.bottom-2,'The readable floorplan sits below the portrait orbit');}
     const before=await orbitData(page);await page.locator('[data-orbit-studio-details]').evaluate(element=>{element.scrollTop=element.scrollHeight;});await page.waitForTimeout(100);
     assert.equal(await page.locator('[data-orbit-studio-details]').evaluate(element=>element.scrollTop),0,'The phone details cannot scroll into a hidden continuation');assertSameCamera(before,await orbitData(page),'Reading the complete mobile card');
     await clickApartment(page,'A101');await waitStudio(page,'A101');assert.equal(await page.locator('#detail-dialog[open]').count(),0,'A mobile apartment tap selects and highlights it without opening the full card');assert.equal(f.detailRequests.length,0,'Selecting an apartment does not download its full detail-card data');
@@ -527,6 +537,24 @@ try{
     const cdp=await page.context().newCDPSession(page),x=geometry.viewport.x+geometry.viewport.width*.8,y=geometry.viewport.y+geometry.viewport.height*.5;
     await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x,y}]});await cdp.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x:x-180,y}]});await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});await waitFrame(page,15);
     await componentScreenshot(page,'compact-mobile-orbit-'+viewport.width+'x'+viewport.height+'.png');
+   }finally{await f.close();}
+  }
+ });
+ await pass('mobile studio SEQ_02 arrival uses the same complete full-width image as the orbit',async()=>{
+  for(const viewport of [{width:320,height:568},{width:390,height:844}]){
+   const f=await fixture({cleanFixture:true,useDefaultOrbitLayout:true,gateDecodeIndices:[0],context:{viewport,isMobile:true,hasTouch:true,deviceScaleFactor:2},props:{...studioProps,startView:'opening',showControls:true,connectionDuration:1.2,duration:.6,maxSpeed:1}}),{page}=f;
+   try{
+    await installFramingCapture(page);assertFullFraming(await readFraming(page),'Mobile SEQ_01 opening');
+    await coveredClick(page,'Skip approach');await waitStage(page,'building');assertFullFraming(await readFraming(page),'Mobile SEQ_01 arrival');
+    await page.evaluate(()=>window.framingSamples=[]);await coveredClick(page,'Explore building');await waitStage(page,'handoff');
+    const connection=await readFraming(page);assert.equal(connection.sequence,'SEQ_02','The handoff holds the completed connector');assert.equal(connection.frame,connections.length,'The connector reaches its matching last frame after the shared SEQ_01 endpoint before orbit activation');
+    assert.ok(Math.abs(connection.x)<1&&Math.abs(connection.width-viewport.width)<1,'The final SEQ_02 frame fills exactly the phone width');
+    assert.ok(Math.abs(connection.height-viewport.width*1010/1920)<1,'The final SEQ_02 frame shows the complete source at its natural image height');
+    assert.ok(connection.pixels.some((value,index)=>index%4!==3&&value>45),'The pending orbit keeps actual completed connector pixels');
+    const transition=await page.evaluate(()=>window.framingSamples.filter(sample=>sample.stage==='connection'&&sample.sequence==='SEQ_02'&&sample.paintedSequence==='SEQ_02'&&sample.canvasWidth>1));assertMonotonicFraming(transition,true);
+    await page.evaluate(()=>window.releaseDecodeGates());await waitStudio(page);const geometry=await studioGeometry(page);assertStudioViewport(geometry);assertNaturalWidthMobileOrbit(geometry,'Mobile connector arrival '+viewport.width+'×'+viewport.height);
+    for(const name of ['x','y','width','height'])assert.ok(Math.abs(geometry.image[name]-connection[name])<1,'SEQ_02 and orbit use an identical '+name+' at handoff: '+JSON.stringify({connection,orbit:geometry.image}));
+    const compact=await compactStudioGeometry(page);assertCompactStudioFit(compact,viewport,'Mobile connector arrival '+viewport.width+'×'+viewport.height);await componentScreenshot(page,'mobile-fullwidth-connector-arrival-'+viewport.width+'x'+viewport.height+'.png');
    }finally{await f.close();}
   }
  });
@@ -554,6 +582,7 @@ try{
     const moved=await orbitData(page),turned={width:viewport.height,height:viewport.width};await page.setViewportSize(turned);await page.waitForTimeout(350);assertSameCamera(moved,await orbitData(page),'Turning the phone inside horizontal fullscreen');assert.equal(await page.locator('[data-admiral-homepage]').getAttribute('data-orbit-fullscreen'),'true','A physical rotation does not accidentally leave the extended view');assert.match(await hud.innerText(),/A001/,'The selected apartment remains visible through physical rotation');const turnedBox=await surface.boundingBox();assert.ok(Math.abs(turnedBox.width-turned.width)<2&&Math.abs(turnedBox.height-turned.height)<2,'The fullscreen surface adapts to the turned phone screen');await page.setViewportSize(viewport);await page.waitForTimeout(350);
     await page.locator('[data-orbit-fullscreen-close]:visible').tap();await waitStudio(page,'A001');await page.waitForFunction(()=>!document.fullscreenElement);assertSameCamera(moved,await orbitData(page),'Closing horizontal fullscreen');assert.equal(await page.locator('[data-admiral-homepage]').getAttribute('data-orbit-fullscreen'),'false');assert.equal(await page.locator('[data-orbit-fullscreen-open]').evaluate(element=>document.activeElement===element),true,'Close returns focus to the fullscreen opener');assert.equal(f.orbitRequests.length,downloadCount,'Returning to the compact card reuses the downloaded sequence');
     await page.locator('[data-orbit-fullscreen-open]:visible').tap();await page.waitForFunction(()=>document.fullscreenElement===document.querySelector('[data-admiral-homepage]'));await page.evaluate(()=>document.exitFullscreen());await waitStudio(page,'A001');assert.equal(await page.locator('[data-admiral-homepage]').getAttribute('data-orbit-fullscreen'),'false','The browser or OS leaving fullscreen restores the compact view');assertSameCamera(moved,await orbitData(page),'Native browser exit keeps the current camera');assert.equal(await page.evaluate(()=>window.nativeFullscreenRequests.length),2,'Only the two explicit user opens request fullscreen');
+    const restored=await studioGeometry(page);assertStudioViewport(restored);if(viewport.height>viewport.width)assertNaturalWidthMobileOrbit(restored,'Restored portrait after fullscreen '+viewport.width+'×'+viewport.height);assertCompactStudioFit(await compactStudioGeometry(page),viewport,'Restored phone after fullscreen '+viewport.width+'×'+viewport.height);
     await componentScreenshot(page,'compact-mobile-fullscreen-restored-'+viewport.width+'x'+viewport.height+'.png');
    }finally{await f.close();}
   }

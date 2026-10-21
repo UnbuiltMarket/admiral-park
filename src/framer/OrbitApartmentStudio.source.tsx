@@ -173,7 +173,7 @@ const orbitApartmentStudioStyles = `
 [data-orbit-studio][data-mobile="true"] {
     container-name: orbit-studio-mobile; container-type: size; overflow: hidden;
     padding: 8px 12px max(8px,env(safe-area-inset-bottom,0px)); gap: 6px;
-    grid-template-rows: 62px minmax(0,1fr); text-align: left;
+    grid-template-rows: auto minmax(0,1fr); text-align: left;
 }
 [data-orbit-studio][data-mobile="true"] .orbit-studio-header { position: relative; display: grid; grid-template-rows: 32px 24px; justify-content: stretch; justify-items: center; gap: 6px; min-height: 0; }
 [data-orbit-studio][data-mobile="true"] .orbit-studio-brand { width: auto; height: 32px; max-width: 120px; justify-self: center; }
@@ -184,10 +184,10 @@ const orbitApartmentStudioStyles = `
 [data-orbit-studio][data-mobile="true"] .orbit-studio-preview { position: absolute; top: 0; left: 0; }
 [data-orbit-studio][data-mobile="true"] .orbit-studio-preview label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
 [data-orbit-studio][data-mobile="true"] .orbit-studio-preview select { width: 70px; min-height: 32px; font-size: 10px; padding: 4px 16px 4px 6px; }
-[data-orbit-studio][data-mobile="true"] .orbit-studio-body { display: grid; grid-template-columns: minmax(0,1fr); grid-template-rows: clamp(88px,27cqh,226px) auto minmax(0,1fr); gap: 6px; overflow: hidden; }
+[data-orbit-studio][data-mobile="true"] .orbit-studio-body { display: grid; grid-template-columns: minmax(0,1fr); grid-template-rows: calc((100cqw + 24px) * 1010 / 1920) auto minmax(0,1fr); gap: 6px; overflow: hidden; }
 [data-orbit-studio][data-mobile="true"] .orbit-studio-scene { display: contents; }
-[data-orbit-studio][data-mobile="true"] .orbit-studio-image-slot { position: relative; order: 0; width: calc(100% + 24px); height: 100%; margin-inline: -12px; aspect-ratio: auto; container-type: size; }
-[data-orbit-studio][data-mobile="true"] [data-orbit-viewport] { width: min(100cqw,calc(100cqh * 1920 / 1010)); height: auto; max-height: 100%; }
+[data-orbit-studio][data-mobile="true"] .orbit-studio-image-slot { position: relative; order: 0; width: calc(100% + 24px); height: 100%; margin-inline: -12px; aspect-ratio: 1920 / 1010; container-type: inline-size; }
+[data-orbit-studio][data-mobile="true"] [data-orbit-viewport] { position: absolute; inset: 0; width: 100%; height: 100%; max-height: none; }
 [data-orbit-studio][data-mobile="true"] .orbit-studio-facts { order: 1; min-height: 0; margin: 0; padding-top: 6px; }
 [data-orbit-studio][data-mobile="true"] .orbit-studio-areas { gap: 10px; margin: 0; }
 [data-orbit-studio][data-mobile="true"] .orbit-studio-areas dt { margin-bottom: 3px; font-size: 9px; font-weight: 400; line-height: 1.3; }
@@ -210,9 +210,21 @@ const orbitApartmentStudioStyles = `
 [data-orbit-studio][data-mobile="true"] .orbit-studio-price-value { font-size: 23px; line-height: 1.05; font-weight: 500; letter-spacing: -.045em; }
 [data-orbit-studio][data-mobile="true"] .orbit-studio-price-value small { font-size: 10px; }
 [data-orbit-studio][data-mobile="true"] .orbit-studio-primary { min-height: 44px; padding: 9px 15px; gap: 15px; font-size: 11px; font-weight: 600; }
+/* Make room for the complete image on short portrait phones. The illustration
+   note remains visible in the full apartment card. */
+@container orbit-studio-mobile (max-height: 560px) and (max-aspect-ratio: 1/1) {
+    [data-orbit-studio][data-mobile="true"] .orbit-studio-header { grid-template-rows: 28px 24px; gap: 4px; }
+    [data-orbit-studio][data-mobile="true"] .orbit-studio-brand { height: 28px; }
+    [data-orbit-studio][data-mobile="true"] .orbit-studio-body,
+    [data-orbit-studio][data-mobile="true"] .orbit-studio-details { gap: 4px; }
+    [data-orbit-studio][data-mobile="true"] .orbit-studio-facts,
+    [data-orbit-studio][data-mobile="true"] .orbit-studio-mobile-actions { padding-top: 4px; }
+    [data-orbit-studio][data-mobile="true"] .orbit-studio-plan-note { display: none; }
+}
 @container orbit-studio-mobile (max-height: 480px) and (min-aspect-ratio: 4/3) {
     [data-orbit-studio][data-mobile="true"] .orbit-studio-body { grid-template-columns: minmax(0,1.1fr) minmax(0,1fr); grid-template-rows: minmax(0,1fr) auto; column-gap: 16px; }
-    [data-orbit-studio][data-mobile="true"] .orbit-studio-image-slot { grid-column: 1; grid-row: 1; width: 100%; margin: 0; }
+    [data-orbit-studio][data-mobile="true"] .orbit-studio-image-slot { grid-column: 1; grid-row: 1; width: 100%; height: 100%; margin: 0; aspect-ratio: auto; container-type: size; }
+    [data-orbit-studio][data-mobile="true"] [data-orbit-viewport] { position: relative; inset: auto; width: min(100cqw,calc(100cqh * 1920 / 1010)); height: auto; max-height: 100%; }
     [data-orbit-studio][data-mobile="true"] .orbit-studio-facts { grid-column: 1; grid-row: 2; }
     [data-orbit-studio][data-mobile="true"] .orbit-studio-details { grid-column: 2; grid-row: 1 / 3; }
     [data-orbit-studio][data-mobile="true"] .orbit-studio-areas dd { font-size: 21px; }
