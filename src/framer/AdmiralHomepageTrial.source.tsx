@@ -41,6 +41,14 @@ const homepageButton: React.CSSProperties = {
     appearance: "none", border: "1px solid rgba(255,255,255,.45)", borderRadius: 6,
     background: "rgba(10,20,28,.78)", color: "#fff", padding: "9px 12px", font: "500 12px/1.3 system-ui,sans-serif", cursor: "pointer",
 }
+const homepageMobileOrbitStyles = `
+[data-admiral-homepage] button[data-orbit-fullscreen-open] { position:absolute; z-index:4; left:calc(var(--admiral-image-x, 0px) + var(--admiral-image-width, 100%) - 12px); top:calc(var(--admiral-image-y, 0px) + var(--admiral-image-height, 100%) - 12px); transform:translate(-100%,-100%); display:inline-flex; align-items:center; justify-content:center; gap:8px; width:max-content; max-width:calc(100% - 24px); min-height:44px; padding:10px 15px; appearance:none; border:1px solid rgba(255,255,255,.85); border-radius:999px; background:#fff; color:#242824; box-shadow:0 2px 5px rgba(20,32,24,.08),0 8px 22px rgba(20,32,24,.14); font:600 11px/1.25 Montserrat,Arial,sans-serif; letter-spacing:.005em; white-space:nowrap; cursor:pointer; touch-action:manipulation; -webkit-tap-highlight-color:transparent; transition:background .18s,border-color .18s,box-shadow .18s; }
+[data-admiral-homepage] button[data-orbit-fullscreen-open] svg { flex:none; width:18px; height:18px; }
+[data-admiral-homepage] button[data-orbit-fullscreen-open]:focus-visible { outline:2px solid #242824; outline-offset:3px; }
+[data-admiral-homepage] button[data-orbit-fullscreen-open]:active { background:#f0f2ed; border-color:#e6eae1; box-shadow:0 1px 3px rgba(20,32,24,.12); }
+@media (hover:hover) and (pointer:fine) { [data-admiral-homepage] button[data-orbit-fullscreen-open]:hover { background:#f5f6f2; box-shadow:0 3px 7px rgba(20,32,24,.1),0 10px 24px rgba(20,32,24,.16); } }
+@media (prefers-reduced-motion:reduce) { [data-admiral-homepage] button[data-orbit-fullscreen-open] { transition:none; } }
+`
 function homepageBlocked(target: EventTarget | null) {
     return target instanceof Element && !!target.closest("nav,header,a,button,input,textarea,select,[contenteditable]:not([contenteditable='false']),[role='button'],[role='link'],[data-orbit-ignore],[data-homepage-controls]")
 }
@@ -676,8 +684,9 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
     return (
         <div ref={rootRef} data-admiral-homepage="" data-admiral-orbit="" data-homepage-stage={stage} data-orbit-fullscreen={String(fullscreen.active)} role="region" aria-label={alt} tabIndex={0}
             style={{ position: "relative", width: "100%", height: "100%", overflow: "hidden", background, "--admiral-orbit-background": orbitBackground, ...style } as React.CSSProperties}>
+            {mobilePresentation && useStudio && <style>{homepageMobileOrbitStyles}</style>}
             <div aria-hidden="true" style={{ position: "absolute", inset: 0, background: orbitBackground, opacity: "var(--admiral-studio-light, 0)" as unknown as number, pointerEvents: "none" }} />
-            {useStudio && <OrbitApartmentStudio active={!fullscreen.active && (orbitVisible || orbitStatic)} mobile={mobilePresentation} mode={detailsMode} dataset={apartmentData.dataset} dataStatus={apartmentData.status} error={apartmentData.error}
+            {useStudio && <OrbitApartmentStudio active={!fullscreen.active && (orbitVisible || orbitStatic)} mobile={mobilePresentation} moving={!staticRenderer && orbitMoving} mode={detailsMode} dataset={apartmentData.dataset} dataStatus={apartmentData.status} error={apartmentData.error}
                 onRetry={apartmentData.retry} apartment={selectedApartment} onSelect={setSelectedApartmentId} assetBase={apartmentAssetBase} detailsUrl={detailPageUrl} inquiryUrl={inquiryUrl}
                 onViewport={setStudioViewport} language={detailsLanguage} onLayout={refreshStudioLayout} onOpenDetails={() => openApartmentDetails()} />}
             <div ref={heroRootRef} data-admiral-sequence="" style={{ position: "absolute", inset: 0, zIndex: 2, pointerEvents: stage === "orbit" || stage === "handoff" ? "none" : "auto", clipPath: imageClip }}>
@@ -694,9 +703,8 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
                         onClose={fullscreen.close} checkpoint={orbitInfo.checkpoint} count={checkpoints} />}
                 </div>
             </div>
-            {mobilePresentation && useStudio && orbitVisible && !fullscreen.active && <button type="button" data-orbit-fullscreen-open="" data-orbit-ignore="" onClick={fullscreen.open}
-                style={{ position: "absolute", zIndex: 4, left: "calc(var(--admiral-image-x, 0px) + var(--admiral-image-width, 100%) - 10px)", top: "calc(var(--admiral-image-y, 0px) + var(--admiral-image-height, 100%) - 8px)", transform: "translate(-100%,-100%)", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 7, width: "max-content", whiteSpace: "nowrap", minHeight: 44, padding: "7px 10px", border: "1px solid rgba(36,40,36,.25)", borderRadius: 0, color: "#242824", background: "rgba(253,251,251,.94)", font: "500 10px/1.3 Montserrat,Arial,sans-serif", cursor: "pointer", touchAction: "manipulation" }}>
-                <span aria-hidden="true" style={{ fontSize: 19, lineHeight: 1 }}>⛶</span>{detailsLanguage === "hu" ? "Teljes képernyő" : "Fullscreen view"}
+            {mobilePresentation && useStudio && orbitVisible && !fullscreen.active && <button type="button" data-orbit-fullscreen-open="" data-orbit-ignore="" aria-haspopup="dialog" onClick={fullscreen.open}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.65" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false"><path d="M8 4H4v4m12-4h4v4M4 16v4h4m12-4v4h-4" /></svg>{detailsLanguage === "hu" ? "Teljes képernyő" : "Fullscreen view"}
             </button>}
             {orbitStatic && <span style={{ position: "absolute", inset: 0, pointerEvents: "none" }} />}
             <div aria-hidden="true" style={{ position: "absolute", top: "var(--admiral-image-y, 0px)", left: "var(--admiral-image-x, 0px)", width: "var(--admiral-image-width, 100%)", height: "var(--admiral-image-height, 100%)", background: "#000", opacity: darken, pointerEvents: "none", zIndex: 2 }} />
