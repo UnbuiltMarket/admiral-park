@@ -43,12 +43,13 @@ const homepageButton: React.CSSProperties = {
     background: "rgba(10,20,28,.78)", color: "#fff", padding: "9px 12px", font: "500 12px/1.3 system-ui,sans-serif", cursor: "pointer",
 }
 const homepageMobileOrbitStyles = `
-[data-admiral-homepage] button[data-orbit-fullscreen-open] { position:absolute; z-index:4; left:calc(var(--admiral-image-x, 0px) + var(--admiral-image-width, 100%) - 12px); top:calc(var(--admiral-image-y, 0px) + var(--admiral-image-height, 100%) - 12px); transform:translate(-100%,-100%); display:inline-flex; align-items:center; justify-content:center; gap:8px; width:max-content; max-width:calc(100% - 24px); min-height:44px; padding:10px 15px; appearance:none; border:1px solid rgba(255,255,255,.85); border-radius:999px; background:#fff; color:#242824; box-shadow:0 2px 5px rgba(20,32,24,.08),0 8px 22px rgba(20,32,24,.14); font:600 11px/1.25 Montserrat,Arial,sans-serif; letter-spacing:.005em; white-space:nowrap; cursor:pointer; touch-action:manipulation; -webkit-tap-highlight-color:transparent; transition:background .18s,border-color .18s,box-shadow .18s; }
-[data-admiral-homepage] button[data-orbit-fullscreen-open] svg { flex:none; width:18px; height:18px; }
+[data-admiral-homepage] button[data-orbit-fullscreen-open] { position:absolute; z-index:4; left:calc(var(--admiral-image-x, 0px) + var(--admiral-image-width, 100%) - 6px); top:calc(var(--admiral-image-y, 0px) + var(--admiral-image-height, 100%) - 6px); transform:translate(-100%,-100%); display:grid; place-items:center; width:44px; height:44px; min-height:44px; padding:0; appearance:none; border:0; border-radius:50%; background:transparent; color:#242824; cursor:pointer; touch-action:manipulation; -webkit-tap-highlight-color:transparent; }
+[data-admiral-homepage] button[data-orbit-fullscreen-open]::before { content:""; position:absolute; inset:6px; border:1px solid rgba(255,255,255,.85); border-radius:50%; background:rgba(255,255,255,.95); box-shadow:0 2px 10px rgba(20,32,24,.14); transition:background .18s,box-shadow .18s; }
+[data-admiral-homepage] button[data-orbit-fullscreen-open] svg { position:relative; width:15px; height:15px; }
 [data-admiral-homepage] button[data-orbit-fullscreen-open]:focus-visible { outline:2px solid #242824; outline-offset:3px; }
-[data-admiral-homepage] button[data-orbit-fullscreen-open]:active { background:#f0f2ed; border-color:#e6eae1; box-shadow:0 1px 3px rgba(20,32,24,.12); }
-@media (hover:hover) and (pointer:fine) { [data-admiral-homepage] button[data-orbit-fullscreen-open]:hover { background:#f5f6f2; box-shadow:0 3px 7px rgba(20,32,24,.1),0 10px 24px rgba(20,32,24,.16); } }
-@media (prefers-reduced-motion:reduce) { [data-admiral-homepage] button[data-orbit-fullscreen-open] { transition:none; } }
+[data-admiral-homepage] button[data-orbit-fullscreen-open]:active::before { background:#e9ede7; box-shadow:0 1px 4px rgba(20,32,24,.12); }
+@media (hover:hover) and (pointer:fine) { [data-admiral-homepage] button[data-orbit-fullscreen-open]:hover::before { background:#fff; box-shadow:0 3px 12px rgba(20,32,24,.2); } }
+@media (prefers-reduced-motion:reduce) { [data-admiral-homepage] button[data-orbit-fullscreen-open]::before { transition:none; } }
 `
 function homepageBlocked(target: EventTarget | null) {
     return target instanceof Element && !!target.closest("nav,header,a,button,input,textarea,select,[contenteditable]:not([contenteditable='false']),[role='button'],[role='link'],[data-orbit-ignore],[data-homepage-controls]")
@@ -552,6 +553,251 @@ function useOrbitApartments(url: string, enabled: boolean): { dataset: OrbitApar
     return { dataset: state.dataset, status: state.status, error: state.error, retry }
 }
 
+type OrbitFilterStatus = "available" | "under_negotiation" | "sold";
+
+interface OrbitApartmentFilters {
+    statuses: OrbitFilterStatus[];
+    priceMin: number | null;
+    priceMax: number | null;
+}
+
+interface OrbitFilterApartment {
+    id: string;
+    status: string;
+    price: number | null;
+    /** Missing currency follows the apartment dataset's HUF default. */
+    currency?: string | null;
+}
+
+interface OrbitPriceBounds {
+    min: number;
+    max: number;
+    step: number;
+    pricedCount: number;
+    currency: "HUF";
+}
+
+interface OrbitApartmentFilterResult {
+    /** False means the renderer should highlight only the hovered apartment. */
+    active: boolean;
+    matchingIds: string[];
+    filters: OrbitApartmentFilters;
+}
+
+const orbitFilterStatuses: OrbitFilterStatus[] = ["available", "under_negotiation", "sold"];
+const orbitFilterPriceStep = 1000000;
+
+function orbitFilterHufPrice(apartment: OrbitFilterApartment): number | null {
+    const currency = apartment.currency;
+    const isHuf = currency === undefined || currency === null ||
+        (typeof currency === "string" && currency.trim().toUpperCase() === "HUF");
+    return isHuf && typeof apartment.price === "number" && Number.isFinite(apartment.price) && apartment.price >= 0
+        ? apartment.price : null;
+}
+
+/** The complete HUF range stays stable when availability choices change. */
+function getOrbitPriceBounds(apartments: readonly OrbitFilterApartment[]): OrbitPriceBounds | null {
+    let minimum = Infinity, maximum = -Infinity, pricedCount = 0;
+    for (const apartment of apartments) {
+        const price = orbitFilterHufPrice(apartment);
+        if (price === null) continue;
+        minimum = Math.min(minimum, price);
+        maximum = Math.max(maximum, price);
+        pricedCount++;
+    }
+    if (!pricedCount) return null;
+    return {
+        min: Math.floor(minimum / orbitFilterPriceStep) * orbitFilterPriceStep,
+        max: Math.ceil(maximum / orbitFilterPriceStep) * orbitFilterPriceStep,
+        step: orbitFilterPriceStep,
+        pricedCount,
+        currency: "HUF",
+    };
+}
+
+/** Canonicalize without modifying slider state or the original apartment data. */
+function normalizeOrbitFilters(
+    filters: Partial<OrbitApartmentFilters> | null | undefined,
+    bounds?: OrbitPriceBounds | null,
+): OrbitApartmentFilters {
+    const selected = Array.isArray(filters?.statuses) ? filters.statuses : [];
+    const statuses = orbitFilterStatuses.filter(status => selected.includes(status));
+    const limit = (value: unknown) => typeof value === "number" && Number.isFinite(value) ? Math.max(0, value) : null;
+    let priceMin = limit(filters?.priceMin), priceMax = limit(filters?.priceMax);
+    if (priceMin !== null && priceMax !== null && priceMin > priceMax) [priceMin, priceMax] = [priceMax, priceMin];
+
+    if (bounds === null) return { statuses, priceMin: null, priceMax: null };
+    if (bounds) {
+        const low = limit(bounds.min), high = limit(bounds.max);
+        // A dataset without usable HUF prices cannot support a price control.
+        if (low === null || high === null || high < low) return { statuses, priceMin: null, priceMax: null };
+        const clamp = (value: number) => Math.min(high, Math.max(low, value));
+        if (priceMin !== null) priceMin = clamp(priceMin);
+        if (priceMax !== null) priceMax = clamp(priceMax);
+        // Full-span sliders are equivalent to reset, including unpriced apartments.
+        if (priceMin !== null && priceMin <= low) priceMin = null;
+        if (priceMax !== null && priceMax >= high) priceMax = null;
+    }
+    return { statuses, priceMin, priceMax };
+}
+
+/** Statuses are ORed; active price limits are inclusive and ANDed with status. */
+function getOrbitFilterResult(
+    apartments: readonly OrbitFilterApartment[],
+    filters: Partial<OrbitApartmentFilters> | null | undefined,
+    bounds: OrbitPriceBounds | null = getOrbitPriceBounds(apartments),
+): OrbitApartmentFilterResult {
+    const normalized = normalizeOrbitFilters(filters, bounds);
+    const hasStatusFilter = normalized.statuses.length > 0;
+    const hasPriceFilter = normalized.priceMin !== null || normalized.priceMax !== null;
+    const active = hasStatusFilter || hasPriceFilter;
+    const matchingIds: string[] = [];
+    for (const apartment of apartments) {
+        if (hasStatusFilter && !normalized.statuses.includes(apartment.status as OrbitFilterStatus)) continue;
+        if (hasPriceFilter) {
+            const price = orbitFilterHufPrice(apartment);
+            if (price === null || (normalized.priceMin !== null && price < normalized.priceMin) ||
+                (normalized.priceMax !== null && price > normalized.priceMax)) continue;
+        }
+        matchingIds.push(apartment.id);
+    }
+    return { active, matchingIds, filters: normalized };
+}
+
+// Inlined into the standalone homepage component; state lives in the homepage.
+interface OrbitFilterBarProps {
+    active: boolean
+    language: "hu" | "en"
+    filters: OrbitApartmentFilters
+    bounds: OrbitPriceBounds | null
+    matchCount: number
+    total: number
+    onChange: (filters: OrbitApartmentFilters) => void
+}
+
+const orbitApartmentFilterStyles = `
+[data-orbit-filters] { position: relative; width: 100%; min-width: 0; color: #26382d; font-family: inherit; isolation: isolate; }
+[data-orbit-filters] *, [data-orbit-filters] *::before, [data-orbit-filters] *::after { box-sizing: border-box; }
+[data-orbit-filters] [hidden] { display: none !important; }
+[data-orbit-filters] button { display: inline-flex; align-items: center; justify-content: center; min-width: 0; height: 30px; margin: 0; padding: 0; border: 0; border-radius: 8px; color: inherit; background: transparent; font: inherit; cursor: pointer; -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
+[data-orbit-filters] button:disabled { opacity: .4; cursor: default; }
+[data-orbit-filters] :is(button,input):focus-visible { outline: 2px solid #42634c; outline-offset: 2px; }
+[data-orbit-filters] [data-orbit-filter-row] { display: flex; align-items: center; gap: 3px; width: 100%; min-width: 0; height: 32px; padding: 0; border-top: 1px solid rgba(48,67,54,.12); border-bottom: 1px solid rgba(48,67,54,.12); }
+[data-orbit-filters] .orbit-filter-statuses { display: flex; align-items: center; flex: 1 1 auto; gap: 2px; min-width: 0; }
+[data-orbit-filters] [data-orbit-filter-status] { flex: 1 1 auto; gap: 4px; height: 26px; padding: 0 5px; border: 1px solid transparent; border-radius: 6px; color: #677269; font-size: 10px; font-weight: 500; line-height: 1; letter-spacing: -.15px; white-space: nowrap; }
+[data-orbit-filters] [data-orbit-filter-status] .orbit-filter-status-label { overflow: hidden; min-width: 0; text-overflow: ellipsis; }
+[data-orbit-filters] .orbit-filter-dot { flex: 0 0 auto; width: 4px; height: 4px; border-radius: 50%; background: var(--filter-dot,#617764); opacity: .85; }
+[data-orbit-filters] [data-orbit-filter-status="under_negotiation"] { --filter-dot: #ae843e; }
+[data-orbit-filters] [data-orbit-filter-status="sold"] { --filter-dot: #ae655e; }
+[data-orbit-filters] [data-orbit-filter-status][aria-pressed="true"] { border-color: rgba(50,79,59,.2); color: #263f2e; background: #e3eae2; }
+[data-orbit-filters] [data-orbit-price-toggle] { flex: 0 0 auto; gap: 3px; height: 26px; padding: 0 6px; color: #56635a; font-size: 10px; font-weight: 600; line-height: 1; }
+[data-orbit-filters] [data-orbit-price-toggle][data-filtered="true"], [data-orbit-filters] [data-orbit-price-toggle][aria-expanded="true"] { color: #263f2e; background: #e3eae2; }
+[data-orbit-filters] [data-orbit-price-toggle] svg { width: 11px; height: 11px; flex-shrink: 0; }
+[data-orbit-filters] [data-orbit-filter-count] { flex: 0 0 auto; min-width: 26px; padding: 0 2px; color: #758078; font-size: 9px; font-weight: 500; line-height: 1; font-variant-numeric: tabular-nums; text-align: center; white-space: nowrap; }
+[data-orbit-filters] [data-orbit-filter-reset] { flex: 0 0 24px; width: 24px; height: 26px; color: #526357; }
+[data-orbit-filters] [data-orbit-filter-reset] svg { width: 12px; height: 12px; }
+[data-orbit-filters] [data-orbit-price-popover] { position: absolute; z-index: 4; bottom: calc(100% + 6px); left: 0; right: 0; height: 62px; min-width: 0; padding: 7px 10px; border: 1px solid rgba(48,67,54,.15); border-radius: 12px; background: #fbfcf8; box-shadow: 0 5px 22px rgba(35,50,39,.12); }
+[data-orbit-filters] .orbit-filter-price-values { display: flex; align-items: center; justify-content: space-between; gap: 12px; height: 15px; min-width: 0; font-size: 10px; font-weight: 600; line-height: 1; font-variant-numeric: tabular-nums; }
+[data-orbit-filters] .orbit-filter-price-caption { color: #738077; font-size: 9px; font-weight: 500; }
+[data-orbit-filters] .orbit-filter-price-stage { position: relative; height: 28px; margin-top: 3px; }
+[data-orbit-filters] .orbit-filter-price-track, [data-orbit-filters] .orbit-filter-price-selection { position: absolute; top: 13px; height: 2px; border-radius: 2px; pointer-events: none; }
+[data-orbit-filters] .orbit-filter-price-track { left: 12px; right: 12px; background: #dce3da; }
+[data-orbit-filters] .orbit-filter-price-selection { background: #48634d; }
+[data-orbit-filters] input[type="range"] { position: absolute; inset: 0; width: 100%; height: 28px; margin: 0; padding: 0; border: 0; border-radius: 5px; outline-offset: 1px; background: transparent; appearance: none; -webkit-appearance: none; pointer-events: none; touch-action: none; }
+[data-orbit-filters] input[type="range"]::-webkit-slider-runnable-track { height: 2px; background: transparent; border: 0; }
+[data-orbit-filters] input[type="range"]::-webkit-slider-thumb { width: 24px; height: 24px; margin-top: -11px; border: 1px solid #ccd7ca; border-radius: 50%; background: #fdfefb; box-shadow: 0 1px 3px rgba(35,50,39,.18),inset 0 0 0 7px #fdfefb; appearance: none; -webkit-appearance: none; pointer-events: auto; cursor: ew-resize; }
+[data-orbit-filters] input[type="range"]::-moz-range-track { height: 2px; background: transparent; border: 0; }
+[data-orbit-filters] input[type="range"]::-moz-range-thumb { width: 22px; height: 22px; border: 1px solid #ccd7ca; border-radius: 50%; background: #fdfefb; box-shadow: 0 1px 3px rgba(35,50,39,.18); pointer-events: auto; cursor: ew-resize; }
+[data-orbit-filters] input[type="range"]:focus-visible::-webkit-slider-thumb { border-color: #42634c; }
+[data-orbit-filters] input[type="range"]:focus-visible::-moz-range-thumb { border-color: #42634c; }
+[data-orbit-filters] input[type="range"]:disabled::-webkit-slider-thumb { pointer-events: none; }
+[data-orbit-filters] input[type="range"]:disabled::-moz-range-thumb { pointer-events: none; }
+@media (hover:hover) { [data-orbit-filters] button:not(:disabled):hover { background: #edf1e9; } [data-orbit-filters] [aria-pressed="true"]:hover { background: #dce6da; } }
+@media (prefers-reduced-motion:reduce) { [data-orbit-filters] *, [data-orbit-filters] *::before, [data-orbit-filters] *::after { animation: none !important; transition: none !important; } }
+`
+
+function OrbitFilterBar({ active, language, filters, bounds, matchCount, total, onChange }: OrbitFilterBarProps): React.JSX.Element {
+    const hu = language === "hu"
+    const [priceOpen, setPriceOpen] = React.useState(false)
+    const root = React.useRef<HTMLDivElement>(null)
+    const priceToggle = React.useRef<HTMLButtonElement>(null)
+    const minimumInput = React.useRef<HTMLInputElement>(null)
+    const maximumInput = React.useRef<HTMLInputElement>(null)
+    const panelId = React.useId()
+    const hasBounds = bounds !== null && typeof bounds.min === "number" && Number.isFinite(bounds.min) && typeof bounds.max === "number" && Number.isFinite(bounds.max) && bounds.max > bounds.min
+    const minimum = hasBounds ? bounds!.min! : 0, maximum = hasBounds ? bounds!.max! : 0
+    const step = hasBounds && Number.isFinite(bounds!.step) && bounds!.step > 0 ? bounds!.step : 1000000
+    const low = Math.min(maximum, Math.max(minimum, filters.priceMin ?? minimum))
+    const high = Math.max(low, Math.min(maximum, filters.priceMax ?? maximum))
+    const hasPrice = filters.priceMin !== null || filters.priceMax !== null
+    const hasFilters = filters.statuses.length > 0 || hasPrice
+    const formatPrice = (value: number) => `${new Intl.NumberFormat(hu ? "hu-HU" : "en-GB", { maximumFractionDigits: 1 }).format(value / 1000000)} ${hu ? "M Ft" : "M HUF"}`
+    const changePrice = (side: "minimum" | "maximum", value: number) => {
+        if (!hasBounds || !Number.isFinite(value)) return
+        if (side === "minimum") {
+            const next = Math.max(minimum, Math.min(high, value))
+            onChange({ ...filters, priceMin: next <= minimum ? null : next })
+        } else {
+            const next = Math.min(maximum, Math.max(low, value))
+            onChange({ ...filters, priceMax: next >= maximum ? null : next })
+        }
+    }
+    React.useEffect(() => { if (!active || !hasBounds) setPriceOpen(false) }, [active, hasBounds])
+    React.useEffect(() => {
+        if (!priceOpen) return
+        const outside = (event: PointerEvent) => { if (event.target instanceof Node && !root.current?.contains(event.target)) setPriceOpen(false) }
+        const escape = (event: KeyboardEvent) => {
+            if (event.key !== "Escape") return
+            event.preventDefault()
+            setPriceOpen(false)
+            priceToggle.current?.focus()
+        }
+        document.addEventListener("pointerdown", outside, true)
+        document.addEventListener("keydown", escape)
+        return () => { document.removeEventListener("pointerdown", outside, true); document.removeEventListener("keydown", escape) }
+    }, [priceOpen])
+    const statusOptions: { id: OrbitFilterStatus; label: string; accessible: string }[] = [
+        { id: "available", label: hu ? "Szabad" : "Available", accessible: hu ? "Szabad lakások" : "Available apartments" },
+        { id: "under_negotiation", label: hu ? "Egyeztetés" : "In talks", accessible: hu ? "Tárgyalás alatt álló lakások" : "Apartments under negotiation" },
+        { id: "sold", label: hu ? "Eladva" : "Sold", accessible: hu ? "Eladott lakások" : "Sold apartments" },
+    ]
+    const count = Math.max(0, Math.min(total, matchCount))
+    const sliderPercent = (value: number) => hasBounds ? (value - minimum) / (maximum - minimum) * 100 : 0
+    return <div ref={root} data-orbit-filters="" data-orbit-ignore="" data-filtered={hasFilters ? "true" : "false"}>
+        <style>{orbitApartmentFilterStyles}</style>
+        <div data-orbit-filter-row="" role="group" aria-label={hu ? "Lakások szűrése" : "Filter apartments"}>
+            <div className="orbit-filter-statuses">
+                {statusOptions.map(option => <button key={option.id} type="button" data-orbit-filter-status={option.id} aria-label={option.accessible} title={option.accessible} aria-pressed={filters.statuses.includes(option.id)} onClick={() => onChange({ ...filters, statuses: filters.statuses.includes(option.id) ? filters.statuses.filter(status => status !== option.id) : [...filters.statuses, option.id] })}>
+                    <span className="orbit-filter-dot" aria-hidden="true" /><span className="orbit-filter-status-label">{option.label}</span>
+                </button>)}
+            </div>
+            <button ref={priceToggle} type="button" data-orbit-price-toggle="" data-filtered={hasPrice ? "true" : "false"} aria-label={hu ? "Ártartomány beállítása" : "Set price range"} title={hasBounds ? (hu ? "Ártartomány" : "Price range") : (hu ? "Az árak még nem érhetők el" : "Prices are not available yet")} aria-expanded={priceOpen} aria-controls={panelId} disabled={!hasBounds} onClick={() => setPriceOpen(open => !open)}>
+                <span>{hu ? "Ár" : "Price"}</span><svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d={priceOpen ? "M4 10 8 6l4 4" : "m4 6 4 4 4-4"} stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" /></svg>
+            </button>
+            <span data-orbit-filter-count="" role="status" aria-live="polite" aria-atomic="true" aria-label={hu ? `${count} találat ${total} lakásból` : `${count} matches out of ${total} apartments`}>{count}/{total}</span>
+            {hasFilters && <button type="button" data-orbit-filter-reset="" aria-label={hu ? "Minden szűrő törlése" : "Reset all filters"} title={hu ? "Szűrők törlése" : "Reset filters"} onClick={() => onChange({ statuses: [], priceMin: null, priceMax: null })}>
+                <svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="m4 4 8 8M12 4l-8 8" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" /></svg>
+            </button>}
+        </div>
+        <div id={panelId} data-orbit-price-popover="" role="group" aria-label={hu ? "Ártartomány" : "Price range"} hidden={!priceOpen}>
+            <div className="orbit-filter-price-values"><span>{formatPrice(low)}</span><span className="orbit-filter-price-caption">{hu ? "Ártartomány" : "Price range"}</span><span>{formatPrice(high)}</span></div>
+            <div className="orbit-filter-price-stage" onPointerDown={event => {
+                if (!hasBounds || event.target instanceof HTMLInputElement) return
+                const rect = event.currentTarget.getBoundingClientRect()
+                const ratio = Math.max(0, Math.min(1, (event.clientX - rect.left - 12) / Math.max(1, rect.width - 24)))
+                const value = Math.max(minimum, Math.min(maximum, minimum + Math.round(ratio * (maximum - minimum) / step) * step))
+                const side = Math.abs(value - low) <= Math.abs(value - high) ? "minimum" : "maximum"
+                changePrice(side, value)
+                ;(side === "minimum" ? minimumInput : maximumInput).current?.focus()
+            }}>
+                <span className="orbit-filter-price-track" aria-hidden="true" /><span className="orbit-filter-price-selection" aria-hidden="true" style={{ left: `calc(12px + (100% - 24px) * ${sliderPercent(low) / 100})`, right: `calc(12px + (100% - 24px) * ${(100 - sliderPercent(high)) / 100})` }} />
+                <input ref={minimumInput} type="range" data-orbit-price-min="" min={minimum} max={maximum} step={step} value={low} aria-label={hu ? "Minimum ár forintban" : "Minimum price in HUF"} aria-valuetext={formatPrice(low)} disabled={!hasBounds} onChange={event => changePrice("minimum", event.currentTarget.valueAsNumber)} style={{ zIndex: low >= maximum ? 2 : 1 }} />
+                <input ref={maximumInput} type="range" data-orbit-price-max="" min={minimum} max={maximum} step={step} value={high} aria-label={hu ? "Maximum ár forintban" : "Maximum price in HUF"} aria-valuetext={formatPrice(high)} disabled={!hasBounds} onChange={event => changePrice("maximum", event.currentTarget.valueAsNumber)} />
+            </div>
+        </div>
+    </div>
+}
+
 interface OrbitApartmentStudioProps {
     active: boolean
     mode: "preview" | "hover" | "off"
@@ -570,6 +816,11 @@ interface OrbitApartmentStudioProps {
     onOpenDetails?: () => void
     mobile?: boolean
     moving?: boolean
+    filters: OrbitApartmentFilters
+    filterBounds: OrbitPriceBounds | null
+    filterActive: boolean
+    filterCount: number
+    onFiltersChange: (filters: OrbitApartmentFilters) => void
 }
 
 const orbitApartmentStudioStyles = `
@@ -727,7 +978,7 @@ const orbitApartmentStudioStyles = `
 [data-orbit-studio][data-mobile="true"] {
     container-name: orbit-studio-mobile; container-type: size; overflow: hidden;
     padding: 8px 12px max(10px,env(safe-area-inset-bottom,0px)); gap: 8px;
-    grid-template-rows: auto minmax(0,1fr); text-align: left;
+    grid-template-rows: auto auto minmax(0,1fr); text-align: left;
 }
 [data-orbit-studio][data-mobile="true"] .orbit-studio-header { display: flex; align-items: center; justify-content: center; gap: 0; min-height: 0; }
 [data-orbit-studio][data-mobile="true"] .orbit-studio-brand { width: 160px; height: auto; max-width: 52cqw; }
@@ -772,11 +1023,15 @@ const orbitApartmentStudioStyles = `
     [data-orbit-studio][data-mobile="true"] .orbit-studio-brand { width: 136px; }
     [data-orbit-studio][data-mobile="true"] .orbit-studio-body { gap: 8px; }
     [data-orbit-studio][data-mobile="true"] .orbit-studio-mobile-panel { gap: 8px 14px; }
+    [data-orbit-studio][data-mobile="true"] .orbit-studio-mobile-panel { grid-template-columns: minmax(0,1.15fr) minmax(0,1fr); }
     [data-orbit-studio][data-mobile="true"] .orbit-studio-mobile-summary { gap: 7px; }
-    [data-orbit-studio][data-mobile="true"] .orbit-studio-id { font-size: 25px; margin-bottom: 4px; }
+    [data-orbit-studio][data-mobile="true"] .orbit-studio-heading { display: flex; align-items: center; gap: 6px; flex-wrap: nowrap; }
+    [data-orbit-studio][data-mobile="true"] .orbit-studio-id { font-size: 23px; margin: 0; }
+    [data-orbit-studio][data-mobile="true"] .orbit-studio-status { font-size: 9.5px; gap: 4px; white-space: nowrap; }
     [data-orbit-studio][data-mobile="true"] .orbit-studio-mobile-metrics { gap: 6px 6px; }
     [data-orbit-studio][data-mobile="true"] .orbit-studio-mobile-metrics > div:first-child dd { font-size: 24px; }
     [data-orbit-studio][data-mobile="true"] .orbit-studio-mobile-meta { padding-top: 6px; }
+    [data-orbit-studio][data-mobile="true"] .orbit-studio-mobile-meta { gap: 3px 6px; font-size: 9.5px; }
     [data-orbit-studio][data-mobile="true"] .orbit-studio-mobile-actions { padding-top: 8px; }
     [data-orbit-studio][data-mobile="true"] .orbit-studio-plan-note { display: none; }
 }
@@ -800,7 +1055,7 @@ const orbitApartmentStudioStyles = `
 `
 
 function OrbitApartmentStudio(props: OrbitApartmentStudioProps): React.JSX.Element {
-    const { active, mode, dataset, dataStatus, error, onRetry, apartment, onSelect, assetBase, detailsUrl, inquiryUrl, onViewport, language, onLayout, onOpenDetails, mobile = false, moving = false } = props
+    const { active, mode, dataset, dataStatus, error, onRetry, apartment, onSelect, assetBase, detailsUrl, inquiryUrl, onViewport, language, onLayout, onOpenDetails, mobile = false, moving = false, filters, filterBounds, filterActive, filterCount, onFiltersChange } = props
     const hu = language !== "en"
     const [view, setView] = React.useState<"floorplan" | "floorLayout">("floorplan")
     const [expanded, setExpanded] = React.useState(false), [zoom, setZoom] = React.useState(1)
@@ -882,7 +1137,7 @@ function OrbitApartmentStudio(props: OrbitApartmentStudioProps): React.JSX.Eleme
     </p>
     const conversion = () => <>
         <div className="orbit-studio-bottom">
-            <div className="orbit-studio-price"><p className="orbit-studio-label">{apartment?.priceIncludesVat === false ? hu ? "Nettó vételár" : "Net purchase price" : labels.gross}</p><p className="orbit-studio-price-value" data-orbit-apartment-price="" data-orbit-field="price">
+            <div className="orbit-studio-price">{!mobile && <p className="orbit-studio-label">{apartment?.priceIncludesVat === false ? hu ? "Nettó vételár" : "Net purchase price" : labels.gross}</p>}<p className="orbit-studio-price-value" data-orbit-apartment-price="" data-orbit-field="price">
                 {positive(apartment?.price) ? <>{number.format(apartment!.price! / 1000000)}<small>M Ft</small></> : availability === "sold" ? hu ? "Nincs megadva" : "Not provided" : hu ? "Ár kérésre" : "Price on request"}
             </p></div>
             {(mobile || !inquiryLink) && onOpenDetails ? <button type="button" className="orbit-studio-primary" data-orbit-apartment-action="" data-orbit-detail-link="" aria-haspopup="dialog" disabled={mobile && moving} onClick={onOpenDetails}><span>{mobile ? hu ? "Adatlap" : "Details" : labels.details}</span>{mobile ? <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6" /></svg> : <span aria-hidden="true">↗</span>}</button> : (mobile ? detailLink : actionLink) && <a className="orbit-studio-primary" href={mobile ? detailLink : actionLink} data-orbit-apartment-action="" {...(!mobile && inquiryLink ? { "data-orbit-inquiry": "" } : { "data-orbit-detail-link": "" })}><span>{mobile ? hu ? "Adatlap" : "Details" : inquiryLink ? labels.inquire : labels.details}</span>{mobile ? <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6" /></svg> : <span aria-hidden="true">↗</span>}</a>}
@@ -923,25 +1178,24 @@ function OrbitApartmentStudio(props: OrbitApartmentStudioProps): React.JSX.Eleme
                     </select></div>}
                 </div>}
             </header>
+            {mobile && <OrbitFilterBar active={active} language={language} filters={filters} bounds={filterBounds} matchCount={filterCount} total={dataset?.apartments.length || 0} onChange={onFiltersChange} />}
             <div className="orbit-studio-body">
                 <div className="orbit-studio-scene">
                     <div className="orbit-studio-image-slot"><div ref={viewportCallback} data-orbit-viewport="" aria-hidden="true" /></div>
                     {!mobile && !shortLandscape && facts}
                 </div>
                 {mobile ? <div className="orbit-studio-mobile-panel" data-orbit-studio-details="" data-orbit-ignore="">
-                    {dataStatus === "error" ? <div className="orbit-studio-empty" role="status"><p>{hu ? "A lakásadatok most nem tölthetők be." : "Apartment information could not be loaded."}</p><button type="button" className="orbit-studio-text-button" onClick={onRetry}>{hu ? "Újrapróbálom" : "Try again"}</button></div> : !apartment ? <div className="orbit-studio-empty" role="status"><p>{dataStatus === "loading" || dataStatus === "idle" ? hu ? "Lakásadatok betöltése…" : "Loading apartment information…" : hu ? "Válasszon egy lakást az épületen." : "Select an apartment on the building."}</p></div> : <>
+                    {dataStatus === "error" ? <div className="orbit-studio-empty" role="status"><p>{hu ? "A lakásadatok most nem tölthetők be." : "Apartment information could not be loaded."}</p><button type="button" className="orbit-studio-text-button" onClick={onRetry}>{hu ? "Újrapróbálom" : "Try again"}</button></div> : !apartment ? <div className="orbit-studio-empty" role="status" {...(filterActive && filterCount === 0 ? { "data-orbit-filter-empty": "" } : {})}><p>{dataStatus === "loading" || dataStatus === "idle" ? hu ? "Lakásadatok betöltése…" : "Loading apartment information…" : filterActive && filterCount === 0 ? hu ? "Nincs a szűrésnek megfelelő lakás." : "No apartments match these filters." : hu ? "Válasszon egy lakást az épületen." : "Select an apartment on the building."}</p></div> : <>
                         <figure className="orbit-studio-mobile-plan" style={aspectStyle}>
-                            <figcaption className="orbit-studio-mobile-eyebrow">{labels.floorplan}</figcaption>
                             <button type="button" className="orbit-studio-mobile-plan-button" data-orbit-detail-link="" aria-haspopup="dialog" aria-label={hu ? `${apartment.id} adatlap megnyitása` : `Open apartment ${apartment.id} details`} disabled={moving || !onOpenDetails} onClick={onOpenDetails}>
                                 <span className="orbit-studio-plan-stage" style={aspectStyle}>
                                     {planShown ? <span className="orbit-studio-plan-crop" data-orbit-plan-crop=""><img data-orbit-floorplan="" className="orbit-studio-plan-image" src={plan!.url} style={planStyle} alt={`${apartment.id} · ${labels.floorplan}`} decoding="async" draggable={false} onLoad={() => onLayout?.()} onError={() => setFailedImage(plan!.url)} /></span> : <span className="orbit-studio-loading">{hu ? "Az alaprajz még nem érhető el." : "Floor plan unavailable."}</span>}
                                 </span>
                             </button>
-                            <p className="orbit-studio-plan-note">{hu ? "Illusztratív alaprajz" : "Illustrative floor plan"}</p>
                         </figure>
                         <div className="orbit-studio-mobile-summary" data-orbit-mobile-summary="">
-                            <div className="orbit-studio-heading"><h2 id={headingId} className="orbit-studio-id">{apartment.id}<small>{hu ? "lakás" : "home"}</small></h2>
-                                {statusText && <span className="orbit-studio-status" data-status={availability} data-orbit-field="status"><span className="orbit-studio-status-dot" aria-hidden="true" />{statusText}</span>}
+                            <div className="orbit-studio-heading"><h2 id={headingId} className="orbit-studio-id">{apartment.id}</h2>
+                                {statusText && <span className="orbit-studio-status" data-status={availability} data-orbit-field="status" title={statusText}><span className="orbit-studio-status-dot" aria-hidden="true" />{availability === "under_negotiation" ? hu ? "Egyeztetés" : "In talks" : statusText}</span>}
                             </div>
                             <dl className="orbit-studio-mobile-metrics">
                                 {([ ["areaInterior", hu ? "Lakótér" : labels.interior, "area"], ["areaTerrace", hu ? "Terasz" : labels.terrace, "terrace"], ["areaGarden", labels.garden, "garden"] ] as const).map(([key, label, field]) => <div key={key} data-orbit-apartment-metric={key} data-orbit-field={field}><dt>{label}</dt><dd>{positive(apartment[key]) && (key === "areaInterior" || apartment[key]! > 0) ? <>{number.format(apartment[key]!)}<small>m²</small></> : "—"}</dd></div>)}
@@ -949,7 +1203,7 @@ function OrbitApartmentStudio(props: OrbitApartmentStudioProps): React.JSX.Eleme
                             <p className="orbit-studio-mobile-meta">
                                 {positive(apartment.rooms) && <span data-orbit-field="rooms"><strong>{number.format(apartment.rooms!)} {labels.roomCount}</strong></span>}
                                 {apartment.orientation && <span data-orbit-field="orientation">{apartment.orientation}</span>}
-                                {floor && <span data-orbit-field="floor">{apartment.building ? `${apartment.building} · ` : ""}{floor}</span>}
+                                {floor && <span data-orbit-field="floor">{floor}</span>}
                             </p>
                         </div>
                         <div className="orbit-studio-mobile-actions">{conversion()}</div>
@@ -1216,6 +1470,7 @@ interface OrbitFullscreenDetailsProps {
     onClose: () => void
     checkpoint: number
     count: number
+    emptyMessage?: string
 }
 
 const orbitFullscreenStyles = `
@@ -1260,7 +1515,7 @@ const orbitFullscreenStyles = `
 @media (prefers-reduced-motion:reduce) { [data-orbit-fullscreen-details] .orbit-fullscreen-detail { transition:none; } }
 `
 
-function OrbitFullscreenDetails({ apartment, assetBase, language, onOpenDetails, moving, onPrevious, onNext, onClose, checkpoint, count }: OrbitFullscreenDetailsProps) {
+function OrbitFullscreenDetails({ apartment, assetBase, language, onOpenDetails, moving, onPrevious, onNext, onClose, checkpoint, count, emptyMessage }: OrbitFullscreenDetailsProps) {
     const hu = language !== "en"
     const rootRef = React.useRef<HTMLDivElement>(null)
     const [compact, setCompact] = React.useState(false)
@@ -1289,7 +1544,7 @@ function OrbitFullscreenDetails({ apartment, assetBase, language, onOpenDetails,
                 <div className="orbit-fullscreen-left"><div className="orbit-fullscreen-identity"><p className="orbit-fullscreen-id" data-orbit-fullscreen-field="number">{apartment.id}</p><p className="orbit-fullscreen-status" data-status={state} data-orbit-fullscreen-field="status">{status}</p></div><dl className="orbit-fullscreen-stats"><div data-orbit-fullscreen-field="area"><dt>{hu ? "Lakótér" : "Interior"}</dt><dd>{area(apartment.areaInterior)}</dd></div><div data-orbit-fullscreen-field="terrace"><dt>{hu ? "Terasz" : "Terrace"}</dt><dd>{area(apartment.areaTerrace)}</dd></div><div data-orbit-fullscreen-field="garden"><dt>{hu ? "Kert" : "Garden"}</dt><dd>{area(apartment.areaGarden)}</dd></div></dl></div>
                 <figure className="orbit-fullscreen-plan" data-orbit-fullscreen-field="floorplan">{floorplan && <img src={floorplan} alt={`${apartment.id} · ${hu ? "alaprajz" : "floorplan"}`} decoding="async" draggable={false} />}<figcaption>{hu ? "Alaprajz · illusztráció" : "Illustrative floorplan"}</figcaption></figure>
                 <div className="orbit-fullscreen-right"><p className="orbit-fullscreen-meta" data-orbit-fullscreen-field="meta">{meta}</p><div><p className="orbit-fullscreen-price" data-orbit-fullscreen-field="price">{known(apartment.price) ? apartment.currency === "HUF" ? <>{number.format(apartment.price! / 1000000)}<small>M Ft</small></> : number.format(apartment.price!) + " " + apartment.currency : hu ? "Ár kérésre" : "Price on request"}</p></div><button type="button" className="orbit-fullscreen-detail" data-orbit-detail-link="" disabled={moving} onClick={onOpenDetails}>{hu ? "Adatlap" : "Apartment details"}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false"><path d="M5 12h14m-6-6 6 6-6 6" /></svg></button></div>
-            </> : <p className="orbit-fullscreen-empty">{hu ? "Koppintson egy lakásra a részletekhez." : "Tap an apartment to see its details."}</p>}
+            </> : <p className="orbit-fullscreen-empty">{emptyMessage || (hu ? "Koppintson egy lakásra a részletekhez." : "Tap an apartment to see its details.")}</p>}
         </div>
         <span style={{ position: "absolute", width: 1, height: 1, overflow: "hidden", clipPath: "inset(50%)" }} role="status">{checkpoint >= 0 ? `${hu ? "Nézet" : "View"} ${checkpoint + 1} / ${count}` : hu ? "Nézetváltás" : "Moving to next view"}</span>
     </div>
@@ -1348,13 +1603,22 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
     // Every orbit layout uses real apartment IDs so its floorplan opens the shared card.
     const jsonDetails = detailsMode !== "off"
     const [selectedApartmentId, setSelectedApartmentId] = React.useState<string | null>(null)
+    const [interactionApartmentId, setInteractionApartmentId] = React.useState<string | null>(null)
+    const [apartmentFilters, setApartmentFilters] = React.useState<OrbitApartmentFilters>({ statuses: [], priceMin: null, priceMax: null })
     const [detailApartmentId, setDetailApartmentId] = React.useState<string | null>(null)
     const detailOpen = React.useRef(false)
     const apartmentData = useOrbitApartments(apartmentDataUrl, jsonDetails && (staticRenderer && editorView === "orbit" || hostVisible && ["building", "connection", "handoff", "orbit"].includes(stage)))
+    const filterBounds = React.useMemo(() => getOrbitPriceBounds(apartmentData.dataset?.apartments || []), [apartmentData.dataset])
+    const filterResult = React.useMemo(() => getOrbitFilterResult(apartmentData.dataset?.apartments || [], apartmentFilters, filterBounds), [apartmentData.dataset, apartmentFilters, filterBounds])
+    const filterMatches = React.useMemo(() => new Set(filterResult.matchingIds), [filterResult])
     const selectedApartment = React.useMemo(() => {
-        const records = apartmentData.dataset?.apartments || []
+        const records = (apartmentData.dataset?.apartments || []).filter(item => filterMatches.has(item.id))
         return records.find(item => item.id === selectedApartmentId) || (detailsMode === "preview" ? records.find(item => item.id === previewApartmentId) || records[0] || null : null)
-    }, [apartmentData.dataset, selectedApartmentId, previewApartmentId, detailsMode])
+    }, [apartmentData.dataset, selectedApartmentId, previewApartmentId, detailsMode, filterMatches])
+    React.useEffect(() => {
+        if (selectedApartmentId && !filterMatches.has(selectedApartmentId)) setSelectedApartmentId(null)
+        if (interactionApartmentId && !filterMatches.has(interactionApartmentId)) setInteractionApartmentId(null)
+    }, [filterMatches, selectedApartmentId, interactionApartmentId])
     const selectedApartmentDetails = React.useMemo<ApartmentDetailsData | null>(() => selectedApartment ? {
         id: selectedApartment.id, number: selectedApartment.id, area: selectedApartment.areaInterior, terrace: selectedApartment.areaTerrace,
         garden: selectedApartment.areaGarden, rooms: selectedApartment.rooms,
@@ -1363,6 +1627,7 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
     } : null, [selectedApartment, apartmentAssetBase, detailsLanguage])
     const detailsModeRef = React.useRef(detailsMode); detailsModeRef.current = detailsMode
     const clearApartmentDetails = React.useCallback(() => {
+        setInteractionApartmentId(null)
         if (detailsModeRef.current === "hover") setSelectedApartmentId(null)
     }, [])
     const rootRef = React.useRef<HTMLDivElement>(null), heroRootRef = React.useRef<HTMLDivElement>(null)
@@ -1370,10 +1635,10 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
     const actions = React.useRef<HomepageActions | null>(null)
     const openApartmentDetails = React.useCallback((id?: string) => {
         const value = id || selectedApartment?.id, root = rootRef.current
-        if (!jsonDetails || staticRenderer || !value || !apartmentData.dataset?.apartments.some(apartment => apartment.id === value) || !root ||
+        if (!jsonDetails || staticRenderer || !value || !filterMatches.has(value) || !apartmentData.dataset?.apartments.some(apartment => apartment.id === value) || !root ||
             root.dataset.homepageStage !== "orbit" || root.dataset.orbitState !== "checkpoint" || Number(root.dataset.orbitCheckpoint) < 0) return
         setSelectedApartmentId(value); detailOpen.current = true; actions.current?.orbit?.setSuspended(true); setDetailApartmentId(value)
-    }, [jsonDetails, staticRenderer, selectedApartment?.id, apartmentData.dataset])
+    }, [jsonDetails, staticRenderer, selectedApartment?.id, apartmentData.dataset, filterMatches])
     const closeApartmentDetails = React.useCallback(() => {
         detailOpen.current = false; setDetailApartmentId(null); actions.current?.orbit?.setSuspended(false)
     }, [])
@@ -1393,6 +1658,24 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
         actions.current?.orbit?.setSuspended(detailOpen.current)
     }, [])
     const fullscreen = useOrbitFullscreen(refreshFullscreenLayout, detailOpen)
+
+    React.useEffect(() => {
+        const root = rootRef.current
+        if (!root) return
+        const moving = !staticRenderer && (stage !== "orbit" || orbitInfo.state !== "checkpoint")
+        const hoveredApartmentId = !moving && interactionApartmentId && filterMatches.has(interactionApartmentId) ? interactionApartmentId : null
+        const highlightIds = moving ? [] : filterResult.active ? filterResult.matchingIds : hoveredApartmentId ? [hoveredApartmentId] : []
+        // The eight mask views can consume the same IDs in compact and fullscreen
+        // mode. A preview record supplies details without pretending it is hovered.
+        const state = { version: 1, criteriaActive: filterResult.active, ...filterResult.filters,
+            matchedIds: [...filterResult.matchingIds], highlightIds: [...highlightIds], hoveredApartmentId,
+            checkpoint: orbitInfo.checkpoint, moving }
+        root.dataset.orbitFilterActive = String(state.criteriaActive)
+        root.dataset.orbitFilterCriteria = JSON.stringify(filterResult.filters)
+        root.dataset.orbitFilterMatches = JSON.stringify(state.matchedIds)
+        root.dataset.orbitHighlightIds = JSON.stringify(state.highlightIds)
+        root.dispatchEvent(new CustomEvent("admiral:orbit-filter-change", { detail: state }))
+    }, [filterResult, filterMatches, interactionApartmentId, stage, orbitInfo.state, orbitInfo.checkpoint, staticRenderer])
     const setStudioViewport = React.useCallback((element: HTMLDivElement | null) => { studioViewportRef.current = element; queueMicrotask(() => refreshPresentation.current()) }, [])
     const refreshStudioLayout = React.useCallback(() => { refreshPresentation.current() }, [])
     const timing = React.useRef<HomepageTiming>({ openingOut, buildingIn, buildingFull, ctaIn, rise })
@@ -1797,11 +2080,14 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
             const detail = (event as CustomEvent<unknown>).detail
             const values = detail && typeof detail === "object" ? detail as { id?: unknown; apartmentId?: unknown; number?: unknown } : null
             const value = typeof detail === "string" ? detail : values?.id ?? values?.apartmentId ?? values?.number
-            if (typeof value === "string" && apartmentData.dataset?.apartments.some(item => item.id === value)) setSelectedApartmentId(value)
+            if (detail === null || detail === "" || values && (values.id === null || values.apartmentId === null || values.number === null)) { setInteractionApartmentId(null); return }
+            if (typeof value === "string" && filterMatches.has(value) && apartmentData.dataset?.apartments.some(item => item.id === value)) {
+                setInteractionApartmentId(value); setSelectedApartmentId(value)
+            }
         }
         root.addEventListener("admiral:apartment-hover", selectFromMask)
         return () => root.removeEventListener("admiral:apartment-hover", selectFromMask)
-    }, [jsonDetails, apartmentData.dataset])
+    }, [jsonDetails, apartmentData.dataset, filterMatches])
 
     React.useEffect(() => {
         const root = rootRef.current
@@ -1810,17 +2096,17 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
             const detail = (event as CustomEvent<unknown>).detail
             const values = detail && typeof detail === "object" ? detail as { id?: unknown; apartmentId?: unknown; number?: unknown } : null
             const id = typeof detail === "string" ? detail : values?.id ?? values?.apartmentId ?? values?.number
-            if (typeof id !== "string") return
+            if (typeof id !== "string" || !filterMatches.has(id)) return
             if (mobilePresentation) {
                 // Touch selects first; the explicit Details action opens the
                 // shared card. Desktop facade clicks retain their direct action.
                 if (jsonDetails && root!.dataset.homepageStage === "orbit" && root!.dataset.orbitState === "checkpoint" && Number(root!.dataset.orbitCheckpoint) >= 0 &&
-                    apartmentData.dataset?.apartments.some(apartment => apartment.id === id)) setSelectedApartmentId(id)
+                    apartmentData.dataset?.apartments.some(apartment => apartment.id === id)) { setInteractionApartmentId(id); setSelectedApartmentId(id) }
             } else openApartmentDetails(id)
         }
         root.addEventListener("admiral:apartment-click", click)
         return () => root.removeEventListener("admiral:apartment-click", click)
-    }, [openApartmentDetails, staticRenderer, mobilePresentation, jsonDetails, apartmentData.dataset])
+    }, [openApartmentDetails, staticRenderer, mobilePresentation, jsonDetails, apartmentData.dataset, filterMatches])
     React.useEffect(() => { if (stage !== "orbit" && detailApartmentId) closeApartmentDetails() }, [stage, detailApartmentId, closeApartmentDetails])
 
     React.useEffect(() => {
@@ -1863,6 +2149,7 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
             {mobilePresentation && useStudio && <style>{homepageMobileOrbitStyles}</style>}
             <div aria-hidden="true" style={{ position: "absolute", inset: 0, background: orbitBackground, opacity: "var(--admiral-studio-light, 0)" as unknown as number, pointerEvents: "none" }} />
             {useStudio && <OrbitApartmentStudio active={!fullscreen.active && (orbitVisible || orbitStatic)} mobile={mobilePresentation} moving={!staticRenderer && orbitMoving} mode={detailsMode} dataset={apartmentData.dataset} dataStatus={apartmentData.status} error={apartmentData.error}
+                filters={filterResult.filters} filterBounds={filterBounds} filterActive={filterResult.active} filterCount={filterResult.matchingIds.length} onFiltersChange={setApartmentFilters}
                 onRetry={apartmentData.retry} apartment={selectedApartment} onSelect={setSelectedApartmentId} assetBase={apartmentAssetBase} detailsUrl={detailPageUrl} inquiryUrl={inquiryUrl}
                 onViewport={setStudioViewport} language={detailsLanguage} onLayout={refreshStudioLayout} onOpenDetails={() => openApartmentDetails()} />}
             <div ref={heroRootRef} data-admiral-sequence="" style={{ position: "absolute", inset: 0, zIndex: 2, pointerEvents: stage === "orbit" || stage === "handoff" ? "none" : "auto", clipPath: imageClip }}>
@@ -1875,12 +2162,13 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
                 <div data-orbit-fullscreen-plane="" data-rotated={String(!!fullscreen.geometryRef.current?.rotated)} style={fullscreen.planeStyle}>
                     <canvas ref={orbitCanvasRef} aria-hidden="true" width={1} height={1} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", zIndex: 2, opacity: orbitVisible ? 1 : 0, transition: reduced ? "none" : "opacity .35s", touchAction: fullscreen.active ? "none" : "pan-y pinch-zoom", pointerEvents: orbitVisible ? "auto" : "none", clipPath: fullscreen.active ? "none" : imageClip }} />
                     {fullscreen.active && <OrbitFullscreenDetails apartment={selectedApartment} assetBase={apartmentAssetBase} language={detailsLanguage}
+                        emptyMessage={filterResult.active && filterResult.matchingIds.length === 0 ? detailsLanguage === "hu" ? "Nincs a szűrésnek megfelelő lakás." : "No apartments match these filters." : undefined}
                         onOpenDetails={() => openApartmentDetails()} moving={orbitMoving} onPrevious={() => actions.current?.orbit?.go(-1)} onNext={() => actions.current?.orbit?.go(1)}
                         onClose={fullscreen.close} checkpoint={orbitInfo.checkpoint} count={checkpoints} />}
                 </div>
             </div>
-            {mobilePresentation && useStudio && orbitVisible && !fullscreen.active && <button type="button" data-orbit-fullscreen-open="" data-orbit-ignore="" aria-haspopup="dialog" onClick={fullscreen.open}>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.65" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false"><path d="M8 4H4v4m12-4h4v4M4 16v4h4m12-4v4h-4" /></svg>{detailsLanguage === "hu" ? "Teljes képernyő" : "Fullscreen view"}
+            {mobilePresentation && useStudio && orbitVisible && !fullscreen.active && <button type="button" data-orbit-fullscreen-open="" data-orbit-ignore="" aria-haspopup="dialog" aria-label={detailsLanguage === "hu" ? "Teljes képernyő" : "Fullscreen view"} title={detailsLanguage === "hu" ? "Teljes képernyő" : "Fullscreen view"} onClick={fullscreen.open}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.65" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false"><path d="M8 4H4v4m12-4h4v4M4 16v4h4m12-4v4h-4" /></svg>
             </button>}
             {orbitStatic && <span style={{ position: "absolute", inset: 0, pointerEvents: "none" }} />}
             <div aria-hidden="true" style={{ position: "absolute", top: "var(--admiral-image-y, 0px)", left: "var(--admiral-image-x, 0px)", width: "var(--admiral-image-width, 100%)", height: "var(--admiral-image-height, 100%)", background: "#000", opacity: darken, pointerEvents: "none", zIndex: 2 }} />

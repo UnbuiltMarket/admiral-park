@@ -29,12 +29,14 @@ export async function buildHomepage() {
  const apartmentDetails = await readFile(new URL('src/framer/ApartmentDetails.source.tsx',root),'utf8');
  const orbitStories = await readFile(new URL('src/framer/OrbitStoryOverlays.source.tsx',root),'utf8');
  const apartmentData = await readFile(new URL('src/framer/OrbitApartmentData.source.tsx',root),'utf8');
+ const apartmentFilterLogic = await readFile(new URL('src/core/orbit-apartment-filters.ts',root),'utf8');
+ const apartmentFilterBar = await readFile(new URL('src/framer/OrbitApartmentFilters.source.tsx',root),'utf8');
  const apartmentStudio = await readFile(new URL('src/framer/OrbitApartmentStudio.source.tsx',root),'utf8');
  const orbitFullscreen = await readFile(new URL('src/framer/OrbitFullscreen.source.tsx',root),'utf8');
  const source = '// Generated Framer homepage. Requires AdmiralApartmentDetailCard.tsx in the same Framer project.\n'+template
   .replace('__HERO_NAMES__',JSON.stringify(heroNames)).replace('__CONNECTION_NAMES__',JSON.stringify(connectionNames)).replace('__ORBIT_NAMES__',JSON.stringify(orbitNames))
   .replace('__HERO_VERSION__',heroHash.digest('hex').slice(0,12)).replace('__CONNECTION_VERSION__',connectionHash.digest('hex').slice(0,12)).replace('__ORBIT_VERSION__',orbitHash.digest('hex').slice(0,12))
-  .replace('// @ORBIT_STORY_INSERT',orbitStories).replace('// @ORBIT_APARTMENT_DATA_INSERT',apartmentData).replace('// @ORBIT_APARTMENT_STUDIO_INSERT',apartmentStudio).replace('// @ORBIT_FULLSCREEN_INSERT',orbitFullscreen).replace('// @APARTMENT_DETAILS_INSERT',apartmentDetails).replace('// @HERO_CORE_INSERT',inlineCore(hero)).replace('// @ORBIT_CORE_INSERT',inlineCore(orbit)).trimEnd()+'\n';
+  .replace('// @ORBIT_STORY_INSERT',orbitStories).replace('// @ORBIT_APARTMENT_DATA_INSERT',apartmentData).replace('// @ORBIT_APARTMENT_FILTERS_INSERT',inlineCore(apartmentFilterLogic)+'\n'+apartmentFilterBar).replace('// @ORBIT_APARTMENT_STUDIO_INSERT',apartmentStudio).replace('// @ORBIT_FULLSCREEN_INSERT',orbitFullscreen).replace('// @APARTMENT_DETAILS_INSERT',apartmentDetails).replace('// @HERO_CORE_INSERT',inlineCore(hero)).replace('// @ORBIT_CORE_INSERT',inlineCore(orbit)).trimEnd()+'\n';
  compileTS(source,'AdmiralHomepageTrial.tsx');
  await writeFile(new URL('src/framer/AdmiralHomepageTrial.tsx',root),source);
  await writeFile(new URL('src/core/orbit-player.js',root),'// Generated from orbit-player.ts.\n'+compileTS(orbit,'orbit-player.ts'));

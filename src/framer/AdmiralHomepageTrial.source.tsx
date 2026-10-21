@@ -42,12 +42,13 @@ const homepageButton: React.CSSProperties = {
     background: "rgba(10,20,28,.78)", color: "#fff", padding: "9px 12px", font: "500 12px/1.3 system-ui,sans-serif", cursor: "pointer",
 }
 const homepageMobileOrbitStyles = `
-[data-admiral-homepage] button[data-orbit-fullscreen-open] { position:absolute; z-index:4; left:calc(var(--admiral-image-x, 0px) + var(--admiral-image-width, 100%) - 12px); top:calc(var(--admiral-image-y, 0px) + var(--admiral-image-height, 100%) - 12px); transform:translate(-100%,-100%); display:inline-flex; align-items:center; justify-content:center; gap:8px; width:max-content; max-width:calc(100% - 24px); min-height:44px; padding:10px 15px; appearance:none; border:1px solid rgba(255,255,255,.85); border-radius:999px; background:#fff; color:#242824; box-shadow:0 2px 5px rgba(20,32,24,.08),0 8px 22px rgba(20,32,24,.14); font:600 11px/1.25 Montserrat,Arial,sans-serif; letter-spacing:.005em; white-space:nowrap; cursor:pointer; touch-action:manipulation; -webkit-tap-highlight-color:transparent; transition:background .18s,border-color .18s,box-shadow .18s; }
-[data-admiral-homepage] button[data-orbit-fullscreen-open] svg { flex:none; width:18px; height:18px; }
+[data-admiral-homepage] button[data-orbit-fullscreen-open] { position:absolute; z-index:4; left:calc(var(--admiral-image-x, 0px) + var(--admiral-image-width, 100%) - 6px); top:calc(var(--admiral-image-y, 0px) + var(--admiral-image-height, 100%) - 6px); transform:translate(-100%,-100%); display:grid; place-items:center; width:44px; height:44px; min-height:44px; padding:0; appearance:none; border:0; border-radius:50%; background:transparent; color:#242824; cursor:pointer; touch-action:manipulation; -webkit-tap-highlight-color:transparent; }
+[data-admiral-homepage] button[data-orbit-fullscreen-open]::before { content:""; position:absolute; inset:6px; border:1px solid rgba(255,255,255,.85); border-radius:50%; background:rgba(255,255,255,.95); box-shadow:0 2px 10px rgba(20,32,24,.14); transition:background .18s,box-shadow .18s; }
+[data-admiral-homepage] button[data-orbit-fullscreen-open] svg { position:relative; width:15px; height:15px; }
 [data-admiral-homepage] button[data-orbit-fullscreen-open]:focus-visible { outline:2px solid #242824; outline-offset:3px; }
-[data-admiral-homepage] button[data-orbit-fullscreen-open]:active { background:#f0f2ed; border-color:#e6eae1; box-shadow:0 1px 3px rgba(20,32,24,.12); }
-@media (hover:hover) and (pointer:fine) { [data-admiral-homepage] button[data-orbit-fullscreen-open]:hover { background:#f5f6f2; box-shadow:0 3px 7px rgba(20,32,24,.1),0 10px 24px rgba(20,32,24,.16); } }
-@media (prefers-reduced-motion:reduce) { [data-admiral-homepage] button[data-orbit-fullscreen-open] { transition:none; } }
+[data-admiral-homepage] button[data-orbit-fullscreen-open]:active::before { background:#e9ede7; box-shadow:0 1px 4px rgba(20,32,24,.12); }
+@media (hover:hover) and (pointer:fine) { [data-admiral-homepage] button[data-orbit-fullscreen-open]:hover::before { background:#fff; box-shadow:0 3px 12px rgba(20,32,24,.2); } }
+@media (prefers-reduced-motion:reduce) { [data-admiral-homepage] button[data-orbit-fullscreen-open]::before { transition:none; } }
 `
 function homepageBlocked(target: EventTarget | null) {
     return target instanceof Element && !!target.closest("nav,header,a,button,input,textarea,select,[contenteditable]:not([contenteditable='false']),[role='button'],[role='link'],[data-orbit-ignore],[data-homepage-controls]")
@@ -117,6 +118,7 @@ function pinHomepagePage(): () => void {
 
 // @ORBIT_STORY_INSERT
 // @ORBIT_APARTMENT_DATA_INSERT
+// @ORBIT_APARTMENT_FILTERS_INSERT
 // @ORBIT_APARTMENT_STUDIO_INSERT
 // @ORBIT_FULLSCREEN_INSERT
 
@@ -172,13 +174,22 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
     // Every orbit layout uses real apartment IDs so its floorplan opens the shared card.
     const jsonDetails = detailsMode !== "off"
     const [selectedApartmentId, setSelectedApartmentId] = React.useState<string | null>(null)
+    const [interactionApartmentId, setInteractionApartmentId] = React.useState<string | null>(null)
+    const [apartmentFilters, setApartmentFilters] = React.useState<OrbitApartmentFilters>({ statuses: [], priceMin: null, priceMax: null })
     const [detailApartmentId, setDetailApartmentId] = React.useState<string | null>(null)
     const detailOpen = React.useRef(false)
     const apartmentData = useOrbitApartments(apartmentDataUrl, jsonDetails && (staticRenderer && editorView === "orbit" || hostVisible && ["building", "connection", "handoff", "orbit"].includes(stage)))
+    const filterBounds = React.useMemo(() => getOrbitPriceBounds(apartmentData.dataset?.apartments || []), [apartmentData.dataset])
+    const filterResult = React.useMemo(() => getOrbitFilterResult(apartmentData.dataset?.apartments || [], apartmentFilters, filterBounds), [apartmentData.dataset, apartmentFilters, filterBounds])
+    const filterMatches = React.useMemo(() => new Set(filterResult.matchingIds), [filterResult])
     const selectedApartment = React.useMemo(() => {
-        const records = apartmentData.dataset?.apartments || []
+        const records = (apartmentData.dataset?.apartments || []).filter(item => filterMatches.has(item.id))
         return records.find(item => item.id === selectedApartmentId) || (detailsMode === "preview" ? records.find(item => item.id === previewApartmentId) || records[0] || null : null)
-    }, [apartmentData.dataset, selectedApartmentId, previewApartmentId, detailsMode])
+    }, [apartmentData.dataset, selectedApartmentId, previewApartmentId, detailsMode, filterMatches])
+    React.useEffect(() => {
+        if (selectedApartmentId && !filterMatches.has(selectedApartmentId)) setSelectedApartmentId(null)
+        if (interactionApartmentId && !filterMatches.has(interactionApartmentId)) setInteractionApartmentId(null)
+    }, [filterMatches, selectedApartmentId, interactionApartmentId])
     const selectedApartmentDetails = React.useMemo<ApartmentDetailsData | null>(() => selectedApartment ? {
         id: selectedApartment.id, number: selectedApartment.id, area: selectedApartment.areaInterior, terrace: selectedApartment.areaTerrace,
         garden: selectedApartment.areaGarden, rooms: selectedApartment.rooms,
@@ -187,6 +198,7 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
     } : null, [selectedApartment, apartmentAssetBase, detailsLanguage])
     const detailsModeRef = React.useRef(detailsMode); detailsModeRef.current = detailsMode
     const clearApartmentDetails = React.useCallback(() => {
+        setInteractionApartmentId(null)
         if (detailsModeRef.current === "hover") setSelectedApartmentId(null)
     }, [])
     const rootRef = React.useRef<HTMLDivElement>(null), heroRootRef = React.useRef<HTMLDivElement>(null)
@@ -194,10 +206,10 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
     const actions = React.useRef<HomepageActions | null>(null)
     const openApartmentDetails = React.useCallback((id?: string) => {
         const value = id || selectedApartment?.id, root = rootRef.current
-        if (!jsonDetails || staticRenderer || !value || !apartmentData.dataset?.apartments.some(apartment => apartment.id === value) || !root ||
+        if (!jsonDetails || staticRenderer || !value || !filterMatches.has(value) || !apartmentData.dataset?.apartments.some(apartment => apartment.id === value) || !root ||
             root.dataset.homepageStage !== "orbit" || root.dataset.orbitState !== "checkpoint" || Number(root.dataset.orbitCheckpoint) < 0) return
         setSelectedApartmentId(value); detailOpen.current = true; actions.current?.orbit?.setSuspended(true); setDetailApartmentId(value)
-    }, [jsonDetails, staticRenderer, selectedApartment?.id, apartmentData.dataset])
+    }, [jsonDetails, staticRenderer, selectedApartment?.id, apartmentData.dataset, filterMatches])
     const closeApartmentDetails = React.useCallback(() => {
         detailOpen.current = false; setDetailApartmentId(null); actions.current?.orbit?.setSuspended(false)
     }, [])
@@ -217,6 +229,24 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
         actions.current?.orbit?.setSuspended(detailOpen.current)
     }, [])
     const fullscreen = useOrbitFullscreen(refreshFullscreenLayout, detailOpen)
+
+    React.useEffect(() => {
+        const root = rootRef.current
+        if (!root) return
+        const moving = !staticRenderer && (stage !== "orbit" || orbitInfo.state !== "checkpoint")
+        const hoveredApartmentId = !moving && interactionApartmentId && filterMatches.has(interactionApartmentId) ? interactionApartmentId : null
+        const highlightIds = moving ? [] : filterResult.active ? filterResult.matchingIds : hoveredApartmentId ? [hoveredApartmentId] : []
+        // The eight mask views can consume the same IDs in compact and fullscreen
+        // mode. A preview record supplies details without pretending it is hovered.
+        const state = { version: 1, criteriaActive: filterResult.active, ...filterResult.filters,
+            matchedIds: [...filterResult.matchingIds], highlightIds: [...highlightIds], hoveredApartmentId,
+            checkpoint: orbitInfo.checkpoint, moving }
+        root.dataset.orbitFilterActive = String(state.criteriaActive)
+        root.dataset.orbitFilterCriteria = JSON.stringify(filterResult.filters)
+        root.dataset.orbitFilterMatches = JSON.stringify(state.matchedIds)
+        root.dataset.orbitHighlightIds = JSON.stringify(state.highlightIds)
+        root.dispatchEvent(new CustomEvent("admiral:orbit-filter-change", { detail: state }))
+    }, [filterResult, filterMatches, interactionApartmentId, stage, orbitInfo.state, orbitInfo.checkpoint, staticRenderer])
     const setStudioViewport = React.useCallback((element: HTMLDivElement | null) => { studioViewportRef.current = element; queueMicrotask(() => refreshPresentation.current()) }, [])
     const refreshStudioLayout = React.useCallback(() => { refreshPresentation.current() }, [])
     const timing = React.useRef<HomepageTiming>({ openingOut, buildingIn, buildingFull, ctaIn, rise })
@@ -621,11 +651,14 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
             const detail = (event as CustomEvent<unknown>).detail
             const values = detail && typeof detail === "object" ? detail as { id?: unknown; apartmentId?: unknown; number?: unknown } : null
             const value = typeof detail === "string" ? detail : values?.id ?? values?.apartmentId ?? values?.number
-            if (typeof value === "string" && apartmentData.dataset?.apartments.some(item => item.id === value)) setSelectedApartmentId(value)
+            if (detail === null || detail === "" || values && (values.id === null || values.apartmentId === null || values.number === null)) { setInteractionApartmentId(null); return }
+            if (typeof value === "string" && filterMatches.has(value) && apartmentData.dataset?.apartments.some(item => item.id === value)) {
+                setInteractionApartmentId(value); setSelectedApartmentId(value)
+            }
         }
         root.addEventListener("admiral:apartment-hover", selectFromMask)
         return () => root.removeEventListener("admiral:apartment-hover", selectFromMask)
-    }, [jsonDetails, apartmentData.dataset])
+    }, [jsonDetails, apartmentData.dataset, filterMatches])
 
     React.useEffect(() => {
         const root = rootRef.current
@@ -634,17 +667,17 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
             const detail = (event as CustomEvent<unknown>).detail
             const values = detail && typeof detail === "object" ? detail as { id?: unknown; apartmentId?: unknown; number?: unknown } : null
             const id = typeof detail === "string" ? detail : values?.id ?? values?.apartmentId ?? values?.number
-            if (typeof id !== "string") return
+            if (typeof id !== "string" || !filterMatches.has(id)) return
             if (mobilePresentation) {
                 // Touch selects first; the explicit Details action opens the
                 // shared card. Desktop facade clicks retain their direct action.
                 if (jsonDetails && root!.dataset.homepageStage === "orbit" && root!.dataset.orbitState === "checkpoint" && Number(root!.dataset.orbitCheckpoint) >= 0 &&
-                    apartmentData.dataset?.apartments.some(apartment => apartment.id === id)) setSelectedApartmentId(id)
+                    apartmentData.dataset?.apartments.some(apartment => apartment.id === id)) { setInteractionApartmentId(id); setSelectedApartmentId(id) }
             } else openApartmentDetails(id)
         }
         root.addEventListener("admiral:apartment-click", click)
         return () => root.removeEventListener("admiral:apartment-click", click)
-    }, [openApartmentDetails, staticRenderer, mobilePresentation, jsonDetails, apartmentData.dataset])
+    }, [openApartmentDetails, staticRenderer, mobilePresentation, jsonDetails, apartmentData.dataset, filterMatches])
     React.useEffect(() => { if (stage !== "orbit" && detailApartmentId) closeApartmentDetails() }, [stage, detailApartmentId, closeApartmentDetails])
 
     React.useEffect(() => {
@@ -687,6 +720,7 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
             {mobilePresentation && useStudio && <style>{homepageMobileOrbitStyles}</style>}
             <div aria-hidden="true" style={{ position: "absolute", inset: 0, background: orbitBackground, opacity: "var(--admiral-studio-light, 0)" as unknown as number, pointerEvents: "none" }} />
             {useStudio && <OrbitApartmentStudio active={!fullscreen.active && (orbitVisible || orbitStatic)} mobile={mobilePresentation} moving={!staticRenderer && orbitMoving} mode={detailsMode} dataset={apartmentData.dataset} dataStatus={apartmentData.status} error={apartmentData.error}
+                filters={filterResult.filters} filterBounds={filterBounds} filterActive={filterResult.active} filterCount={filterResult.matchingIds.length} onFiltersChange={setApartmentFilters}
                 onRetry={apartmentData.retry} apartment={selectedApartment} onSelect={setSelectedApartmentId} assetBase={apartmentAssetBase} detailsUrl={detailPageUrl} inquiryUrl={inquiryUrl}
                 onViewport={setStudioViewport} language={detailsLanguage} onLayout={refreshStudioLayout} onOpenDetails={() => openApartmentDetails()} />}
             <div ref={heroRootRef} data-admiral-sequence="" style={{ position: "absolute", inset: 0, zIndex: 2, pointerEvents: stage === "orbit" || stage === "handoff" ? "none" : "auto", clipPath: imageClip }}>
@@ -699,12 +733,13 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
                 <div data-orbit-fullscreen-plane="" data-rotated={String(!!fullscreen.geometryRef.current?.rotated)} style={fullscreen.planeStyle}>
                     <canvas ref={orbitCanvasRef} aria-hidden="true" width={1} height={1} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", zIndex: 2, opacity: orbitVisible ? 1 : 0, transition: reduced ? "none" : "opacity .35s", touchAction: fullscreen.active ? "none" : "pan-y pinch-zoom", pointerEvents: orbitVisible ? "auto" : "none", clipPath: fullscreen.active ? "none" : imageClip }} />
                     {fullscreen.active && <OrbitFullscreenDetails apartment={selectedApartment} assetBase={apartmentAssetBase} language={detailsLanguage}
+                        emptyMessage={filterResult.active && filterResult.matchingIds.length === 0 ? detailsLanguage === "hu" ? "Nincs a szűrésnek megfelelő lakás." : "No apartments match these filters." : undefined}
                         onOpenDetails={() => openApartmentDetails()} moving={orbitMoving} onPrevious={() => actions.current?.orbit?.go(-1)} onNext={() => actions.current?.orbit?.go(1)}
                         onClose={fullscreen.close} checkpoint={orbitInfo.checkpoint} count={checkpoints} />}
                 </div>
             </div>
-            {mobilePresentation && useStudio && orbitVisible && !fullscreen.active && <button type="button" data-orbit-fullscreen-open="" data-orbit-ignore="" aria-haspopup="dialog" onClick={fullscreen.open}>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.65" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false"><path d="M8 4H4v4m12-4h4v4M4 16v4h4m12-4v4h-4" /></svg>{detailsLanguage === "hu" ? "Teljes képernyő" : "Fullscreen view"}
+            {mobilePresentation && useStudio && orbitVisible && !fullscreen.active && <button type="button" data-orbit-fullscreen-open="" data-orbit-ignore="" aria-haspopup="dialog" aria-label={detailsLanguage === "hu" ? "Teljes képernyő" : "Fullscreen view"} title={detailsLanguage === "hu" ? "Teljes képernyő" : "Fullscreen view"} onClick={fullscreen.open}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.65" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false"><path d="M8 4H4v4m12-4h4v4M4 16v4h4m12-4v4h-4" /></svg>
             </button>}
             {orbitStatic && <span style={{ position: "absolute", inset: 0, pointerEvents: "none" }} />}
             <div aria-hidden="true" style={{ position: "absolute", top: "var(--admiral-image-y, 0px)", left: "var(--admiral-image-x, 0px)", width: "var(--admiral-image-width, 100%)", height: "var(--admiral-image-height, 100%)", background: "#000", opacity: darken, pointerEvents: "none", zIndex: 2 }} />
