@@ -16,7 +16,18 @@ function rgba(width=10,height=10){
  return pixels;
 }
 
-function harness({fetchFailure=false,deferredDecode=false,decodeFailure=false,highlightColor,preserveModalHover=false}={}){
+function cssContext(initial='rgb(46, 119, 255)',initialPixel=[46,119,255,255]){
+ let resolved=initial,pixel=initialPixel,reads=0,removed=0;const probes=[],surfaces=[],fills=[];
+ const ownerDocument={defaultView:{getComputedStyle(probe){assert.ok(probe.parentNode,'CSS tokens must resolve while attached to their inherited root');reads++;return{backgroundColor:resolved};}},createElement(tag){
+  if(tag==='span'){
+   const properties={},probe={properties,style:{cssText:'',setProperty(name,value){properties[name]=value;}},setAttribute(){},remove(){removed++;this.parentNode=null;}};probes.push(probe);return probe;
+  }
+  assert.equal(tag,'canvas');const surface={width:0,height:0,getContext(){return{set fillStyle(value){fills.push(value);},fillRect(){},getImageData(){return{data:new Uint8ClampedArray(pixel)};}};}};surfaces.push(surface);return surface;
+ }};
+ return{ownerDocument,probes,surfaces,fills,setResolved(value,nextPixel=pixel){resolved=value;pixel=nextPixel;},stats:()=>({reads,removed})};
+}
+
+function harness({fetchFailure=false,deferredDecode=false,decodeFailure=false,highlightColor,preserveModalHover=false,colorContext}={}){
  const listeners=new Map(),animation=new Map(),draws=[],hovered=[],picked=[],created=[],requests=[],watchdogs=new Map();
  let rafId=0,highlights=[],allowed=['A001','A002'],fetches=0,inFlight=0,maxFetches=0,closed=0,decodes=0,decodeResolve,mapper=(x,y)=>({x,y});
  class Element{
@@ -24,6 +35,7 @@ function harness({fetchFailure=false,deferredDecode=false,decodeFailure=false,hi
   matches(selector){return this.fullscreenSurface&&selector.includes(":not([data-orbit-fullscreen-surface])")?false:this.control;}
   contains(node){for(let parent=node;parent;parent=parent.parentElement)if(parent===this)return true;return false;} closest(){return null;}
   querySelectorAll(selector){return(this.controls??[]).filter(control=>control.matches(selector));} getBoundingClientRect(){return this.bounds;}
+  appendChild(child){child.parentNode=this;return child;}
  }
  class Canvas extends Element{
   constructor(){super();this.width=0;this.height=0;this.image=null;created.push(this);}
@@ -34,6 +46,7 @@ function harness({fetchFailure=false,deferredDecode=false,decodeFailure=false,hi
   };}
  }
  const root=new Element(),canvas=new Canvas(),document={hidden:false,createElement:()=>new Canvas(),addEventListener(){},removeEventListener(){}};
+ if(colorContext)root.ownerDocument=colorContext.ownerDocument;
  const view={enabled:true,checkpoint:0,moving:false,suspended:false,mobile:false,width:100,height:100,viewport:{x:0,y:0,width:100,height:100},focalX:.5,focalY:.5};
  const context={exports:{},Uint8Array,Uint8ClampedArray,Element,document,window:{devicePixelRatio:1,
   addEventListener(name,fn){if(!listeners.has(name))listeners.set(name,[]);listeners.get(name).push(fn);},
@@ -101,6 +114,47 @@ test('numeric CSS highlight colour reaches the rendered overlay and unchanged di
   let writes=0;app.root.dataset=new Proxy(app.root.dataset,{set(target,key,value){writes++;target[key]=value;return true;}});
   for(let step=0;step<10;step++)app.engine.refresh();
   assert.equal(writes,0,'Unchanged mask state must not retrigger root mutation observers');
+ }finally{app.engine.destroy();}
+});
+
+test('the published Framer token resolves in its inherited context, including primary variables and nested fallbacks',()=>{
+ const app=harness(),css=cssContext(),root={ownerDocument:css.ownerDocument,appendChild(node){node.parentNode=this;return node;}};
+ const published='var(--token-66c2eeca-6d1b-4d69-991e-55004b209eb7, rgb(46, 119, 255))';
+ try{
+  assert.deepEqual([...app.api.orbitMaskHighlightRGB(published,root)],[46,119,255]);
+  assert.equal(css.probes.at(-1).properties['--admiral-highlight-probe-color'],published);
+  css.setResolved('rgb(12, 34, 56)');assert.deepEqual([...app.api.orbitMaskHighlightRGB(published,root)],[12,34,56],'The actual inherited variable must take priority over the fallback text');
+  const nested='var(--missing, var(--nested, hsl(219 100% 59%)))';css.setResolved('rgb(46, 119, 255)');
+  assert.deepEqual([...app.api.orbitMaskHighlightRGB(nested,root)],[46,119,255]);assert.equal(css.probes.at(-1).properties['--admiral-highlight-probe-color'],nested);
+  assert.deepEqual([...app.api.orbitMaskHighlightRGB('hsl(219 100% 59%)',root)],[46,119,255]);
+  assert.equal(css.stats().reads,4);assert.equal(css.stats().removed,4);assert.equal(css.surfaces.length,0,'Resolved numeric CSS does not need a canvas readback');
+  assert.deepEqual([...app.api.orbitMaskHighlightRGB(published)],[248,214,139],'Unavailable browser CSS context must degrade safely');
+ }finally{app.engine.destroy();}
+});
+
+test('browser-supported modern CSS colours use a one-pixel sRGB conversion and invalid computed colours fall back safely',()=>{
+ const app=harness(),css=cssContext('color(display-p3 0.2 0.4 0.8)',[39,103,210,255]),root={ownerDocument:css.ownerDocument,appendChild(node){node.parentNode=this;return node;}};
+ try{
+  assert.deepEqual([...app.api.orbitMaskHighlightRGB('color(display-p3 0.2 0.4 0.8)',root)],[39,103,210]);
+  assert.equal(css.fills.at(-1),'color(display-p3 0.2 0.4 0.8)');assert.equal(css.surfaces.at(-1).width,0);assert.equal(css.surfaces.at(-1).height,0);
+  css.setResolved('rgba(0, 0, 0, 0)',[0,0,0,0]);
+  assert.deepEqual([...app.api.orbitMaskHighlightRGB('not-a-colour',root)],[248,214,139]);
+  assert.equal(css.stats().removed,2);
+ }finally{app.engine.destroy();}
+});
+
+test('highlight style changes and CSS token reapplication preserve masks, downloads, camera, and hover state',async()=>{
+ const css=cssContext(),app=harness({highlightColor:'#f8d68b',colorContext:css});
+ const tint=()=>{const layer=app.draws.filter(draw=>draw.surface===app.canvas).at(-1).image;return[...layer.rgba.slice((4*10+2)*4,(4*10+2)*4+4)];};
+ try{
+  await until(()=>app.engine.snapshot().state==='ready'&&app.engine.snapshot().downloaded===8);app.emit('pointermove');app.flush();
+  const before=app.stats(),snapshot=app.engine.snapshot();
+  app.engine.setHighlightStyle('var(--token-66c2eeca-6d1b-4d69-991e-55004b209eb7, rgb(46, 119, 255))',.33);
+  assert.deepEqual(tint(),[46,119,255,84]);assert.deepEqual(app.stats(),before);assert.equal(app.engine.snapshot().checkpoint,snapshot.checkpoint);assert.equal(app.engine.snapshot().cached,snapshot.cached);assert.equal(app.engine.snapshot().hovered,'A001');
+  const reads=css.stats().reads;app.emit('pointermove');app.flush();app.engine.refresh();assert.equal(css.stats().reads,reads,'Pointer updates must not perform CSS probe or pixel readbacks');
+  css.setResolved('rgb(200, 60, 90)');app.engine.setHighlightStyle();assert.deepEqual(tint(),[200,60,90,84]);assert.deepEqual(app.stats(),before);
+  css.setResolved('rgb(9, 8, 7)');app.view.width=110;app.engine.refresh();assert.deepEqual(tint(),[9,8,7,84]);
+  css.setResolved('rgb(1, 2, 3)');app.emit('resize');assert.deepEqual(tint(),[1,2,3,84]);assert.deepEqual(app.stats(),before);
  }finally{app.engine.destroy();}
 });
 

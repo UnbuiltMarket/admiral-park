@@ -243,13 +243,15 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
     const fullscreen = useOrbitFullscreen(refreshFullscreenLayout, detailOpen)
     const pickerLatest = React.useRef({ hostVisible, mobilePresentation, focalX, focalY, filterResult, jsonDetails })
     pickerLatest.current = { hostVisible, mobilePresentation, focalX, focalY, filterResult, jsonDetails }
+    const pickerStyle = React.useRef({ color: maskHighlightColor, opacity: maskHighlightOpacity / 100 })
+    pickerStyle.current = { color: maskHighlightColor, opacity: maskHighlightOpacity / 100 }
 
     React.useEffect(() => {
         const root = rootRef.current, canvas = maskCanvasRef.current
         if (!root || !canvas || staticRenderer || !maskPicking || checkpointCount !== 8 || maskUrls.length !== 8) return
         const picker = createOrbitApartmentPicker({
             root, canvas, urls: maskUrls, palette: HOMEPAGE_MASK_PALETTE,
-            highlightColor: maskHighlightColor, highlightOpacity: maskHighlightOpacity / 100,
+            highlightColor: pickerStyle.current.color, highlightOpacity: pickerStyle.current.opacity,
             getView: () => {
                 const latest = pickerLatest.current, geometry = fullscreen.geometryRef.current
                 const width = geometry?.width || root.clientWidth, height = geometry?.height || root.clientHeight
@@ -292,7 +294,8 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
         root.addEventListener("admiral:orbit-mask-retry", retry)
         observer.observe(root); picker.refresh()
         return () => { observer.disconnect(); status.disconnect(); root.removeEventListener("admiral:orbit-filter-change", refresh); root.removeEventListener("admiral:orbit-mask-retry", retry); picker.destroy(); setMaskFailed(false); if (maskPickerRef.current === picker) maskPickerRef.current = null }
-    }, [staticRenderer, maskPicking, checkpointCount, maskUrls, maskHighlightColor, maskHighlightOpacity])
+    }, [staticRenderer, maskPicking, checkpointCount, maskUrls])
+    React.useEffect(() => { maskPickerRef.current?.setHighlightStyle(maskHighlightColor, maskHighlightOpacity / 100) }, [maskHighlightColor, maskHighlightOpacity, mobilePresentation, fullscreen.active])
     React.useEffect(() => { maskPickerRef.current?.refresh() }, [hostVisible, mobilePresentation, stage, orbitInfo.state, orbitInfo.checkpoint, detailApartmentId, fullscreen.active, focalX, focalY, filterResult])
 
     React.useEffect(() => {

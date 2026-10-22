@@ -199,11 +199,11 @@ function row(a) {
   const media=mediaEntries(a);
   const floorplan=media.find(item=>item.key==='floorplan'),floorLayout=media.find(item=>item.key==='floorLayout');
   return `<tr class="apartment-row" data-unit="${esc(a.id)}">
-    <td class="cell-unit" data-label="Lakás"><div class="unit-summary"><div class="unit-media">${floorplan?previewButton(a,floorplan):''}</div><div class="unit-identification"><div class="unit-id-line"><button type="button" class="unit-id unit-open" data-detail="${esc(a.id)}" aria-label="${esc(a.id)} lakás részleteinek megnyitása" aria-haspopup="dialog">${esc(a.id)}</button>${saveButton(a)}</div></div></div></td>
+    <td class="cell-unit" data-label="Lakás"><div class="unit-summary"><div class="unit-media">${floorplan?previewButton(a,floorplan):''}</div><div class="unit-identification"><div class="unit-id-line"><button type="button" class="unit-id unit-open" data-detail="${esc(a.id)}" aria-label="${esc(a.id)} lakás részleteinek megnyitása" aria-haspopup="dialog">${esc(a.id)}</button>${saveButton(a)}</div><span class="unit-status status-pill status-${esc(a.status)}">${esc(statusText(a))}</span><span class="unit-mobile-meta"><span>${esc(a.building)} épület · ${esc(floorText(a))}</span><span class="unit-room-count">${a.rooms == null ? esc(a.layoutLabel || 'Nincs szobaadat') : `${number.format(a.rooms)} szoba`}${a.apartmentType?` · ${esc(a.apartmentType)} típus`:''}</span></span></div></div></td>
     <td class="cell-type" data-label="Típus"><span class="unit-type" aria-label="${esc(a.apartmentType||'')} lakástípus">${esc(a.apartmentType||'')}</span><span class="unit-location"><span class="unit-building"><strong>${esc(a.building)}</strong> épület</span><span class="unit-floor">${esc(floorText(a))}</span></span></td>
     <td class="cell-rooms" data-label="Szobák">${a.rooms == null ? `<span title="${esc(a.layoutLabel || 'Nincs adat')}">${esc(a.layoutLabel || 'Nincs adat')}</span>` : number.format(a.rooms)}</td>
     <td class="cell-area cell-interior" data-label="Beltér"><span class="interior-value">${rowArea(a.areaInterior)}</span></td>
-    <td class="cell-outdoor" data-label="Kültér"><div class="outdoor-area cell-balcony"><span class="outdoor-label">Erkély</span><span class="outdoor-value">${rowArea(a.areaTerrace)}</span></div>${hasNumber(a.areaGarden)&&a.areaGarden>0?`<div class="outdoor-area cell-garden"><span class="outdoor-label">Kert</span><span class="outdoor-value garden-value">${rowArea(a.areaGarden)}</span></div>`:''}</td>
+    <td class="cell-outdoor" data-label="Kültér"><div class="outdoor-area cell-balcony"><span class="outdoor-label">Erkély</span><span class="outdoor-value">${rowArea(a.areaTerrace)}</span></div><div class="outdoor-area cell-garden${hasNumber(a.areaGarden)&&a.areaGarden>0?'':' empty-garden'}"><span class="outdoor-label">Kert</span><span class="outdoor-value garden-value">${rowArea(a.areaGarden)}</span></div></td>
     <td class="cell-price" data-label="Bruttó ár"><span class="price-amount">${apartmentPrice(a)}</span><span class="cell-status"><span class="status-pill status-${esc(a.status)}">${esc(statusText(a))}</span></span></td>
     <td class="cell-floor-layout" data-label="Szintrajz">${floorLayout?previewButton(a,floorLayout):''}</td>
     <td class="cell-actions"><div class="row-actions"><div class="action-pills">${downloadLink(a)}${compareToggle(a)}</div></div></td>
@@ -363,6 +363,11 @@ async function downloadDatasheet(id,trigger) {
   }
 }
 function resizeEmbed() { if(embed) requestAnimationFrame(()=>{ parent.postMessage({type:'admiral-list-height',height:document.documentElement.scrollHeight,instance:config.instance},'*'); }); }
+function syncSortPlacement() {
+  const container=root.querySelector('.list-container'),field=$('sort-field');
+  const destination=$(container&&container.clientWidth<=600?'mobile-sort-slot':'desktop-sort-slot');
+  if(field&&destination&&field.parentElement!==destination)destination.append(field);
+}
 
 root.addEventListener('click',event=>{
   const clickedRow=event.target.closest('.apartment-row[data-unit]');
@@ -471,8 +476,9 @@ window.addEventListener('admiral:apartment-favorites',refreshFavorites,events);
 window.addEventListener('storage',event=>{if(event.key==='admiral-park:favorites:v1')refreshFavorites();},events);
 if(useUrl)window.addEventListener('popstate',()=>{state={...defaults,sort:'id'};readUrl();syncControls();render();const id=new URL(location.href).searchParams.get('apartment');if(id&&byId(id))detail(id);else config.onApartmentClose?.();},events);
 if(embed) document.documentElement.classList.add('embedded');
-const observer = new ResizeObserver(resizeEmbed);
+const observer = new ResizeObserver(()=>{syncSortPlacement();resizeEmbed();});
 observer.observe(root.host || document.body);
+syncSortPlacement();
 
 async function load() {
   $('results').setAttribute('aria-busy','true');

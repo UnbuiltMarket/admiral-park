@@ -19,20 +19,54 @@ export interface OrbitApartmentPickerSnapshot {
     cached: number; downloaded: number; hovered: string | null; highlighted: string[]; error: string | null;
 }
 
-/** Framer colour controls may return numeric CSS rgb()/rgba() instead of hex. */
-export function orbitMaskHighlightRGB(value?: string): [number, number, number] {
-    const input = typeof value === "string" ? value.trim() : "", fallback: [number, number, number] = [248, 214, 139];
+function orbitNumericHighlightRGB(input: string): [number, number, number] | null {
     if (/^#(?:[0-9a-f]{3}|[0-9a-f]{4}|[0-9a-f]{6}|[0-9a-f]{8})$/i.test(input)) {
         const raw = input.slice(1), hex = raw.length <= 4 ? raw.split("").map(channel => channel + channel).join("") : raw;
         return [parseInt(hex.slice(0, 2), 16), parseInt(hex.slice(2, 4), 16), parseInt(hex.slice(4, 6), 16)];
     }
     const match = input.match(/^rgba?\(([^()]*)\)$/i);
-    if (!match) return fallback;
+    if (!match) return null;
     const channels = match[1].trim().split(/[\s,/]+/).filter(Boolean);
-    if ((channels.length !== 3 && channels.length !== 4) || channels.some(channel => !/^[+-]?(?:\d+(?:\.\d*)?|\.\d+)%?$/.test(channel))) return fallback;
+    if ((channels.length !== 3 && channels.length !== 4) || channels.some(channel => !/^[+-]?(?:\d+(?:\.\d*)?|\.\d+)%?$/.test(channel))) return null;
     const values = channels.slice(0, 3).map(channel => Math.round(Math.max(0, Math.min(255, channel.endsWith("%") ? parseFloat(channel) * 255 / 100 : parseFloat(channel)))));
     // Alpha is controlled separately by highlightOpacity for consistent filters.
     return [values[0], values[1], values[2]];
+}
+
+/** Resolve Framer tokens in the component's inherited CSS context, never by discarding their fallback wrapper. */
+export function orbitMaskHighlightRGB(value?: string, root?: HTMLElement): [number, number, number] {
+    const input = typeof value === "string" ? value.trim() : "", fallback: [number, number, number] = [248, 214, 139];
+    const numeric = orbitNumericHighlightRGB(input);
+    if (numeric) return numeric;
+    const owner = root?.ownerDocument;
+    if (!input || !root || !owner) return fallback;
+    let probe: HTMLSpanElement | null = null, surface: HTMLCanvasElement | null = null;
+    try {
+        probe = owner.createElement("span");
+        probe.setAttribute("aria-hidden", "true");
+        probe.style.cssText = "display:none!important;position:absolute!important;pointer-events:none!important";
+        // Custom properties resolve inherited tokens and nested var() fallbacks.
+        // An unresolved token also gets the explicit default below, rather than
+        // accidentally inheriting the webpage's text colour.
+        probe.style.setProperty("--admiral-highlight-probe-color", input);
+        probe.style.setProperty("background-color", "var(--admiral-highlight-probe-color, #f8d68b)", "important");
+        root.appendChild(probe);
+        const resolved = (owner.defaultView?.getComputedStyle(probe) ?? getComputedStyle(probe)).backgroundColor;
+        const direct = orbitNumericHighlightRGB(resolved);
+        if (direct && !/^rgba?\(\s*0[\s,]+0[\s,]+0(?:[\s,/]+0(?:\.0+)?\s*)\)$/i.test(resolved)) return direct;
+        // The browser converts supported hsl(), lab(), oklch(), color() and
+        // display-p3 values into the overlay's default sRGB canvas colour space.
+        surface = owner.createElement("canvas"); surface.width = surface.height = 1;
+        const drawing = surface.getContext("2d", { willReadFrequently: true });
+        if (!drawing) return fallback;
+        drawing.fillStyle = "#f8d68b"; drawing.fillStyle = resolved; drawing.fillRect(0, 0, 1, 1);
+        const pixel = drawing.getImageData(0, 0, 1, 1).data;
+        return pixel[3] ? [pixel[0], pixel[1], pixel[2]] : fallback;
+    } catch { return fallback; }
+    finally {
+        probe?.remove();
+        if (surface) surface.width = surface.height = 0;
+    }
 }
 
 /** The same object-fit:cover crop used by the orbit image, before any scene rotation. */
@@ -85,8 +119,9 @@ export function createOrbitApartmentPicker(options: OrbitApartmentPickerOptions)
     const generations = new Map<number, number>(), reload = new Set<number>();
     const fetching = new Set<number>(), decoding = new Set<number>(), ids = palette.map(entry => entry.id);
     const indices = new Map(ids.map((id, index) => [id, index + 1]));
-    const highlightRGB = orbitMaskHighlightRGB(options.highlightColor);
-    const highlightOpacity = Math.max(0, Math.min(1, Number.isFinite(options.highlightOpacity) ? options.highlightOpacity! : .27));
+    let highlightColor = options.highlightColor, highlightRGB = orbitMaskHighlightRGB(highlightColor, root);
+    let highlightOpacity = Math.max(0, Math.min(1, Number.isFinite(options.highlightOpacity) ? options.highlightOpacity! : .27));
+    let styleBounds: string | null = null;
     const controls = "nav,header,a,button,input,textarea,select,option,[contenteditable]:not([contenteditable='false']),[role='button'],[role='link'],[role='dialog']:not([data-orbit-fullscreen-surface]),[data-orbit-ignore]";
     let destroyed = false, begun = false, decodingIndex = -1, frame = 0, hovered: string | null = null, currentCheckpoint = -1;
     let texture: HTMLCanvasElement | null = null, textureKey = "", paintKey = "";
@@ -114,6 +149,18 @@ export function createOrbitApartmentPicker(options: OrbitApartmentPickerOptions)
     function clearTexture() {
         if (texture) texture.width = texture.height = 0;
         texture = null; textureKey = "";
+    }
+
+    function resolveHighlightStyle(color = highlightColor, opacity = highlightOpacity) {
+        highlightColor = color;
+        const rgb = orbitMaskHighlightRGB(color, root), alpha = Math.max(0, Math.min(1, Number.isFinite(opacity) ? opacity : .27));
+        if (rgb.every((channel, index) => channel === highlightRGB[index]) && alpha === highlightOpacity) return false;
+        highlightRGB = rgb; highlightOpacity = alpha; clearTexture(); paintKey = "";
+        return true;
+    }
+
+    function setHighlightStyle(color = highlightColor, opacity = highlightOpacity) {
+        if (!destroyed && resolveHighlightStyle(color, opacity)) refresh();
     }
 
     function updateDiagnostics(view: OrbitApartmentPickerView, highlighted: string[] = []) {
@@ -258,6 +305,8 @@ export function createOrbitApartmentPicker(options: OrbitApartmentPickerOptions)
     function refresh() {
         if (destroyed) return;
         const view = options.getView(), ready = viewReady(view), checkpoint = ready ? view.checkpoint : -1;
+        const bounds = view.width + "|" + view.height;
+        if (bounds !== styleBounds) { if (styleBounds !== null) resolveHighlightStyle(); styleBounds = bounds; }
         if (checkpoint !== currentCheckpoint) { currentCheckpoint = checkpoint; setHover(null); clearTexture(); paintKey = ""; }
         if (ready) { begun = true; pump(); }
         if (!ready) { down = null; latestPoint = null; setHover(null); clearTexture(); }
@@ -363,16 +412,17 @@ export function createOrbitApartmentPicker(options: OrbitApartmentPickerOptions)
     function onPointerCancel() { down = null; latestPoint = null; }
     function onPointerOut(event: PointerEvent) { if (!event.relatedTarget && !options.getView().mobile) { setHover(null); refresh(); } }
     function onVisibility() { if (document.hidden) onPointerCancel(); refresh(); }
+    function onResize() { resolveHighlightStyle(); styleBounds = null; refresh(); }
 
     window.addEventListener("pointermove", onPointerMove, { passive: true, capture: true });
     window.addEventListener("pointerdown", onPointerDown, { passive: true, capture: true });
     window.addEventListener("pointerup", onPointerUp, { passive: true, capture: true });
     window.addEventListener("pointercancel", onPointerCancel, { passive: true, capture: true });
     window.addEventListener("pointerout", onPointerOut, { passive: true, capture: true });
-    window.addEventListener("resize", refresh, { passive: true }); document.addEventListener("visibilitychange", onVisibility);
+    window.addEventListener("resize", onResize, { passive: true }); document.addEventListener("visibilitychange", onVisibility);
     refresh();
     return {
-        refresh,
+        refresh, setHighlightStyle,
         retry(checkpoint?: number) {
             if (destroyed) return;
             const failed = checkpoint === undefined ? [...failures.keys()] : failures.has(checkpoint) ? [checkpoint] : [];
@@ -391,7 +441,7 @@ export function createOrbitApartmentPicker(options: OrbitApartmentPickerOptions)
             destroyed = true; cancellation.abort(); if (frame) cancelAnimationFrame(frame);
             window.removeEventListener("pointermove", onPointerMove, true); window.removeEventListener("pointerdown", onPointerDown, true);
             window.removeEventListener("pointerup", onPointerUp, true); window.removeEventListener("pointercancel", onPointerCancel, true);
-            window.removeEventListener("pointerout", onPointerOut, true); window.removeEventListener("resize", refresh);
+            window.removeEventListener("pointerout", onPointerOut, true); window.removeEventListener("resize", onResize);
             document.removeEventListener("visibilitychange", onVisibility);
             down = latestPoint = null; clearTexture(); masks.clear(); blobs.clear(); failures.clear(); generations.clear(); reload.clear();
             context?.clearRect(0, 0, canvas.width, canvas.height); setHover(null);

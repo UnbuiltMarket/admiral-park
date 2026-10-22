@@ -760,7 +760,7 @@ const orbitApartmentFilterStyles = `
 [data-orbit-filters] [data-orbit-price-popover] { position: absolute; z-index: 4; bottom: calc(100% + 6px); left: 0; right: 0; height: 62px; min-width: 0; padding: 7px 10px; border: 1px solid rgba(48,67,54,.15); border-radius: 12px; background: #fbfcf8; box-shadow: 0 5px 22px rgba(35,50,39,.12); }
 [data-orbit-filters] .orbit-filter-price-values { display: flex; align-items: center; justify-content: space-between; gap: 12px; height: 15px; min-width: 0; font-size: 10px; font-weight: 600; line-height: 1; font-variant-numeric: tabular-nums; }
 [data-orbit-filters] .orbit-filter-price-caption { color: #738077; font-size: 9px; font-weight: 500; }
-[data-orbit-filters] .orbit-filter-price-stage { position: relative; height: 28px; margin-top: 3px; }
+[data-orbit-filters] .orbit-filter-price-stage { position: relative; height: 28px; margin-top: 3px; touch-action: none; user-select: none; -webkit-user-select: none; cursor: ew-resize; }
 [data-orbit-filters] .orbit-filter-price-track, [data-orbit-filters] .orbit-filter-price-selection { position: absolute; top: 13px; height: 2px; border-radius: 2px; pointer-events: none; }
 [data-orbit-filters] .orbit-filter-price-track { left: 12px; right: 12px; background: #dce3da; }
 [data-orbit-filters] .orbit-filter-price-selection { background: #48634d; }
@@ -783,6 +783,12 @@ const orbitApartmentFilterStyles = `
 @media (prefers-reduced-motion:reduce) { [data-orbit-filters] *, [data-orbit-filters] *::before, [data-orbit-filters] *::after { animation: none !important; transition: none !important; } }
 `
 
+function orbitPricePointerValue(clientX: number, rect: { left: number; width: number }, logicalWidth: number, minimum: number, maximum: number, step: number) {
+    const scale = rect.width / Math.max(1, logicalWidth || rect.width), inset = 12 * scale
+    const ratio = Math.max(0, Math.min(1, (clientX - rect.left - inset) / Math.max(1, rect.width - 2 * inset)))
+    return Math.max(minimum, Math.min(maximum, minimum + Math.round(ratio * (maximum - minimum) / step) * step))
+}
+
 function OrbitFilterBar({ active, language, filters, bounds, matchCount, total, onChange, presentation = "compact" }: OrbitFilterBarProps): React.JSX.Element {
     const hu = language === "hu"
     const [priceOpen, setPriceOpen] = React.useState(false)
@@ -790,6 +796,7 @@ function OrbitFilterBar({ active, language, filters, bounds, matchCount, total, 
     const priceToggle = React.useRef<HTMLButtonElement>(null)
     const minimumInput = React.useRef<HTMLInputElement>(null)
     const maximumInput = React.useRef<HTMLInputElement>(null)
+    const priceStage = React.useRef<HTMLDivElement>(null)
     const panelId = React.useId()
     const hasBounds = bounds !== null && typeof bounds.min === "number" && Number.isFinite(bounds.min) && typeof bounds.max === "number" && Number.isFinite(bounds.max) && bounds.max > bounds.min
     const minimum = hasBounds ? bounds!.min! : 0, maximum = hasBounds ? bounds!.max! : 0
@@ -798,16 +805,23 @@ function OrbitFilterBar({ active, language, filters, bounds, matchCount, total, 
     const high = Math.max(low, Math.min(maximum, filters.priceMax ?? maximum))
     const hasPrice = filters.priceMin !== null || filters.priceMax !== null
     const hasFilters = filters.statuses.length > 0 || hasPrice
+    const priceLatest = React.useRef({ active, priceOpen, hasBounds, minimum, maximum, step, low, high, filters, onChange })
+    priceLatest.current = { active, priceOpen, hasBounds, minimum, maximum, step, low, high, filters, onChange }
     const formatPrice = (value: number) => `${new Intl.NumberFormat(hu ? "hu-HU" : "en-GB", { maximumFractionDigits: 1 }).format(value / 1000000)} ${hu ? "M Ft" : "M HUF"}`
     const changePrice = (side: "minimum" | "maximum", value: number) => {
-        if (!hasBounds || !Number.isFinite(value)) return
+        const current = priceLatest.current
+        if (!current.hasBounds || !Number.isFinite(value)) return
+        let next: number, updated: OrbitApartmentFilters
         if (side === "minimum") {
-            const next = Math.max(minimum, Math.min(high, value))
-            onChange({ ...filters, priceMin: next <= minimum ? null : next })
+            next = Math.max(current.minimum, Math.min(current.high, value))
+            updated = { ...current.filters, priceMin: next <= current.minimum ? null : next }
+            priceLatest.current = { ...current, low: next, filters: updated }
         } else {
-            const next = Math.min(maximum, Math.max(low, value))
-            onChange({ ...filters, priceMax: next >= maximum ? null : next })
+            next = Math.min(current.maximum, Math.max(current.low, value))
+            updated = { ...current.filters, priceMax: next >= current.maximum ? null : next }
+            priceLatest.current = { ...current, high: next, filters: updated }
         }
+        if (updated.priceMin !== current.filters.priceMin || updated.priceMax !== current.filters.priceMax) current.onChange(updated)
     }
     React.useEffect(() => { if (!active || !hasBounds) setPriceOpen(false) }, [active, hasBounds])
     React.useEffect(() => {
@@ -834,6 +848,76 @@ function OrbitFilterBar({ active, language, filters, bounds, matchCount, total, 
         document.addEventListener("keydown", escape)
         return () => { document.removeEventListener("pointerdown", outside, true); document.removeEventListener("keydown", escape) }
     }, [priceOpen])
+    React.useEffect(() => {
+        if (!priceOpen || !active || !hasBounds) return
+        let drag: { id: number; side: "minimum" | "maximum"; offset: number; kind: string; stage: HTMLDivElement } | null = null
+        const finish = () => {
+            const previous = drag; drag = null
+            if (previous) { try { if (previous.stage.hasPointerCapture(previous.id)) previous.stage.releasePointerCapture(previous.id) } catch { /* A global listener still completes a detached gesture. */ } }
+        }
+        const apply = (clientX: number) => {
+            if (!drag) return
+            const current = priceLatest.current, rect = drag.stage.getBoundingClientRect()
+            changePrice(drag.side, orbitPricePointerValue(clientX - drag.offset, rect, drag.stage.offsetWidth || rect.width, current.minimum, current.maximum, current.step))
+        }
+        const down = (event: PointerEvent) => {
+            if (drag && drag.id !== event.pointerId) { finish(); return }
+            if (!event.isPrimary || event.button !== 0 || event.defaultPrevented) { finish(); return }
+            const stage = priceStage.current, current = priceLatest.current
+            if (!stage || !current.active || !current.priceOpen || !current.hasBounds || stage.closest("[hidden],[inert],[aria-hidden='true']")) return
+            const rect = stage.getBoundingClientRect()
+            if (rect.width <= 0 || rect.height <= 0 || event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom) return
+            // An actual authored control above the price track keeps its own
+            // interaction. A passive Framer sibling may safely cover this area.
+            if (event.target instanceof Element && !stage.contains(event.target) && event.target.closest("nav,header,a,button,input,textarea,select,[contenteditable]:not([contenteditable='false']),[role='button'],[role='link'],[data-orbit-ignore]")) return
+            const value = orbitPricePointerValue(event.clientX, rect, stage.offsetWidth || rect.width, current.minimum, current.maximum, current.step)
+            let side: "minimum" | "maximum" = Math.abs(value - current.low) <= Math.abs(value - current.high) ? "minimum" : "maximum"
+            if (event.target === minimumInput.current) side = "minimum"
+            else if (event.target === maximumInput.current) side = "maximum"
+            else if (current.low === current.high) side = value >= current.high && current.high < current.maximum ? "maximum" : "minimum"
+            const scale = rect.width / Math.max(1, stage.offsetWidth || rect.width), inset = 12 * scale
+            const center = rect.left + inset + (side === "minimum" ? current.low - current.minimum : current.high - current.minimum) / (current.maximum - current.minimum) * (rect.width - 2 * inset)
+            const offset = Math.abs(event.clientX - center) <= 14 * scale ? event.clientX - center : 0
+            drag = { id: event.pointerId, side, offset, kind: event.pointerType, stage }
+            if (event.cancelable) event.preventDefault()
+            try { stage.setPointerCapture(event.pointerId) } catch { /* Window listeners also work through passive Framer overlays. */ }
+            ;(side === "minimum" ? minimumInput : maximumInput).current?.focus({ preventScroll: true })
+            apply(event.clientX)
+        }
+        const move = (event: PointerEvent) => {
+            if (!drag || drag.id !== event.pointerId) return
+            if (event.pointerType === "mouse" && event.buttons === 0) { finish(); return }
+            if (event.cancelable) event.preventDefault()
+            apply(event.clientX)
+        }
+        const up = (event: PointerEvent) => {
+            if (!drag || drag.id !== event.pointerId) return
+            if (event.cancelable) event.preventDefault()
+            apply(event.clientX); finish()
+        }
+        const cancel = (event: PointerEvent) => { if (drag?.id === event.pointerId) finish() }
+        const touchStart = (event: TouchEvent) => { if (event.touches.length !== 1) finish() }
+        const touchMove = (event: TouchEvent) => {
+            if (!drag || drag.kind !== "touch") return
+            if (event.touches.length !== 1) { finish(); return }
+            if (event.cancelable) event.preventDefault()
+            apply(event.touches[0].clientX)
+        }
+        window.addEventListener("pointerdown", down, { passive: false, capture: true })
+        window.addEventListener("pointermove", move, { passive: false, capture: true })
+        window.addEventListener("pointerup", up, { passive: false, capture: true })
+        window.addEventListener("pointercancel", cancel, true)
+        window.addEventListener("touchstart", touchStart, { passive: true, capture: true })
+        window.addEventListener("touchmove", touchMove, { passive: false, capture: true })
+        window.addEventListener("touchcancel", finish, true)
+        window.addEventListener("blur", finish)
+        return () => {
+            finish(); window.removeEventListener("pointerdown", down, true); window.removeEventListener("pointermove", move, true)
+            window.removeEventListener("pointerup", up, true); window.removeEventListener("pointercancel", cancel, true)
+            window.removeEventListener("touchstart", touchStart, true); window.removeEventListener("touchmove", touchMove, true)
+            window.removeEventListener("touchcancel", finish, true); window.removeEventListener("blur", finish)
+        }
+    }, [priceOpen, active, hasBounds, minimum, maximum, step])
     const statusOptions: { id: OrbitFilterStatus; label: string; accessible: string }[] = [
         { id: "available", label: hu ? "Szabad" : "Available", accessible: hu ? "Szabad lakások" : "Available apartments" },
         { id: "under_negotiation", label: hu ? "Egyeztetés alatt" : "In talks", accessible: hu ? "Egyeztetés alatt álló lakások" : "Apartments under negotiation" },
@@ -857,17 +941,9 @@ function OrbitFilterBar({ active, language, filters, bounds, matchCount, total, 
                 <svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="m4 4 8 8M12 4l-8 8" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" /></svg>
             </button>}
         </div>
-        <div id={panelId} data-orbit-price-popover="" role="group" aria-label={hu ? "Ártartomány" : "Price range"} hidden={!priceOpen}>
+        <div id={panelId} data-orbit-price-popover="" data-orbit-ignore="" role="group" aria-label={hu ? "Ártartomány" : "Price range"} hidden={!priceOpen}>
             <div className="orbit-filter-price-values"><span>{formatPrice(low)}</span><span className="orbit-filter-price-caption">{hu ? "Ártartomány" : "Price range"}</span><span>{formatPrice(high)}</span></div>
-            <div className="orbit-filter-price-stage" onPointerDown={event => {
-                if (!hasBounds || event.target instanceof HTMLInputElement) return
-                const rect = event.currentTarget.getBoundingClientRect()
-                const ratio = Math.max(0, Math.min(1, (event.clientX - rect.left - 12) / Math.max(1, rect.width - 24)))
-                const value = Math.max(minimum, Math.min(maximum, minimum + Math.round(ratio * (maximum - minimum) / step) * step))
-                const side = Math.abs(value - low) <= Math.abs(value - high) ? "minimum" : "maximum"
-                changePrice(side, value)
-                ;(side === "minimum" ? minimumInput : maximumInput).current?.focus()
-            }}>
+            <div ref={priceStage} data-orbit-price-stage="" className="orbit-filter-price-stage">
                 <span className="orbit-filter-price-track" aria-hidden="true" /><span className="orbit-filter-price-selection" aria-hidden="true" style={{ left: `calc(12px + (100% - 24px) * ${sliderPercent(low) / 100})`, right: `calc(12px + (100% - 24px) * ${(100 - sliderPercent(high)) / 100})` }} />
                 <input ref={minimumInput} type="range" data-orbit-price-min="" min={minimum} max={maximum} step={step} value={low} aria-label={hu ? "Minimum ár forintban" : "Minimum price in HUF"} aria-valuetext={formatPrice(low)} disabled={!hasBounds} onChange={event => changePrice("minimum", event.currentTarget.valueAsNumber)} style={{ zIndex: low >= maximum ? 2 : 1 }} />
                 <input ref={maximumInput} type="range" data-orbit-price-max="" min={minimum} max={maximum} step={step} value={high} aria-label={hu ? "Maximum ár forintban" : "Maximum price in HUF"} aria-valuetext={formatPrice(high)} disabled={!hasBounds} onChange={event => changePrice("maximum", event.currentTarget.valueAsNumber)} />
@@ -1075,10 +1151,11 @@ const orbitApartmentStudioStyles = `
 [data-orbit-studio][data-mobile="true"] .orbit-studio-plan-stage { width: 100%; height: 100%; min-height: 0; flex: auto; padding: 0; }
 [data-orbit-studio][data-mobile="true"] .orbit-studio-plan-note { margin: 0; font-size: 8px; line-height: 1.4; text-align: left; }
 [data-orbit-studio][data-mobile="true"] .orbit-studio-mobile-summary { display: flex; flex-direction: column; justify-content: center; align-items: stretch; gap: 10px; min-width: 0; min-height: 0; text-align: left; }
-[data-orbit-studio][data-mobile="true"] .orbit-studio-heading { display: block; min-width: 0; }
-[data-orbit-studio][data-mobile="true"] .orbit-studio-id { margin: 0 0 5px; font-size: 28px; line-height: 1; font-weight: 600; letter-spacing: -.045em; }
+[data-orbit-studio][data-mobile="true"] .orbit-studio-heading { display: flex; align-items: center; flex-wrap: nowrap; gap: 7px; min-width: 0; }
+[data-orbit-studio][data-mobile="true"] .orbit-studio-id { flex: 0 0 auto; margin: 0; font-size: 28px; line-height: 1; font-weight: 600; letter-spacing: -.045em; }
 [data-orbit-studio][data-mobile="true"] .orbit-studio-id small { margin-left: 5px; color: var(--studio-muted); font-size: 10px; font-weight: 400; letter-spacing: 0; }
-[data-orbit-studio][data-mobile="true"] .orbit-studio-status { font-size: 10px; line-height: 1.35; font-weight: 500; gap: 6px; }
+[data-orbit-studio][data-mobile="true"] .orbit-studio-status { flex: 0 1 auto; min-width: 0; font-size: 10px; line-height: 1.35; font-weight: 500; gap: 5px; }
+[data-orbit-studio][data-mobile="true"] .orbit-studio-status-text { display: block; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 [data-orbit-studio][data-mobile="true"] .orbit-studio-mobile-metrics { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 9px 8px; margin: 0; min-width: 0; }
 [data-orbit-studio][data-mobile="true"] .orbit-studio-mobile-metrics > div { min-width: 0; }
 [data-orbit-studio][data-mobile="true"] .orbit-studio-mobile-metrics > div:first-child { grid-column: 1 / -1; }
@@ -1132,6 +1209,12 @@ const orbitApartmentStudioStyles = `
 }
 @media (prefers-reduced-motion: reduce) {
     [data-orbit-studio][data-mobile="true"] .orbit-studio-primary { transition: none; }
+}
+@container orbit-studio-mobile (max-width: 340px) {
+    [data-orbit-studio][data-mobile="true"] .orbit-studio-heading { gap: 5px; }
+    [data-orbit-studio][data-mobile="true"] .orbit-studio-id { font-size: 24px; }
+    [data-orbit-studio][data-mobile="true"] .orbit-studio-status { font-size: 9px; gap: 4px; }
+    [data-orbit-studio][data-mobile="true"] .orbit-studio-status-dot { width: 5px; height: 5px; }
 }
 `
 
@@ -1278,7 +1361,7 @@ function OrbitApartmentStudio(props: OrbitApartmentStudioProps): React.JSX.Eleme
                         </figure>
                         <div className="orbit-studio-mobile-summary" data-orbit-mobile-summary="">
                             <div className="orbit-studio-heading"><h2 id={headingId} className="orbit-studio-id">{apartment.id}</h2>
-                                {statusText && <span className="orbit-studio-status" data-status={availability} data-orbit-field="status" title={statusText}><span className="orbit-studio-status-dot" aria-hidden="true" />{availability === "under_negotiation" ? hu ? "Egyeztetés" : "In talks" : statusText}</span>}
+                                {statusText && <span className="orbit-studio-status" data-status={availability} data-orbit-field="status" title={statusText}><span className="orbit-studio-status-dot" aria-hidden="true" /><span className="orbit-studio-status-text">{availability === "under_negotiation" ? hu ? "Egyeztetés" : "In talks" : statusText}</span></span>}
                             </div>
                             <dl className="orbit-studio-mobile-metrics">
                                 {([ ["areaInterior", hu ? "Lakótér" : labels.interior, "area"], ["areaTerrace", hu ? "Terasz" : labels.terrace, "terrace"], ["areaGarden", labels.garden, "garden"] ] as const).map(([key, label, field]) => <div key={key} data-orbit-apartment-metric={key} data-orbit-field={field}><dt>{label}</dt><dd>{positive(apartment[key]) && (key === "areaInterior" || apartment[key]! > 0) ? <>{number.format(apartment[key]!)}<small>m²</small></> : "—"}</dd></div>)}
@@ -1752,13 +1835,15 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
     const fullscreen = useOrbitFullscreen(refreshFullscreenLayout, detailOpen)
     const pickerLatest = React.useRef({ hostVisible, mobilePresentation, focalX, focalY, filterResult, jsonDetails })
     pickerLatest.current = { hostVisible, mobilePresentation, focalX, focalY, filterResult, jsonDetails }
+    const pickerStyle = React.useRef({ color: maskHighlightColor, opacity: maskHighlightOpacity / 100 })
+    pickerStyle.current = { color: maskHighlightColor, opacity: maskHighlightOpacity / 100 }
 
     React.useEffect(() => {
         const root = rootRef.current, canvas = maskCanvasRef.current
         if (!root || !canvas || staticRenderer || !maskPicking || checkpointCount !== 8 || maskUrls.length !== 8) return
         const picker = createOrbitApartmentPicker({
             root, canvas, urls: maskUrls, palette: HOMEPAGE_MASK_PALETTE,
-            highlightColor: maskHighlightColor, highlightOpacity: maskHighlightOpacity / 100,
+            highlightColor: pickerStyle.current.color, highlightOpacity: pickerStyle.current.opacity,
             getView: () => {
                 const latest = pickerLatest.current, geometry = fullscreen.geometryRef.current
                 const width = geometry?.width || root.clientWidth, height = geometry?.height || root.clientHeight
@@ -1801,7 +1886,8 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
         root.addEventListener("admiral:orbit-mask-retry", retry)
         observer.observe(root); picker.refresh()
         return () => { observer.disconnect(); status.disconnect(); root.removeEventListener("admiral:orbit-filter-change", refresh); root.removeEventListener("admiral:orbit-mask-retry", retry); picker.destroy(); setMaskFailed(false); if (maskPickerRef.current === picker) maskPickerRef.current = null }
-    }, [staticRenderer, maskPicking, checkpointCount, maskUrls, maskHighlightColor, maskHighlightOpacity])
+    }, [staticRenderer, maskPicking, checkpointCount, maskUrls])
+    React.useEffect(() => { maskPickerRef.current?.setHighlightStyle(maskHighlightColor, maskHighlightOpacity / 100) }, [maskHighlightColor, maskHighlightOpacity, mobilePresentation, fullscreen.active])
     React.useEffect(() => { maskPickerRef.current?.refresh() }, [hostVisible, mobilePresentation, stage, orbitInfo.state, orbitInfo.checkpoint, detailApartmentId, fullscreen.active, focalX, focalY, filterResult])
 
     React.useEffect(() => {
@@ -4245,20 +4331,54 @@ interface OrbitApartmentPickerSnapshot {
     cached: number; downloaded: number; hovered: string | null; highlighted: string[]; error: string | null;
 }
 
-/** Framer colour controls may return numeric CSS rgb()/rgba() instead of hex. */
-function orbitMaskHighlightRGB(value?: string): [number, number, number] {
-    const input = typeof value === "string" ? value.trim() : "", fallback: [number, number, number] = [248, 214, 139];
+function orbitNumericHighlightRGB(input: string): [number, number, number] | null {
     if (/^#(?:[0-9a-f]{3}|[0-9a-f]{4}|[0-9a-f]{6}|[0-9a-f]{8})$/i.test(input)) {
         const raw = input.slice(1), hex = raw.length <= 4 ? raw.split("").map(channel => channel + channel).join("") : raw;
         return [parseInt(hex.slice(0, 2), 16), parseInt(hex.slice(2, 4), 16), parseInt(hex.slice(4, 6), 16)];
     }
     const match = input.match(/^rgba?\(([^()]*)\)$/i);
-    if (!match) return fallback;
+    if (!match) return null;
     const channels = match[1].trim().split(/[\s,/]+/).filter(Boolean);
-    if ((channels.length !== 3 && channels.length !== 4) || channels.some(channel => !/^[+-]?(?:\d+(?:\.\d*)?|\.\d+)%?$/.test(channel))) return fallback;
+    if ((channels.length !== 3 && channels.length !== 4) || channels.some(channel => !/^[+-]?(?:\d+(?:\.\d*)?|\.\d+)%?$/.test(channel))) return null;
     const values = channels.slice(0, 3).map(channel => Math.round(Math.max(0, Math.min(255, channel.endsWith("%") ? parseFloat(channel) * 255 / 100 : parseFloat(channel)))));
     // Alpha is controlled separately by highlightOpacity for consistent filters.
     return [values[0], values[1], values[2]];
+}
+
+/** Resolve Framer tokens in the component's inherited CSS context, never by discarding their fallback wrapper. */
+function orbitMaskHighlightRGB(value?: string, root?: HTMLElement): [number, number, number] {
+    const input = typeof value === "string" ? value.trim() : "", fallback: [number, number, number] = [248, 214, 139];
+    const numeric = orbitNumericHighlightRGB(input);
+    if (numeric) return numeric;
+    const owner = root?.ownerDocument;
+    if (!input || !root || !owner) return fallback;
+    let probe: HTMLSpanElement | null = null, surface: HTMLCanvasElement | null = null;
+    try {
+        probe = owner.createElement("span");
+        probe.setAttribute("aria-hidden", "true");
+        probe.style.cssText = "display:none!important;position:absolute!important;pointer-events:none!important";
+        // Custom properties resolve inherited tokens and nested var() fallbacks.
+        // An unresolved token also gets the explicit default below, rather than
+        // accidentally inheriting the webpage's text colour.
+        probe.style.setProperty("--admiral-highlight-probe-color", input);
+        probe.style.setProperty("background-color", "var(--admiral-highlight-probe-color, #f8d68b)", "important");
+        root.appendChild(probe);
+        const resolved = (owner.defaultView?.getComputedStyle(probe) ?? getComputedStyle(probe)).backgroundColor;
+        const direct = orbitNumericHighlightRGB(resolved);
+        if (direct && !/^rgba?\(\s*0[\s,]+0[\s,]+0(?:[\s,/]+0(?:\.0+)?\s*)\)$/i.test(resolved)) return direct;
+        // The browser converts supported hsl(), lab(), oklch(), color() and
+        // display-p3 values into the overlay's default sRGB canvas colour space.
+        surface = owner.createElement("canvas"); surface.width = surface.height = 1;
+        const drawing = surface.getContext("2d", { willReadFrequently: true });
+        if (!drawing) return fallback;
+        drawing.fillStyle = "#f8d68b"; drawing.fillStyle = resolved; drawing.fillRect(0, 0, 1, 1);
+        const pixel = drawing.getImageData(0, 0, 1, 1).data;
+        return pixel[3] ? [pixel[0], pixel[1], pixel[2]] : fallback;
+    } catch { return fallback; }
+    finally {
+        probe?.remove();
+        if (surface) surface.width = surface.height = 0;
+    }
 }
 
 /** The same object-fit:cover crop used by the orbit image, before any scene rotation. */
@@ -4311,8 +4431,9 @@ function createOrbitApartmentPicker(options: OrbitApartmentPickerOptions) {
     const generations = new Map<number, number>(), reload = new Set<number>();
     const fetching = new Set<number>(), decoding = new Set<number>(), ids = palette.map(entry => entry.id);
     const indices = new Map(ids.map((id, index) => [id, index + 1]));
-    const highlightRGB = orbitMaskHighlightRGB(options.highlightColor);
-    const highlightOpacity = Math.max(0, Math.min(1, Number.isFinite(options.highlightOpacity) ? options.highlightOpacity! : .27));
+    let highlightColor = options.highlightColor, highlightRGB = orbitMaskHighlightRGB(highlightColor, root);
+    let highlightOpacity = Math.max(0, Math.min(1, Number.isFinite(options.highlightOpacity) ? options.highlightOpacity! : .27));
+    let styleBounds: string | null = null;
     const controls = "nav,header,a,button,input,textarea,select,option,[contenteditable]:not([contenteditable='false']),[role='button'],[role='link'],[role='dialog']:not([data-orbit-fullscreen-surface]),[data-orbit-ignore]";
     let destroyed = false, begun = false, decodingIndex = -1, frame = 0, hovered: string | null = null, currentCheckpoint = -1;
     let texture: HTMLCanvasElement | null = null, textureKey = "", paintKey = "";
@@ -4340,6 +4461,18 @@ function createOrbitApartmentPicker(options: OrbitApartmentPickerOptions) {
     function clearTexture() {
         if (texture) texture.width = texture.height = 0;
         texture = null; textureKey = "";
+    }
+
+    function resolveHighlightStyle(color = highlightColor, opacity = highlightOpacity) {
+        highlightColor = color;
+        const rgb = orbitMaskHighlightRGB(color, root), alpha = Math.max(0, Math.min(1, Number.isFinite(opacity) ? opacity : .27));
+        if (rgb.every((channel, index) => channel === highlightRGB[index]) && alpha === highlightOpacity) return false;
+        highlightRGB = rgb; highlightOpacity = alpha; clearTexture(); paintKey = "";
+        return true;
+    }
+
+    function setHighlightStyle(color = highlightColor, opacity = highlightOpacity) {
+        if (!destroyed && resolveHighlightStyle(color, opacity)) refresh();
     }
 
     function updateDiagnostics(view: OrbitApartmentPickerView, highlighted: string[] = []) {
@@ -4484,6 +4617,8 @@ function createOrbitApartmentPicker(options: OrbitApartmentPickerOptions) {
     function refresh() {
         if (destroyed) return;
         const view = options.getView(), ready = viewReady(view), checkpoint = ready ? view.checkpoint : -1;
+        const bounds = view.width + "|" + view.height;
+        if (bounds !== styleBounds) { if (styleBounds !== null) resolveHighlightStyle(); styleBounds = bounds; }
         if (checkpoint !== currentCheckpoint) { currentCheckpoint = checkpoint; setHover(null); clearTexture(); paintKey = ""; }
         if (ready) { begun = true; pump(); }
         if (!ready) { down = null; latestPoint = null; setHover(null); clearTexture(); }
@@ -4589,16 +4724,17 @@ function createOrbitApartmentPicker(options: OrbitApartmentPickerOptions) {
     function onPointerCancel() { down = null; latestPoint = null; }
     function onPointerOut(event: PointerEvent) { if (!event.relatedTarget && !options.getView().mobile) { setHover(null); refresh(); } }
     function onVisibility() { if (document.hidden) onPointerCancel(); refresh(); }
+    function onResize() { resolveHighlightStyle(); styleBounds = null; refresh(); }
 
     window.addEventListener("pointermove", onPointerMove, { passive: true, capture: true });
     window.addEventListener("pointerdown", onPointerDown, { passive: true, capture: true });
     window.addEventListener("pointerup", onPointerUp, { passive: true, capture: true });
     window.addEventListener("pointercancel", onPointerCancel, { passive: true, capture: true });
     window.addEventListener("pointerout", onPointerOut, { passive: true, capture: true });
-    window.addEventListener("resize", refresh, { passive: true }); document.addEventListener("visibilitychange", onVisibility);
+    window.addEventListener("resize", onResize, { passive: true }); document.addEventListener("visibilitychange", onVisibility);
     refresh();
     return {
-        refresh,
+        refresh, setHighlightStyle,
         retry(checkpoint?: number) {
             if (destroyed) return;
             const failed = checkpoint === undefined ? [...failures.keys()] : failures.has(checkpoint) ? [checkpoint] : [];
@@ -4617,7 +4753,7 @@ function createOrbitApartmentPicker(options: OrbitApartmentPickerOptions) {
             destroyed = true; cancellation.abort(); if (frame) cancelAnimationFrame(frame);
             window.removeEventListener("pointermove", onPointerMove, true); window.removeEventListener("pointerdown", onPointerDown, true);
             window.removeEventListener("pointerup", onPointerUp, true); window.removeEventListener("pointercancel", onPointerCancel, true);
-            window.removeEventListener("pointerout", onPointerOut, true); window.removeEventListener("resize", refresh);
+            window.removeEventListener("pointerout", onPointerOut, true); window.removeEventListener("resize", onResize);
             document.removeEventListener("visibilitychange", onVisibility);
             down = latestPoint = null; clearTexture(); masks.clear(); blobs.clear(); failures.clear(); generations.clear(); reload.clear();
             context?.clearRect(0, 0, canvas.width, canvas.height); setHover(null);

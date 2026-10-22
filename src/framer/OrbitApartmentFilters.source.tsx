@@ -34,7 +34,7 @@ const orbitApartmentFilterStyles = `
 [data-orbit-filters] [data-orbit-price-popover] { position: absolute; z-index: 4; bottom: calc(100% + 6px); left: 0; right: 0; height: 62px; min-width: 0; padding: 7px 10px; border: 1px solid rgba(48,67,54,.15); border-radius: 12px; background: #fbfcf8; box-shadow: 0 5px 22px rgba(35,50,39,.12); }
 [data-orbit-filters] .orbit-filter-price-values { display: flex; align-items: center; justify-content: space-between; gap: 12px; height: 15px; min-width: 0; font-size: 10px; font-weight: 600; line-height: 1; font-variant-numeric: tabular-nums; }
 [data-orbit-filters] .orbit-filter-price-caption { color: #738077; font-size: 9px; font-weight: 500; }
-[data-orbit-filters] .orbit-filter-price-stage { position: relative; height: 28px; margin-top: 3px; }
+[data-orbit-filters] .orbit-filter-price-stage { position: relative; height: 28px; margin-top: 3px; touch-action: none; user-select: none; -webkit-user-select: none; cursor: ew-resize; }
 [data-orbit-filters] .orbit-filter-price-track, [data-orbit-filters] .orbit-filter-price-selection { position: absolute; top: 13px; height: 2px; border-radius: 2px; pointer-events: none; }
 [data-orbit-filters] .orbit-filter-price-track { left: 12px; right: 12px; background: #dce3da; }
 [data-orbit-filters] .orbit-filter-price-selection { background: #48634d; }
@@ -57,6 +57,12 @@ const orbitApartmentFilterStyles = `
 @media (prefers-reduced-motion:reduce) { [data-orbit-filters] *, [data-orbit-filters] *::before, [data-orbit-filters] *::after { animation: none !important; transition: none !important; } }
 `
 
+function orbitPricePointerValue(clientX: number, rect: { left: number; width: number }, logicalWidth: number, minimum: number, maximum: number, step: number) {
+    const scale = rect.width / Math.max(1, logicalWidth || rect.width), inset = 12 * scale
+    const ratio = Math.max(0, Math.min(1, (clientX - rect.left - inset) / Math.max(1, rect.width - 2 * inset)))
+    return Math.max(minimum, Math.min(maximum, minimum + Math.round(ratio * (maximum - minimum) / step) * step))
+}
+
 function OrbitFilterBar({ active, language, filters, bounds, matchCount, total, onChange, presentation = "compact" }: OrbitFilterBarProps): React.JSX.Element {
     const hu = language === "hu"
     const [priceOpen, setPriceOpen] = React.useState(false)
@@ -64,6 +70,7 @@ function OrbitFilterBar({ active, language, filters, bounds, matchCount, total, 
     const priceToggle = React.useRef<HTMLButtonElement>(null)
     const minimumInput = React.useRef<HTMLInputElement>(null)
     const maximumInput = React.useRef<HTMLInputElement>(null)
+    const priceStage = React.useRef<HTMLDivElement>(null)
     const panelId = React.useId()
     const hasBounds = bounds !== null && typeof bounds.min === "number" && Number.isFinite(bounds.min) && typeof bounds.max === "number" && Number.isFinite(bounds.max) && bounds.max > bounds.min
     const minimum = hasBounds ? bounds!.min! : 0, maximum = hasBounds ? bounds!.max! : 0
@@ -72,16 +79,23 @@ function OrbitFilterBar({ active, language, filters, bounds, matchCount, total, 
     const high = Math.max(low, Math.min(maximum, filters.priceMax ?? maximum))
     const hasPrice = filters.priceMin !== null || filters.priceMax !== null
     const hasFilters = filters.statuses.length > 0 || hasPrice
+    const priceLatest = React.useRef({ active, priceOpen, hasBounds, minimum, maximum, step, low, high, filters, onChange })
+    priceLatest.current = { active, priceOpen, hasBounds, minimum, maximum, step, low, high, filters, onChange }
     const formatPrice = (value: number) => `${new Intl.NumberFormat(hu ? "hu-HU" : "en-GB", { maximumFractionDigits: 1 }).format(value / 1000000)} ${hu ? "M Ft" : "M HUF"}`
     const changePrice = (side: "minimum" | "maximum", value: number) => {
-        if (!hasBounds || !Number.isFinite(value)) return
+        const current = priceLatest.current
+        if (!current.hasBounds || !Number.isFinite(value)) return
+        let next: number, updated: OrbitApartmentFilters
         if (side === "minimum") {
-            const next = Math.max(minimum, Math.min(high, value))
-            onChange({ ...filters, priceMin: next <= minimum ? null : next })
+            next = Math.max(current.minimum, Math.min(current.high, value))
+            updated = { ...current.filters, priceMin: next <= current.minimum ? null : next }
+            priceLatest.current = { ...current, low: next, filters: updated }
         } else {
-            const next = Math.min(maximum, Math.max(low, value))
-            onChange({ ...filters, priceMax: next >= maximum ? null : next })
+            next = Math.min(current.maximum, Math.max(current.low, value))
+            updated = { ...current.filters, priceMax: next >= current.maximum ? null : next }
+            priceLatest.current = { ...current, high: next, filters: updated }
         }
+        if (updated.priceMin !== current.filters.priceMin || updated.priceMax !== current.filters.priceMax) current.onChange(updated)
     }
     React.useEffect(() => { if (!active || !hasBounds) setPriceOpen(false) }, [active, hasBounds])
     React.useEffect(() => {
@@ -108,6 +122,76 @@ function OrbitFilterBar({ active, language, filters, bounds, matchCount, total, 
         document.addEventListener("keydown", escape)
         return () => { document.removeEventListener("pointerdown", outside, true); document.removeEventListener("keydown", escape) }
     }, [priceOpen])
+    React.useEffect(() => {
+        if (!priceOpen || !active || !hasBounds) return
+        let drag: { id: number; side: "minimum" | "maximum"; offset: number; kind: string; stage: HTMLDivElement } | null = null
+        const finish = () => {
+            const previous = drag; drag = null
+            if (previous) { try { if (previous.stage.hasPointerCapture(previous.id)) previous.stage.releasePointerCapture(previous.id) } catch { /* A global listener still completes a detached gesture. */ } }
+        }
+        const apply = (clientX: number) => {
+            if (!drag) return
+            const current = priceLatest.current, rect = drag.stage.getBoundingClientRect()
+            changePrice(drag.side, orbitPricePointerValue(clientX - drag.offset, rect, drag.stage.offsetWidth || rect.width, current.minimum, current.maximum, current.step))
+        }
+        const down = (event: PointerEvent) => {
+            if (drag && drag.id !== event.pointerId) { finish(); return }
+            if (!event.isPrimary || event.button !== 0 || event.defaultPrevented) { finish(); return }
+            const stage = priceStage.current, current = priceLatest.current
+            if (!stage || !current.active || !current.priceOpen || !current.hasBounds || stage.closest("[hidden],[inert],[aria-hidden='true']")) return
+            const rect = stage.getBoundingClientRect()
+            if (rect.width <= 0 || rect.height <= 0 || event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom) return
+            // An actual authored control above the price track keeps its own
+            // interaction. A passive Framer sibling may safely cover this area.
+            if (event.target instanceof Element && !stage.contains(event.target) && event.target.closest("nav,header,a,button,input,textarea,select,[contenteditable]:not([contenteditable='false']),[role='button'],[role='link'],[data-orbit-ignore]")) return
+            const value = orbitPricePointerValue(event.clientX, rect, stage.offsetWidth || rect.width, current.minimum, current.maximum, current.step)
+            let side: "minimum" | "maximum" = Math.abs(value - current.low) <= Math.abs(value - current.high) ? "minimum" : "maximum"
+            if (event.target === minimumInput.current) side = "minimum"
+            else if (event.target === maximumInput.current) side = "maximum"
+            else if (current.low === current.high) side = value >= current.high && current.high < current.maximum ? "maximum" : "minimum"
+            const scale = rect.width / Math.max(1, stage.offsetWidth || rect.width), inset = 12 * scale
+            const center = rect.left + inset + (side === "minimum" ? current.low - current.minimum : current.high - current.minimum) / (current.maximum - current.minimum) * (rect.width - 2 * inset)
+            const offset = Math.abs(event.clientX - center) <= 14 * scale ? event.clientX - center : 0
+            drag = { id: event.pointerId, side, offset, kind: event.pointerType, stage }
+            if (event.cancelable) event.preventDefault()
+            try { stage.setPointerCapture(event.pointerId) } catch { /* Window listeners also work through passive Framer overlays. */ }
+            ;(side === "minimum" ? minimumInput : maximumInput).current?.focus({ preventScroll: true })
+            apply(event.clientX)
+        }
+        const move = (event: PointerEvent) => {
+            if (!drag || drag.id !== event.pointerId) return
+            if (event.pointerType === "mouse" && event.buttons === 0) { finish(); return }
+            if (event.cancelable) event.preventDefault()
+            apply(event.clientX)
+        }
+        const up = (event: PointerEvent) => {
+            if (!drag || drag.id !== event.pointerId) return
+            if (event.cancelable) event.preventDefault()
+            apply(event.clientX); finish()
+        }
+        const cancel = (event: PointerEvent) => { if (drag?.id === event.pointerId) finish() }
+        const touchStart = (event: TouchEvent) => { if (event.touches.length !== 1) finish() }
+        const touchMove = (event: TouchEvent) => {
+            if (!drag || drag.kind !== "touch") return
+            if (event.touches.length !== 1) { finish(); return }
+            if (event.cancelable) event.preventDefault()
+            apply(event.touches[0].clientX)
+        }
+        window.addEventListener("pointerdown", down, { passive: false, capture: true })
+        window.addEventListener("pointermove", move, { passive: false, capture: true })
+        window.addEventListener("pointerup", up, { passive: false, capture: true })
+        window.addEventListener("pointercancel", cancel, true)
+        window.addEventListener("touchstart", touchStart, { passive: true, capture: true })
+        window.addEventListener("touchmove", touchMove, { passive: false, capture: true })
+        window.addEventListener("touchcancel", finish, true)
+        window.addEventListener("blur", finish)
+        return () => {
+            finish(); window.removeEventListener("pointerdown", down, true); window.removeEventListener("pointermove", move, true)
+            window.removeEventListener("pointerup", up, true); window.removeEventListener("pointercancel", cancel, true)
+            window.removeEventListener("touchstart", touchStart, true); window.removeEventListener("touchmove", touchMove, true)
+            window.removeEventListener("touchcancel", finish, true); window.removeEventListener("blur", finish)
+        }
+    }, [priceOpen, active, hasBounds, minimum, maximum, step])
     const statusOptions: { id: OrbitFilterStatus; label: string; accessible: string }[] = [
         { id: "available", label: hu ? "Szabad" : "Available", accessible: hu ? "Szabad lakások" : "Available apartments" },
         { id: "under_negotiation", label: hu ? "Egyeztetés alatt" : "In talks", accessible: hu ? "Egyeztetés alatt álló lakások" : "Apartments under negotiation" },
@@ -131,17 +215,9 @@ function OrbitFilterBar({ active, language, filters, bounds, matchCount, total, 
                 <svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="m4 4 8 8M12 4l-8 8" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" /></svg>
             </button>}
         </div>
-        <div id={panelId} data-orbit-price-popover="" role="group" aria-label={hu ? "Ártartomány" : "Price range"} hidden={!priceOpen}>
+        <div id={panelId} data-orbit-price-popover="" data-orbit-ignore="" role="group" aria-label={hu ? "Ártartomány" : "Price range"} hidden={!priceOpen}>
             <div className="orbit-filter-price-values"><span>{formatPrice(low)}</span><span className="orbit-filter-price-caption">{hu ? "Ártartomány" : "Price range"}</span><span>{formatPrice(high)}</span></div>
-            <div className="orbit-filter-price-stage" onPointerDown={event => {
-                if (!hasBounds || event.target instanceof HTMLInputElement) return
-                const rect = event.currentTarget.getBoundingClientRect()
-                const ratio = Math.max(0, Math.min(1, (event.clientX - rect.left - 12) / Math.max(1, rect.width - 24)))
-                const value = Math.max(minimum, Math.min(maximum, minimum + Math.round(ratio * (maximum - minimum) / step) * step))
-                const side = Math.abs(value - low) <= Math.abs(value - high) ? "minimum" : "maximum"
-                changePrice(side, value)
-                ;(side === "minimum" ? minimumInput : maximumInput).current?.focus()
-            }}>
+            <div ref={priceStage} data-orbit-price-stage="" className="orbit-filter-price-stage">
                 <span className="orbit-filter-price-track" aria-hidden="true" /><span className="orbit-filter-price-selection" aria-hidden="true" style={{ left: `calc(12px + (100% - 24px) * ${sliderPercent(low) / 100})`, right: `calc(12px + (100% - 24px) * ${(100 - sliderPercent(high)) / 100})` }} />
                 <input ref={minimumInput} type="range" data-orbit-price-min="" min={minimum} max={maximum} step={step} value={low} aria-label={hu ? "Minimum ár forintban" : "Minimum price in HUF"} aria-valuetext={formatPrice(low)} disabled={!hasBounds} onChange={event => changePrice("minimum", event.currentTarget.valueAsNumber)} style={{ zIndex: low >= maximum ? 2 : 1 }} />
                 <input ref={maximumInput} type="range" data-orbit-price-max="" min={minimum} max={maximum} step={step} value={high} aria-label={hu ? "Maximum ár forintban" : "Maximum price in HUF"} aria-valuetext={formatPrice(high)} disabled={!hasBounds} onChange={event => changePrice("maximum", event.currentTarget.valueAsNumber)} />

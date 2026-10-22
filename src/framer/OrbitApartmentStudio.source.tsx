@@ -197,10 +197,11 @@ const orbitApartmentStudioStyles = `
 [data-orbit-studio][data-mobile="true"] .orbit-studio-plan-stage { width: 100%; height: 100%; min-height: 0; flex: auto; padding: 0; }
 [data-orbit-studio][data-mobile="true"] .orbit-studio-plan-note { margin: 0; font-size: 8px; line-height: 1.4; text-align: left; }
 [data-orbit-studio][data-mobile="true"] .orbit-studio-mobile-summary { display: flex; flex-direction: column; justify-content: center; align-items: stretch; gap: 10px; min-width: 0; min-height: 0; text-align: left; }
-[data-orbit-studio][data-mobile="true"] .orbit-studio-heading { display: block; min-width: 0; }
-[data-orbit-studio][data-mobile="true"] .orbit-studio-id { margin: 0 0 5px; font-size: 28px; line-height: 1; font-weight: 600; letter-spacing: -.045em; }
+[data-orbit-studio][data-mobile="true"] .orbit-studio-heading { display: flex; align-items: center; flex-wrap: nowrap; gap: 7px; min-width: 0; }
+[data-orbit-studio][data-mobile="true"] .orbit-studio-id { flex: 0 0 auto; margin: 0; font-size: 28px; line-height: 1; font-weight: 600; letter-spacing: -.045em; }
 [data-orbit-studio][data-mobile="true"] .orbit-studio-id small { margin-left: 5px; color: var(--studio-muted); font-size: 10px; font-weight: 400; letter-spacing: 0; }
-[data-orbit-studio][data-mobile="true"] .orbit-studio-status { font-size: 10px; line-height: 1.35; font-weight: 500; gap: 6px; }
+[data-orbit-studio][data-mobile="true"] .orbit-studio-status { flex: 0 1 auto; min-width: 0; font-size: 10px; line-height: 1.35; font-weight: 500; gap: 5px; }
+[data-orbit-studio][data-mobile="true"] .orbit-studio-status-text { display: block; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 [data-orbit-studio][data-mobile="true"] .orbit-studio-mobile-metrics { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 9px 8px; margin: 0; min-width: 0; }
 [data-orbit-studio][data-mobile="true"] .orbit-studio-mobile-metrics > div { min-width: 0; }
 [data-orbit-studio][data-mobile="true"] .orbit-studio-mobile-metrics > div:first-child { grid-column: 1 / -1; }
@@ -254,6 +255,12 @@ const orbitApartmentStudioStyles = `
 }
 @media (prefers-reduced-motion: reduce) {
     [data-orbit-studio][data-mobile="true"] .orbit-studio-primary { transition: none; }
+}
+@container orbit-studio-mobile (max-width: 340px) {
+    [data-orbit-studio][data-mobile="true"] .orbit-studio-heading { gap: 5px; }
+    [data-orbit-studio][data-mobile="true"] .orbit-studio-id { font-size: 24px; }
+    [data-orbit-studio][data-mobile="true"] .orbit-studio-status { font-size: 9px; gap: 4px; }
+    [data-orbit-studio][data-mobile="true"] .orbit-studio-status-dot { width: 5px; height: 5px; }
 }
 `
 
@@ -400,7 +407,7 @@ function OrbitApartmentStudio(props: OrbitApartmentStudioProps): React.JSX.Eleme
                         </figure>
                         <div className="orbit-studio-mobile-summary" data-orbit-mobile-summary="">
                             <div className="orbit-studio-heading"><h2 id={headingId} className="orbit-studio-id">{apartment.id}</h2>
-                                {statusText && <span className="orbit-studio-status" data-status={availability} data-orbit-field="status" title={statusText}><span className="orbit-studio-status-dot" aria-hidden="true" />{availability === "under_negotiation" ? hu ? "Egyeztetés" : "In talks" : statusText}</span>}
+                                {statusText && <span className="orbit-studio-status" data-status={availability} data-orbit-field="status" title={statusText}><span className="orbit-studio-status-dot" aria-hidden="true" /><span className="orbit-studio-status-text">{availability === "under_negotiation" ? hu ? "Egyeztetés" : "In talks" : statusText}</span></span>}
                             </div>
                             <dl className="orbit-studio-mobile-metrics">
                                 {([ ["areaInterior", hu ? "Lakótér" : labels.interior, "area"], ["areaTerrace", hu ? "Terasz" : labels.terrace, "terrace"], ["areaGarden", labels.garden, "garden"] ] as const).map(([key, label, field]) => <div key={key} data-orbit-apartment-metric={key} data-orbit-field={field}><dt>{label}</dt><dd>{positive(apartment[key]) && (key === "areaInterior" || apartment[key]! > 0) ? <>{number.format(apartment[key]!)}<small>m²</small></> : "—"}</dd></div>)}
