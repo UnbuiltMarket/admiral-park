@@ -53,6 +53,8 @@ A custom **Orbit start frame** such as 42 remains an exact parked image, but has
 
 The Balatonfüred composition belongs to the opening panorama and fades during SEQ_01 according to the existing opening controls. The Aranyhíd sétány composition arrives toward the end of SEQ_01 and is fully readable on its final still. The visitor can read it before a fresh downward gesture starts SEQ_02.
 
+SEQ_02 accumulates small wheel/trackpad updates within a fresh gesture until **Trigger distance** is reached. A 160 ms quiet gap separates gestures, and a gesture that began during SEQ_01 or its first 200 ms of arrival remains unarmed until the next quiet gap. This lets gentle trackpad and mouse input start SEQ_02 while preventing leftover SEQ_01 momentum from chaining into it. Horizontal jitter does not cancel vertical intent; real controls and scrollable text retain their own input. Wheel updates still count when later events in the same browser gesture are noncancelable.
+
 Aranyhíd content and the arrival CTA retain their **0.5-second departure fade** as SEQ_02 begins. Their interaction is disabled immediately. There is no additional copy stage in the middle of SEQ_02. The matching camera sequence leads directly to the parked orbit view.
 
 An orbit story appears only when its exact checkpoint has been reached. The camera stops, waits **0.12 seconds**, then the composition fades and moves into place over **0.6 seconds**. When the next camera command is accepted, it fades toward its selected exit direction over **0.3 seconds**, including while the next route is buffering. Buttons stop accepting input immediately when departure begins. Download and decode updates do not restart either animation.

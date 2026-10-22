@@ -1118,6 +1118,36 @@ try{
    await page.evaluate(()=>window.releaseSequenceDecodeGates());await page.waitForTimeout(150);assert.equal(await page.locator('[data-admiral-homepage]').getAttribute('data-homepage-stage'),'opening');
   }finally{await f.close();}
  });
+ await pass('SEQ_02 Mac trackpad small wheel pulses accumulate within one fresh gesture',async()=>{
+  for(const externalOverlay of [false,true]){
+   const f=await fixture({useDefaultOrbitStart:true,externalOverlay,props:{duration:.6,connectionDuration:4,maxSpeed:1,triggerDistance:24}}),{page}=f;
+   try{
+    await page.evaluate(()=>{window.trackpadTrace=[];window.addEventListener('wheel',event=>window.trackpadTrace.push({time:performance.now(),delta:event.deltaY,trusted:event.isTrusted,cancelable:event.cancelable,stage:document.querySelector('[data-admiral-homepage]')?.dataset.homepageStage}),{capture:true});});await waitStage(page,'opening');await page.mouse.move(450,500);await page.mouse.wheel(0,120);await waitStage(page,'building');await page.waitForTimeout(300);const pinned=await pagePosition(page);
+    for(let index=0;index<20;index++){await page.mouse.wheel(0,1+index%4);await page.waitForTimeout(16);}const stage=await page.locator('[data-admiral-homepage]').getAttribute('data-homepage-stage'),trace=await page.evaluate(()=>window.trackpadTrace);await writeFile(new URL('seq02-trackpad-'+(externalOverlay?'overlay':'native')+'.json',out),JSON.stringify({stage,trace},null,2));assert.equal(stage,'connection','A fresh stream of 1–4px Mac trackpad pulses starts SEQ_02');assert.ok(trace.filter(event=>event.delta<=4&&event.trusted).length>=20,'The regression uses actual trusted browser wheel input');const burst=trace.filter(event=>event.delta<=4);assert.ok(burst.slice(1).every((event,index)=>event.time-burst[index].time<160),'The small pulses belong to a single continuous wheel gesture');await assertPageHeld(page,pinned,'The fine wheel stream');
+   }finally{await f.close();}
+  }
+ });
+ await pass('SEQ_02 Mac trackpad SEQ_01 inertial tail cannot chain before a quiet gap',async()=>{
+  const f=await fixture({useDefaultOrbitStart:true,externalOverlay:true,props:{duration:.6,connectionDuration:4,maxSpeed:1,triggerDistance:24}}),{page}=f;
+  try{
+   await waitStage(page,'opening');await page.mouse.move(450,500);await page.mouse.wheel(0,120);let reached=false;
+   for(let index=0;index<120;index++){await page.mouse.wheel(0,4);await page.waitForTimeout(16);const stage=await page.locator('[data-admiral-homepage]').getAttribute('data-homepage-stage');assert.ok(stage==='approach'||stage==='building','SEQ_01 wheel inertia never starts the connector');if(stage==='building'){reached=true;break;}}
+   assert.equal(reached,true,'The original SEQ_01 arrives during its ongoing gesture');for(let index=0;index<24;index++){await page.mouse.wheel(0,4);await page.waitForTimeout(16);}assert.equal(await page.locator('[data-admiral-homepage]').getAttribute('data-homepage-stage'),'building','Continuing inertia remains unarmed after the arrival cooldown');await page.waitForTimeout(260);
+   for(let index=0;index<10;index++){await page.mouse.wheel(0,4);await page.waitForTimeout(16);}assert.equal(await page.locator('[data-admiral-homepage]').getAttribute('data-homepage-stage'),'connection','A new wheel gesture after quiet time starts the connector normally');
+  }finally{await f.close();}
+ });
+ await pass('SEQ_02 Mac trackpad later noncancelable pulses and horizontal jitter retain vertical intent',async()=>{
+  const f=await fixture({useDefaultOrbitStart:true,props:{connectionDuration:4,maxSpeed:1,triggerDistance:24}}),{page}=f;
+  try{await coveredClick(page,'Skip approach');await waitStage(page,'building');await page.waitForTimeout(300);await page.evaluate(async()=>{const target=document.querySelector('[data-admiral-homepage]');for(let index=0;index<12;index++){target.dispatchEvent(new WheelEvent('wheel',{deltaY:3,clientX:450,clientY:500,bubbles:true,cancelable:index===0}));if(index%3===0)target.dispatchEvent(new WheelEvent('wheel',{deltaX:6,deltaY:1,clientX:450,clientY:500,bubbles:true,cancelable:false}));await new Promise(resolve=>setTimeout(resolve,16));}});assert.equal(await page.locator('[data-admiral-homepage]').getAttribute('data-homepage-stage'),'connection','A browser burst with only its first pulse cancelable still accumulates through harmless horizontal jitter');}finally{await f.close();}
+ });
+ await pass('SEQ_02 Mac trackpad native scroll panels cancel partial connector intent',async()=>{
+  const f=await fixture({useDefaultOrbitStart:true,props:{connectionDuration:4,maxSpeed:1,triggerDistance:24}}),{page}=f;
+  try{await coveredClick(page,'Skip approach');await waitStage(page,'building');await page.waitForTimeout(300);await page.mouse.move(450,500);for(let index=0;index<3;index++){await page.mouse.wheel(0,4);await page.waitForTimeout(16);}const panel=await page.locator('#nested').boundingBox();await page.mouse.move(panel.x+panel.width/2,panel.y+panel.height/2);await page.mouse.wheel(0,80);await page.waitForFunction(()=>document.querySelector('#nested').scrollTop>0);await page.mouse.move(450,500);for(let index=0;index<10;index++){await page.mouse.wheel(0,4);await page.waitForTimeout(16);}assert.equal(await page.locator('[data-admiral-homepage]').getAttribute('data-homepage-stage'),'building','Scrolling a native panel disarms the partial connector gesture');assert.equal(await page.evaluate(()=>scrollY),0,'The native panel cannot pan the homepage');await page.waitForTimeout(260);for(let index=0;index<10;index++){await page.mouse.wheel(0,4);await page.waitForTimeout(16);}assert.equal(await page.locator('[data-admiral-homepage]').getAttribute('data-homepage-stage'),'connection','A deliberate fresh wheel gesture still works after native-panel interaction');}finally{await f.close();}
+ });
+ await pass('SEQ_02 ArrowDown and Explore button still enter the connecting sequence',async()=>{
+  const f=await fixture({useDefaultOrbitStart:true,externalOverlay:true,props:{connectionDuration:4,maxSpeed:1}}),{page}=f;
+  try{await coveredClick(page,'Skip approach');await waitStage(page,'building');await page.waitForTimeout(250);await page.keyboard.press('ArrowDown');await waitStage(page,'connection');assert.equal(await page.evaluate(()=>scrollY),0,'ArrowDown enters SEQ_02 without moving the page');await coveredClick(page,'Overview');await waitStage(page,'opening');await coveredClick(page,'Skip approach');await waitStage(page,'building');await coveredClick(page,'Explore building');await waitStage(page,'connection');await coveredClick(page,'Skip connection');await waitFrame(page,45);}finally{await f.close();}
+ });
  await pass('SEQ_02 full journey waits for a fresh scroll draws the connector endpoint and drains wheel momentum',async()=>{
   const f=await fixture({useDefaultOrbitStart:true,externalOverlay:true,props:{duration:.6,connectionDuration:.8,maxSpeed:1}}),{page}=f;
   await waitStage(page,'opening');assert.equal(await page.evaluate(()=>window.bitmapRecords.filter(record=>record.sequence==='SEQ_02').length),0,'Opening does not decode the connector');

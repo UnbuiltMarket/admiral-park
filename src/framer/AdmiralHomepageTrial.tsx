@@ -1913,7 +1913,7 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
         let orbitSnapshot: OrbitSnapshot = { state: staticRenderer && previewStage === "orbit" ? "checkpoint" : "idle", frame: editorPreviewFrame,
             checkpoint: staticRenderer && previewStage === "orbit" ? editorCheckpoint : -1, direction: 1, ready: 0, total: orbitUrls.length, decoded: 0, downloaded: 0,
             buffered: 0, bufferTotal: 0, requiredReady: 0, requiredTotal: 0, position: editorPreviewFrame, userPaused: false, suspended: false }
-        let arrivedAt = -Infinity, lastWheelAt = -Infinity, wheelIntent = 0, lastUI = 0, lastOrbitUI = ""
+        let arrivedAt = -Infinity, lastWheelAt = -Infinity, wheelIntent = 0, wheelCanEnter = false, lastUI = 0, lastOrbitUI = ""
         const abort = new AbortController(), signal = abort.signal
         // A phone entering in landscape still uses the phone decode budget.
         // Read logical component sizes so scaled Framer previews stay desktop.
@@ -2145,16 +2145,28 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
             }
         }
         window.addEventListener("click", relayControlClick, { capture: true, signal })
+        function resetWheelIntent() { wheelIntent = 0; wheelCanEnter = false }
         function wheel(event: WheelEvent) {
             const now = performance.now(), gap = now - lastWheelAt; lastWheelAt = now
+            // A quiet gap identifies a fresh gesture. Once armed, accumulate
+            // every small trackpad or mouse pulse instead of discarding the burst.
+            // A gesture inherited from SEQ_01 stays unarmed until it goes quiet.
+            if (gap >= 160) { wheelIntent = 0; wheelCanEnter = currentStage === "building" && now - arrivedAt >= 200 }
             const box = root!.getBoundingClientRect()
-            if (!isVisible() || event.clientX < box.left || event.clientX > box.right || event.clientY < box.top || event.clientY > box.bottom || homepageBlocked(event.target) || event.ctrlKey || event.metaKey || Math.abs(event.deltaX) > Math.abs(event.deltaY)) return
-            if (currentStage === "handoff") { if (event.cancelable) event.preventDefault(); return }
-            if (currentStage !== "building" || event.deltaY <= 0 || event.defaultPrevented) return
+            if (!isVisible() || event.clientX < box.left || event.clientX > box.right || event.clientY < box.top || event.clientY > box.bottom || homepageBlocked(event.target) || event.ctrlKey || event.metaKey || event.defaultPrevented) { resetWheelIntent(); return }
+            if (currentStage !== "building" && currentStage !== "handoff") { resetWheelIntent(); return }
+            // Horizontal jitter should neither trigger nor cancel a new vertical gesture.
+            if (Math.abs(event.deltaX) > Math.abs(event.deltaY) || event.deltaY === 0) return
+            for (let element = event.target instanceof Element ? event.target : null; element && element !== document.body && element !== document.documentElement; element = element.parentElement) {
+                const css = getComputedStyle(element)
+                if (/(auto|scroll)/.test(css.overflowY) && element.scrollHeight > element.clientHeight + 1 && (event.deltaY > 0 ? element.scrollTop + element.clientHeight < element.scrollHeight - 1 : element.scrollTop > 0)) { resetWheelIntent(); return }
+            }
+            if (currentStage === "handoff") { resetWheelIntent(); if (event.cancelable) event.preventDefault(); return }
+            if (event.deltaY < 0) { resetWheelIntent(); return }
             if (event.cancelable) event.preventDefault()
-            if (now - arrivedAt < 200 || gap < 160) { wheelIntent = 0; return }
+            if (!wheelCanEnter) return
             wheelIntent += event.deltaY * (event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? innerHeight : 1)
-            if (wheelIntent >= triggerDistance) { wheelIntent = 0; void explore() }
+            if (wheelIntent >= triggerDistance) { resetWheelIntent(); void explore() }
         }
         let touchY: number | null = null, touchCanEnter = false, touchInside = false
         window.addEventListener("touchstart", event => {
