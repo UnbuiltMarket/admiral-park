@@ -44,6 +44,9 @@ const orbitApartmentStudioStyles = `
 [data-orbit-studio] .orbit-studio-header { display: flex; justify-content: space-between; align-items: center; gap: 20px; min-width: 0; }
 [data-orbit-studio] .orbit-studio-brand { display: block; width: clamp(130px,13vw,184px); height: auto; flex: 0 0 auto; }
 [data-orbit-studio] .orbit-studio-header-end { display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 14px 24px; min-width: 0; }
+[data-orbit-studio][data-mobile="false"] .orbit-studio-header { flex-wrap: wrap; row-gap: 12px; }
+[data-orbit-studio] [data-orbit-studio-filters] { flex: 1 0 100%; width: 100%; min-width: 0; }
+[data-orbit-studio][data-mobile="false"] [data-orbit-filter-status], [data-orbit-studio][data-mobile="false"] [data-orbit-price-toggle] { font-size: 12px; }
 [data-orbit-studio] .orbit-studio-preview { display: flex; align-items: center; gap: 10px; min-width: 0; font-size: 10px; color: var(--studio-muted); }
 [data-orbit-studio] .orbit-studio-preview label { white-space: nowrap; }
 [data-orbit-studio] select { width: 98px; max-width: 100%; min-height: 38px; padding: 5px 24px 5px 10px; border: 1px solid var(--studio-line); border-radius: 0; background: transparent; font-size: 12px; }
@@ -378,6 +381,7 @@ function OrbitApartmentStudio(props: OrbitApartmentStudioProps): React.JSX.Eleme
                         {!apartment && <option value="">—</option>}{dataset.apartments.map(unit => <option key={unit.id} value={unit.id}>{unit.id}</option>)}
                     </select></div>}
                 </div>}
+                {!mobile && <div data-orbit-studio-filters=""><OrbitFilterBar active={active} language={language} filters={filters} bounds={filterBounds} matchCount={filterCount} total={dataset?.apartments.length || 0} onChange={onFiltersChange} /></div>}
             </header>
             {mobile && <OrbitFilterBar active={active} language={language} filters={filters} bounds={filterBounds} matchCount={filterCount} total={dataset?.apartments.length || 0} onChange={onFiltersChange} />}
             <div className="orbit-studio-body">

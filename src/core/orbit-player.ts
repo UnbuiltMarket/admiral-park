@@ -480,11 +480,16 @@ export function createOrbitPlayer(options: OrbitOptions) {
     }
 
     function coveredTrialControl(x: number, y: number) {
-        return Array.from(root.querySelectorAll<HTMLButtonElement>("[data-homepage-controls] button, button[data-apartment-open], button[data-orbit-detail-link], button[data-orbit-fullscreen-open], button[data-orbit-fullscreen-close]")).some(button => {
-            if (button.disabled || button.getAttribute("aria-disabled") === "true" || button.closest("[inert], [hidden], [aria-hidden='true']")) return false;
-            const css = getComputedStyle(button);
-            if (css.display === "none" || css.visibility === "hidden" || css.visibility === "collapse" || Number(css.opacity) === 0) return false;
-            const box = button.getBoundingClientRect();
+        return Array.from(root.querySelectorAll<HTMLElement>("[data-homepage-controls] button, button[data-apartment-open], button[data-orbit-detail-link], button[data-orbit-fullscreen-open], button[data-orbit-fullscreen-close], [data-orbit-filters], [data-orbit-filters] button, [data-orbit-price-popover]")).some(control => {
+            if ((control as HTMLButtonElement).disabled || control.getAttribute("aria-disabled") === "true" || control.closest("[inert], [hidden], [aria-hidden='true']")) return false;
+            const style = getComputedStyle(control);
+            if (style.pointerEvents === "none") return false;
+            for (let element: HTMLElement | null = control; element; element = element.parentElement) {
+                const css = element === control ? style : getComputedStyle(element);
+                if (css.display === "none" || css.visibility === "hidden" || css.visibility === "collapse" || Number(css.opacity) === 0) return false;
+                if (element === root) break;
+            }
+            const box = control.getBoundingClientRect();
             return box.width > 0 && box.height > 0 && x >= box.left && x <= box.right && y >= box.top && y <= box.bottom;
         });
     }
@@ -535,7 +540,7 @@ export function createOrbitPlayer(options: OrbitOptions) {
 
     function onWheel(event: WheelEvent) {
         if (!event.ctrlKey && !event.metaKey && suspendedInput(event, event.clientX, event.clientY)) return;
-        if (!inputAvailable() || event.defaultPrevented || event.ctrlKey || event.metaKey || !insideViewer(event.clientX, event.clientY) || ignored(event.target)) return;
+        if (!inputAvailable() || event.defaultPrevented || event.ctrlKey || event.metaKey || !insideViewer(event.clientX, event.clientY) || coveredTrialControl(event.clientX, event.clientY) || ignored(event.target)) return;
         if (nestedScroll(event.target, event.deltaX, event.deltaY)) return;
         const scale = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? Math.max(1, root.clientHeight) : 1;
         const raw = (Math.abs(event.deltaX) > Math.abs(event.deltaY) ? event.deltaX : event.deltaY) * scale;

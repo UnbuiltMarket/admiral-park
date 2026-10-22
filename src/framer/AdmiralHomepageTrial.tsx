@@ -733,10 +733,11 @@ interface OrbitFilterBarProps {
     matchCount: number
     total: number
     onChange: (filters: OrbitApartmentFilters) => void
+    presentation?: "compact" | "floating"
 }
 
 const orbitApartmentFilterStyles = `
-[data-orbit-filters] { position: relative; width: 100%; min-width: 0; color: #26382d; font-family: inherit; isolation: isolate; }
+[data-orbit-filters] { position: relative; width: 100%; min-width: 0; box-sizing: border-box; color: #26382d; font-family: inherit; isolation: isolate; container-type: inline-size; container-name: orbit-filters; }
 [data-orbit-filters] *, [data-orbit-filters] *::before, [data-orbit-filters] *::after { box-sizing: border-box; }
 [data-orbit-filters] [hidden] { display: none !important; }
 [data-orbit-filters] button { display: inline-flex; align-items: center; justify-content: center; min-width: 0; height: 30px; margin: 0; padding: 0; border: 0; border-radius: 8px; color: inherit; background: transparent; font: inherit; cursor: pointer; -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
@@ -772,11 +773,17 @@ const orbitApartmentFilterStyles = `
 [data-orbit-filters] input[type="range"]:focus-visible::-moz-range-thumb { border-color: #42634c; }
 [data-orbit-filters] input[type="range"]:disabled::-webkit-slider-thumb { pointer-events: none; }
 [data-orbit-filters] input[type="range"]:disabled::-moz-range-thumb { pointer-events: none; }
+[data-orbit-filters][data-presentation="floating"] { padding: 4px 10px; border: 1px solid rgba(255,255,255,.8); border-radius: 12px; background: rgba(251,252,248,.96); box-shadow: 0 4px 20px rgba(10,25,16,.12); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); font-family: Montserrat,Arial,Helvetica,sans-serif; }
+[data-orbit-filters][data-presentation="floating"] [data-orbit-filter-row] { height: 36px; border: 0; gap: 5px; }
+[data-orbit-filters][data-presentation="floating"] [data-orbit-filter-status] { height: 32px; padding: 0 9px; font-size: 12px; }
+[data-orbit-filters][data-presentation="floating"] [data-orbit-price-toggle] { height: 32px; padding: 0 9px; font-size: 12px; }
+[data-orbit-filters][data-presentation="floating"] [data-orbit-filter-count] { min-width: 36px; font-size: 10px; }
+@container orbit-filters (max-width: 330px) { [data-orbit-filters] [data-orbit-filter-count] { display: none; } }
 @media (hover:hover) { [data-orbit-filters] button:not(:disabled):hover { background: #edf1e9; } [data-orbit-filters] [aria-pressed="true"]:hover { background: #dce6da; } }
 @media (prefers-reduced-motion:reduce) { [data-orbit-filters] *, [data-orbit-filters] *::before, [data-orbit-filters] *::after { animation: none !important; transition: none !important; } }
 `
 
-function OrbitFilterBar({ active, language, filters, bounds, matchCount, total, onChange }: OrbitFilterBarProps): React.JSX.Element {
+function OrbitFilterBar({ active, language, filters, bounds, matchCount, total, onChange, presentation = "compact" }: OrbitFilterBarProps): React.JSX.Element {
     const hu = language === "hu"
     const [priceOpen, setPriceOpen] = React.useState(false)
     const root = React.useRef<HTMLDivElement>(null)
@@ -805,7 +812,18 @@ function OrbitFilterBar({ active, language, filters, bounds, matchCount, total, 
     React.useEffect(() => { if (!active || !hasBounds) setPriceOpen(false) }, [active, hasBounds])
     React.useEffect(() => {
         if (!priceOpen) return
-        const outside = (event: PointerEvent) => { if (event.target instanceof Node && !root.current?.contains(event.target)) setPriceOpen(false) }
+        const outside = (event: PointerEvent) => {
+            const element = root.current
+            if (!element || !(event.target instanceof Node) || element.contains(event.target)) return
+            // Native Framer decoration can be the event target over our controls.
+            // Keep the price panel open when that passive target is inside it.
+            const genuineControl = event.target instanceof Element && event.target.closest("nav,header,a,button,input,textarea,select,[contenteditable]:not([contenteditable='false']),[role='button'],[role='link'],[data-orbit-ignore]")
+            if (!genuineControl && [element, ...Array.from(element.querySelectorAll<HTMLElement>("[data-orbit-price-popover]:not([hidden])"))].some(node => {
+                const box = node.getBoundingClientRect()
+                return box.width > 0 && box.height > 0 && event.clientX >= box.left && event.clientX <= box.right && event.clientY >= box.top && event.clientY <= box.bottom
+            })) return
+            setPriceOpen(false)
+        }
         const escape = (event: KeyboardEvent) => {
             if (event.key !== "Escape") return
             event.preventDefault()
@@ -818,12 +836,12 @@ function OrbitFilterBar({ active, language, filters, bounds, matchCount, total, 
     }, [priceOpen])
     const statusOptions: { id: OrbitFilterStatus; label: string; accessible: string }[] = [
         { id: "available", label: hu ? "Szabad" : "Available", accessible: hu ? "Szabad lakások" : "Available apartments" },
-        { id: "under_negotiation", label: hu ? "Egyeztetés" : "In talks", accessible: hu ? "Tárgyalás alatt álló lakások" : "Apartments under negotiation" },
+        { id: "under_negotiation", label: hu ? "Egyeztetés alatt" : "In talks", accessible: hu ? "Egyeztetés alatt álló lakások" : "Apartments under negotiation" },
         { id: "sold", label: hu ? "Eladva" : "Sold", accessible: hu ? "Eladott lakások" : "Sold apartments" },
     ]
     const count = Math.max(0, Math.min(total, matchCount))
     const sliderPercent = (value: number) => hasBounds ? (value - minimum) / (maximum - minimum) * 100 : 0
-    return <div ref={root} data-orbit-filters="" data-orbit-ignore="" data-filtered={hasFilters ? "true" : "false"}>
+    return <div ref={root} data-orbit-filters="" data-orbit-ignore="" data-presentation={presentation} data-filtered={hasFilters ? "true" : "false"}>
         <style>{orbitApartmentFilterStyles}</style>
         <div data-orbit-filter-row="" role="group" aria-label={hu ? "Lakások szűrése" : "Filter apartments"}>
             <div className="orbit-filter-statuses">
@@ -904,6 +922,9 @@ const orbitApartmentStudioStyles = `
 [data-orbit-studio] .orbit-studio-header { display: flex; justify-content: space-between; align-items: center; gap: 20px; min-width: 0; }
 [data-orbit-studio] .orbit-studio-brand { display: block; width: clamp(130px,13vw,184px); height: auto; flex: 0 0 auto; }
 [data-orbit-studio] .orbit-studio-header-end { display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 14px 24px; min-width: 0; }
+[data-orbit-studio][data-mobile="false"] .orbit-studio-header { flex-wrap: wrap; row-gap: 12px; }
+[data-orbit-studio] [data-orbit-studio-filters] { flex: 1 0 100%; width: 100%; min-width: 0; }
+[data-orbit-studio][data-mobile="false"] [data-orbit-filter-status], [data-orbit-studio][data-mobile="false"] [data-orbit-price-toggle] { font-size: 12px; }
 [data-orbit-studio] .orbit-studio-preview { display: flex; align-items: center; gap: 10px; min-width: 0; font-size: 10px; color: var(--studio-muted); }
 [data-orbit-studio] .orbit-studio-preview label { white-space: nowrap; }
 [data-orbit-studio] select { width: 98px; max-width: 100%; min-height: 38px; padding: 5px 24px 5px 10px; border: 1px solid var(--studio-line); border-radius: 0; background: transparent; font-size: 12px; }
@@ -1238,6 +1259,7 @@ function OrbitApartmentStudio(props: OrbitApartmentStudioProps): React.JSX.Eleme
                         {!apartment && <option value="">—</option>}{dataset.apartments.map(unit => <option key={unit.id} value={unit.id}>{unit.id}</option>)}
                     </select></div>}
                 </div>}
+                {!mobile && <div data-orbit-studio-filters=""><OrbitFilterBar active={active} language={language} filters={filters} bounds={filterBounds} matchCount={filterCount} total={dataset?.apartments.length || 0} onChange={onFiltersChange} /></div>}
             </header>
             {mobile && <OrbitFilterBar active={active} language={language} filters={filters} bounds={filterBounds} matchCount={filterCount} total={dataset?.apartments.length || 0} onChange={onFiltersChange} />}
             <div className="orbit-studio-body">
@@ -2107,7 +2129,7 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
             if (event.defaultPrevented || detailOpen.current || !isVisible() || root!.contains(event.target as Node) || homepageBlocked(event.target)) return
             // Passive Framer overlay frames can cover the viewport. Relay only a click
             // over one of our visible controls; genuine links and buttons above stay native.
-            for (const button of Array.from(root!.querySelectorAll<HTMLButtonElement>("[data-homepage-controls] button, button[data-apartment-open], button[data-orbit-detail-link], button[data-orbit-fullscreen-open], button[data-orbit-fullscreen-close]"))) {
+            for (const button of Array.from(root!.querySelectorAll<HTMLButtonElement>("[data-homepage-controls] button, [data-orbit-filters] button, button[data-apartment-open], button[data-orbit-detail-link], button[data-orbit-fullscreen-open], button[data-orbit-fullscreen-close]"))) {
                 if (button.disabled || button.getAttribute("aria-disabled") === "true" || button.closest("[inert], [hidden], [aria-hidden='true']")) continue
                 let visible = true
                 for (let element: HTMLElement | null = button; element; element = element.parentElement) {
@@ -2265,7 +2287,9 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
     const detailsData = selectedApartmentDetails ? { ...selectedApartmentDetails, floorplanUrl: stripFloorplanUrl || undefined } : null
     const detailsVisible = !useStudio && (detailsMode === "preview" ? (orbitStatic || (orbitVisible && orbitInfo.state === "checkpoint")) :
         detailsMode === "hover" && orbitVisible && orbitInfo.state === "checkpoint" && orbitInfo.checkpoint >= 0 && detailsData !== null)
-    const controlsBottom = detailsVisible ? `calc(${detailsBottom + detailsHeight + 20}px + env(safe-area-inset-bottom, 0px))` : "18px"
+    const floatingFilters = !useStudio && !fullscreen.active && detailsMode !== "off" && (orbitVisible || orbitStatic)
+    const filterBarBottom = detailsBottom + Math.max(140, detailsHeight) + 16
+    const controlsBottom = floatingFilters ? `calc(${filterBarBottom + 58}px + env(safe-area-inset-bottom, 0px))` : detailsVisible ? `calc(${detailsBottom + detailsHeight + 20}px + env(safe-area-inset-bottom, 0px))` : "18px"
     const diagnosticBottom = detailsVisible ? detailsBottom + detailsHeight + (showControls ? 112 : 20) : 94
     const studioControls = useStudio && (stage === "orbit" || stage === "handoff")
     const imageClip = "inset(var(--admiral-image-y, 0px) var(--admiral-image-right, 0px) var(--admiral-image-cut, 0px) var(--admiral-image-x, 0px))"
@@ -2299,6 +2323,9 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.65" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false"><path d="M8 4H4v4m12-4h4v4M4 16v4h4m12-4v4h-4" /></svg>
             </button>}
             {maskFailed && orbitVisible && !fullscreen.active && <button type="button" data-orbit-mask-retry="" data-orbit-ignore="" style={{ ...homepageButton, position: "absolute", left: "calc(var(--admiral-image-x, 0px) + 12px)", top: "calc(var(--admiral-image-y, 0px) + 12px)", zIndex: 5 }} onClick={() => maskPickerRef.current?.retry()}>{detailsLanguage === "hu" ? "Lakáskijelölés újratöltése" : "Retry apartment picking"}</button>}
+            {floatingFilters && <div data-orbit-desktop-filters="" style={{ position: "absolute", left: "50%", bottom: `calc(${filterBarBottom}px + env(safe-area-inset-bottom, 0px))`, transform: "translateX(-50%)", width: "min(560px,calc(100% - 32px))", zIndex: 4 }}>
+                <OrbitFilterBar active={orbitVisible || orbitStatic} language={detailsLanguage} filters={filterResult.filters} bounds={filterBounds} matchCount={filterResult.matchingIds.length} total={apartmentData.dataset?.apartments.length || 0} onChange={setApartmentFilters} presentation="floating" />
+            </div>}
             {orbitStatic && <span style={{ position: "absolute", inset: 0, pointerEvents: "none" }} />}
             <div aria-hidden="true" style={{ position: "absolute", top: "var(--admiral-image-y, 0px)", left: "var(--admiral-image-x, 0px)", width: "var(--admiral-image-width, 100%)", height: "var(--admiral-image-height, 100%)", background: "#000", opacity: darken, pointerEvents: "none", zIndex: 2 }} />
             {!staticRenderer && showControls && !fullscreen.active && <div data-homepage-controls="" data-orbit-ignore="" style={{ position: "absolute", bottom: studioControls ? "auto" : controlsBottom, top: studioControls ? "var(--admiral-controls-top)" : "auto", left: studioControls ? "var(--admiral-controls-left)" : "50%", transform: "translateX(-50%)", display: "flex", alignItems: "center", justifyContent: "center", flexWrap: "wrap", gap: 7, width: "max-content", maxWidth: studioControls ? "var(--admiral-controls-width)" : "94%", zIndex: 3 }}>
@@ -3850,11 +3877,16 @@ function createOrbitPlayer(options: OrbitOptions) {
     }
 
     function coveredTrialControl(x: number, y: number) {
-        return Array.from(root.querySelectorAll<HTMLButtonElement>("[data-homepage-controls] button, button[data-apartment-open], button[data-orbit-detail-link], button[data-orbit-fullscreen-open], button[data-orbit-fullscreen-close]")).some(button => {
-            if (button.disabled || button.getAttribute("aria-disabled") === "true" || button.closest("[inert], [hidden], [aria-hidden='true']")) return false;
-            const css = getComputedStyle(button);
-            if (css.display === "none" || css.visibility === "hidden" || css.visibility === "collapse" || Number(css.opacity) === 0) return false;
-            const box = button.getBoundingClientRect();
+        return Array.from(root.querySelectorAll<HTMLElement>("[data-homepage-controls] button, button[data-apartment-open], button[data-orbit-detail-link], button[data-orbit-fullscreen-open], button[data-orbit-fullscreen-close], [data-orbit-filters], [data-orbit-filters] button, [data-orbit-price-popover]")).some(control => {
+            if ((control as HTMLButtonElement).disabled || control.getAttribute("aria-disabled") === "true" || control.closest("[inert], [hidden], [aria-hidden='true']")) return false;
+            const style = getComputedStyle(control);
+            if (style.pointerEvents === "none") return false;
+            for (let element: HTMLElement | null = control; element; element = element.parentElement) {
+                const css = element === control ? style : getComputedStyle(element);
+                if (css.display === "none" || css.visibility === "hidden" || css.visibility === "collapse" || Number(css.opacity) === 0) return false;
+                if (element === root) break;
+            }
+            const box = control.getBoundingClientRect();
             return box.width > 0 && box.height > 0 && x >= box.left && x <= box.right && y >= box.top && y <= box.bottom;
         });
     }
@@ -3905,7 +3937,7 @@ function createOrbitPlayer(options: OrbitOptions) {
 
     function onWheel(event: WheelEvent) {
         if (!event.ctrlKey && !event.metaKey && suspendedInput(event, event.clientX, event.clientY)) return;
-        if (!inputAvailable() || event.defaultPrevented || event.ctrlKey || event.metaKey || !insideViewer(event.clientX, event.clientY) || ignored(event.target)) return;
+        if (!inputAvailable() || event.defaultPrevented || event.ctrlKey || event.metaKey || !insideViewer(event.clientX, event.clientY) || coveredTrialControl(event.clientX, event.clientY) || ignored(event.target)) return;
         if (nestedScroll(event.target, event.deltaX, event.deltaY)) return;
         const scale = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? Math.max(1, root.clientHeight) : 1;
         const raw = (Math.abs(event.deltaX) > Math.abs(event.deltaY) ? event.deltaX : event.deltaY) * scale;

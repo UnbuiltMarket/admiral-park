@@ -7,10 +7,11 @@ interface OrbitFilterBarProps {
     matchCount: number
     total: number
     onChange: (filters: OrbitApartmentFilters) => void
+    presentation?: "compact" | "floating"
 }
 
 const orbitApartmentFilterStyles = `
-[data-orbit-filters] { position: relative; width: 100%; min-width: 0; color: #26382d; font-family: inherit; isolation: isolate; }
+[data-orbit-filters] { position: relative; width: 100%; min-width: 0; box-sizing: border-box; color: #26382d; font-family: inherit; isolation: isolate; container-type: inline-size; container-name: orbit-filters; }
 [data-orbit-filters] *, [data-orbit-filters] *::before, [data-orbit-filters] *::after { box-sizing: border-box; }
 [data-orbit-filters] [hidden] { display: none !important; }
 [data-orbit-filters] button { display: inline-flex; align-items: center; justify-content: center; min-width: 0; height: 30px; margin: 0; padding: 0; border: 0; border-radius: 8px; color: inherit; background: transparent; font: inherit; cursor: pointer; -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
@@ -46,11 +47,17 @@ const orbitApartmentFilterStyles = `
 [data-orbit-filters] input[type="range"]:focus-visible::-moz-range-thumb { border-color: #42634c; }
 [data-orbit-filters] input[type="range"]:disabled::-webkit-slider-thumb { pointer-events: none; }
 [data-orbit-filters] input[type="range"]:disabled::-moz-range-thumb { pointer-events: none; }
+[data-orbit-filters][data-presentation="floating"] { padding: 4px 10px; border: 1px solid rgba(255,255,255,.8); border-radius: 12px; background: rgba(251,252,248,.96); box-shadow: 0 4px 20px rgba(10,25,16,.12); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); font-family: Montserrat,Arial,Helvetica,sans-serif; }
+[data-orbit-filters][data-presentation="floating"] [data-orbit-filter-row] { height: 36px; border: 0; gap: 5px; }
+[data-orbit-filters][data-presentation="floating"] [data-orbit-filter-status] { height: 32px; padding: 0 9px; font-size: 12px; }
+[data-orbit-filters][data-presentation="floating"] [data-orbit-price-toggle] { height: 32px; padding: 0 9px; font-size: 12px; }
+[data-orbit-filters][data-presentation="floating"] [data-orbit-filter-count] { min-width: 36px; font-size: 10px; }
+@container orbit-filters (max-width: 330px) { [data-orbit-filters] [data-orbit-filter-count] { display: none; } }
 @media (hover:hover) { [data-orbit-filters] button:not(:disabled):hover { background: #edf1e9; } [data-orbit-filters] [aria-pressed="true"]:hover { background: #dce6da; } }
 @media (prefers-reduced-motion:reduce) { [data-orbit-filters] *, [data-orbit-filters] *::before, [data-orbit-filters] *::after { animation: none !important; transition: none !important; } }
 `
 
-function OrbitFilterBar({ active, language, filters, bounds, matchCount, total, onChange }: OrbitFilterBarProps): React.JSX.Element {
+function OrbitFilterBar({ active, language, filters, bounds, matchCount, total, onChange, presentation = "compact" }: OrbitFilterBarProps): React.JSX.Element {
     const hu = language === "hu"
     const [priceOpen, setPriceOpen] = React.useState(false)
     const root = React.useRef<HTMLDivElement>(null)
@@ -79,7 +86,18 @@ function OrbitFilterBar({ active, language, filters, bounds, matchCount, total, 
     React.useEffect(() => { if (!active || !hasBounds) setPriceOpen(false) }, [active, hasBounds])
     React.useEffect(() => {
         if (!priceOpen) return
-        const outside = (event: PointerEvent) => { if (event.target instanceof Node && !root.current?.contains(event.target)) setPriceOpen(false) }
+        const outside = (event: PointerEvent) => {
+            const element = root.current
+            if (!element || !(event.target instanceof Node) || element.contains(event.target)) return
+            // Native Framer decoration can be the event target over our controls.
+            // Keep the price panel open when that passive target is inside it.
+            const genuineControl = event.target instanceof Element && event.target.closest("nav,header,a,button,input,textarea,select,[contenteditable]:not([contenteditable='false']),[role='button'],[role='link'],[data-orbit-ignore]")
+            if (!genuineControl && [element, ...Array.from(element.querySelectorAll<HTMLElement>("[data-orbit-price-popover]:not([hidden])"))].some(node => {
+                const box = node.getBoundingClientRect()
+                return box.width > 0 && box.height > 0 && event.clientX >= box.left && event.clientX <= box.right && event.clientY >= box.top && event.clientY <= box.bottom
+            })) return
+            setPriceOpen(false)
+        }
         const escape = (event: KeyboardEvent) => {
             if (event.key !== "Escape") return
             event.preventDefault()
@@ -92,12 +110,12 @@ function OrbitFilterBar({ active, language, filters, bounds, matchCount, total, 
     }, [priceOpen])
     const statusOptions: { id: OrbitFilterStatus; label: string; accessible: string }[] = [
         { id: "available", label: hu ? "Szabad" : "Available", accessible: hu ? "Szabad lakások" : "Available apartments" },
-        { id: "under_negotiation", label: hu ? "Egyeztetés" : "In talks", accessible: hu ? "Tárgyalás alatt álló lakások" : "Apartments under negotiation" },
+        { id: "under_negotiation", label: hu ? "Egyeztetés alatt" : "In talks", accessible: hu ? "Egyeztetés alatt álló lakások" : "Apartments under negotiation" },
         { id: "sold", label: hu ? "Eladva" : "Sold", accessible: hu ? "Eladott lakások" : "Sold apartments" },
     ]
     const count = Math.max(0, Math.min(total, matchCount))
     const sliderPercent = (value: number) => hasBounds ? (value - minimum) / (maximum - minimum) * 100 : 0
-    return <div ref={root} data-orbit-filters="" data-orbit-ignore="" data-filtered={hasFilters ? "true" : "false"}>
+    return <div ref={root} data-orbit-filters="" data-orbit-ignore="" data-presentation={presentation} data-filtered={hasFilters ? "true" : "false"}>
         <style>{orbitApartmentFilterStyles}</style>
         <div data-orbit-filter-row="" role="group" aria-label={hu ? "Lakások szűrése" : "Filter apartments"}>
             <div className="orbit-filter-statuses">

@@ -118,3 +118,44 @@ test('no priced records disables price criteria while availability filtering rem
  assert.equal(sold.active,true);assert.deepEqual(plain(sold.matchingIds),['S']);
  assert.deepEqual(plain(getOrbitFilterResult([],empty())),{active:false,matchingIds:[],filters:empty()});
 });
+
+test('visible filter bars and price popovers protect orbit gestures even behind passive Framer overlays',async()=>{
+ const orbitSource=await readFile(new URL('../src/core/orbit-player.ts',import.meta.url),'utf8');
+ const listeners=new Map(),animations=new Map();let now=1000,nextAnimation=0;
+ class Element{
+  constructor(bounds={left:0,top:0,right:100,bottom:100,width:100,height:100}){this.bounds=bounds;this.parentElement=null;this.style={};this.dataset={};this.clientWidth=100;this.clientHeight=100;this.hidden=false;this.css={};}
+  matches(){return false;} contains(node){for(let parent=node;parent;parent=parent.parentElement)if(parent===this)return true;return false;}
+  getAttribute(name){return this[name]??null;} closest(){for(let element=this;element;element=element.parentElement)if(element.hidden||element.inert||element.ariaHidden)return element;return null;}
+  getBoundingClientRect(){return this.bounds;} querySelectorAll(selector){return(this.controls??[]).filter(control=>!control.filter||selector.includes('[data-orbit-filters]'));}
+  hasPointerCapture(){return false;} setPointerCapture(){} releasePointerCapture(){}
+ }
+ const root=new Element(),canvas=new Element(),overlay=new Element();root.controls=[];
+ canvas.getContext=()=>({drawImage(){},clearRect(){},fillRect(){},save(){},restore(){},beginPath(){},rect(){},clip(){}});
+ const document={hidden:false,addEventListener(){},removeEventListener(){}},window={devicePixelRatio:1,
+  addEventListener(name,handler){if(!listeners.has(name))listeners.set(name,[]);listeners.get(name).push(handler);},removeEventListener(name,handler){listeners.set(name,(listeners.get(name)??[]).filter(value=>value!==handler));}};
+ const world={exports:{},Element,document,window,AbortController,setTimeout,clearTimeout,console,
+  performance:{now:()=>now},getComputedStyle:element=>({display:'block',visibility:'visible',opacity:'1',pointerEvents:'auto',overflowX:'visible',overflowY:'visible',...element.css}),
+  requestAnimationFrame(handler){animations.set(++nextAnimation,handler);return nextAnimation;},cancelAnimationFrame(id){animations.delete(id);},
+  fetch:async()=>({ok:true,blob:async()=>({size:1})}),createImageBitmap:async()=>({width:240,height:126,close(){}})};
+ vm.runInNewContext(ts.transpileModule(orbitSource,{compilerOptions:{target:ts.ScriptTarget.ES2020,module:ts.ModuleKind.CommonJS}}).outputText,world);
+ const player=world.exports.createOrbitPlayer({root,canvas,urls:Array.from({length:8},(_,index)=>'frame'+index),checkpointCount:8,decodeWidth:240,inspectionWidth:240,snapDuration:1.5});
+ const emit=(name,extra={})=>{const event={target:overlay,defaultPrevented:false,cancelable:true,ctrlKey:false,metaKey:false,button:0,isPrimary:true,pointerId:1,pointerType:'mouse',clientX:20,clientY:20,deltaX:0,deltaY:80,deltaMode:0,preventDefault(){this.defaultPrevented=true;},...extra};for(const handler of listeners.get(name)??[])handler(event);return event;};
+ const drag=()=>{emit('pointerdown');emit('pointermove',{clientX:55});emit('pointerup',{clientX:55});};
+ try{
+  await player.activate();assert.equal(player.snapshot().state,'checkpoint');
+  const nativeButton=new Element();nativeButton.matches=()=>true;
+  now+=250;const nativeWheel=emit('wheel',{target:nativeButton});assert.equal(nativeWheel.defaultPrevented,false);
+  emit('pointerdown',{target:nativeButton});emit('pointermove',{target:nativeButton,clientX:55});emit('pointerup',{target:nativeButton,clientX:55});
+  assert.equal(player.snapshot().state,'checkpoint','A genuine authored button keeps its native events and cannot start orbit rotation');
+  const bar=new Element({left:0,top:10,right:100,bottom:35,width:100,height:25});bar.filter=true;bar.parentElement=root;root.controls=[bar];
+  now+=250;const wheel=emit('wheel');assert.equal(wheel.defaultPrevented,false);assert.equal(player.snapshot().state,'checkpoint');drag();assert.equal(player.snapshot().state,'checkpoint');
+  emit('touchstart',{touches:[{identifier:4,clientX:20,clientY:20}]});emit('touchmove',{touches:[{identifier:4,clientX:60,clientY:20}]});emit('touchend',{touches:[]});assert.equal(player.snapshot().state,'checkpoint');
+  const popover=new Element({left:0,top:0,right:100,bottom:25,width:100,height:25});popover.filter=true;popover.parentElement=root;root.controls=[popover];
+  now+=250;emit('wheel');drag();assert.equal(player.snapshot().state,'checkpoint','Popover outside its filter row still owns gestures');
+  const ancestor=new Element();ancestor.css.opacity='0';ancestor.parentElement=root;popover.parentElement=ancestor;
+  now+=250;emit('wheel');assert.notEqual(player.snapshot().state,'checkpoint','Invisible ancestors cannot leave stale filter hit rectangles');
+  await player.activate();popover.parentElement=root;popover.hidden=true;now+=250;drag();assert.notEqual(player.snapshot().state,'checkpoint','Hidden/inert filter panels do not block orbit gestures');
+  await player.activate();popover.hidden=false;popover.inert=true;now+=250;emit('wheel');assert.notEqual(player.snapshot().state,'checkpoint','Inert filters do not capture wheel input');
+  await player.activate();popover.inert=false;popover.css.pointerEvents='none';now+=250;drag();assert.notEqual(player.snapshot().state,'checkpoint','Noninteractive filter wrappers do not create invisible blockers');
+ }finally{player.destroy();}
+});
