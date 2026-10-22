@@ -270,7 +270,8 @@ function OrbitApartmentStudio(props: OrbitApartmentStudioProps): React.JSX.Eleme
     const labels = hu ? { interior: "Beltér", terrace: "Erkély", garden: "Kert", floorplan: "Alaprajz", floorLayout: "Szintrajz", expand: "Alaprajz nagyítása", preview: "Előnézet", select: "Előnézeti lakás", gross: "Bruttó vételár", details: "Lakás részletei", inquire: "Érdeklődöm", download: "Adatlap PDF", share: "Megosztás", close: "Bezárás", roomCount: "szoba", floor: "emelet", building: "épület", type: "típus", orientation: "tájolás" } :
         { interior: "Interior", terrace: "Terrace", garden: "Garden", floorplan: "Floor plan", floorLayout: "Floor layout", expand: "Enlarge floor plan", preview: "Preview", select: "Preview apartment", gross: "Gross purchase price", details: "Apartment details", inquire: "Enquire", download: "PDF factsheet", share: "Share", close: "Close", roomCount: "rooms", floor: "floor", building: "building", type: "type", orientation: "orientation" }
     const number = new Intl.NumberFormat(hu ? "hu-HU" : "en-GB", { maximumFractionDigits: 2 })
-    const plan = active && apartment && dataset ? orbitApartmentPlan(apartment, dataset, assetBase, view) : null
+    const plan = active && apartment && dataset ? orbitApartmentPlan(apartment, dataset, assetBase, view, !expanded) : null
+    const previewImage = useOrbitPreviewImage(plan?.url, active)
     const floorLayout = apartment && dataset ? orbitApartmentPlan(apartment, dataset, assetBase, "floorLayout") : null
     const asset = (path: string) => orbitApartmentAssetUrl(path, assetBase) || ""
     const logo = asset("assets/brand/admiral-park-full-logo-no-location.svg")
@@ -352,7 +353,7 @@ function OrbitApartmentStudio(props: OrbitApartmentStudioProps): React.JSX.Eleme
     const viewBox = plan?.viewBox || { x: 0, y: 0, width: 1, height: 1 }
     const planStyle: React.CSSProperties = { left: `${-viewBox.x / viewBox.width * 100}%`, top: `${-viewBox.y / viewBox.height * 100}%`, width: `${100 / viewBox.width}%`, height: `${100 / viewBox.height}%` }
     const aspectStyle = { "--studio-plan-aspect": plan?.aspect || 1 } as React.CSSProperties
-    const planShown = !!plan && failedImage !== plan.url
+    const planShown = !!plan && previewImage === plan.url && failedImage !== plan.url
     const note = hu ? "Az alaprajz illusztráció. Bútorozatlan átadás." : "Illustrative floor plan. Homes are delivered unfurnished."
     const tabs = <div className="orbit-studio-tabs" role="tablist" aria-label={hu ? "Rajz kiválasztása" : "Choose drawing"}>
         {(["floorplan", "floorLayout"] as const).filter(kind => kind === "floorplan" || !!floorLayout).map(kind => <button key={kind} type="button" className="orbit-studio-tab" role="tab" aria-selected={view === kind} aria-controls={planPanelId} tabIndex={view === kind ? 0 : -1}

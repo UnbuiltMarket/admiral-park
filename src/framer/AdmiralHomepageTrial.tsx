@@ -7,6 +7,9 @@ import AdmiralApartmentDetailCard from "./AdmiralApartmentDetailCard.tsx"
 const HOMEPAGE_HERO_NAMES: string[] = ["raw sequence00.avif","raw sequence01.avif","raw sequence02.avif","raw sequence03.avif","raw sequence04.avif","raw sequence05.avif","raw sequence06.avif","raw sequence07.avif","raw sequence08.avif","raw sequence09.avif","raw sequence10.avif","raw sequence11.avif","raw sequence12.avif","raw sequence13.avif","raw sequence14.avif","raw sequence15.avif","raw sequence16.avif","raw sequence17.avif","raw sequence18.avif","raw sequence19.avif","raw sequence20.avif","raw sequence21.avif","raw sequence22.avif","raw sequence23.avif","raw sequence24.avif","raw sequence25.avif","raw sequence26.avif","raw sequence27.avif","raw sequence28.avif","raw sequence29.avif","raw sequence30.avif","raw sequence31.avif","raw sequence32.avif","raw sequence33.avif","raw sequence34.avif","raw sequence35.avif","raw sequence36.avif","raw sequence37.avif","raw sequence38.avif","raw sequence39.avif","raw sequence40.avif","raw sequence41.avif","raw sequence42.avif","raw sequence43.avif","raw sequence44.avif","raw sequence45.avif","raw sequence46.avif","raw sequence47.avif","raw sequence48.avif","raw sequence49.avif","raw sequence50.avif","raw sequence51.avif","raw sequence52.avif","raw sequence53.avif","raw sequence54.avif","raw sequence55.avif","raw sequence56.avif","raw sequence57.avif","raw sequence58.avif","raw sequence59.avif","raw sequence60.avif","raw sequence61.avif","raw sequence62.avif","raw sequence63.avif","raw sequence64.avif"]
 const HOMEPAGE_CONNECTION_NAMES: string[] = ["02 sequence00 copy.avif","02 sequence01 copy.avif","02 sequence02 copy.avif","02 sequence03 copy.avif","02 sequence04 copy.avif","02 sequence05 copy.avif","02 sequence06 copy.avif","02 sequence07 copy.avif","02 sequence08 copy.avif","02 sequence09 copy.avif","02 sequence10 copy.avif","02 sequence11 copy.avif","02 sequence12 copy.avif","02 sequence13 copy.avif","02 sequence14 copy.avif","02 sequence15 copy.avif","02 sequence16 copy.avif","02 sequence17 copy.avif","02 sequence18 copy.avif","02 sequence19 copy.avif","02 sequence20 copy.avif","02 sequence21 copy.avif","02 sequence22 copy.avif","02 sequence23 copy.avif","02 sequence24 copy.avif","02 sequence25 copy.avif","02 sequence26 copy.avif","02 sequence27 copy.avif","02 sequence28 copy.avif","02 sequence29 copy.avif","02 sequence30 copy.avif","02 sequence31 copy.avif","02 sequence32 copy.avif","02 sequence33 copy.avif","02 sequence34 copy.avif","02 sequence35 copy.avif","02 sequence36 copy.avif","02 sequence37 copy.avif","02 sequence38 copy.avif","02 sequence39 copy.avif","02 sequence40 copy.avif","02 sequence41 copy.avif","02 sequence42 copy.avif","02 sequence43 copy.avif","02 sequence44 copy.avif","02 sequence45 copy.avif","02 sequence46 copy.avif","02 sequence47 copy.avif","02 sequence48 copy.avif","02 sequence49 copy.avif","02 sequence50 copy.avif","02 sequence51 copy.avif","02 sequence52 copy.avif","02 sequence53 copy.avif","02 sequence54 copy.avif","02 sequence55 copy.avif","02 sequence56 copy.avif","02 sequence57 copy.avif","02 sequence58 copy.avif","02 sequence59 copy.avif","02 sequence60 copy.avif","02 sequence61 copy.avif","02 sequence62 copy.avif","02 sequence63 copy.avif","02 sequence64 copy.avif","02 sequence65 copy.avif","02 sequence66 copy.avif","02 sequence67 copy.avif","02 sequence68 copy.avif","02 sequence69 copy.avif","02 sequence70 copy.avif","02 sequence71 copy.avif","02 sequence72 copy.avif"]
 const HOMEPAGE_ORBIT_NAMES: string[] = ["adjusted sequence0000 copy.avif","adjusted sequence0001 copy.avif","adjusted sequence0002 copy.avif","adjusted sequence0003 copy.avif","adjusted sequence0004 copy.avif","adjusted sequence0005 copy.avif","adjusted sequence0006 copy.avif","adjusted sequence0007 copy.avif","adjusted sequence0008 copy.avif","adjusted sequence0009 copy.avif","adjusted sequence0010 copy.avif","adjusted sequence0011 copy.avif","adjusted sequence0012 copy.avif","adjusted sequence0013 copy.avif","adjusted sequence0014 copy.avif","adjusted sequence0015 copy.avif","adjusted sequence0016 copy.avif","adjusted sequence0017 copy.avif","adjusted sequence0018 copy.avif","adjusted sequence0019 copy.avif","adjusted sequence0020 copy.avif","adjusted sequence0021 copy.avif","adjusted sequence0022 copy.avif","adjusted sequence0023 copy.avif","adjusted sequence0024 copy.avif","adjusted sequence0025 copy.avif","adjusted sequence0026 copy.avif","adjusted sequence0027 copy.avif","adjusted sequence0028 copy.avif","adjusted sequence0029 copy.avif","adjusted sequence0030 copy.avif","adjusted sequence0031 copy.avif","adjusted sequence0032 copy.avif","adjusted sequence0033 copy.avif","adjusted sequence0034 copy.avif","adjusted sequence0035 copy.avif","adjusted sequence0036 copy.avif","adjusted sequence0037 copy.avif","adjusted sequence0038 copy.avif","adjusted sequence0039 copy.avif","adjusted sequence0040 copy.avif","adjusted sequence0041 copy.avif","adjusted sequence0042 copy.avif","adjusted sequence0043 copy.avif","adjusted sequence0044 copy.avif","adjusted sequence0045 copy.avif","adjusted sequence0046 copy.avif","adjusted sequence0047 copy.avif","adjusted sequence0048 copy.avif","adjusted sequence0049 copy.avif","adjusted sequence0050 copy.avif","adjusted sequence0051 copy.avif","adjusted sequence0052 copy.avif","adjusted sequence0053 copy.avif","adjusted sequence0054 copy.avif","adjusted sequence0055 copy.avif","adjusted sequence0056 copy.avif","adjusted sequence0057 copy.avif","adjusted sequence0058 copy.avif","adjusted sequence0059 copy.avif","adjusted sequence0060 copy.avif","adjusted sequence0061 copy.avif","adjusted sequence0062 copy.avif","adjusted sequence0063 copy.avif","adjusted sequence0064 copy.avif","adjusted sequence0065 copy.avif","adjusted sequence0066 copy.avif","adjusted sequence0067 copy.avif","adjusted sequence0068 copy.avif","adjusted sequence0069 copy.avif","adjusted sequence0070 copy.avif","adjusted sequence0071 copy.avif","adjusted sequence0072 copy.avif","adjusted sequence0073 copy.avif","adjusted sequence0074 copy.avif","adjusted sequence0075 copy.avif","adjusted sequence0076 copy.avif","adjusted sequence0077 copy.avif","adjusted sequence0078 copy.avif","adjusted sequence0079 copy.avif","adjusted sequence0080 copy.avif","adjusted sequence0081 copy.avif","adjusted sequence0082 copy.avif","adjusted sequence0083 copy.avif","adjusted sequence0084 copy.avif","adjusted sequence0085 copy.avif","adjusted sequence0086 copy.avif","adjusted sequence0087 copy.avif","adjusted sequence0088 copy.avif","adjusted sequence0089 copy.avif","adjusted sequence0090 copy.avif","adjusted sequence0091 copy.avif","adjusted sequence0092 copy.avif","adjusted sequence0093 copy.avif","adjusted sequence0094 copy.avif","adjusted sequence0095 copy.avif","adjusted sequence0096 copy.avif","adjusted sequence0097 copy.avif","adjusted sequence0098 copy.avif","adjusted sequence0099 copy.avif","adjusted sequence0100 copy.avif","adjusted sequence0101 copy.avif","adjusted sequence0102 copy.avif","adjusted sequence0103 copy.avif","adjusted sequence0104 copy.avif","adjusted sequence0105 copy.avif","adjusted sequence0106 copy.avif","adjusted sequence0107 copy.avif","adjusted sequence0108 copy.avif","adjusted sequence0109 copy.avif","adjusted sequence0110 copy.avif","adjusted sequence0111 copy.avif","adjusted sequence0112 copy.avif","adjusted sequence0113 copy.avif","adjusted sequence0114 copy.avif","adjusted sequence0115 copy.avif","adjusted sequence0116 copy.avif","adjusted sequence0117 copy.avif","adjusted sequence0118 copy.avif","adjusted sequence0119 copy.avif"]
+const HOMEPAGE_MASK_NAMES: string[] = ["mask_CMasking_WireColor0000.png","mask_CMasking_WireColor0015.png","mask_CMasking_WireColor0030.png","mask_CMasking_WireColor0045.png","mask_CMasking_WireColor0060.png","mask_CMasking_WireColor0075.png","mask_CMasking_WireColor0090.png","mask_CMasking_WireColor0105.png"]
+const HOMEPAGE_MASK_PALETTE: { id: string; maskColor: string; maskColorAliases?: string[] }[] = [{"id":"A001","maskColor":"#63BBF1","maskColorAliases":["#63BAF0"]},{"id":"A002","maskColor":"#F1BB63","maskColorAliases":["#F0BA63"]},{"id":"A003","maskColor":"#63F163","maskColorAliases":["#63F063"]},{"id":"A004","maskColor":"#F163F1","maskColorAliases":["#F063F0"]},{"id":"A005","maskColor":"#9763BB","maskColorAliases":["#9663BA","#9763BA"]},{"id":"A006","maskColor":"#BBD8BB","maskColorAliases":["#BAD7BA"]},{"id":"A101","maskColor":"#63BB97","maskColorAliases":["#63BA96","#63BA97"]},{"id":"A102","maskColor":"#63F1D8","maskColorAliases":["#63F0D7"]},{"id":"A103","maskColor":"#BB6363","maskColorAliases":["#BA6363"]},{"id":"A104","maskColor":"#BB97F1","maskColorAliases":["#BA96F0","#BA97F0"]},{"id":"A105","maskColor":"#BBF1F1","maskColorAliases":["#BAF0F0"]},{"id":"A106","maskColor":"#D897BB","maskColorAliases":["#D796BA","#D797BA"]},{"id":"A107","maskColor":"#D8F163","maskColorAliases":["#D7F063"]},{"id":"A201","maskColor":"#F1D8D8","maskColorAliases":["#F0D7D7"]},{"id":"A202","maskColor":"#6363F1","maskColorAliases":["#6363F0"]},{"id":"A203","maskColor":"#BBBB63","maskColorAliases":["#BABA63"]},{"id":"A204","maskColor":"#F16363","maskColorAliases":["#F06363"]},{"id":"A205","maskColor":"#636397","maskColorAliases":["#636396"]},{"id":"A301","maskColor":"#639763","maskColorAliases":["#639663"]},{"id":"A302","maskColor":"#6397BB","maskColorAliases":["#6396BA","#6397BA"]},{"id":"A303","maskColor":"#63D8BB","maskColorAliases":["#63D7BA"]},{"id":"A304","maskColor":"#979797","maskColorAliases":["#969696"]},{"id":"B001","maskColor":"#9797D8","maskColorAliases":["#9696D7","#9797D7"]},{"id":"B002","maskColor":"#97BBBB","maskColorAliases":["#96BABA","#97BABA"]},{"id":"B003","maskColor":"#97D863","maskColorAliases":["#96D763","#97D763"]},{"id":"B004","maskColor":"#97D8D8","maskColorAliases":["#96D7D7","#97D7D7"]},{"id":"B005","maskColor":"#97F197","maskColorAliases":["#96F096","#97F097"]},{"id":"B006","maskColor":"#BB63D8","maskColorAliases":["#BA63D7"]},{"id":"B101","maskColor":"#BBBBD8","maskColorAliases":["#BABAD7"]},{"id":"B102","maskColor":"#D86397","maskColorAliases":["#D76396","#D76397"]},{"id":"B103","maskColor":"#D89763","maskColorAliases":["#D79663","#D79763"]},{"id":"B104","maskColor":"#D8BB97","maskColorAliases":["#D7BA96","#D7BA97"]},{"id":"B105","maskColor":"#D8BBF1","maskColorAliases":["#D7BAF0"]},{"id":"B106","maskColor":"#D8F1BB","maskColorAliases":["#D7F0BA"]},{"id":"B107","maskColor":"#F163BB","maskColorAliases":["#F063BA"]},{"id":"B201","maskColor":"#F19797","maskColorAliases":["#F09696","#F09797"]},{"id":"B202","maskColor":"#F197D8","maskColorAliases":["#F096D7","#F097D7"]},{"id":"B203","maskColor":"#F1BBBB","maskColorAliases":["#F0BABA"]},{"id":"B204","maskColor":"#F1D897","maskColorAliases":["#F0D796","#F0D797"]},{"id":"B205","maskColor":"#F1F1F1","maskColorAliases":["#F0F0F0"]},{"id":"B206","maskColor":"#636363"},{"id":"B207","maskColor":"#6363BB","maskColorAliases":["#6363BA"]},{"id":"B301","maskColor":"#6363D8","maskColorAliases":["#6363D7"]},{"id":"B302","maskColor":"#639797","maskColorAliases":["#639696"]},{"id":"B303","maskColor":"#6397D8","maskColorAliases":["#6396D7","#6397D7"]},{"id":"B304","maskColor":"#6397F1","maskColorAliases":["#6396F0","#6397F0"]},{"id":"C001","maskColor":"#63BB63","maskColorAliases":["#63BA63"]},{"id":"C002","maskColor":"#63BBBB","maskColorAliases":["#63BABA"]},{"id":"C003","maskColor":"#63BBD8","maskColorAliases":["#63BAD7"]},{"id":"C004","maskColor":"#63D863","maskColorAliases":["#63D763"]},{"id":"C005","maskColor":"#63D897","maskColorAliases":["#63D796","#63D797"]},{"id":"C006","maskColor":"#63D8D8","maskColorAliases":["#63D7D7"]},{"id":"C007","maskColor":"#63D8F1","maskColorAliases":["#63D7F0"]},{"id":"C008","maskColor":"#63F197","maskColorAliases":["#63F096","#63F097"]},{"id":"C101","maskColor":"#63F1BB","maskColorAliases":["#63F0BA"]},{"id":"C102","maskColor":"#63F1F1","maskColorAliases":["#63F0F0"]},{"id":"C103","maskColor":"#976363","maskColorAliases":["#966363"]},{"id":"C104","maskColor":"#976397","maskColorAliases":["#966396"]},{"id":"C105","maskColor":"#9763D8","maskColorAliases":["#9663D7","#9763D7"]},{"id":"C106","maskColor":"#9763F1","maskColorAliases":["#9663F0","#9763F0"]},{"id":"C201","maskColor":"#979763","maskColorAliases":["#969663"]},{"id":"C202","maskColor":"#9797BB","maskColorAliases":["#9696BA","#9797BA"]},{"id":"C203","maskColor":"#9797F1","maskColorAliases":["#9696F0","#9797F0"]},{"id":"C204","maskColor":"#97BB63","maskColorAliases":["#96BA63","#97BA63"]},{"id":"C205","maskColor":"#97BB97","maskColorAliases":["#96BA96","#97BA97"]},{"id":"C301","maskColor":"#97BBD8","maskColorAliases":["#96BAD7","#97BAD7"]},{"id":"C302","maskColor":"#97BBF1","maskColorAliases":["#96BAF0","#97BAF0"]},{"id":"C303","maskColor":"#97D897","maskColorAliases":["#96D796","#97D797"]},{"id":"C304","maskColor":"#97D8BB","maskColorAliases":["#96D7BA","#97D7BA"]}]
+const HOMEPAGE_MASK_VERSION = "e0d8174df3f4"
 const HOMEPAGE_HERO_VERSION = "1d4b64cbfa4f"
 const HOMEPAGE_CONNECTION_VERSION = "426c29f22325"
 const HOMEPAGE_ORBIT_VERSION = "15fce8a9d4fe"
@@ -20,6 +23,7 @@ const homepageSubscribers = new Set<() => void>()
 const notifyHomepage = () => homepageSubscribers.forEach(update => update())
 interface AdmiralHomepageTrialProps {
     useGitHubAssets?: boolean; heroBaseUrl?: string; connectionBaseUrl?: string; orbitBaseUrl?: string
+    maskPicking?: boolean; maskBaseUrl?: string; maskHighlightColor?: string; maskHighlightOpacity?: number
     startView?: "opening" | "orbit"; editorView?: "opening" | "building" | "connection" | "orbit"; editorOrbitView?: string; orbitStartFrame?: number
     duration?: number; connectionDuration?: number; maxSpeed?: number; momentum?: number; triggerDistance?: number
     checkpointCount?: number; motionWidth?: number; orbitMobileWidth?: number; inspectionWidth?: number
@@ -376,6 +380,7 @@ interface OrbitApartmentImage {
 }
 interface OrbitApartmentRecord {
     id: string
+    maskColor?: string
     name: string
     building: string
     floor: number | null
@@ -451,12 +456,14 @@ function parseOrbitApartmentDataset(value: unknown): OrbitApartmentDataset {
         const price = number(apartment.price, "price")
         if (price !== null && !Number.isSafeInteger(price)) throw new Error(`Invalid price for apartment ${id}.`)
         const sourceMedia = object(apartment.media), plan = image(sourceMedia?.floorplan), floorLayout = image(sourceMedia?.floorLayout)
+        const sourceMaskColor = text(apartment.maskColor, 64)
+        const maskColor = sourceMaskColor && /^#[0-9a-fA-F]{6}$/.test(sourceMaskColor) ? sourceMaskColor.toUpperCase() : null
         const sourceSheet = object(sourceMedia?.datasheet), sheetUrl = text(sourceSheet?.url, 4096)
         const media = { ...(plan ? { floorplan: plan } : {}), ...(floorLayout ? { floorLayout } : {}),
             ...(sheetUrl ? { datasheet: { url: sheetUrl, ...(text(sourceSheet?.filename) ? { filename: text(sourceSheet?.filename)! } : {}),
                 ...(text(sourceSheet?.label) ? { label: text(sourceSheet?.label)! } : {}),
                 ...(typeof sourceSheet?.page === "number" && Number.isSafeInteger(sourceSheet.page) && sourceSheet.page > 0 ? { page: sourceSheet.page } : {}) } } : {}) }
-        return { id, name: text(apartment.name) || id, building: text(apartment.building, 64) || "", floor,
+        return { id, ...(maskColor ? { maskColor } : {}), name: text(apartment.name) || id, building: text(apartment.building, 64) || "", floor,
             floorLabel: text(apartment.floorLabel), rooms: number(apartment.rooms, "rooms"), bedrooms: number(apartment.bedrooms, "bedrooms"),
             layoutLabel: text(apartment.layoutLabel), orientation: text(apartment.orientation),
             areaInterior: number(apartment.areaInterior, "interior area"), areaTerrace: number(apartment.areaTerrace, "balcony area"), areaGarden: number(apartment.areaGarden, "garden area"),
@@ -500,16 +507,69 @@ function orbitApartmentAssetUrl(path: unknown, base: string): string | null {
     } catch { return null }
 }
 
-function orbitApartmentPlan(record: OrbitApartmentRecord, dataset: OrbitApartmentDataset, base: string, view: "floorplan" | "floorLayout" = "floorplan"): OrbitApartmentPlan | null {
+function orbitApartmentPlan(record: OrbitApartmentRecord, dataset: OrbitApartmentDataset, base: string, view: "floorplan" | "floorLayout" = "floorplan", preferThumbnail = false): OrbitApartmentPlan | null {
     const source = view === "floorLayout" ? record.media?.floorLayout : record.media?.floorplan
-    const url = orbitApartmentAssetUrl(source?.full || (view === "floorplan" ? record.floorplan : null), base)
+    const thumbnail = preferThumbnail ? orbitApartmentAssetUrl(source?.thumbnail, base) : null
+    const url = thumbnail || orbitApartmentAssetUrl(source?.full || (view === "floorplan" ? record.floorplan : null), base)
     if (!url) return null
     const layout = view === "floorplan" && record.apartmentType ? dataset.roomLayouts[record.apartmentType] : null
     const dimensions = layout?.imageDimensions || (view === "floorLayout" ? { width: 2560, height: 1600 } : { width: 1500, height: 2000 })
     const viewBox = layout?.viewBox || { x: 0, y: 0, width: 1, height: 1 }
-    return { url, aspect: dimensions.width * viewBox.width / (dimensions.height * viewBox.height), dimensions, viewBox,
+    const aspect = dimensions.width * viewBox.width / (dimensions.height * viewBox.height)
+    // The existing thumbnails already contain the plan crop; applying it twice cuts
+    // away rooms. Retain the drawing's cropped aspect while showing the whole thumb.
+    return { url, aspect, dimensions: thumbnail ? { width: dimensions.width * viewBox.width, height: dimensions.height * viewBox.height } : dimensions,
+        viewBox: thumbnail ? { x: 0, y: 0, width: 1, height: 1 } : viewBox,
         isIllustrative: view === "floorplan" && source?.isIllustrative !== false,
         label: source?.label || (view === "floorLayout" ? "Szintrajz" : "Alaprajz · illusztráció") }
+}
+
+// A fast pointer pass updates apartment text immediately without starting a large
+// drawing request for every crossed unit. Cache URL readiness, not decoded images.
+const orbitPreviewImageReady = new Set<string>()
+const orbitPreviewImageRequests = new Map<string, Promise<void>>()
+function requestOrbitPreviewImage(url: string): Promise<void> {
+    if (orbitPreviewImageReady.has(url)) return Promise.resolve()
+    const previous = orbitPreviewImageRequests.get(url)
+    if (previous) return previous
+    const request = new Promise<void>((resolve, reject) => {
+        const image = new Image()
+        image.decoding = "async"
+        let finished = false
+        const finish = (error?: Error) => {
+            if (finished) return
+            finished = true; image.onload = null; image.onerror = null
+            if (error) reject(error)
+            else resolve()
+        }
+        image.onerror = () => finish(new Error("Apartment floorplan could not be loaded."))
+        image.onload = () => {
+            if (typeof image.decode === "function") image.decode().then(() => finish(), () => finish(new Error("Apartment floorplan could not be decoded.")))
+            else finish()
+        }
+        image.src = url
+    }).then(() => {
+        orbitPreviewImageReady.add(url)
+        if (orbitPreviewImageReady.size > 96) orbitPreviewImageReady.delete(orbitPreviewImageReady.values().next().value!)
+    }).finally(() => { orbitPreviewImageRequests.delete(url) })
+    orbitPreviewImageRequests.set(url, request)
+    return request
+}
+function useOrbitPreviewImage(url: string | null | undefined, enabled = true): string | null {
+    const requested = enabled && url ? url : null
+    const [ready, setReady] = React.useState<string | null>(null)
+    React.useEffect(() => {
+        if (!requested) { setReady(null); return }
+        if (orbitPreviewImageReady.has(requested)) { setReady(requested); return }
+        let active = true
+        setReady(null)
+        const timer = setTimeout(() => {
+            requestOrbitPreviewImage(requested).then(() => { if (active) setReady(requested) }, () => { if (active) setReady(null) })
+        }, 160)
+        return () => { active = false; clearTimeout(timer) }
+    }, [requested])
+    // Do not show an old apartment's floorplan during the effect's next tick.
+    return requested && (ready === requested || orbitPreviewImageReady.has(requested)) ? requested : null
 }
 
 const orbitApartmentRequests = new Map<string, Promise<OrbitApartmentDataset>>()
@@ -1070,7 +1130,8 @@ function OrbitApartmentStudio(props: OrbitApartmentStudioProps): React.JSX.Eleme
     const labels = hu ? { interior: "Beltér", terrace: "Erkély", garden: "Kert", floorplan: "Alaprajz", floorLayout: "Szintrajz", expand: "Alaprajz nagyítása", preview: "Előnézet", select: "Előnézeti lakás", gross: "Bruttó vételár", details: "Lakás részletei", inquire: "Érdeklődöm", download: "Adatlap PDF", share: "Megosztás", close: "Bezárás", roomCount: "szoba", floor: "emelet", building: "épület", type: "típus", orientation: "tájolás" } :
         { interior: "Interior", terrace: "Terrace", garden: "Garden", floorplan: "Floor plan", floorLayout: "Floor layout", expand: "Enlarge floor plan", preview: "Preview", select: "Preview apartment", gross: "Gross purchase price", details: "Apartment details", inquire: "Enquire", download: "PDF factsheet", share: "Share", close: "Close", roomCount: "rooms", floor: "floor", building: "building", type: "type", orientation: "orientation" }
     const number = new Intl.NumberFormat(hu ? "hu-HU" : "en-GB", { maximumFractionDigits: 2 })
-    const plan = active && apartment && dataset ? orbitApartmentPlan(apartment, dataset, assetBase, view) : null
+    const plan = active && apartment && dataset ? orbitApartmentPlan(apartment, dataset, assetBase, view, !expanded) : null
+    const previewImage = useOrbitPreviewImage(plan?.url, active)
     const floorLayout = apartment && dataset ? orbitApartmentPlan(apartment, dataset, assetBase, "floorLayout") : null
     const asset = (path: string) => orbitApartmentAssetUrl(path, assetBase) || ""
     const logo = asset("assets/brand/admiral-park-full-logo-no-location.svg")
@@ -1152,7 +1213,7 @@ function OrbitApartmentStudio(props: OrbitApartmentStudioProps): React.JSX.Eleme
     const viewBox = plan?.viewBox || { x: 0, y: 0, width: 1, height: 1 }
     const planStyle: React.CSSProperties = { left: `${-viewBox.x / viewBox.width * 100}%`, top: `${-viewBox.y / viewBox.height * 100}%`, width: `${100 / viewBox.width}%`, height: `${100 / viewBox.height}%` }
     const aspectStyle = { "--studio-plan-aspect": plan?.aspect || 1 } as React.CSSProperties
-    const planShown = !!plan && failedImage !== plan.url
+    const planShown = !!plan && previewImage === plan.url && failedImage !== plan.url
     const note = hu ? "Az alaprajz illusztráció. Bútorozatlan átadás." : "Illustrative floor plan. Homes are delivered unfurnished."
     const tabs = <div className="orbit-studio-tabs" role="tablist" aria-label={hu ? "Rajz kiválasztása" : "Choose drawing"}>
         {(["floorplan", "floorLayout"] as const).filter(kind => kind === "floorplan" || !!floorLayout).map(kind => <button key={kind} type="button" className="orbit-studio-tab" role="tab" aria-selected={view === kind} aria-controls={planPanelId} tabIndex={view === kind ? 0 : -1}
@@ -1529,7 +1590,8 @@ function OrbitFullscreenDetails({ apartment, assetBase, language, onOpenDetails,
     const number = new Intl.NumberFormat(hu ? "hu-HU" : "en-GB", { maximumFractionDigits: 2 })
     const known = (value: number | null | undefined) => typeof value === "number" && Number.isFinite(value)
     const area = (value: number | null | undefined) => known(value) ? <>{number.format(value!)}<small>m²</small></> : "—"
-    const floorplan = apartment && orbitApartmentAssetUrl(apartment.media?.floorplan?.thumbnail || apartment.media?.floorplan?.full || apartment.floorplan, assetBase)
+    const floorplanSource = apartment && orbitApartmentAssetUrl(apartment.media?.floorplan?.thumbnail || apartment.media?.floorplan?.full || apartment.floorplan, assetBase)
+    const floorplan = useOrbitPreviewImage(floorplanSource)
     const logo = orbitApartmentAssetUrl("assets/brand/admiral-park-full-logo-no-location.svg", assetBase)
     const state = apartment?.status
     const status = state === "available" ? hu ? "Szabad" : "Available" : state === "sold" ? hu ? "Eladva" : "Sold" : state === "under_negotiation" ? hu ? "Tárgyalás alatt" : "In negotiation" : state === "reserved" ? hu ? "Foglalt" : "Reserved" : apartment?.statusLabel || ""
@@ -1560,6 +1622,7 @@ function OrbitFullscreenDetails({ apartment, assetBase, language, onOpenDetails,
 export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): React.JSX.Element {
     const {
         useGitHubAssets = true, heroBaseUrl = "", connectionBaseUrl = "", orbitBaseUrl = "", startView = "opening", editorView = "opening", editorOrbitView = "entry", orbitStartFrame = 45,
+        maskPicking = true, maskBaseUrl = "", maskHighlightColor = "#f8d68b", maskHighlightOpacity = 27,
         duration = 2.5, connectionDuration = 2.5, maxSpeed = 1.8, momentum = .22, triggerDistance = 28, checkpointCount = 8,
         motionWidth = 960, orbitMobileWidth = 640, inspectionWidth = 1920, desktopBuffer = 2, phoneBuffer = 1, snapDuration = 1.5, frameBlend = 0,
         phoneFraming = true, phoneImageWidth = 100, phoneImageTop = 80,
@@ -1583,6 +1646,10 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
     const connectionPlaybackUrls = React.useMemo(() => [heroUrls[heroUrls.length - 1], ...connectionUrls], [heroUrls, connectionUrls])
     const orbitUrls = React.useMemo(() => homepageUrls(useGitHubAssets ? HOMEPAGE_ASSETS + "/ORBIT%20PICKER/BEAUTY%20sequence_Desktop" : orbitBaseUrl,
         HOMEPAGE_ORBIT_NAMES, useGitHubAssets ? HOMEPAGE_ORBIT_VERSION : ""), [useGitHubAssets, orbitBaseUrl])
+    const maskUrls = React.useMemo(() => {
+        const base = useGitHubAssets ? HOMEPAGE_ASSETS + "/images/Mask%20full%20size%201920" : maskBaseUrl
+        return base.trim() ? homepageUrls(base, HOMEPAGE_MASK_NAMES, useGitHubAssets ? HOMEPAGE_MASK_VERSION : "") : []
+    }, [useGitHubAssets, maskBaseUrl])
     const orbitStartIndex = Math.round(Math.max(0, Math.min(orbitUrls.length - 1, Number.isFinite(orbitStartFrame) ? orbitStartFrame : 45)))
     const orbitPoster = orbitUrls[orbitStartIndex]
     const editorViewNumber = /^[1-8]$/.test(editorOrbitView) ? Number(editorOrbitView) : 0
@@ -1599,6 +1666,7 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
     const [hostVisible, setHostVisible] = React.useState(false)
     const [detailsHeight, setDetailsHeight] = React.useState(140)
     const [mobilePresentation, setMobilePresentation] = React.useState(false)
+    const [maskFailed, setMaskFailed] = React.useState(false)
     const useStudio = (orbitLayout === "studio" || orbitLayout === "mobile" && mobilePresentation) && detailsMode !== "off"
     // Every orbit layout uses real apartment IDs so its floorplan opens the shared card.
     const jsonDetails = detailsMode !== "off"
@@ -1632,6 +1700,8 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
     }, [])
     const rootRef = React.useRef<HTMLDivElement>(null), heroRootRef = React.useRef<HTMLDivElement>(null)
     const heroCanvasRef = React.useRef<HTMLCanvasElement>(null), orbitCanvasRef = React.useRef<HTMLCanvasElement>(null), posterRef = React.useRef<HTMLImageElement>(null)
+    const maskCanvasRef = React.useRef<HTMLCanvasElement>(null)
+    const maskPickerRef = React.useRef<ReturnType<typeof createOrbitApartmentPicker> | null>(null)
     const actions = React.useRef<HomepageActions | null>(null)
     const openApartmentDetails = React.useCallback((id?: string) => {
         const value = id || selectedApartment?.id, root = rootRef.current
@@ -1658,6 +1728,59 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
         actions.current?.orbit?.setSuspended(detailOpen.current)
     }, [])
     const fullscreen = useOrbitFullscreen(refreshFullscreenLayout, detailOpen)
+    const pickerLatest = React.useRef({ hostVisible, mobilePresentation, focalX, focalY, filterResult, jsonDetails })
+    pickerLatest.current = { hostVisible, mobilePresentation, focalX, focalY, filterResult, jsonDetails }
+
+    React.useEffect(() => {
+        const root = rootRef.current, canvas = maskCanvasRef.current
+        if (!root || !canvas || staticRenderer || !maskPicking || checkpointCount !== 8 || maskUrls.length !== 8) return
+        const picker = createOrbitApartmentPicker({
+            root, canvas, urls: maskUrls, palette: HOMEPAGE_MASK_PALETTE,
+            highlightColor: maskHighlightColor, highlightOpacity: maskHighlightOpacity / 100,
+            getView: () => {
+                const latest = pickerLatest.current, geometry = fullscreen.geometryRef.current
+                const width = geometry?.width || root.clientWidth, height = geometry?.height || root.clientHeight
+                const value = (name: string, fallback: number) => {
+                    const number = parseFloat(root.style.getPropertyValue(name))
+                    return Number.isFinite(number) ? number : fallback
+                }
+                return { enabled: latest.hostVisible && latest.jsonDetails && root.dataset.homepageStage === "orbit",
+                    checkpoint: Number(root.dataset.orbitCheckpoint ?? -1), moving: root.dataset.orbitState !== "checkpoint",
+                    suspended: detailOpen.current, mobile: latest.mobilePresentation, width, height,
+                    viewport: geometry ? { x: 0, y: 0, width, height } : { x: value("--admiral-image-x", 0), y: value("--admiral-image-y", 0), width: value("--admiral-image-width", width), height: value("--admiral-image-height", height) },
+                    focalX: latest.focalX / 100, focalY: latest.focalY / 100 }
+            },
+            inputPoint: (clientX, clientY) => {
+                const geometry = fullscreen.geometryRef.current
+                if (geometry) {
+                    const { physical, width, height, rotated } = geometry, x = clientX - physical.left, y = clientY - physical.top
+                    return rotated ? { x: y * width / physical.height, y: height - x * height / physical.width } : { x: x * width / physical.width, y: y * height / physical.height }
+                }
+                const bounds = root.getBoundingClientRect()
+                return { x: (clientX - bounds.left) * root.clientWidth / Math.max(1, bounds.width), y: (clientY - bounds.top) * root.clientHeight / Math.max(1, bounds.height) }
+            },
+            getAllowedIds: () => pickerLatest.current.filterResult.matchingIds,
+            getHighlightIds: () => {
+                try { return JSON.parse(root.dataset.orbitHighlightIds || "[]") as string[] } catch { return [] }
+            },
+            onHover: id => {
+                // The modal hides picking, but closing it restores the selected
+                // apartment. A camera move still clears the selection highlight.
+                if (id === null && detailOpen.current) return
+                root.dispatchEvent(new CustomEvent("admiral:apartment-hover", { detail: { id } }))
+            },
+            onPick: id => root.dispatchEvent(new CustomEvent("admiral:apartment-click", { detail: { id } })),
+        })
+        maskPickerRef.current = picker
+        const refresh = () => picker.refresh(), retry = () => picker.retry(), observer = new ResizeObserver(refresh)
+        const status = new MutationObserver(() => setMaskFailed(root.dataset.orbitMaskState === "error"))
+        status.observe(root, { attributes: true, attributeFilter: ["data-orbit-mask-state"] })
+        root.addEventListener("admiral:orbit-filter-change", refresh)
+        root.addEventListener("admiral:orbit-mask-retry", retry)
+        observer.observe(root); picker.refresh()
+        return () => { observer.disconnect(); status.disconnect(); root.removeEventListener("admiral:orbit-filter-change", refresh); root.removeEventListener("admiral:orbit-mask-retry", retry); picker.destroy(); setMaskFailed(false); if (maskPickerRef.current === picker) maskPickerRef.current = null }
+    }, [staticRenderer, maskPicking, checkpointCount, maskUrls, maskHighlightColor, maskHighlightOpacity])
+    React.useEffect(() => { maskPickerRef.current?.refresh() }, [hostVisible, mobilePresentation, stage, orbitInfo.state, orbitInfo.checkpoint, detailApartmentId, fullscreen.active, focalX, focalY, filterResult])
 
     React.useEffect(() => {
         const root = rootRef.current
@@ -1839,6 +1962,7 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
                 const storyTop = rect.y + rect.height + 20
                 mobileLayout = { enabled: true, storyTop, storyMaxHeight: Math.max(0, Math.min(detailsTop, controlsTop) - 20 - storyTop) }
             } else mobileLayout = null
+            maskPickerRef.current?.refresh()
         }
         function changeStage(next: HomepageStage) {
             currentStage = next; root!.dataset.homepageStage = next; setStage(next); applyPresentation(); publish()
@@ -1861,6 +1985,7 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
             viewport: bounds => fullscreen.geometryRef.current ? null : viewportFor(1, bounds),
             onUpdate(snapshot) {
                 if (disposed) return
+                maskPickerRef.current?.refresh()
                 orbitSnapshot = snapshot; publish()
                 root!.dataset.orbitDownloaded = String(snapshot.downloaded)
                 if (snapshot.state !== "checkpoint" || snapshot.checkpoint < 0) clearApartmentDetails()
@@ -2136,7 +2261,8 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
     const paused = orbitInfo.state === "paused"
     const orbitMoving = orbitInfo.state !== "checkpoint"
     const orbitButtonStyle: React.CSSProperties = { ...homepageButton, opacity: orbitMoving ? .45 : 1, cursor: orbitMoving ? "default" : "pointer" }
-    const detailsData = selectedApartmentDetails
+    const stripFloorplanUrl = useOrbitPreviewImage(selectedApartmentDetails?.floorplanUrl || null, !useStudio && detailsMode !== "off")
+    const detailsData = selectedApartmentDetails ? { ...selectedApartmentDetails, floorplanUrl: stripFloorplanUrl || undefined } : null
     const detailsVisible = !useStudio && (detailsMode === "preview" ? (orbitStatic || (orbitVisible && orbitInfo.state === "checkpoint")) :
         detailsMode === "hover" && orbitVisible && orbitInfo.state === "checkpoint" && orbitInfo.checkpoint >= 0 && detailsData !== null)
     const controlsBottom = detailsVisible ? `calc(${detailsBottom + detailsHeight + 20}px + env(safe-area-inset-bottom, 0px))` : "18px"
@@ -2161,6 +2287,8 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
                 aria-label={fullscreen.active ? detailsLanguage === "hu" ? "Teljes képernyős épületnézet" : "Fullscreen building view" : undefined} aria-modal={fullscreen.active ? true : undefined} style={fullscreen.surfaceStyle}>
                 <div data-orbit-fullscreen-plane="" data-rotated={String(!!fullscreen.geometryRef.current?.rotated)} style={fullscreen.planeStyle}>
                     <canvas ref={orbitCanvasRef} aria-hidden="true" width={1} height={1} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", zIndex: 2, opacity: orbitVisible ? 1 : 0, transition: reduced ? "none" : "opacity .35s", touchAction: fullscreen.active ? "none" : "pan-y pinch-zoom", pointerEvents: orbitVisible ? "auto" : "none", clipPath: fullscreen.active ? "none" : imageClip }} />
+                    <canvas ref={maskCanvasRef} data-orbit-mask-overlay="" aria-hidden="true" width={1} height={1} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", zIndex: 3, opacity: orbitVisible ? 1 : 0, pointerEvents: "none", clipPath: fullscreen.active ? "none" : imageClip }} />
+                    {maskFailed && fullscreen.active && <button type="button" data-orbit-mask-retry="" data-orbit-ignore="" style={{ ...homepageButton, position: "absolute", left: 16, top: 16, zIndex: 9 }} onClick={() => maskPickerRef.current?.retry()}>{detailsLanguage === "hu" ? "Lakáskijelölés újratöltése" : "Retry apartment picking"}</button>}
                     {fullscreen.active && <OrbitFullscreenDetails apartment={selectedApartment} assetBase={apartmentAssetBase} language={detailsLanguage}
                         emptyMessage={filterResult.active && filterResult.matchingIds.length === 0 ? detailsLanguage === "hu" ? "Nincs a szűrésnek megfelelő lakás." : "No apartments match these filters." : undefined}
                         onOpenDetails={() => openApartmentDetails()} moving={orbitMoving} onPrevious={() => actions.current?.orbit?.go(-1)} onNext={() => actions.current?.orbit?.go(1)}
@@ -2170,6 +2298,7 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
             {mobilePresentation && useStudio && orbitVisible && !fullscreen.active && <button type="button" data-orbit-fullscreen-open="" data-orbit-ignore="" aria-haspopup="dialog" aria-label={detailsLanguage === "hu" ? "Teljes képernyő" : "Fullscreen view"} title={detailsLanguage === "hu" ? "Teljes képernyő" : "Fullscreen view"} onClick={fullscreen.open}>
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.65" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false"><path d="M8 4H4v4m12-4h4v4M4 16v4h4m12-4v4h-4" /></svg>
             </button>}
+            {maskFailed && orbitVisible && !fullscreen.active && <button type="button" data-orbit-mask-retry="" data-orbit-ignore="" style={{ ...homepageButton, position: "absolute", left: "calc(var(--admiral-image-x, 0px) + 12px)", top: "calc(var(--admiral-image-y, 0px) + 12px)", zIndex: 5 }} onClick={() => maskPickerRef.current?.retry()}>{detailsLanguage === "hu" ? "Lakáskijelölés újratöltése" : "Retry apartment picking"}</button>}
             {orbitStatic && <span style={{ position: "absolute", inset: 0, pointerEvents: "none" }} />}
             <div aria-hidden="true" style={{ position: "absolute", top: "var(--admiral-image-y, 0px)", left: "var(--admiral-image-x, 0px)", width: "var(--admiral-image-width, 100%)", height: "var(--admiral-image-height, 100%)", background: "#000", opacity: darken, pointerEvents: "none", zIndex: 2 }} />
             {!staticRenderer && showControls && !fullscreen.active && <div data-homepage-controls="" data-orbit-ignore="" style={{ position: "absolute", bottom: studioControls ? "auto" : controlsBottom, top: studioControls ? "var(--admiral-controls-top)" : "auto", left: studioControls ? "var(--admiral-controls-left)" : "50%", transform: "translateX(-50%)", display: "flex", alignItems: "center", justifyContent: "center", flexWrap: "wrap", gap: 7, width: "max-content", maxWidth: studioControls ? "var(--admiral-controls-width)" : "94%", zIndex: 3 }}>
@@ -2313,6 +2442,10 @@ addPropertyControls(AdmiralHomepageTrial, {
     heroBaseUrl: { type: ControlType.String, title: "SEQ_01 folder", defaultValue: "", hidden: p => p.useGitHubAssets !== false },
     connectionBaseUrl: { type: ControlType.String, title: "SEQ_02 folder", defaultValue: "", hidden: p => p.useGitHubAssets !== false },
     orbitBaseUrl: { type: ControlType.String, title: "Orbit folder", defaultValue: "", hidden: p => p.useGitHubAssets !== false },
+    maskPicking: { type: ControlType.Boolean, title: "Apartment masks", defaultValue: true, description: "Hover on desktop or tap on phones to select an apartment at the eight parked camera views." },
+    maskBaseUrl: { type: ControlType.String, title: "Mask folder", defaultValue: "", hidden: p => p.useGitHubAssets !== false || p.maskPicking === false },
+    maskHighlightColor: { type: ControlType.Color, title: "Highlight colour", defaultValue: "#f8d68b", hidden: p => p.maskPicking === false },
+    maskHighlightOpacity: { type: ControlType.Number, title: "Highlight opacity", defaultValue: 27, min: 5, max: 70, step: 1, unit: "%", hidden: p => p.maskPicking === false },
     startView: { type: ControlType.Enum, title: "Start trial", options: ["opening", "orbit"], optionTitles: ["Full journey", "Orbit directly"], defaultValue: "opening" },
     editorView: { type: ControlType.Enum, title: "Editor view", options: ["opening", "building", "connection", "orbit"], optionTitles: ["SEQ_01 opening", "SEQ_01 arrival", "SEQ_02 midway", "Orbit"], defaultValue: "opening" },
     editorOrbitView: { type: ControlType.Enum, title: "Editor orbit view", options: ["entry", "1", "2", "3", "4", "5", "6", "7", "8"], optionTitles: ["Entry camera", "View 1", "View 2", "View 3", "View 4", "View 5", "View 6", "View 7", "View 8"], defaultValue: "entry", hidden: p => p.editorView !== "orbit", description: "Preview one camera and its native story group while editing. The published orbit entry stays unchanged." },
@@ -2392,11 +2525,11 @@ addPropertyControls(AdmiralHomepageTrial, {
     orbitBackground: { type: ControlType.Color, title: "Orbit background", defaultValue: "#fdfbfb", hidden: p => p.orbitLayout === "classic" },
     apartmentDataUrl: { type: ControlType.String, title: "Apartment JSON", defaultValue: "https://raw.githubusercontent.com/UnbuiltMarket/admiral-park/main/data/apartments.json", hidden: p => p.detailsMode === "off", description: "Apartment facts and media paths. All 69 records are small; only the selected plan is loaded." },
     apartmentAssetBase: { type: ControlType.String, title: "Media base", defaultValue: HOMEPAGE_ASSETS + "/apartment-list/", hidden: p => p.detailsMode === "off" },
-    previewApartmentId: { type: ControlType.String, title: "Preview apartment", defaultValue: "A001", hidden: p => p.detailsMode === "hover" || p.detailsMode === "off", description: "A real JSON apartment ID, used until picking masks are connected. Clicking its floorplan opens the shared detail card." },
+    previewApartmentId: { type: ControlType.String, title: "Preview apartment", defaultValue: "A001", hidden: p => p.detailsMode === "hover" || p.detailsMode === "off", description: "Initial apartment before hover or tap selection. Clicking its floorplan opens the shared detail card." },
     detailPageUrl: { type: ControlType.String, title: "Details page", defaultValue: "/lista", hidden: p => p.detailsMode === "off", description: "Your Framer apartment page path. Links add ?apartment=ID to open this apartment." },
     detailDataUrl: { type: ControlType.String, title: "Detail card JSON", defaultValue: "https://raw.githubusercontent.com/UnbuiltMarket/admiral-park/main/data/apartment-details.json", description: "Full apartment data for the shared list-view card, fetched only when an apartment is opened." },
     inquiryUrl: { type: ControlType.String, title: "Inquiry page", defaultValue: "", hidden: p => p.detailsMode === "off", description: "Optional enquiry page URL. If empty, the action opens the apartment details page." },
-    detailsMode: { type: ControlType.Enum, title: "Apartment details", options: ["preview", "hover", "off"], optionTitles: ["Preview", "Hover", "Off"], defaultValue: "preview", description: "Preview shows real JSON data with a trial apartment selector. Hover waits for a selected apartment ID from the future masks. Off hides the apartment workspace." },
+    detailsMode: { type: ControlType.Enum, title: "Apartment details", options: ["preview", "hover", "off"], optionTitles: ["Preview", "Hover", "Off"], defaultValue: "preview", description: "Preview starts with A001 and updates on hover/tap. Hover waits for an actual apartment selection. Off hides the apartment workspace and picking." },
     detailsLanguage: { type: ControlType.Enum, title: "Details language", options: ["hu", "en"], optionTitles: ["Magyar", "English"], defaultValue: "hu", hidden: p => p.detailsMode === "off" },
     detailsBottom: { type: ControlType.Number, title: "Details bottom", defaultValue: 32, min: 0, max: 160, step: 1, unit: "px", hidden: p => p.detailsMode === "off" || p.orbitLayout === "studio" },
     detailsInset: { type: ControlType.Number, title: "Details margin", defaultValue: 48, min: 0, max: 120, step: 1, unit: "px", hidden: p => p.detailsMode === "off" || p.orbitLayout === "studio" },
@@ -4044,5 +4177,408 @@ function createOrbitPlayer(options: OrbitOptions) {
             window.removeEventListener("resize", resize); window.removeEventListener("keydown", onEscape); document.removeEventListener("visibilitychange", visibilityChanged);
             reducedQuery?.removeEventListener?.("change", reducedChanged);
         },
+    };
+}
+
+interface OrbitMaskRect { x: number; y: number; width: number; height: number }
+interface OrbitApartmentPickerView {
+    enabled: boolean; checkpoint: number; moving: boolean; suspended: boolean; mobile: boolean;
+    width: number; height: number; viewport: OrbitMaskRect; focalX: number; focalY: number;
+}
+interface OrbitApartmentPickerOptions {
+    root: HTMLElement; canvas: HTMLCanvasElement; urls: readonly string[];
+    /** Actual exported mask RGB values; these may differ from the source object colours. */
+    palette: readonly { id: string; maskColor: string; maskColorAliases?: readonly string[] }[];
+    getView: () => OrbitApartmentPickerView;
+    inputPoint: (clientX: number, clientY: number) => { x: number; y: number };
+    onHover: (id: string | null) => void; onPick: (id: string) => void;
+    getAllowedIds: () => readonly string[]; getHighlightIds: () => readonly string[];
+    highlightColor?: string; highlightOpacity?: number;
+}
+interface OrbitMaskIndex { width: number; height: number; pixels: Uint8Array }
+interface OrbitApartmentPickerSnapshot {
+    state: "off" | "moving" | "loading" | "ready" | "error"; checkpoint: number;
+    cached: number; downloaded: number; hovered: string | null; highlighted: string[]; error: string | null;
+}
+
+/** Framer colour controls may return numeric CSS rgb()/rgba() instead of hex. */
+function orbitMaskHighlightRGB(value?: string): [number, number, number] {
+    const input = typeof value === "string" ? value.trim() : "", fallback: [number, number, number] = [248, 214, 139];
+    if (/^#(?:[0-9a-f]{3}|[0-9a-f]{4}|[0-9a-f]{6}|[0-9a-f]{8})$/i.test(input)) {
+        const raw = input.slice(1), hex = raw.length <= 4 ? raw.split("").map(channel => channel + channel).join("") : raw;
+        return [parseInt(hex.slice(0, 2), 16), parseInt(hex.slice(2, 4), 16), parseInt(hex.slice(4, 6), 16)];
+    }
+    const match = input.match(/^rgba?\(([^()]*)\)$/i);
+    if (!match) return fallback;
+    const channels = match[1].trim().split(/[\s,/]+/).filter(Boolean);
+    if ((channels.length !== 3 && channels.length !== 4) || channels.some(channel => !/^[+-]?(?:\d+(?:\.\d*)?|\.\d+)%?$/.test(channel))) return fallback;
+    const values = channels.slice(0, 3).map(channel => Math.round(Math.max(0, Math.min(255, channel.endsWith("%") ? parseFloat(channel) * 255 / 100 : parseFloat(channel)))));
+    // Alpha is controlled separately by highlightOpacity for consistent filters.
+    return [values[0], values[1], values[2]];
+}
+
+/** The same object-fit:cover crop used by the orbit image, before any scene rotation. */
+function orbitMaskCoverRect(width: number, height: number, viewport: OrbitMaskRect, focalX = .5, focalY = .5): OrbitMaskRect {
+    const scale = Math.max(viewport.width / width, viewport.height / height);
+    const resultWidth = width * scale, resultHeight = height * scale;
+    return { x: viewport.x + (viewport.width - resultWidth) * Math.max(0, Math.min(1, focalX)),
+        y: viewport.y + (viewport.height - resultHeight) * Math.max(0, Math.min(1, focalY)), width: resultWidth, height: resultHeight };
+}
+
+/** Encode an opaque exact RGB match once. Zero always means background or ambiguous edge. */
+function buildOrbitMaskIndex(rgba: ArrayLike<number>, width: number, height: number, palette: readonly { id: string; maskColor: string; maskColorAliases?: readonly string[] }[]): OrbitMaskIndex {
+    if (!Number.isInteger(width) || !Number.isInteger(height) || width <= 0 || height <= 0 || width * height > 16777216 || rgba.length !== width * height * 4) throw new Error("Invalid apartment mask dimensions");
+    if (!palette.length || palette.length > 254) throw new Error("Invalid apartment mask palette");
+    const colors = new Map<number, number>(), ids = new Set<string>();
+    palette.forEach((entry, index) => {
+        if (!entry.id || ids.has(entry.id) || (entry.maskColorAliases && (!Array.isArray(entry.maskColorAliases) || entry.maskColorAliases.length > 16))) throw new Error("Invalid apartment mask colour mapping");
+        ids.add(entry.id);
+        // Only explicitly audited byte encodings are accepted. This never
+        // expands to a nearest-colour search or an arbitrary colour tolerance.
+        for (const hex of new Set([entry.maskColor, ...(entry.maskColorAliases ?? [])])) {
+            if (!/^#[0-9a-f]{6}$/i.test(hex)) throw new Error("Invalid apartment mask colour mapping");
+            const rgb = parseInt(hex.slice(1), 16), owner = colors.get(rgb);
+            if (rgb === 0 || rgb === 0xffffff || (owner !== undefined && owner !== index + 1)) throw new Error("Ambiguous apartment mask colour mapping");
+            colors.set(rgb, index + 1);
+        }
+    });
+    const pixels = new Uint8Array(width * height);
+    for (let pixel = 0, channel = 0; pixel < pixels.length; pixel++, channel += 4) {
+        if (rgba[channel + 3] !== 255) continue;
+        pixels[pixel] = colors.get((rgba[channel] << 16) | (rgba[channel + 1] << 8) | rgba[channel + 2]) ?? 0;
+    }
+    return { width, height, pixels };
+}
+
+/** Require a solid pixel and its immediate neighbours; never guess an antialiased border. */
+function orbitMaskPixelAt(mask: OrbitMaskIndex, x: number, y: number): number {
+    const px = Math.floor(x), py = Math.floor(y);
+    if (px < 1 || py < 1 || px >= mask.width - 1 || py >= mask.height - 1) return 0;
+    const offset = py * mask.width + px, value = mask.pixels[offset];
+    return value && mask.pixels[offset - 1] === value && mask.pixels[offset + 1] === value &&
+        mask.pixels[offset - mask.width] === value && mask.pixels[offset + mask.width] === value ? value : 0;
+}
+
+/** Compressed masks stay downloaded; at most two compact one-byte ID maps stay decoded. */
+function createOrbitApartmentPicker(options: OrbitApartmentPickerOptions) {
+    const { root, canvas } = options, urls = [...options.urls], palette = [...options.palette];
+    const context = canvas.getContext("2d"), cancellation = new AbortController();
+    const blobs = new Map<number, Blob>(), masks = new Map<number, OrbitMaskIndex>(), failures = new Map<number, string>();
+    const generations = new Map<number, number>(), reload = new Set<number>();
+    const fetching = new Set<number>(), decoding = new Set<number>(), ids = palette.map(entry => entry.id);
+    const indices = new Map(ids.map((id, index) => [id, index + 1]));
+    const highlightRGB = orbitMaskHighlightRGB(options.highlightColor);
+    const highlightOpacity = Math.max(0, Math.min(1, Number.isFinite(options.highlightOpacity) ? options.highlightOpacity! : .27));
+    const controls = "nav,header,a,button,input,textarea,select,option,[contenteditable]:not([contenteditable='false']),[role='button'],[role='link'],[role='dialog']:not([data-orbit-fullscreen-surface]),[data-orbit-ignore]";
+    let destroyed = false, begun = false, decodingIndex = -1, frame = 0, hovered: string | null = null, currentCheckpoint = -1;
+    let texture: HTMLCanvasElement | null = null, textureKey = "", paintKey = "";
+    let latestPoint: { clientX: number; clientY: number; target: EventTarget | null } | null = null;
+    let down: { id: number; x: number; y: number; checkpoint: number; mobile: boolean; dragged: boolean } | null = null;
+    let diagnostics: OrbitApartmentPickerSnapshot = { state: "off", checkpoint: -1, cached: 0, downloaded: 0, hovered: null, highlighted: [], error: null };
+
+    function setDiagnostic(name: string, value: string) {
+        if (root.dataset[name] !== value) root.dataset[name] = value;
+    }
+
+    function viewReady(view: OrbitApartmentPickerView) {
+        return !destroyed && !document.hidden && !!context && view.enabled && !view.moving && !view.suspended &&
+            Number.isInteger(view.checkpoint) && view.checkpoint >= 0 && view.checkpoint < urls.length &&
+            [view.width, view.height, view.viewport.x, view.viewport.y, view.viewport.width, view.viewport.height, view.focalX, view.focalY].every(Number.isFinite) &&
+            view.width > 0 && view.height > 0 && view.viewport.width > 0 && view.viewport.height > 0;
+    }
+
+    function setHover(id: string | null, force = false) {
+        if (hovered === id) { if (force) options.onHover(id); return; }
+        hovered = id; setDiagnostic("orbitMaskHovered", id ?? "");
+        options.onHover(id);
+    }
+
+    function clearTexture() {
+        if (texture) texture.width = texture.height = 0;
+        texture = null; textureKey = "";
+    }
+
+    function updateDiagnostics(view: OrbitApartmentPickerView, highlighted: string[] = []) {
+        const available = viewReady(view), error = available ? failures.get(view.checkpoint) ?? null : null;
+        const state = !view.enabled || view.suspended || document.hidden ? "off" : view.moving ? "moving" : !available ? "off" : error ? "error" : masks.has(view.checkpoint) ? "ready" : "loading";
+        diagnostics = { state, checkpoint: available ? view.checkpoint : -1, cached: masks.size, downloaded: blobs.size, hovered, highlighted, error };
+        setDiagnostic("orbitMaskState", state); setDiagnostic("orbitMaskCheckpoint", String(diagnostics.checkpoint));
+        setDiagnostic("orbitMaskCached", String(masks.size)); setDiagnostic("orbitMaskDownloaded", String(blobs.size));
+        setDiagnostic("orbitMaskHighlights", highlighted.join(",")); setDiagnostic("orbitMaskError", error ?? "");
+    }
+
+    function touchMask(index: number) {
+        const mask = masks.get(index);
+        if (mask) { masks.delete(index); masks.set(index, mask); }
+        return mask;
+    }
+
+    function storeMask(index: number, mask: OrbitMaskIndex) {
+        masks.delete(index); masks.set(index, mask);
+        while (masks.size > 2) {
+            const old = [...masks.keys()].find(key => key !== currentCheckpoint && key !== index) ?? [...masks.keys()][0];
+            masks.delete(old);
+        }
+    }
+
+    function priority() {
+        const anchor = currentCheckpoint >= 0 ? currentCheckpoint : 0;
+        return [...new Set([anchor, (anchor + 1) % urls.length, (anchor - 1 + urls.length) % urls.length, ...urls.map((_, index) => index)])];
+    }
+
+    async function fetchMask(index: number) {
+        fetching.add(index);
+        const generation = generations.get(index) ?? 0, valid = () => !destroyed && (generations.get(index) ?? 0) === generation;
+        const controller = new AbortController(), abort = () => controller.abort();
+        cancellation.signal.addEventListener("abort", abort, { once: true });
+        const timer = setTimeout(abort, 15000);
+        try {
+            const cache = reload.delete(index) ? "reload" : "force-cache";
+            const response = await fetch(urls[index], { signal: controller.signal, credentials: "omit", cache });
+            if (!response.ok) throw new Error("Mask download failed (" + response.status + ")");
+            const blob = await response.blob();
+            if (!blob.size || blob.size > 16777216) throw new Error("Invalid apartment mask file");
+            if (valid()) blobs.set(index, blob);
+        } catch (reason) {
+            if (valid()) failures.set(index, reason instanceof Error ? reason.message : "Mask download failed");
+        } finally {
+            clearTimeout(timer); cancellation.signal.removeEventListener("abort", abort); fetching.delete(index);
+            if (!destroyed) { refresh(); pump(); }
+        }
+    }
+
+    async function decodeMask(index: number) {
+        decoding.add(index); decodingIndex = index;
+        const generation = generations.get(index) ?? 0, valid = () => !destroyed && (generations.get(index) ?? 0) === generation;
+        let image: ImageBitmap | HTMLImageElement | null = null, objectURL = "";
+        let surface: HTMLCanvasElement | null = null;
+        let expired = false;
+        // Native ImageBitmap work cannot be cancelled; keep its one decode permit
+        // until it settles, but stop presenting the view as indefinitely loading.
+        const watchdog = setTimeout(() => {
+            expired = true;
+            if (valid()) { failures.set(index, "Mask decoding timed out"); refresh(); }
+        }, 15000);
+        try {
+            const blob = blobs.get(index);
+            if (!blob) return;
+            if (typeof createImageBitmap === "function") {
+                try { image = await createImageBitmap(blob, { premultiplyAlpha: "none", colorSpaceConversion: "none" }); }
+                catch { /* Native PNG Image decoding is also available in older browsers. */ }
+            }
+            if (!valid() || expired) return;
+            if (!image) {
+                const fallback = new Image(); objectURL = URL.createObjectURL(blob); fallback.decoding = "async"; fallback.src = objectURL;
+                image = fallback;
+                await new Promise<void>((resolve, reject) => {
+                    const timer = setTimeout(() => { fallback.src = ""; reject(new Error("Mask decoding timed out")); }, 12000);
+                    const abort = () => { clearTimeout(timer); fallback.src = ""; reject(new Error("Mask picker disposed")); };
+                    cancellation.signal.addEventListener("abort", abort, { once: true });
+                    const done = () => { clearTimeout(timer); cancellation.signal.removeEventListener("abort", abort); };
+                    fallback.decode().then(() => { done(); resolve(); }, reason => { done(); reject(reason); });
+                });
+            }
+            if (!valid() || expired) return;
+            const width = image.width, height = image.height;
+            if (!width || !height || width * height > 16777216) throw new Error("Invalid apartment mask dimensions");
+            surface = document.createElement("canvas"); surface.width = width; surface.height = height;
+            const drawing = surface.getContext("2d", { willReadFrequently: true });
+            if (!drawing) throw new Error("Mask decoding canvas is unavailable");
+            drawing.drawImage(image, 0, 0);
+            const rgba = drawing.getImageData(0, 0, width, height).data;
+            const mask = buildOrbitMaskIndex(rgba, width, height, palette);
+            if (!mask.pixels.some(value => value !== 0)) throw new Error("Mask colours do not match the apartment palette");
+            if (valid() && !expired) storeMask(index, mask);
+        } catch (reason) {
+            if (valid()) failures.set(index, reason instanceof Error ? reason.message : "Mask decoding failed");
+        } finally {
+            clearTimeout(watchdog);
+            if (image && "close" in image) image.close();
+            else if (image) image.src = "";
+            if (objectURL) URL.revokeObjectURL(objectURL);
+            if (surface) surface.width = surface.height = 0;
+            decoding.delete(index); decodingIndex = -1;
+            if (!destroyed) { refresh(); pump(); }
+        }
+    }
+
+    function pump() {
+        if (destroyed || !begun || !urls.length) return;
+        for (const index of priority()) {
+            if (fetching.size >= 2) break;
+            if (!blobs.has(index) && !fetching.has(index) && !failures.has(index)) void fetchMask(index);
+        }
+        if (decodingIndex !== -1) return;
+        const target = currentCheckpoint;
+        if (target >= 0 && blobs.has(target) && !masks.has(target) && !decoding.has(target) && !failures.has(target)) void decodeMask(target);
+    }
+
+    function makeTexture(mask: OrbitMaskIndex, highlighted: string[]) {
+        const key = currentCheckpoint + ":" + highlighted.join(",");
+        if (key === textureKey && texture) return texture;
+        clearTexture();
+        if (!highlighted.length) return null;
+        const wanted = new Set(highlighted.map(id => indices.get(id)).filter((id): id is number => id !== undefined));
+        const surface = document.createElement("canvas"); surface.width = mask.width; surface.height = mask.height;
+        const drawing = surface.getContext("2d");
+        if (!drawing) return null;
+        const image = drawing.createImageData(mask.width, mask.height), data = image.data, pixels = mask.pixels;
+        for (let offset = 0; offset < pixels.length; offset++) {
+            const apartment = pixels[offset];
+            if (!apartment || !wanted.has(apartment)) continue;
+            const x = offset % mask.width, y = Math.floor(offset / mask.width);
+            const border = x === 0 || y === 0 || x === mask.width - 1 || y === mask.height - 1 ||
+                pixels[offset - 1] !== apartment || pixels[offset + 1] !== apartment || pixels[offset - mask.width] !== apartment || pixels[offset + mask.width] !== apartment;
+            const channel = offset * 4;
+            data[channel] = highlightRGB[0]; data[channel + 1] = highlightRGB[1]; data[channel + 2] = highlightRGB[2];
+            data[channel + 3] = Math.round(255 * (border ? Math.min(1, highlightOpacity + .5) : highlightOpacity));
+        }
+        drawing.putImageData(image, 0, 0); texture = surface; textureKey = key;
+        return texture;
+    }
+
+    function refresh() {
+        if (destroyed) return;
+        const view = options.getView(), ready = viewReady(view), checkpoint = ready ? view.checkpoint : -1;
+        if (checkpoint !== currentCheckpoint) { currentCheckpoint = checkpoint; setHover(null); clearTexture(); paintKey = ""; }
+        if (ready) { begun = true; pump(); }
+        if (!ready) { down = null; latestPoint = null; setHover(null); clearTexture(); }
+        const mask = ready ? touchMask(checkpoint) : undefined;
+        const allowed = new Set(options.getAllowedIds()), highlighted = mask ? [...new Set(options.getHighlightIds())].filter(id => allowed.has(id) && indices.has(id)).sort() : [];
+        if (hovered && !allowed.has(hovered)) setHover(null);
+        const logicalWidth = Number.isFinite(view.width) && view.width > 0 ? view.width : 1;
+        const logicalHeight = Number.isFinite(view.height) && view.height > 0 ? view.height : 1;
+        // A transparent full-window backing can otherwise allocate 32+ MB on
+        // a 4K screen. Native masks have no additional detail above this budget.
+        const dpr = Math.min(window.devicePixelRatio || 1, 2, Math.sqrt(1920 * 1010 / (logicalWidth * logicalHeight)));
+        const width = Math.max(1, Math.floor(logicalWidth * dpr)), height = Math.max(1, Math.floor(logicalHeight * dpr));
+        const signature = [checkpoint, !!mask, width, height, ...Object.values(view.viewport), view.focalX, view.focalY, highlighted.join(",")].join("|");
+        if (signature !== paintKey && context) {
+            if (canvas.width !== width || canvas.height !== height) { canvas.width = width; canvas.height = height; }
+            context.clearRect(0, 0, canvas.width, canvas.height);
+            const layer = mask ? makeTexture(mask, highlighted) : null;
+            if (layer && mask) {
+                const rect = orbitMaskCoverRect(mask.width, mask.height, view.viewport, view.focalX, view.focalY);
+                context.save(); context.scale(width / view.width, height / view.height);
+                context.beginPath(); context.rect(view.viewport.x, view.viewport.y, view.viewport.width, view.viewport.height); context.clip();
+                context.drawImage(layer, rect.x, rect.y, rect.width, rect.height); context.restore();
+            }
+            paintKey = signature;
+        }
+        updateDiagnostics(view, highlighted);
+    }
+
+    function ignored(target: EventTarget | null) {
+        let element = target instanceof Element ? target : null;
+        if (!element) return true;
+        while (element && element !== root && !element.contains(root)) {
+            if (element.matches(controls)) return true;
+            element = element.parentElement;
+        }
+        return false;
+    }
+
+    function coveredControl(x: number, y: number) {
+        return Array.from(root.querySelectorAll<HTMLElement>(controls)).some(control => {
+            if ((control as HTMLButtonElement).disabled || control.closest("[inert],[hidden],[aria-hidden='true']")) return false;
+            const style = getComputedStyle(control);
+            // The shared card keeps a full-window idle wrapper mounted with
+            // pointer-events:none. Only a hit-testable control should obscure
+            // the facade; an explicitly interactive child is checked itself.
+            if (style.pointerEvents === "none") return false;
+            for (let element: HTMLElement | null = control; element; element = element.parentElement) {
+                const css = element === control ? style : getComputedStyle(element);
+                if (css.display === "none" || css.visibility === "hidden" || css.visibility === "collapse" || Number(css.opacity) === 0) return false;
+                if (element === root) break;
+            }
+            const bounds = control.getBoundingClientRect();
+            return bounds.width > 0 && bounds.height > 0 && x >= bounds.left && x <= bounds.right && y >= bounds.top && y <= bounds.bottom;
+        });
+    }
+
+    function hit(clientX: number, clientY: number, target: EventTarget | null) {
+        const view = options.getView();
+        if (!viewReady(view) || ignored(target) || coveredControl(clientX, clientY)) return null;
+        const mask = masks.get(view.checkpoint), point = options.inputPoint(clientX, clientY), viewport = view.viewport;
+        if (!mask || !Number.isFinite(point.x) || !Number.isFinite(point.y) || point.x < viewport.x || point.y < viewport.y || point.x >= viewport.x + viewport.width || point.y >= viewport.y + viewport.height) return null;
+        const rect = orbitMaskCoverRect(mask.width, mask.height, viewport, view.focalX, view.focalY);
+        const index = orbitMaskPixelAt(mask, (point.x - rect.x) * mask.width / rect.width, (point.y - rect.y) * mask.height / rect.height);
+        const id = index ? ids[index - 1] : null;
+        return id && options.getAllowedIds().includes(id) ? id : null;
+    }
+
+    function processHover() {
+        frame = 0;
+        if (!latestPoint || destroyed) return;
+        const point = latestPoint; latestPoint = null;
+        const id = hit(point.clientX, point.clientY, point.target);
+        // Lifecycle clears can be intentionally ignored by the parent while a
+        // detail card is open. Explicit background input still clears that
+        // parent's restored highlight after the card has closed.
+        setHover(id, id === null); refresh();
+    }
+
+    function onPointerMove(event: PointerEvent) {
+        if (down && event.pointerId === down.id && Math.hypot(event.clientX - down.x, event.clientY - down.y) > 6) down.dragged = true;
+        if (event.pointerType === "touch" || options.getView().mobile || down?.dragged || event.buttons) return;
+        latestPoint = { clientX: event.clientX, clientY: event.clientY, target: event.target };
+        if (!frame) frame = requestAnimationFrame(processHover);
+    }
+
+    function onPointerDown(event: PointerEvent) {
+        if (!event.isPrimary || event.button !== 0 || event.defaultPrevented) { down = null; return; }
+        const view = options.getView();
+        if (!viewReady(view) || ignored(event.target) || coveredControl(event.clientX, event.clientY)) return;
+        const point = options.inputPoint(event.clientX, event.clientY), viewport = view.viewport;
+        if (point.x < viewport.x || point.y < viewport.y || point.x >= viewport.x + viewport.width || point.y >= viewport.y + viewport.height) return;
+        down = { id: event.pointerId, x: event.clientX, y: event.clientY, checkpoint: view.checkpoint, mobile: view.mobile || event.pointerType === "touch", dragged: false };
+    }
+
+    function onPointerUp(event: PointerEvent) {
+        if (!down || down.id !== event.pointerId) return;
+        const press = down; down = null;
+        if (press.dragged || Math.hypot(event.clientX - press.x, event.clientY - press.y) > 6 || options.getView().checkpoint !== press.checkpoint || event.defaultPrevented) return;
+        const id = hit(event.clientX, event.clientY, event.target); setHover(id, id === null); refresh();
+        if (id && !press.mobile) options.onPick(id);
+    }
+
+    function onPointerCancel() { down = null; latestPoint = null; }
+    function onPointerOut(event: PointerEvent) { if (!event.relatedTarget && !options.getView().mobile) { setHover(null); refresh(); } }
+    function onVisibility() { if (document.hidden) onPointerCancel(); refresh(); }
+
+    window.addEventListener("pointermove", onPointerMove, { passive: true, capture: true });
+    window.addEventListener("pointerdown", onPointerDown, { passive: true, capture: true });
+    window.addEventListener("pointerup", onPointerUp, { passive: true, capture: true });
+    window.addEventListener("pointercancel", onPointerCancel, { passive: true, capture: true });
+    window.addEventListener("pointerout", onPointerOut, { passive: true, capture: true });
+    window.addEventListener("resize", refresh, { passive: true }); document.addEventListener("visibilitychange", onVisibility);
+    refresh();
+    return {
+        refresh,
+        retry(checkpoint?: number) {
+            if (destroyed) return;
+            const failed = checkpoint === undefined ? [...failures.keys()] : failures.has(checkpoint) ? [checkpoint] : [];
+            for (const index of failed) {
+                // A corrected file must replace corrupt cached bytes. Version
+                // guards also discard an old native decode that finishes late.
+                generations.set(index, (generations.get(index) ?? 0) + 1);
+                blobs.delete(index); masks.delete(index); failures.delete(index); reload.add(index);
+                if (index === currentCheckpoint) { setHover(null); clearTexture(); paintKey = ""; }
+            }
+            refresh(); pump();
+        },
+        snapshot: () => ({ ...diagnostics, highlighted: [...diagnostics.highlighted] }),
+        destroy() {
+            if (destroyed) return;
+            destroyed = true; cancellation.abort(); if (frame) cancelAnimationFrame(frame);
+            window.removeEventListener("pointermove", onPointerMove, true); window.removeEventListener("pointerdown", onPointerDown, true);
+            window.removeEventListener("pointerup", onPointerUp, true); window.removeEventListener("pointercancel", onPointerCancel, true);
+            window.removeEventListener("pointerout", onPointerOut, true); window.removeEventListener("resize", refresh);
+            document.removeEventListener("visibilitychange", onVisibility);
+            down = latestPoint = null; clearTexture(); masks.clear(); blobs.clear(); failures.clear(); generations.clear(); reload.clear();
+            context?.clearRect(0, 0, canvas.width, canvas.height); setHover(null);
+            setDiagnostic("orbitMaskState", "off"); setDiagnostic("orbitMaskCached", "0"); setDiagnostic("orbitMaskDownloaded", "0");
+            setDiagnostic("orbitMaskHighlights", "");
+        }
     };
 }

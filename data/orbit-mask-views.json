@@ -1,0 +1,1011 @@
+{
+  "schemaVersion": "1.0",
+  "projectId": "admiral-park",
+  "paletteVersion": 1,
+  "encoding": "RGB16",
+  "width": 1920,
+  "height": 1010,
+  "backgroundColor": "#000000",
+  "folder": "assets/images/Mask full size 1920/",
+  "colorTransfer": "Corona export gamma 2.2; calibrated against lossless rendered RGB values.",
+  "palette": [
+    {
+      "id": "A001",
+      "sourceColor": "#2080E0",
+      "renderedColor": "#63BBF1",
+      "renderedRgb16": [
+        25512,
+        47908,
+        61785
+      ]
+    },
+    {
+      "id": "A002",
+      "sourceColor": "#E08020",
+      "renderedColor": "#F1BB63",
+      "renderedRgb16": [
+        61785,
+        47908,
+        25512
+      ]
+    },
+    {
+      "id": "A003",
+      "sourceColor": "#20E020",
+      "renderedColor": "#63F163",
+      "renderedRgb16": [
+        25512,
+        61785,
+        25512
+      ]
+    },
+    {
+      "id": "A004",
+      "sourceColor": "#E020E0",
+      "renderedColor": "#F163F1",
+      "renderedRgb16": [
+        61785,
+        25512,
+        61785
+      ]
+    },
+    {
+      "id": "A005",
+      "sourceColor": "#502080",
+      "renderedColor": "#9763BB",
+      "renderedRgb16": [
+        38692,
+        25512,
+        47908
+      ]
+    },
+    {
+      "id": "A006",
+      "sourceColor": "#80B080",
+      "renderedColor": "#BBD8BB",
+      "renderedRgb16": [
+        47908,
+        55370,
+        47908
+      ]
+    },
+    {
+      "id": "A101",
+      "sourceColor": "#208050",
+      "renderedColor": "#63BB97",
+      "renderedRgb16": [
+        25512,
+        47908,
+        38692
+      ]
+    },
+    {
+      "id": "A102",
+      "sourceColor": "#20E0B0",
+      "renderedColor": "#63F1D8",
+      "renderedRgb16": [
+        25512,
+        61785,
+        55370
+      ]
+    },
+    {
+      "id": "A103",
+      "sourceColor": "#802020",
+      "renderedColor": "#BB6363",
+      "renderedRgb16": [
+        47908,
+        25512,
+        25512
+      ]
+    },
+    {
+      "id": "A104",
+      "sourceColor": "#8050E0",
+      "renderedColor": "#BB97F1",
+      "renderedRgb16": [
+        47908,
+        38692,
+        61785
+      ]
+    },
+    {
+      "id": "A105",
+      "sourceColor": "#80E0E0",
+      "renderedColor": "#BBF1F1",
+      "renderedRgb16": [
+        47908,
+        61785,
+        61785
+      ]
+    },
+    {
+      "id": "A106",
+      "sourceColor": "#B05080",
+      "renderedColor": "#D897BB",
+      "renderedRgb16": [
+        55370,
+        38692,
+        47908
+      ]
+    },
+    {
+      "id": "A107",
+      "sourceColor": "#B0E020",
+      "renderedColor": "#D8F163",
+      "renderedRgb16": [
+        55370,
+        61785,
+        25512
+      ]
+    },
+    {
+      "id": "A201",
+      "sourceColor": "#E0B0B0",
+      "renderedColor": "#F1D8D8",
+      "renderedRgb16": [
+        61785,
+        55370,
+        55370
+      ]
+    },
+    {
+      "id": "A202",
+      "sourceColor": "#2020E0",
+      "renderedColor": "#6363F1",
+      "renderedRgb16": [
+        25512,
+        25512,
+        61785
+      ]
+    },
+    {
+      "id": "A203",
+      "sourceColor": "#808020",
+      "renderedColor": "#BBBB63",
+      "renderedRgb16": [
+        47908,
+        47908,
+        25512
+      ]
+    },
+    {
+      "id": "A204",
+      "sourceColor": "#E02020",
+      "renderedColor": "#F16363",
+      "renderedRgb16": [
+        61785,
+        25512,
+        25512
+      ]
+    },
+    {
+      "id": "A205",
+      "sourceColor": "#202050",
+      "renderedColor": "#636397",
+      "renderedRgb16": [
+        25512,
+        25512,
+        38692
+      ]
+    },
+    {
+      "id": "A301",
+      "sourceColor": "#205020",
+      "renderedColor": "#639763",
+      "renderedRgb16": [
+        25512,
+        38692,
+        25512
+      ]
+    },
+    {
+      "id": "A302",
+      "sourceColor": "#205080",
+      "renderedColor": "#6397BB",
+      "renderedRgb16": [
+        25512,
+        38692,
+        47908
+      ]
+    },
+    {
+      "id": "A303",
+      "sourceColor": "#20B080",
+      "renderedColor": "#63D8BB",
+      "renderedRgb16": [
+        25512,
+        55370,
+        47908
+      ]
+    },
+    {
+      "id": "A304",
+      "sourceColor": "#505050",
+      "renderedColor": "#979797",
+      "renderedRgb16": [
+        38692,
+        38692,
+        38692
+      ]
+    },
+    {
+      "id": "B001",
+      "sourceColor": "#5050B0",
+      "renderedColor": "#9797D8",
+      "renderedRgb16": [
+        38692,
+        38692,
+        55370
+      ]
+    },
+    {
+      "id": "B002",
+      "sourceColor": "#508080",
+      "renderedColor": "#97BBBB",
+      "renderedRgb16": [
+        38692,
+        47908,
+        47908
+      ]
+    },
+    {
+      "id": "B003",
+      "sourceColor": "#50B020",
+      "renderedColor": "#97D863",
+      "renderedRgb16": [
+        38692,
+        55370,
+        25512
+      ]
+    },
+    {
+      "id": "B004",
+      "sourceColor": "#50B0B0",
+      "renderedColor": "#97D8D8",
+      "renderedRgb16": [
+        38692,
+        55370,
+        55370
+      ]
+    },
+    {
+      "id": "B005",
+      "sourceColor": "#50E050",
+      "renderedColor": "#97F197",
+      "renderedRgb16": [
+        38692,
+        61785,
+        38692
+      ]
+    },
+    {
+      "id": "B006",
+      "sourceColor": "#8020B0",
+      "renderedColor": "#BB63D8",
+      "renderedRgb16": [
+        47908,
+        25512,
+        55370
+      ]
+    },
+    {
+      "id": "B101",
+      "sourceColor": "#8080B0",
+      "renderedColor": "#BBBBD8",
+      "renderedRgb16": [
+        47908,
+        47908,
+        55370
+      ]
+    },
+    {
+      "id": "B102",
+      "sourceColor": "#B02050",
+      "renderedColor": "#D86397",
+      "renderedRgb16": [
+        55370,
+        25512,
+        38692
+      ]
+    },
+    {
+      "id": "B103",
+      "sourceColor": "#B05020",
+      "renderedColor": "#D89763",
+      "renderedRgb16": [
+        55370,
+        38692,
+        25512
+      ]
+    },
+    {
+      "id": "B104",
+      "sourceColor": "#B08050",
+      "renderedColor": "#D8BB97",
+      "renderedRgb16": [
+        55370,
+        47908,
+        38692
+      ]
+    },
+    {
+      "id": "B105",
+      "sourceColor": "#B080E0",
+      "renderedColor": "#D8BBF1",
+      "renderedRgb16": [
+        55370,
+        47908,
+        61785
+      ]
+    },
+    {
+      "id": "B106",
+      "sourceColor": "#B0E080",
+      "renderedColor": "#D8F1BB",
+      "renderedRgb16": [
+        55370,
+        61785,
+        47908
+      ]
+    },
+    {
+      "id": "B107",
+      "sourceColor": "#E02080",
+      "renderedColor": "#F163BB",
+      "renderedRgb16": [
+        61785,
+        25512,
+        47908
+      ]
+    },
+    {
+      "id": "B201",
+      "sourceColor": "#E05050",
+      "renderedColor": "#F19797",
+      "renderedRgb16": [
+        61785,
+        38692,
+        38692
+      ]
+    },
+    {
+      "id": "B202",
+      "sourceColor": "#E050B0",
+      "renderedColor": "#F197D8",
+      "renderedRgb16": [
+        61785,
+        38692,
+        55370
+      ]
+    },
+    {
+      "id": "B203",
+      "sourceColor": "#E08080",
+      "renderedColor": "#F1BBBB",
+      "renderedRgb16": [
+        61785,
+        47908,
+        47908
+      ]
+    },
+    {
+      "id": "B204",
+      "sourceColor": "#E0B050",
+      "renderedColor": "#F1D897",
+      "renderedRgb16": [
+        61785,
+        55370,
+        38692
+      ]
+    },
+    {
+      "id": "B205",
+      "sourceColor": "#E0E0E0",
+      "renderedColor": "#F1F1F1",
+      "renderedRgb16": [
+        61785,
+        61785,
+        61785
+      ]
+    },
+    {
+      "id": "B206",
+      "sourceColor": "#202020",
+      "renderedColor": "#636363",
+      "renderedRgb16": [
+        25512,
+        25512,
+        25512
+      ]
+    },
+    {
+      "id": "B207",
+      "sourceColor": "#202080",
+      "renderedColor": "#6363BB",
+      "renderedRgb16": [
+        25512,
+        25512,
+        47908
+      ]
+    },
+    {
+      "id": "B301",
+      "sourceColor": "#2020B0",
+      "renderedColor": "#6363D8",
+      "renderedRgb16": [
+        25512,
+        25512,
+        55370
+      ]
+    },
+    {
+      "id": "B302",
+      "sourceColor": "#205050",
+      "renderedColor": "#639797",
+      "renderedRgb16": [
+        25512,
+        38692,
+        38692
+      ]
+    },
+    {
+      "id": "B303",
+      "sourceColor": "#2050B0",
+      "renderedColor": "#6397D8",
+      "renderedRgb16": [
+        25512,
+        38692,
+        55370
+      ]
+    },
+    {
+      "id": "B304",
+      "sourceColor": "#2050E0",
+      "renderedColor": "#6397F1",
+      "renderedRgb16": [
+        25512,
+        38692,
+        61785
+      ]
+    },
+    {
+      "id": "C001",
+      "sourceColor": "#208020",
+      "renderedColor": "#63BB63",
+      "renderedRgb16": [
+        25512,
+        47908,
+        25512
+      ]
+    },
+    {
+      "id": "C002",
+      "sourceColor": "#208080",
+      "renderedColor": "#63BBBB",
+      "renderedRgb16": [
+        25512,
+        47908,
+        47908
+      ]
+    },
+    {
+      "id": "C003",
+      "sourceColor": "#2080B0",
+      "renderedColor": "#63BBD8",
+      "renderedRgb16": [
+        25512,
+        47908,
+        55370
+      ]
+    },
+    {
+      "id": "C004",
+      "sourceColor": "#20B020",
+      "renderedColor": "#63D863",
+      "renderedRgb16": [
+        25512,
+        55370,
+        25512
+      ]
+    },
+    {
+      "id": "C005",
+      "sourceColor": "#20B050",
+      "renderedColor": "#63D897",
+      "renderedRgb16": [
+        25512,
+        55370,
+        38692
+      ]
+    },
+    {
+      "id": "C006",
+      "sourceColor": "#20B0B0",
+      "renderedColor": "#63D8D8",
+      "renderedRgb16": [
+        25512,
+        55370,
+        55370
+      ]
+    },
+    {
+      "id": "C007",
+      "sourceColor": "#20B0E0",
+      "renderedColor": "#63D8F1",
+      "renderedRgb16": [
+        25512,
+        55370,
+        61785
+      ]
+    },
+    {
+      "id": "C008",
+      "sourceColor": "#20E050",
+      "renderedColor": "#63F197",
+      "renderedRgb16": [
+        25512,
+        61785,
+        38692
+      ]
+    },
+    {
+      "id": "C101",
+      "sourceColor": "#20E080",
+      "renderedColor": "#63F1BB",
+      "renderedRgb16": [
+        25512,
+        61785,
+        47908
+      ]
+    },
+    {
+      "id": "C102",
+      "sourceColor": "#20E0E0",
+      "renderedColor": "#63F1F1",
+      "renderedRgb16": [
+        25512,
+        61785,
+        61785
+      ]
+    },
+    {
+      "id": "C103",
+      "sourceColor": "#502020",
+      "renderedColor": "#976363",
+      "renderedRgb16": [
+        38692,
+        25512,
+        25512
+      ]
+    },
+    {
+      "id": "C104",
+      "sourceColor": "#502050",
+      "renderedColor": "#976397",
+      "renderedRgb16": [
+        38692,
+        25512,
+        38692
+      ]
+    },
+    {
+      "id": "C105",
+      "sourceColor": "#5020B0",
+      "renderedColor": "#9763D8",
+      "renderedRgb16": [
+        38692,
+        25512,
+        55370
+      ]
+    },
+    {
+      "id": "C106",
+      "sourceColor": "#5020E0",
+      "renderedColor": "#9763F1",
+      "renderedRgb16": [
+        38692,
+        25512,
+        61785
+      ]
+    },
+    {
+      "id": "C201",
+      "sourceColor": "#505020",
+      "renderedColor": "#979763",
+      "renderedRgb16": [
+        38692,
+        38692,
+        25512
+      ]
+    },
+    {
+      "id": "C202",
+      "sourceColor": "#505080",
+      "renderedColor": "#9797BB",
+      "renderedRgb16": [
+        38692,
+        38692,
+        47908
+      ]
+    },
+    {
+      "id": "C203",
+      "sourceColor": "#5050E0",
+      "renderedColor": "#9797F1",
+      "renderedRgb16": [
+        38692,
+        38692,
+        61785
+      ]
+    },
+    {
+      "id": "C204",
+      "sourceColor": "#508020",
+      "renderedColor": "#97BB63",
+      "renderedRgb16": [
+        38692,
+        47908,
+        25512
+      ]
+    },
+    {
+      "id": "C205",
+      "sourceColor": "#508050",
+      "renderedColor": "#97BB97",
+      "renderedRgb16": [
+        38692,
+        47908,
+        38692
+      ]
+    },
+    {
+      "id": "C301",
+      "sourceColor": "#5080B0",
+      "renderedColor": "#97BBD8",
+      "renderedRgb16": [
+        38692,
+        47908,
+        55370
+      ]
+    },
+    {
+      "id": "C302",
+      "sourceColor": "#5080E0",
+      "renderedColor": "#97BBF1",
+      "renderedRgb16": [
+        38692,
+        47908,
+        61785
+      ]
+    },
+    {
+      "id": "C303",
+      "sourceColor": "#50B050",
+      "renderedColor": "#97D897",
+      "renderedRgb16": [
+        38692,
+        55370,
+        38692
+      ]
+    },
+    {
+      "id": "C304",
+      "sourceColor": "#50B080",
+      "renderedColor": "#97D8BB",
+      "renderedRgb16": [
+        38692,
+        55370,
+        47908
+      ]
+    }
+  ],
+  "views": [
+    {
+      "frame": 0,
+      "filename": "mask_CMasking_WireColor0000.png",
+      "bytes": 20203,
+      "sha256": "b2038ba6d4b2bf9adc8841df26652e8372191dbc15eb2a6698fa91cc035ecc97",
+      "visibleIds": [
+        "A002",
+        "A003",
+        "A004",
+        "A103",
+        "A104",
+        "A202",
+        "A302",
+        "B002",
+        "B003",
+        "B004",
+        "B005",
+        "B006",
+        "B103",
+        "B104",
+        "B105",
+        "B203",
+        "B204",
+        "B205",
+        "B301",
+        "B302",
+        "B303",
+        "B304",
+        "C005",
+        "C006",
+        "C104",
+        "C204",
+        "C303"
+      ]
+    },
+    {
+      "frame": 15,
+      "filename": "mask_CMasking_WireColor0015.png",
+      "bytes": 29322,
+      "sha256": "9465d2589beaea61ea551467ad3b58ff5355f98a23e5609659f279a60d1ec7af",
+      "visibleIds": [
+        "B002",
+        "B103",
+        "B203",
+        "B301",
+        "B302",
+        "C002",
+        "C003",
+        "C004",
+        "C005",
+        "C006",
+        "C101",
+        "C102",
+        "C103",
+        "C104",
+        "C201",
+        "C202",
+        "C203",
+        "C204",
+        "C301",
+        "C302",
+        "C303",
+        "C304"
+      ]
+    },
+    {
+      "frame": 30,
+      "filename": "mask_CMasking_WireColor0030.png",
+      "bytes": 22719,
+      "sha256": "a61502b3454312f769fade60891e0c5691d8d75504ca95c1afea0349ff1d267e",
+      "visibleIds": [
+        "A003",
+        "A004",
+        "A005",
+        "B001",
+        "B004",
+        "B005",
+        "B102",
+        "B103",
+        "B104",
+        "B105",
+        "B202",
+        "B203",
+        "B204",
+        "B205",
+        "B207",
+        "B301",
+        "B302",
+        "C001",
+        "C002",
+        "C004",
+        "C006",
+        "C007",
+        "C008",
+        "C101",
+        "C103",
+        "C105",
+        "C106",
+        "C201",
+        "C203",
+        "C205",
+        "C301",
+        "C302",
+        "C303",
+        "C304"
+      ]
+    },
+    {
+      "frame": 45,
+      "filename": "mask_CMasking_WireColor0045.png",
+      "bytes": 24648,
+      "sha256": "f3798b0a99b384780dacba80983afdd6c7e320a245ce2a896982a36083cc38ce",
+      "visibleIds": [
+        "A204",
+        "A303",
+        "A304",
+        "B001",
+        "B002",
+        "B101",
+        "B102",
+        "B103",
+        "B201",
+        "B202",
+        "B203",
+        "B301",
+        "B302",
+        "B303",
+        "B304",
+        "C001",
+        "C006",
+        "C007",
+        "C008",
+        "C101",
+        "C104",
+        "C105",
+        "C106",
+        "C201",
+        "C204",
+        "C205",
+        "C301",
+        "C302",
+        "C303",
+        "C304"
+      ]
+    },
+    {
+      "frame": 60,
+      "filename": "mask_CMasking_WireColor0060.png",
+      "bytes": 18122,
+      "sha256": "0f795ce89ad7ec7a1236a0a05555e4729d69af2773fbf3570d6214569ce908e4",
+      "visibleIds": [
+        "A002",
+        "A003",
+        "A004",
+        "A005",
+        "A104",
+        "A105",
+        "A203",
+        "A204",
+        "A302",
+        "A303",
+        "A304",
+        "B001",
+        "B002",
+        "B003",
+        "B004",
+        "B005",
+        "B006",
+        "B101",
+        "B102",
+        "B104",
+        "B106",
+        "B107",
+        "B201",
+        "B202",
+        "B204",
+        "B206",
+        "B207",
+        "B301",
+        "B302",
+        "B303",
+        "B304",
+        "C003",
+        "C004",
+        "C005",
+        "C006",
+        "C102",
+        "C103",
+        "C202",
+        "C203",
+        "C302"
+      ]
+    },
+    {
+      "frame": 75,
+      "filename": "mask_CMasking_WireColor0075.png",
+      "bytes": 27087,
+      "sha256": "ce332764003625eec847a4a3261b4e509b400e20e1ce1baa83f775d8bd699c21",
+      "visibleIds": [
+        "A001",
+        "A002",
+        "A006",
+        "A101",
+        "A102",
+        "A103",
+        "A107",
+        "A201",
+        "A202",
+        "A205",
+        "A301",
+        "A302",
+        "A303",
+        "A304",
+        "B001",
+        "B005",
+        "B006",
+        "B101",
+        "B105",
+        "B106",
+        "B107",
+        "B201",
+        "B205",
+        "B206",
+        "B207",
+        "B301",
+        "B302",
+        "B303",
+        "B304",
+        "C202",
+        "C301",
+        "C302",
+        "C303",
+        "C304"
+      ]
+    },
+    {
+      "frame": 90,
+      "filename": "mask_CMasking_WireColor0090.png",
+      "bytes": 21157,
+      "sha256": "0566708298f695d1a51550de800c50f368625d6b0b266b0b3e0544ff8f2276b6",
+      "visibleIds": [
+        "A001",
+        "A002",
+        "A003",
+        "A004",
+        "A006",
+        "A101",
+        "A102",
+        "A104",
+        "A106",
+        "A107",
+        "A201",
+        "A203",
+        "A205",
+        "A301",
+        "A302",
+        "A303",
+        "A304",
+        "B002",
+        "B003",
+        "B006",
+        "B103",
+        "B104",
+        "B105",
+        "B203",
+        "B204",
+        "B205",
+        "B206",
+        "B302",
+        "B303",
+        "B304",
+        "C003",
+        "C004",
+        "C005",
+        "C006"
+      ]
+    },
+    {
+      "frame": 105,
+      "filename": "mask_CMasking_WireColor0105.png",
+      "bytes": 26991,
+      "sha256": "f26bb4eac5eb8295c58897fdfc193bb18112fecb748565a0c9cba3c2777b1b2f",
+      "visibleIds": [
+        "A002",
+        "A003",
+        "A004",
+        "A005",
+        "A006",
+        "A103",
+        "A104",
+        "A105",
+        "A106",
+        "A202",
+        "A203",
+        "A204",
+        "A205",
+        "A301",
+        "A302",
+        "A303",
+        "A304",
+        "B005",
+        "B105",
+        "B205",
+        "B303"
+      ]
+    }
+  ]
+}

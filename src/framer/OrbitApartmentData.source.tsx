@@ -9,6 +9,7 @@ interface OrbitApartmentImage {
 }
 interface OrbitApartmentRecord {
     id: string
+    maskColor?: string
     name: string
     building: string
     floor: number | null
@@ -84,12 +85,14 @@ function parseOrbitApartmentDataset(value: unknown): OrbitApartmentDataset {
         const price = number(apartment.price, "price")
         if (price !== null && !Number.isSafeInteger(price)) throw new Error(`Invalid price for apartment ${id}.`)
         const sourceMedia = object(apartment.media), plan = image(sourceMedia?.floorplan), floorLayout = image(sourceMedia?.floorLayout)
+        const sourceMaskColor = text(apartment.maskColor, 64)
+        const maskColor = sourceMaskColor && /^#[0-9a-fA-F]{6}$/.test(sourceMaskColor) ? sourceMaskColor.toUpperCase() : null
         const sourceSheet = object(sourceMedia?.datasheet), sheetUrl = text(sourceSheet?.url, 4096)
         const media = { ...(plan ? { floorplan: plan } : {}), ...(floorLayout ? { floorLayout } : {}),
             ...(sheetUrl ? { datasheet: { url: sheetUrl, ...(text(sourceSheet?.filename) ? { filename: text(sourceSheet?.filename)! } : {}),
                 ...(text(sourceSheet?.label) ? { label: text(sourceSheet?.label)! } : {}),
                 ...(typeof sourceSheet?.page === "number" && Number.isSafeInteger(sourceSheet.page) && sourceSheet.page > 0 ? { page: sourceSheet.page } : {}) } } : {}) }
-        return { id, name: text(apartment.name) || id, building: text(apartment.building, 64) || "", floor,
+        return { id, ...(maskColor ? { maskColor } : {}), name: text(apartment.name) || id, building: text(apartment.building, 64) || "", floor,
             floorLabel: text(apartment.floorLabel), rooms: number(apartment.rooms, "rooms"), bedrooms: number(apartment.bedrooms, "bedrooms"),
             layoutLabel: text(apartment.layoutLabel), orientation: text(apartment.orientation),
             areaInterior: number(apartment.areaInterior, "interior area"), areaTerrace: number(apartment.areaTerrace, "balcony area"), areaGarden: number(apartment.areaGarden, "garden area"),
@@ -133,16 +136,69 @@ function orbitApartmentAssetUrl(path: unknown, base: string): string | null {
     } catch { return null }
 }
 
-function orbitApartmentPlan(record: OrbitApartmentRecord, dataset: OrbitApartmentDataset, base: string, view: "floorplan" | "floorLayout" = "floorplan"): OrbitApartmentPlan | null {
+function orbitApartmentPlan(record: OrbitApartmentRecord, dataset: OrbitApartmentDataset, base: string, view: "floorplan" | "floorLayout" = "floorplan", preferThumbnail = false): OrbitApartmentPlan | null {
     const source = view === "floorLayout" ? record.media?.floorLayout : record.media?.floorplan
-    const url = orbitApartmentAssetUrl(source?.full || (view === "floorplan" ? record.floorplan : null), base)
+    const thumbnail = preferThumbnail ? orbitApartmentAssetUrl(source?.thumbnail, base) : null
+    const url = thumbnail || orbitApartmentAssetUrl(source?.full || (view === "floorplan" ? record.floorplan : null), base)
     if (!url) return null
     const layout = view === "floorplan" && record.apartmentType ? dataset.roomLayouts[record.apartmentType] : null
     const dimensions = layout?.imageDimensions || (view === "floorLayout" ? { width: 2560, height: 1600 } : { width: 1500, height: 2000 })
     const viewBox = layout?.viewBox || { x: 0, y: 0, width: 1, height: 1 }
-    return { url, aspect: dimensions.width * viewBox.width / (dimensions.height * viewBox.height), dimensions, viewBox,
+    const aspect = dimensions.width * viewBox.width / (dimensions.height * viewBox.height)
+    // The existing thumbnails already contain the plan crop; applying it twice cuts
+    // away rooms. Retain the drawing's cropped aspect while showing the whole thumb.
+    return { url, aspect, dimensions: thumbnail ? { width: dimensions.width * viewBox.width, height: dimensions.height * viewBox.height } : dimensions,
+        viewBox: thumbnail ? { x: 0, y: 0, width: 1, height: 1 } : viewBox,
         isIllustrative: view === "floorplan" && source?.isIllustrative !== false,
         label: source?.label || (view === "floorLayout" ? "Szintrajz" : "Alaprajz · illusztráció") }
+}
+
+// A fast pointer pass updates apartment text immediately without starting a large
+// drawing request for every crossed unit. Cache URL readiness, not decoded images.
+const orbitPreviewImageReady = new Set<string>()
+const orbitPreviewImageRequests = new Map<string, Promise<void>>()
+function requestOrbitPreviewImage(url: string): Promise<void> {
+    if (orbitPreviewImageReady.has(url)) return Promise.resolve()
+    const previous = orbitPreviewImageRequests.get(url)
+    if (previous) return previous
+    const request = new Promise<void>((resolve, reject) => {
+        const image = new Image()
+        image.decoding = "async"
+        let finished = false
+        const finish = (error?: Error) => {
+            if (finished) return
+            finished = true; image.onload = null; image.onerror = null
+            if (error) reject(error)
+            else resolve()
+        }
+        image.onerror = () => finish(new Error("Apartment floorplan could not be loaded."))
+        image.onload = () => {
+            if (typeof image.decode === "function") image.decode().then(() => finish(), () => finish(new Error("Apartment floorplan could not be decoded.")))
+            else finish()
+        }
+        image.src = url
+    }).then(() => {
+        orbitPreviewImageReady.add(url)
+        if (orbitPreviewImageReady.size > 96) orbitPreviewImageReady.delete(orbitPreviewImageReady.values().next().value!)
+    }).finally(() => { orbitPreviewImageRequests.delete(url) })
+    orbitPreviewImageRequests.set(url, request)
+    return request
+}
+function useOrbitPreviewImage(url: string | null | undefined, enabled = true): string | null {
+    const requested = enabled && url ? url : null
+    const [ready, setReady] = React.useState<string | null>(null)
+    React.useEffect(() => {
+        if (!requested) { setReady(null); return }
+        if (orbitPreviewImageReady.has(requested)) { setReady(requested); return }
+        let active = true
+        setReady(null)
+        const timer = setTimeout(() => {
+            requestOrbitPreviewImage(requested).then(() => { if (active) setReady(requested) }, () => { if (active) setReady(null) })
+        }, 160)
+        return () => { active = false; clearTimeout(timer) }
+    }, [requested])
+    // Do not show an old apartment's floorplan during the effect's next tick.
+    return requested && (ready === requested || orbitPreviewImageReady.has(requested)) ? requested : null
 }
 
 const orbitApartmentRequests = new Map<string, Promise<OrbitApartmentDataset>>()

@@ -1,8 +1,10 @@
 import { readFile, readdir, writeFile } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 import { inlineCore, compileTS } from './tooling.mjs';
+import { validateOrbitMaskAssets } from './orbit-mask-assets.mjs';
 const root = new URL('../', import.meta.url);
 export async function buildHomepage() {
+ const masks = await validateOrbitMaskAssets(root);
  const heroFolder = new URL('assets/images/AVIF 30_1920x1010 DESKTOP HERO SEQUENCE/', root);
  const orbitFolder = new URL('assets/ORBIT PICKER/BEAUTY sequence_Desktop/', root);
  const connectionFolder = new URL('assets/images/SEQ_02_V01/', root);
@@ -25,6 +27,7 @@ export async function buildHomepage() {
  }
  const hero = await readFile(new URL('src/core/hero-sequence.ts',root),'utf8');
  const orbit = await readFile(new URL('src/core/orbit-player.ts',root),'utf8');
+ const picker = await readFile(new URL('src/core/orbit-apartment-picker.ts',root),'utf8');
  const template = await readFile(new URL('src/framer/AdmiralHomepageTrial.source.tsx',root),'utf8');
  const apartmentDetails = await readFile(new URL('src/framer/ApartmentDetails.source.tsx',root),'utf8');
  const orbitStories = await readFile(new URL('src/framer/OrbitStoryOverlays.source.tsx',root),'utf8');
@@ -35,8 +38,9 @@ export async function buildHomepage() {
  const orbitFullscreen = await readFile(new URL('src/framer/OrbitFullscreen.source.tsx',root),'utf8');
  const source = '// Generated Framer homepage. Requires AdmiralApartmentDetailCard.tsx in the same Framer project.\n'+template
   .replace('__HERO_NAMES__',JSON.stringify(heroNames)).replace('__CONNECTION_NAMES__',JSON.stringify(connectionNames)).replace('__ORBIT_NAMES__',JSON.stringify(orbitNames))
+  .replace('__MASK_NAMES__',JSON.stringify(masks.names)).replace('__MASK_VERSION__',masks.version).replace('__MASK_PALETTE__',JSON.stringify(masks.palette))
   .replace('__HERO_VERSION__',heroHash.digest('hex').slice(0,12)).replace('__CONNECTION_VERSION__',connectionHash.digest('hex').slice(0,12)).replace('__ORBIT_VERSION__',orbitHash.digest('hex').slice(0,12))
-  .replace('// @ORBIT_STORY_INSERT',orbitStories).replace('// @ORBIT_APARTMENT_DATA_INSERT',apartmentData).replace('// @ORBIT_APARTMENT_FILTERS_INSERT',inlineCore(apartmentFilterLogic)+'\n'+apartmentFilterBar).replace('// @ORBIT_APARTMENT_STUDIO_INSERT',apartmentStudio).replace('// @ORBIT_FULLSCREEN_INSERT',orbitFullscreen).replace('// @APARTMENT_DETAILS_INSERT',apartmentDetails).replace('// @HERO_CORE_INSERT',inlineCore(hero)).replace('// @ORBIT_CORE_INSERT',inlineCore(orbit)).trimEnd()+'\n';
+  .replace('// @ORBIT_STORY_INSERT',orbitStories).replace('// @ORBIT_APARTMENT_DATA_INSERT',apartmentData).replace('// @ORBIT_APARTMENT_FILTERS_INSERT',inlineCore(apartmentFilterLogic)+'\n'+apartmentFilterBar).replace('// @ORBIT_APARTMENT_STUDIO_INSERT',apartmentStudio).replace('// @ORBIT_FULLSCREEN_INSERT',orbitFullscreen).replace('// @APARTMENT_DETAILS_INSERT',apartmentDetails).replace('// @HERO_CORE_INSERT',inlineCore(hero)).replace('// @ORBIT_CORE_INSERT',inlineCore(orbit)).replace('// @ORBIT_PICKER_INSERT',inlineCore(picker)).trimEnd()+'\n';
  compileTS(source,'AdmiralHomepageTrial.tsx');
  await writeFile(new URL('src/framer/AdmiralHomepageTrial.tsx',root),source);
  await writeFile(new URL('src/core/orbit-player.js',root),'// Generated from orbit-player.ts.\n'+compileTS(orbit,'orbit-player.ts'));

@@ -283,7 +283,8 @@ function OrbitFullscreenDetails({ apartment, assetBase, language, onOpenDetails,
     const number = new Intl.NumberFormat(hu ? "hu-HU" : "en-GB", { maximumFractionDigits: 2 })
     const known = (value: number | null | undefined) => typeof value === "number" && Number.isFinite(value)
     const area = (value: number | null | undefined) => known(value) ? <>{number.format(value!)}<small>m²</small></> : "—"
-    const floorplan = apartment && orbitApartmentAssetUrl(apartment.media?.floorplan?.thumbnail || apartment.media?.floorplan?.full || apartment.floorplan, assetBase)
+    const floorplanSource = apartment && orbitApartmentAssetUrl(apartment.media?.floorplan?.thumbnail || apartment.media?.floorplan?.full || apartment.floorplan, assetBase)
+    const floorplan = useOrbitPreviewImage(floorplanSource)
     const logo = orbitApartmentAssetUrl("assets/brand/admiral-park-full-logo-no-location.svg", assetBase)
     const state = apartment?.status
     const status = state === "available" ? hu ? "Szabad" : "Available" : state === "sold" ? hu ? "Eladva" : "Sold" : state === "under_negotiation" ? hu ? "Tárgyalás alatt" : "In negotiation" : state === "reserved" ? hu ? "Foglalt" : "Reserved" : apartment?.statusLabel || ""

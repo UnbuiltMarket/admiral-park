@@ -6,6 +6,9 @@ import AdmiralApartmentDetailCard from "./AdmiralApartmentDetailCard.tsx"
 const HOMEPAGE_HERO_NAMES: string[] = __HERO_NAMES__
 const HOMEPAGE_CONNECTION_NAMES: string[] = __CONNECTION_NAMES__
 const HOMEPAGE_ORBIT_NAMES: string[] = __ORBIT_NAMES__
+const HOMEPAGE_MASK_NAMES: string[] = __MASK_NAMES__
+const HOMEPAGE_MASK_PALETTE: { id: string; maskColor: string; maskColorAliases?: string[] }[] = __MASK_PALETTE__
+const HOMEPAGE_MASK_VERSION = "__MASK_VERSION__"
 const HOMEPAGE_HERO_VERSION = "__HERO_VERSION__"
 const HOMEPAGE_CONNECTION_VERSION = "__CONNECTION_VERSION__"
 const HOMEPAGE_ORBIT_VERSION = "__ORBIT_VERSION__"
@@ -19,6 +22,7 @@ const homepageSubscribers = new Set<() => void>()
 const notifyHomepage = () => homepageSubscribers.forEach(update => update())
 interface AdmiralHomepageTrialProps {
     useGitHubAssets?: boolean; heroBaseUrl?: string; connectionBaseUrl?: string; orbitBaseUrl?: string
+    maskPicking?: boolean; maskBaseUrl?: string; maskHighlightColor?: string; maskHighlightOpacity?: number
     startView?: "opening" | "orbit"; editorView?: "opening" | "building" | "connection" | "orbit"; editorOrbitView?: string; orbitStartFrame?: number
     duration?: number; connectionDuration?: number; maxSpeed?: number; momentum?: number; triggerDistance?: number
     checkpointCount?: number; motionWidth?: number; orbitMobileWidth?: number; inspectionWidth?: number
@@ -131,6 +135,7 @@ function pinHomepagePage(): () => void {
 export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): React.JSX.Element {
     const {
         useGitHubAssets = true, heroBaseUrl = "", connectionBaseUrl = "", orbitBaseUrl = "", startView = "opening", editorView = "opening", editorOrbitView = "entry", orbitStartFrame = 45,
+        maskPicking = true, maskBaseUrl = "", maskHighlightColor = "#f8d68b", maskHighlightOpacity = 27,
         duration = 2.5, connectionDuration = 2.5, maxSpeed = 1.8, momentum = .22, triggerDistance = 28, checkpointCount = 8,
         motionWidth = 960, orbitMobileWidth = 640, inspectionWidth = 1920, desktopBuffer = 2, phoneBuffer = 1, snapDuration = 1.5, frameBlend = 0,
         phoneFraming = true, phoneImageWidth = 100, phoneImageTop = 80,
@@ -154,6 +159,10 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
     const connectionPlaybackUrls = React.useMemo(() => [heroUrls[heroUrls.length - 1], ...connectionUrls], [heroUrls, connectionUrls])
     const orbitUrls = React.useMemo(() => homepageUrls(useGitHubAssets ? HOMEPAGE_ASSETS + "/ORBIT%20PICKER/BEAUTY%20sequence_Desktop" : orbitBaseUrl,
         HOMEPAGE_ORBIT_NAMES, useGitHubAssets ? HOMEPAGE_ORBIT_VERSION : ""), [useGitHubAssets, orbitBaseUrl])
+    const maskUrls = React.useMemo(() => {
+        const base = useGitHubAssets ? HOMEPAGE_ASSETS + "/images/Mask%20full%20size%201920" : maskBaseUrl
+        return base.trim() ? homepageUrls(base, HOMEPAGE_MASK_NAMES, useGitHubAssets ? HOMEPAGE_MASK_VERSION : "") : []
+    }, [useGitHubAssets, maskBaseUrl])
     const orbitStartIndex = Math.round(Math.max(0, Math.min(orbitUrls.length - 1, Number.isFinite(orbitStartFrame) ? orbitStartFrame : 45)))
     const orbitPoster = orbitUrls[orbitStartIndex]
     const editorViewNumber = /^[1-8]$/.test(editorOrbitView) ? Number(editorOrbitView) : 0
@@ -170,6 +179,7 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
     const [hostVisible, setHostVisible] = React.useState(false)
     const [detailsHeight, setDetailsHeight] = React.useState(140)
     const [mobilePresentation, setMobilePresentation] = React.useState(false)
+    const [maskFailed, setMaskFailed] = React.useState(false)
     const useStudio = (orbitLayout === "studio" || orbitLayout === "mobile" && mobilePresentation) && detailsMode !== "off"
     // Every orbit layout uses real apartment IDs so its floorplan opens the shared card.
     const jsonDetails = detailsMode !== "off"
@@ -203,6 +213,8 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
     }, [])
     const rootRef = React.useRef<HTMLDivElement>(null), heroRootRef = React.useRef<HTMLDivElement>(null)
     const heroCanvasRef = React.useRef<HTMLCanvasElement>(null), orbitCanvasRef = React.useRef<HTMLCanvasElement>(null), posterRef = React.useRef<HTMLImageElement>(null)
+    const maskCanvasRef = React.useRef<HTMLCanvasElement>(null)
+    const maskPickerRef = React.useRef<ReturnType<typeof createOrbitApartmentPicker> | null>(null)
     const actions = React.useRef<HomepageActions | null>(null)
     const openApartmentDetails = React.useCallback((id?: string) => {
         const value = id || selectedApartment?.id, root = rootRef.current
@@ -229,6 +241,59 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
         actions.current?.orbit?.setSuspended(detailOpen.current)
     }, [])
     const fullscreen = useOrbitFullscreen(refreshFullscreenLayout, detailOpen)
+    const pickerLatest = React.useRef({ hostVisible, mobilePresentation, focalX, focalY, filterResult, jsonDetails })
+    pickerLatest.current = { hostVisible, mobilePresentation, focalX, focalY, filterResult, jsonDetails }
+
+    React.useEffect(() => {
+        const root = rootRef.current, canvas = maskCanvasRef.current
+        if (!root || !canvas || staticRenderer || !maskPicking || checkpointCount !== 8 || maskUrls.length !== 8) return
+        const picker = createOrbitApartmentPicker({
+            root, canvas, urls: maskUrls, palette: HOMEPAGE_MASK_PALETTE,
+            highlightColor: maskHighlightColor, highlightOpacity: maskHighlightOpacity / 100,
+            getView: () => {
+                const latest = pickerLatest.current, geometry = fullscreen.geometryRef.current
+                const width = geometry?.width || root.clientWidth, height = geometry?.height || root.clientHeight
+                const value = (name: string, fallback: number) => {
+                    const number = parseFloat(root.style.getPropertyValue(name))
+                    return Number.isFinite(number) ? number : fallback
+                }
+                return { enabled: latest.hostVisible && latest.jsonDetails && root.dataset.homepageStage === "orbit",
+                    checkpoint: Number(root.dataset.orbitCheckpoint ?? -1), moving: root.dataset.orbitState !== "checkpoint",
+                    suspended: detailOpen.current, mobile: latest.mobilePresentation, width, height,
+                    viewport: geometry ? { x: 0, y: 0, width, height } : { x: value("--admiral-image-x", 0), y: value("--admiral-image-y", 0), width: value("--admiral-image-width", width), height: value("--admiral-image-height", height) },
+                    focalX: latest.focalX / 100, focalY: latest.focalY / 100 }
+            },
+            inputPoint: (clientX, clientY) => {
+                const geometry = fullscreen.geometryRef.current
+                if (geometry) {
+                    const { physical, width, height, rotated } = geometry, x = clientX - physical.left, y = clientY - physical.top
+                    return rotated ? { x: y * width / physical.height, y: height - x * height / physical.width } : { x: x * width / physical.width, y: y * height / physical.height }
+                }
+                const bounds = root.getBoundingClientRect()
+                return { x: (clientX - bounds.left) * root.clientWidth / Math.max(1, bounds.width), y: (clientY - bounds.top) * root.clientHeight / Math.max(1, bounds.height) }
+            },
+            getAllowedIds: () => pickerLatest.current.filterResult.matchingIds,
+            getHighlightIds: () => {
+                try { return JSON.parse(root.dataset.orbitHighlightIds || "[]") as string[] } catch { return [] }
+            },
+            onHover: id => {
+                // The modal hides picking, but closing it restores the selected
+                // apartment. A camera move still clears the selection highlight.
+                if (id === null && detailOpen.current) return
+                root.dispatchEvent(new CustomEvent("admiral:apartment-hover", { detail: { id } }))
+            },
+            onPick: id => root.dispatchEvent(new CustomEvent("admiral:apartment-click", { detail: { id } })),
+        })
+        maskPickerRef.current = picker
+        const refresh = () => picker.refresh(), retry = () => picker.retry(), observer = new ResizeObserver(refresh)
+        const status = new MutationObserver(() => setMaskFailed(root.dataset.orbitMaskState === "error"))
+        status.observe(root, { attributes: true, attributeFilter: ["data-orbit-mask-state"] })
+        root.addEventListener("admiral:orbit-filter-change", refresh)
+        root.addEventListener("admiral:orbit-mask-retry", retry)
+        observer.observe(root); picker.refresh()
+        return () => { observer.disconnect(); status.disconnect(); root.removeEventListener("admiral:orbit-filter-change", refresh); root.removeEventListener("admiral:orbit-mask-retry", retry); picker.destroy(); setMaskFailed(false); if (maskPickerRef.current === picker) maskPickerRef.current = null }
+    }, [staticRenderer, maskPicking, checkpointCount, maskUrls, maskHighlightColor, maskHighlightOpacity])
+    React.useEffect(() => { maskPickerRef.current?.refresh() }, [hostVisible, mobilePresentation, stage, orbitInfo.state, orbitInfo.checkpoint, detailApartmentId, fullscreen.active, focalX, focalY, filterResult])
 
     React.useEffect(() => {
         const root = rootRef.current
@@ -410,6 +475,7 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
                 const storyTop = rect.y + rect.height + 20
                 mobileLayout = { enabled: true, storyTop, storyMaxHeight: Math.max(0, Math.min(detailsTop, controlsTop) - 20 - storyTop) }
             } else mobileLayout = null
+            maskPickerRef.current?.refresh()
         }
         function changeStage(next: HomepageStage) {
             currentStage = next; root!.dataset.homepageStage = next; setStage(next); applyPresentation(); publish()
@@ -432,6 +498,7 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
             viewport: bounds => fullscreen.geometryRef.current ? null : viewportFor(1, bounds),
             onUpdate(snapshot) {
                 if (disposed) return
+                maskPickerRef.current?.refresh()
                 orbitSnapshot = snapshot; publish()
                 root!.dataset.orbitDownloaded = String(snapshot.downloaded)
                 if (snapshot.state !== "checkpoint" || snapshot.checkpoint < 0) clearApartmentDetails()
@@ -707,7 +774,8 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
     const paused = orbitInfo.state === "paused"
     const orbitMoving = orbitInfo.state !== "checkpoint"
     const orbitButtonStyle: React.CSSProperties = { ...homepageButton, opacity: orbitMoving ? .45 : 1, cursor: orbitMoving ? "default" : "pointer" }
-    const detailsData = selectedApartmentDetails
+    const stripFloorplanUrl = useOrbitPreviewImage(selectedApartmentDetails?.floorplanUrl || null, !useStudio && detailsMode !== "off")
+    const detailsData = selectedApartmentDetails ? { ...selectedApartmentDetails, floorplanUrl: stripFloorplanUrl || undefined } : null
     const detailsVisible = !useStudio && (detailsMode === "preview" ? (orbitStatic || (orbitVisible && orbitInfo.state === "checkpoint")) :
         detailsMode === "hover" && orbitVisible && orbitInfo.state === "checkpoint" && orbitInfo.checkpoint >= 0 && detailsData !== null)
     const controlsBottom = detailsVisible ? `calc(${detailsBottom + detailsHeight + 20}px + env(safe-area-inset-bottom, 0px))` : "18px"
@@ -732,6 +800,8 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
                 aria-label={fullscreen.active ? detailsLanguage === "hu" ? "Teljes képernyős épületnézet" : "Fullscreen building view" : undefined} aria-modal={fullscreen.active ? true : undefined} style={fullscreen.surfaceStyle}>
                 <div data-orbit-fullscreen-plane="" data-rotated={String(!!fullscreen.geometryRef.current?.rotated)} style={fullscreen.planeStyle}>
                     <canvas ref={orbitCanvasRef} aria-hidden="true" width={1} height={1} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", zIndex: 2, opacity: orbitVisible ? 1 : 0, transition: reduced ? "none" : "opacity .35s", touchAction: fullscreen.active ? "none" : "pan-y pinch-zoom", pointerEvents: orbitVisible ? "auto" : "none", clipPath: fullscreen.active ? "none" : imageClip }} />
+                    <canvas ref={maskCanvasRef} data-orbit-mask-overlay="" aria-hidden="true" width={1} height={1} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", zIndex: 3, opacity: orbitVisible ? 1 : 0, pointerEvents: "none", clipPath: fullscreen.active ? "none" : imageClip }} />
+                    {maskFailed && fullscreen.active && <button type="button" data-orbit-mask-retry="" data-orbit-ignore="" style={{ ...homepageButton, position: "absolute", left: 16, top: 16, zIndex: 9 }} onClick={() => maskPickerRef.current?.retry()}>{detailsLanguage === "hu" ? "Lakáskijelölés újratöltése" : "Retry apartment picking"}</button>}
                     {fullscreen.active && <OrbitFullscreenDetails apartment={selectedApartment} assetBase={apartmentAssetBase} language={detailsLanguage}
                         emptyMessage={filterResult.active && filterResult.matchingIds.length === 0 ? detailsLanguage === "hu" ? "Nincs a szűrésnek megfelelő lakás." : "No apartments match these filters." : undefined}
                         onOpenDetails={() => openApartmentDetails()} moving={orbitMoving} onPrevious={() => actions.current?.orbit?.go(-1)} onNext={() => actions.current?.orbit?.go(1)}
@@ -741,6 +811,7 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
             {mobilePresentation && useStudio && orbitVisible && !fullscreen.active && <button type="button" data-orbit-fullscreen-open="" data-orbit-ignore="" aria-haspopup="dialog" aria-label={detailsLanguage === "hu" ? "Teljes képernyő" : "Fullscreen view"} title={detailsLanguage === "hu" ? "Teljes képernyő" : "Fullscreen view"} onClick={fullscreen.open}>
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.65" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false"><path d="M8 4H4v4m12-4h4v4M4 16v4h4m12-4v4h-4" /></svg>
             </button>}
+            {maskFailed && orbitVisible && !fullscreen.active && <button type="button" data-orbit-mask-retry="" data-orbit-ignore="" style={{ ...homepageButton, position: "absolute", left: "calc(var(--admiral-image-x, 0px) + 12px)", top: "calc(var(--admiral-image-y, 0px) + 12px)", zIndex: 5 }} onClick={() => maskPickerRef.current?.retry()}>{detailsLanguage === "hu" ? "Lakáskijelölés újratöltése" : "Retry apartment picking"}</button>}
             {orbitStatic && <span style={{ position: "absolute", inset: 0, pointerEvents: "none" }} />}
             <div aria-hidden="true" style={{ position: "absolute", top: "var(--admiral-image-y, 0px)", left: "var(--admiral-image-x, 0px)", width: "var(--admiral-image-width, 100%)", height: "var(--admiral-image-height, 100%)", background: "#000", opacity: darken, pointerEvents: "none", zIndex: 2 }} />
             {!staticRenderer && showControls && !fullscreen.active && <div data-homepage-controls="" data-orbit-ignore="" style={{ position: "absolute", bottom: studioControls ? "auto" : controlsBottom, top: studioControls ? "var(--admiral-controls-top)" : "auto", left: studioControls ? "var(--admiral-controls-left)" : "50%", transform: "translateX(-50%)", display: "flex", alignItems: "center", justifyContent: "center", flexWrap: "wrap", gap: 7, width: "max-content", maxWidth: studioControls ? "var(--admiral-controls-width)" : "94%", zIndex: 3 }}>
@@ -884,6 +955,10 @@ addPropertyControls(AdmiralHomepageTrial, {
     heroBaseUrl: { type: ControlType.String, title: "SEQ_01 folder", defaultValue: "", hidden: p => p.useGitHubAssets !== false },
     connectionBaseUrl: { type: ControlType.String, title: "SEQ_02 folder", defaultValue: "", hidden: p => p.useGitHubAssets !== false },
     orbitBaseUrl: { type: ControlType.String, title: "Orbit folder", defaultValue: "", hidden: p => p.useGitHubAssets !== false },
+    maskPicking: { type: ControlType.Boolean, title: "Apartment masks", defaultValue: true, description: "Hover on desktop or tap on phones to select an apartment at the eight parked camera views." },
+    maskBaseUrl: { type: ControlType.String, title: "Mask folder", defaultValue: "", hidden: p => p.useGitHubAssets !== false || p.maskPicking === false },
+    maskHighlightColor: { type: ControlType.Color, title: "Highlight colour", defaultValue: "#f8d68b", hidden: p => p.maskPicking === false },
+    maskHighlightOpacity: { type: ControlType.Number, title: "Highlight opacity", defaultValue: 27, min: 5, max: 70, step: 1, unit: "%", hidden: p => p.maskPicking === false },
     startView: { type: ControlType.Enum, title: "Start trial", options: ["opening", "orbit"], optionTitles: ["Full journey", "Orbit directly"], defaultValue: "opening" },
     editorView: { type: ControlType.Enum, title: "Editor view", options: ["opening", "building", "connection", "orbit"], optionTitles: ["SEQ_01 opening", "SEQ_01 arrival", "SEQ_02 midway", "Orbit"], defaultValue: "opening" },
     editorOrbitView: { type: ControlType.Enum, title: "Editor orbit view", options: ["entry", "1", "2", "3", "4", "5", "6", "7", "8"], optionTitles: ["Entry camera", "View 1", "View 2", "View 3", "View 4", "View 5", "View 6", "View 7", "View 8"], defaultValue: "entry", hidden: p => p.editorView !== "orbit", description: "Preview one camera and its native story group while editing. The published orbit entry stays unchanged." },
@@ -963,11 +1038,11 @@ addPropertyControls(AdmiralHomepageTrial, {
     orbitBackground: { type: ControlType.Color, title: "Orbit background", defaultValue: "#fdfbfb", hidden: p => p.orbitLayout === "classic" },
     apartmentDataUrl: { type: ControlType.String, title: "Apartment JSON", defaultValue: "https://raw.githubusercontent.com/UnbuiltMarket/admiral-park/main/data/apartments.json", hidden: p => p.detailsMode === "off", description: "Apartment facts and media paths. All 69 records are small; only the selected plan is loaded." },
     apartmentAssetBase: { type: ControlType.String, title: "Media base", defaultValue: HOMEPAGE_ASSETS + "/apartment-list/", hidden: p => p.detailsMode === "off" },
-    previewApartmentId: { type: ControlType.String, title: "Preview apartment", defaultValue: "A001", hidden: p => p.detailsMode === "hover" || p.detailsMode === "off", description: "A real JSON apartment ID, used until picking masks are connected. Clicking its floorplan opens the shared detail card." },
+    previewApartmentId: { type: ControlType.String, title: "Preview apartment", defaultValue: "A001", hidden: p => p.detailsMode === "hover" || p.detailsMode === "off", description: "Initial apartment before hover or tap selection. Clicking its floorplan opens the shared detail card." },
     detailPageUrl: { type: ControlType.String, title: "Details page", defaultValue: "/lista", hidden: p => p.detailsMode === "off", description: "Your Framer apartment page path. Links add ?apartment=ID to open this apartment." },
     detailDataUrl: { type: ControlType.String, title: "Detail card JSON", defaultValue: "https://raw.githubusercontent.com/UnbuiltMarket/admiral-park/main/data/apartment-details.json", description: "Full apartment data for the shared list-view card, fetched only when an apartment is opened." },
     inquiryUrl: { type: ControlType.String, title: "Inquiry page", defaultValue: "", hidden: p => p.detailsMode === "off", description: "Optional enquiry page URL. If empty, the action opens the apartment details page." },
-    detailsMode: { type: ControlType.Enum, title: "Apartment details", options: ["preview", "hover", "off"], optionTitles: ["Preview", "Hover", "Off"], defaultValue: "preview", description: "Preview shows real JSON data with a trial apartment selector. Hover waits for a selected apartment ID from the future masks. Off hides the apartment workspace." },
+    detailsMode: { type: ControlType.Enum, title: "Apartment details", options: ["preview", "hover", "off"], optionTitles: ["Preview", "Hover", "Off"], defaultValue: "preview", description: "Preview starts with A001 and updates on hover/tap. Hover waits for an actual apartment selection. Off hides the apartment workspace and picking." },
     detailsLanguage: { type: ControlType.Enum, title: "Details language", options: ["hu", "en"], optionTitles: ["Magyar", "English"], defaultValue: "hu", hidden: p => p.detailsMode === "off" },
     detailsBottom: { type: ControlType.Number, title: "Details bottom", defaultValue: 32, min: 0, max: 160, step: 1, unit: "px", hidden: p => p.detailsMode === "off" || p.orbitLayout === "studio" },
     detailsInset: { type: ControlType.Number, title: "Details margin", defaultValue: 48, min: 0, max: 120, step: 1, unit: "px", hidden: p => p.detailsMode === "off" || p.orbitLayout === "studio" },
@@ -987,3 +1062,4 @@ addPropertyControls(AdmiralHomepageTrial, {
 // @APARTMENT_DETAILS_INSERT
 // @HERO_CORE_INSERT
 // @ORBIT_CORE_INSERT
+// @ORBIT_PICKER_INSERT
