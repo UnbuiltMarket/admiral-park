@@ -30,6 +30,14 @@ Navbar — native Framer navigation above the viewer
 
 Apply one journey override to each composition's parent. Its children move and fade as a group. Do not put an additional Framer Appear effect or opacity transition on that same overridden parent: both effects would try to control its visibility. Animate a child separately if a second decorative motion is needed.
 
+## Home menu behaviour
+
+Point the native **Home** link, and the logo if it is also a Home link, to the page containing the viewer. For the current draft that is **/homepage-draft**, without a section anchor. Update the destinations in both desktop and mobile navbar variants. The component cannot correct a navbar link pointing to a different page.
+
+Selecting that same-page link resets the journey to the opening SEQ_01 image and copy. It cancels ongoing sequence playback and orbit movement, closes the apartment card and fullscreen viewer, and clears apartment selection and filters. Downloaded orbit images stay available. A short quiet-gap guard prevents leftover trackpad momentum from immediately starting the sequence again. Authored menu click handlers can still close the mobile menu; other page links, section anchors, modified clicks and new-tab links keep their normal behaviour.
+
+Install both the updated **AdmiralHomepageTrial.tsx** and **AdmiralApartmentDetailCard.tsx** for this reset fix. The shared card also prevents its invisible toast from intercepting clicks after the card closes.
+
 ## Match each composition to its camera
 
 Keep **Viewpoints = 8**. The eight story groups are attached to the fixed physical cameras, rather than to the order in which a visitor first encounters them.
@@ -115,7 +123,7 @@ On mobile, these controls remain in the slim row above the orbit. The desktop fu
 
 The mask layer reads the scoped homepage attributes `data-orbit-filter-active`, `data-orbit-filter-criteria`, `data-orbit-filter-matches` and `data-orbit-highlight-ids` and subscribes to **admiral:orbit-filter-change** on that same homepage root. Each event contains `version: 1`, `criteriaActive`, `statuses`, `priceMin`, `priceMax`, `matchedIds`, `highlightIds`, `hoveredApartmentId`, `checkpoint` and `moving`. IDs refer to the canonical JSON apartments and their persisted mask colours. `matchedIds` covers the dataset; each checkpoint mask limits the drawn highlights to visible apartments. The layer draws only `highlightIds` and accepts picking only from `matchedIds`. **admiral:apartment-hover** with `{id: null}` clears a pointer highlight.
 
-Replace the existing Framer homepage file with the latest **AdmiralHomepageTrial.tsx** and keep **AdmiralApartmentDetailCard.tsx** beside it. The shared card does not need replacing. The original fullscreen SEQ_01 and SEQ_02 journey remains; SEQ_02 still reframes toward the mobile orbit slot. The classic layout's **Phone image width**, **Phone image top** and **Phone framing** controls remain available when choosing that layout.
+Replace the existing Framer homepage file with the latest **AdmiralHomepageTrial.tsx** and keep the updated **AdmiralApartmentDetailCard.tsx** beside it. The original fullscreen SEQ_01 and SEQ_02 journey remains; SEQ_02 still reframes toward the mobile orbit slot. The classic layout's **Phone image width**, **Phone image top** and **Phone framing** controls remain available when choosing that layout.
 
 The separate **AdmiralApartmentList.tsx** update makes phone filters compact when closed and moves sorting inside the expanded filters. In that list, availability sits below the apartment ID. **Beltér**, **Erkély** and **Kert** form the primary metrics row; room count stays smaller beside the secondary location details. The mobile gross-price heading is omitted. Desktop sorting and columns retain their existing arrangement.
 

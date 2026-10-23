@@ -1281,7 +1281,7 @@ export default function AdmiralApartmentDetailCard(props: AdmiralApartmentDetail
         const shadow = host.current.shadowRoot || host.current.attachShadow({ mode: "open" })
         let alive = true
         let lastOpen = false
-        shadow.innerHTML = "<style>" + ORBIT_APARTMENT_CARD_STYLES + "\n:host{position:fixed!important;inset:0 auto auto 0!important;width:0!important;height:0!important;min-height:0!important;background:transparent!important;pointer-events:none!important;overflow:visible!important}dialog,.toast{pointer-events:auto}dialog{font-size:14px}</style>" + ORBIT_APARTMENT_CARD_SHELL
+        shadow.innerHTML = "<style>" + ORBIT_APARTMENT_CARD_STYLES + "\n:host{position:fixed!important;inset:0 auto auto 0!important;width:0!important;height:0!important;min-height:0!important;background:transparent!important;pointer-events:none!important;overflow:visible!important}dialog,.toast.visible{pointer-events:auto}dialog{font-size:14px}</style>" + ORBIT_APARTMENT_CARD_SHELL
         setState("loading")
         setError("")
         setNativeOpen(false)

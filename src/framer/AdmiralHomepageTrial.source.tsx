@@ -57,6 +57,21 @@ const homepageMobileOrbitStyles = `
 function homepageBlocked(target: EventTarget | null) {
     return target instanceof Element && !!target.closest("nav,header,a,button,input,textarea,select,[contenteditable]:not([contenteditable='false']),[role='button'],[role='link'],[data-orbit-ignore],[data-homepage-controls]")
 }
+function homepageSelfLink(event: MouseEvent): HTMLAnchorElement | null {
+    if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return null
+    const link = event.composedPath().find(node => node instanceof HTMLAnchorElement) as HTMLAnchorElement | undefined
+    if (!link || !link.hasAttribute("href") || link.hasAttribute("download") || link.closest("[inert],[aria-disabled='true']")) return null
+    const target = (link.getAttribute("target") || document.querySelector("base[target]")?.getAttribute("target") || "").toLowerCase()
+    if (target && target !== "_self") return null
+    try {
+        const destination = new URL(link.href, location.href), current = new URL(location.href)
+        const path = (url: URL) => url.pathname.replace(/\/+$/, "") || "/"
+        // Only a link to this page's opening view is a Home action. Section links,
+        // other pages, query changes and new tabs retain their normal navigation.
+        return destination.origin === current.origin && path(destination) === path(current) && destination.search === current.search &&
+            (!destination.hash || destination.hash.toLowerCase() === "#top") ? link : null
+    } catch { return null }
+}
 function homepageUrls(base: string, names: string[], version = "") {
     return names.map(name => base.trim().replace(/\/+$/, "") + "/" + encodeURIComponent(name) + (version ? "?v=" + version : ""))
 }
@@ -408,6 +423,7 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
             checkpoint: staticRenderer && previewStage === "orbit" ? editorCheckpoint : -1, direction: 1, ready: 0, total: orbitUrls.length, decoded: 0, downloaded: 0,
             buffered: 0, bufferTotal: 0, requiredReady: 0, requiredTotal: 0, position: editorPreviewFrame, userPaused: false, suspended: false }
         let arrivedAt = -Infinity, lastWheelAt = -Infinity, wheelIntent = 0, wheelCanEnter = false, lastUI = 0, lastOrbitUI = ""
+        let resetWheelAt: number | null = null
         const abort = new AbortController(), signal = abort.signal
         // A phone entering in landscape still uses the phone decode budget.
         // Read logical component sizes so scaled Framer previews stay desktop.
@@ -485,6 +501,18 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
         }
         function changePoster(url: string) { poster!.src = url; setPosterUrl(url) }
         function destroyHero() { heroGeneration++; hero?.destroy(); hero = null }
+        function sequenceInput(event: Event) {
+            if (homepageBlocked(event.target)) return false
+            if (event instanceof WheelEvent && resetWheelAt !== null) {
+                const now = performance.now(), quiet = now - resetWheelAt
+                resetWheelAt = now
+                // A Home click must not be undone by the trackpad's old inertia.
+                // A fresh burst after a quiet gap, keyboard or new touch stays usable.
+                if (quiet < 160) return false
+                resetWheelAt = null
+            }
+            return true
+        }
         const orbit = staticRenderer ? null : createOrbitPlayer({
             root, canvas: orbitCanvas, urls: orbitUrls, startFrame: orbitStartIndex, decodeWidth, inspectionWidth: phone ? Math.min(inspectionWidth, 1280) : inspectionWidth,
             checkpointCount, bufferCheckpoints: phone ? phoneBuffer : desktopBuffer, snapDuration, frameBlend: frameBlend / 100, focalX: focalX / 100, focalY: focalY / 100,
@@ -539,14 +567,15 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
             presentationProgress = 0; applyPresentation()
             activeSequence = "SEQ_01"; root!.dataset.activeSequence = activeSequence
             changePoster(heroUrls[atEnd ? heroUrls.length - 1 : 0])
-            if (atEnd) heroSnapshot = { state: "arrival", progress: 1, frame: heroUrls.length - 1, direction: 1, held: false, decoded: 0, downloaded: 0 }
+            heroSnapshot = { state: atEnd ? "arrival" : "opening", progress: atEnd ? 1 : 0, frame: atEnd ? heroUrls.length - 1 : 0, direction: 1, held: false, decoded: 0, downloaded: 0 }
+            setHeroState(heroSnapshot.state)
             changeStage(atEnd ? "building" : "opening")
             if (atEnd) arrivedAt = performance.now()
             const generation = ++heroGeneration
             hero = createHeroSequence({
                 root: heroRoot!, canvas: heroCanvas!, poster: poster!, urls: heroUrls, duration, maxSpeed, momentum, triggerDistance, startAtEnd: atEnd,
                 preservePresentation: atEnd, holdScroll: true, preload: true, cacheFrames: phone ? 10 : 14, decodeWidth: phone ? 1280 : 1920, focalX, focalY,
-                inputFilter: event => !homepageBlocked(event.target),
+                inputFilter: sequenceInput,
                 onUpdate(snapshot) {
                     if (disposed || generation !== heroGeneration) return
                     heroSnapshot = snapshot; setHeroState(previous => previous === snapshot.state ? previous : snapshot.state)
@@ -585,7 +614,7 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
                 duration: connectionDuration, maxSpeed, momentum, triggerDistance, preservePresentation: true,
                 viewport: (progress, bounds) => viewportFor(progress, bounds),
                 holdScroll: true, preload: true, cacheFrames: phone ? 10 : 14, decodeWidth: phone ? 1280 : 1920, focalX, focalY,
-                inputFilter: event => !homepageBlocked(event.target),
+                inputFilter: sequenceInput,
                 onUpdate(snapshot) {
                     if (disposed || generation !== heroGeneration) return
                     heroSnapshot = snapshot; setHeroState(previous => previous === snapshot.state ? previous : snapshot.state)
@@ -607,6 +636,24 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
             hero.start()
         }
         function overview() { mountHero(false) }
+        function resetHome() {
+            if (disposed || staticRenderer || !isVisible()) return
+            closeApartmentDetails(); fullscreen.close()
+            setSelectedApartmentId(null); setInteractionApartmentId(null)
+            setApartmentFilters({ statuses: [], priceMin: null, priceMax: null })
+            wheelIntent = 0; wheelCanEnter = false; lastWheelAt = arrivedAt = -Infinity
+            touchY = null; touchCanEnter = touchInside = false
+            resetWheelAt = performance.now()
+            // Cancels both sequence generations and pending orbit activation,
+            // while keeping the orbit's already downloaded compressed frames.
+            mountHero(false)
+        }
+        window.addEventListener("click", event => {
+            if (staticRenderer || !isVisible() || !homepageSelfLink(event)) return
+            event.preventDefault()
+            // Leave propagation intact so an authored mobile menu can close.
+            resetHome()
+        }, { capture: true, signal })
         const retry = async () => {
             if (!orbit) return
             const token = enterToken
@@ -713,7 +760,7 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
             homepageChannels.delete(root); notifyHomepage()
         }
     }, [heroUrls, connectionUrls, connectionPlaybackUrls, orbitUrls, staticRenderer, hostVisible, startView, editorView, duration, connectionDuration, maxSpeed, momentum, triggerDistance, checkpointCount,
-        motionWidth, orbitMobileWidth, inspectionWidth, desktopBuffer, phoneBuffer, orbitStartIndex, editorPreviewFrame, snapDuration, frameBlend, focalX, focalY, showDiagnostics, clearApartmentDetails])
+        motionWidth, orbitMobileWidth, inspectionWidth, desktopBuffer, phoneBuffer, orbitStartIndex, editorPreviewFrame, snapDuration, frameBlend, focalX, focalY, showDiagnostics, clearApartmentDetails, closeApartmentDetails, fullscreen.close])
 
     React.useEffect(() => { refreshPresentation.current() }, [phoneFraming, phoneImageWidth, phoneImageTop, detailsHeight, detailsBottom, detailsMode, useStudio, showControls, showViewpoints, stage, orbitInfo.state])
 
