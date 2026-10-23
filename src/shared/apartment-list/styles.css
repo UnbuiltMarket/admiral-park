@@ -44,8 +44,10 @@ input:focus-visible, select:focus-visible { outline-offset: 2px; }
 .mobile-sort-slot:empty, .unit-identification .unit-status, .unit-mobile-meta, .cell-outdoor .empty-garden { display: none; }
 #desktop-sort-slot:empty { display: none; }
 
-/* One quiet filter frame; readable controls stay in two compact bands. */
-.filter-header { padding: 22px 26px 17px; border: 1px solid var(--line); border-radius: 18px; background: var(--filter-background); }
+/* A page header surface reaches the component edges; controls align with the list. */
+.filter-header { border: 0; border-bottom: 1px solid color-mix(in srgb, var(--line) 65%, var(--filter-background)); border-radius: 0; background: var(--filter-background); }
+.filter-inner.page-width { padding-block: 44px 25px; }
+.list-content.page-width { padding-top: 0; }
 .filters { margin: 0; }
 .primary-filters { display: grid; grid-template-columns: 1.1fr repeat(4, minmax(0, 1fr)); gap: 28px; }
 .field { min-width: 0; }
@@ -286,7 +288,7 @@ input[aria-invalid="true"] { border-color: var(--negotiating); }
   .media-preview { width: 72px; }
 }
 @container apartment-list (max-width: 1100px) {
-  .filter-header { padding: 21px 23px 17px; }
+  .filter-inner.page-width { padding-block: 35px 24px; }
   .primary-filters { gap: 20px; }
   .field select, .search-field input { font-size: 14px; }
   .range-filters { gap: 24px; }
@@ -330,7 +332,7 @@ input[aria-invalid="true"] { border-color: var(--negotiating); }
   .row-actions { justify-content: flex-start; }
 }
 @container apartment-list (max-width: 900px) {
-  .filter-header { padding-inline: 21px; }
+  .filter-inner.page-width { padding-block: 32px 22px; }
   .primary-filters { gap: 17px; }
   .range-filters { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 7px 28px; }
   .checkbox-filters { grid-column: 1 / -1; justify-content: flex-start; gap: 25px; margin-bottom: 0; min-height: 31px; }
@@ -347,7 +349,8 @@ input[aria-invalid="true"] { border-color: var(--negotiating); }
 }
 @container apartment-list (max-width: 760px) {
   .page-width { padding-inline: min(var(--component-padding, 32px), 22px); }
-  .filter-header { padding: 20px 21px 16px; }
+  .filter-header { padding: 0; border: 0; background: none; }
+  .filter-inner.page-width { width: calc(100% - 2 * min(var(--component-padding, 32px), 22px)); margin-top: var(--component-padding, 32px); padding: 20px 21px 16px; border: 1px solid var(--line); border-radius: 18px; background: var(--filter-background); }
   .primary-filters { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 17px 25px; }
   .search-field { grid-column: 1 / -1; }
   .range-filters { gap: 10px 25px; margin-top: 20px; }
@@ -406,8 +409,8 @@ input[aria-invalid="true"] { border-color: var(--negotiating); }
 }
 @container apartment-list (max-width: 600px) {
   .page-width { padding-inline: min(var(--component-padding, 32px), 20px); }
-  .filter-header { padding: 0 15px; border-radius: 12px; }
-  .filter-header:has(.filters[data-open="true"]) { padding-bottom: 15px; }
+  .filter-inner.page-width { width: calc(100% - 2 * min(var(--component-padding, 32px), 20px)); padding: 0 15px; border-radius: 12px; }
+  .filter-inner:has(.filters[data-open="true"]) { padding-bottom: 15px; }
   .mobile-filter-button { display: flex; align-items: center; width: 100%; min-height: 44px; padding: 0; gap: 9px; border: 0; font-size: 13px; text-align: left; }
   .mobile-filter-button > svg { color: var(--accent); }
   .filter-toggle-icon { margin-left: auto; font-size: 22px; font-weight: 300; color: var(--muted); }
@@ -443,6 +446,7 @@ input[aria-invalid="true"] { border-color: var(--negotiating); }
 }
 @container apartment-list (max-width: 380px) {
   .page-width { padding-inline: min(var(--component-padding, 32px), 17px); }
+  .filter-inner.page-width { width: calc(100% - 2 * min(var(--component-padding, 32px), 17px)); }
   .result-utilities { align-items: flex-start; gap: 12px; }
   .sort-field { align-items: flex-end; flex-direction: column; gap: 2px; }
   .sort-field select { min-width: 164px; }
@@ -461,6 +465,7 @@ input[aria-invalid="true"] { border-color: var(--negotiating); }
 }
 @media (max-width: 760px) {
   .page-width { padding-inline: min(var(--component-padding, 32px), 20px); }
+  .filter-inner.page-width { width: calc(100% - 2 * min(var(--component-padding, 32px), 20px)); }
   .apartment-dialog, .compare-dialog { width: calc(100% - 24px); max-height: calc(100% - 24px); }
   .dialog-inner { padding: 26px 23px; }
   .dialog-head { padding-bottom: 23px; margin-bottom: 24px; }

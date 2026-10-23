@@ -1,7 +1,8 @@
 
   <div class="list-container">
-  <main class="page-width" id="apartment-app" aria-label="Lakáslista">
+  <main id="apartment-app" aria-label="Lakáslista">
     <section class="filter-header" aria-label="Lakásszűrők">
+    <div class="page-width filter-inner">
     <button class="mobile-filter-button" id="mobile-filters" type="button" aria-expanded="false" aria-controls="filters"><svg width="17" height="17" viewBox="0 0 18 18" fill="none" aria-hidden="true"><path d="M2 5h14M2 13h14M6 2v6M12 10v6" stroke="currentColor" stroke-width="1.2"/></svg><span>Szűrés</span><span class="filter-toggle-icon" aria-hidden="true">+</span></button>
     <form id="filters" class="filters" data-open="false" aria-label="Lakások szűrése">
       <div class="primary-filters">
@@ -18,7 +19,9 @@
       </div>
       <div id="mobile-sort-slot" class="mobile-sort-slot"></div>
     </form>
+    </div>
     </section>
+    <div class="page-width list-content">
     <div class="result-toolbar">
       <div class="result-summary"><p class="result-count" id="result-count" aria-live="polite" aria-atomic="true">Lakások betöltése…</p><p class="favorites-hint"><svg viewBox="0 0 24 24" width="13" height="13" aria-hidden="true"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 0 0 0-7.8Z" fill="none" stroke="currentColor" stroke-width="1.5"/></svg><span>A szívvel a kedvencekhez mentheti a lakást.</span></p></div>
       <div class="result-utilities"><button type="button" id="reset" class="reset-button">Alaphelyzet <span aria-hidden="true">↺</span></button>
@@ -27,6 +30,7 @@
     <div class="filter-chips" id="filter-chips" aria-label="Aktív szűrők"></div>
     <div id="results" class="results" aria-busy="true"><div class="loading-state"><span class="loading-dot"></span>Lakások betöltése…</div></div>
     <p class="data-note" id="data-note"></p>
+    </div>
   </main>
   </div>
   <aside id="compare-tray" class="compare-tray" aria-label="Összehasonlításra kijelölt lakások" hidden></aside>
