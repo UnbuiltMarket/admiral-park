@@ -480,7 +480,7 @@ export function createOrbitPlayer(options: OrbitOptions) {
     }
 
     function coveredTrialControl(x: number, y: number) {
-        return Array.from(root.querySelectorAll<HTMLElement>("[data-homepage-controls] button, button[data-apartment-open], button[data-orbit-detail-link], button[data-orbit-fullscreen-open], button[data-orbit-fullscreen-close], [data-orbit-filters], [data-orbit-filters] button, [data-orbit-price-popover]")).some(control => {
+        return Array.from(root.querySelectorAll<HTMLElement>("[data-homepage-controls] button, button[data-apartment-open], button[data-orbit-detail-link], button[data-orbit-fullscreen-open], button[data-orbit-fullscreen-close], [data-orbit-filters], [data-orbit-filters] button, [data-orbit-price-popover], [data-orbit-area-popover]")).some(control => {
             if ((control as HTMLButtonElement).disabled || control.getAttribute("aria-disabled") === "true" || control.closest("[inert], [hidden], [aria-hidden='true']")) return false;
             const style = getComputedStyle(control);
             if (style.pointerEvents === "none") return false;

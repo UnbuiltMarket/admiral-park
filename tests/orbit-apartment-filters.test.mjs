@@ -6,12 +6,12 @@ import {ts} from '../scripts/tooling.mjs';
 
 const dataset=JSON.parse(await readFile(new URL('../data/apartments.json',import.meta.url),'utf8'));
 const source=await readFile(new URL('../src/core/orbit-apartment-filters.ts',import.meta.url),'utf8');
-const script=ts.transpileModule(source+'\nglobalThis.filtersApi={getOrbitPriceBounds,normalizeOrbitFilters,getOrbitFilterResult};',{
+const script=ts.transpileModule(source+'\nglobalThis.filtersApi={getOrbitPriceBounds,getOrbitAreaBounds,normalizeOrbitFilters,getOrbitFilterResult};',{
  compilerOptions:{target:ts.ScriptTarget.ES2020,module:ts.ModuleKind.CommonJS},reportDiagnostics:true,
 });
 assert.equal((script.diagnostics||[]).filter(item=>item.category===ts.DiagnosticCategory.Error).length,0);
 const context={exports:{}};vm.runInNewContext(script.outputText,context);
-const {getOrbitPriceBounds,normalizeOrbitFilters,getOrbitFilterResult}=context.filtersApi;
+const {getOrbitPriceBounds,getOrbitAreaBounds,normalizeOrbitFilters,getOrbitFilterResult}=context.filtersApi;
 const plain=value=>JSON.parse(JSON.stringify(value));
 const empty=()=>({statuses:[],priceMin:null,priceMax:null});
 
@@ -20,6 +20,60 @@ test('real dataset bounds cover all 63 known HUF prices on an outward million-fo
  assert.deepEqual(plain(getOrbitPriceBounds(dataset.apartments)),{min:153000000,max:677000000,step:1000000,pricedCount:63,currency:'HUF'});
  assert.equal(Math.min(...dataset.apartments.flatMap(item=>item.price===null?[]:[item.price])),153888000);
  assert.equal(Math.max(...dataset.apartments.flatMap(item=>item.price===null?[]:[item.price])),676200000);
+});
+
+test('interior area bounds use all 69 apartments on an outward one-square-metre grid',()=>{
+ assert.deepEqual(plain(getOrbitAreaBounds(dataset.apartments)),{min:47,max:137,step:1,areaCount:69,unit:'m²'});
+ const bounds=getOrbitAreaBounds(dataset.apartments);
+ getOrbitFilterResult(dataset.apartments,{...empty(),statuses:['sold'],areaMin:80,areaMax:100});
+ assert.deepEqual(plain(getOrbitAreaBounds(dataset.apartments)),plain(bounds),'Other filters never alter area-slider limits');
+ assert.deepEqual(plain(getOrbitAreaBounds([{id:'ZERO',status:'available',price:null,areaInterior:0},{id:'A',status:'sold',price:null,areaInterior:68.67}])),{min:0,max:69,step:1,areaCount:2,unit:'m²'});
+ assert.equal(getOrbitAreaBounds([{areaInterior:null},{areaInterior:-1},{areaInterior:Infinity},{areaInterior:'80'},{}]),null);
+});
+
+test('interior area is inclusive and ANDs with price plus the union of selected availability states',()=>{
+ const records=[
+  {id:'LOW',status:'available',price:200000000,areaInterior:60},
+  {id:'HIGH',status:'under_negotiation',price:300000000,areaInterior:80},
+  {id:'SOLD',status:'sold',price:250000000,areaInterior:70},
+  {id:'SMALL',status:'available',price:250000000,areaInterior:59.99},
+  {id:'LARGE',status:'available',price:250000000,areaInterior:80.01},
+  {id:'CHEAP',status:'available',price:199999999,areaInterior:70},
+  {id:'EXPENSIVE',status:'available',price:300000001,areaInterior:70},
+  {id:'UNKNOWN',status:'available',price:null,areaInterior:null},
+ ];
+ const result=getOrbitFilterResult(records,{statuses:['available','under_negotiation'],priceMin:200000000,priceMax:300000000,areaMin:60,areaMax:80});
+ assert.equal(result.active,true);assert.deepEqual(plain(result.matchingIds),['LOW','HIGH']);
+ assert.equal(getOrbitFilterResult(records,empty()).matchingIds.length,records.length);
+ assert.deepEqual(plain(getOrbitFilterResult(records,{...empty(),areaMin:60,areaMax:80}).matchingIds),['LOW','HIGH','SOLD','CHEAP','EXPENSIVE']);
+ const real=getOrbitFilterResult(dataset.apartments,{statuses:['available'],priceMin:200000000,priceMax:300000000,areaMin:60,areaMax:80});
+ assert.deepEqual(plain(real.matchingIds),dataset.apartments.filter(item=>item.status==='available'&&item.price>=200000000&&item.price<=300000000&&item.areaInterior>=60&&item.areaInterior<=80).map(item=>item.id));
+ assert.ok(real.matchingIds.length>0);
+});
+
+test('full area span removes its restriction and retains old price-only filter shapes',()=>{
+ const records=[{id:'A',status:'available',price:null,areaInterior:60.4},{id:'B',status:'sold',price:null,areaInterior:80.5},{id:'UNKNOWN',status:'sold',price:null}];
+ const bounds=getOrbitAreaBounds(records),filters={...empty(),areaMin:bounds.min,areaMax:bounds.max};
+ const result=getOrbitFilterResult(records,filters);
+ assert.equal(result.active,false);assert.deepEqual(plain(result.matchingIds),['A','B','UNKNOWN']);
+ assert.deepEqual(plain(result.filters),{...empty(),areaMin:null,areaMax:null});
+ assert.deepEqual(plain(normalizeOrbitFilters(empty(),null,bounds)),empty(),'Legacy objects must not acquire new keys merely by loading');
+ assert.deepEqual(plain(normalizeOrbitFilters({...empty(),areaMin:null},null,bounds)),{...empty(),areaMin:null,areaMax:null});
+});
+
+test('invalid area input clamps, reverses and resets without mutating filters or data',()=>{
+ const areaBounds=Object.freeze(getOrbitAreaBounds(dataset.apartments)),priceBounds=getOrbitPriceBounds(dataset.apartments);
+ assert.deepEqual(plain(normalizeOrbitFilters({...empty(),areaMin:100,areaMax:70},priceBounds,areaBounds)),{...empty(),areaMin:70,areaMax:100});
+ assert.deepEqual(plain(normalizeOrbitFilters({...empty(),areaMin:999,areaMax:null},priceBounds,areaBounds)),{...empty(),areaMin:137,areaMax:null});
+ assert.deepEqual(plain(normalizeOrbitFilters({...empty(),areaMin:'70',areaMax:NaN},priceBounds,areaBounds)),{...empty(),areaMin:null,areaMax:null});
+ const input=Object.freeze({...empty(),statuses:Object.freeze(['sold']),areaMin:60,areaMax:90}),before=JSON.stringify(dataset.apartments);
+ getOrbitFilterResult(dataset.apartments,input,priceBounds,areaBounds);
+ assert.equal(JSON.stringify(dataset.apartments),before);assert.deepEqual(input,{...empty(),statuses:['sold'],areaMin:60,areaMax:90});
+ const records=[{id:'A',status:'available',price:200000000},{id:'S',status:'sold',price:300000000}];
+ const result=getOrbitFilterResult(records,{...empty(),statuses:['sold'],areaMin:60,areaMax:90});
+ assert.equal(result.active,true);assert.deepEqual(plain(result.matchingIds),['S']);assert.equal(result.filters.areaMin,null);assert.equal(result.filters.areaMax,null);
+ const unpriced=[{id:'A',status:'available',price:null,areaInterior:50},{id:'B',status:'available',price:null,areaInterior:80}];
+ assert.deepEqual(plain(getOrbitFilterResult(unpriced,{...empty(),priceMin:200000000,areaMin:70}).matchingIds),['B'],'Absent price data must not short-circuit a valid area filter');
 });
 
 test('no criteria is hover-only while all statuses selected deliberately activates highlights',()=>{

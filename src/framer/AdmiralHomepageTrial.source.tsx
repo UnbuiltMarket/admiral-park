@@ -205,7 +205,8 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
     const detailOpen = React.useRef(false)
     const apartmentData = useOrbitApartments(apartmentDataUrl, jsonDetails && (staticRenderer && editorView === "orbit" || hostVisible && ["building", "connection", "handoff", "orbit"].includes(stage)))
     const filterBounds = React.useMemo(() => getOrbitPriceBounds(apartmentData.dataset?.apartments || []), [apartmentData.dataset])
-    const filterResult = React.useMemo(() => getOrbitFilterResult(apartmentData.dataset?.apartments || [], apartmentFilters, filterBounds), [apartmentData.dataset, apartmentFilters, filterBounds])
+    const filterAreaBounds = React.useMemo(() => getOrbitAreaBounds(apartmentData.dataset?.apartments || []), [apartmentData.dataset])
+    const filterResult = React.useMemo(() => getOrbitFilterResult(apartmentData.dataset?.apartments || [], apartmentFilters, filterBounds, filterAreaBounds), [apartmentData.dataset, apartmentFilters, filterBounds, filterAreaBounds])
     const filterMatches = React.useMemo(() => new Set(filterResult.matchingIds), [filterResult])
     const selectedApartment = React.useMemo(() => {
         const records = (apartmentData.dataset?.apartments || []).filter(item => filterMatches.has(item.id))
@@ -668,6 +669,13 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
         }
         function relayControlClick(event: MouseEvent) {
             if (event.defaultPrevented || detailOpen.current || !isVisible() || root!.contains(event.target as Node) || homepageBlocked(event.target)) return
+            // A clamped phone popup can overlap the status row. Passive Framer
+            // covers must not relay a click in its padding to a button below it.
+            if (Array.from(root!.querySelectorAll<HTMLElement>("[data-orbit-range-popover]:not([hidden])")).some(panel => {
+                if (panel.closest("[inert],[aria-hidden='true']")) return false
+                const box = panel.getBoundingClientRect()
+                return box.width > 0 && box.height > 0 && event.clientX >= box.left && event.clientX <= box.right && event.clientY >= box.top && event.clientY <= box.bottom
+            })) return
             // Passive Framer overlay frames can cover the viewport. Relay only a click
             // over one of our visible controls; genuine links and buttons above stay native.
             for (const button of Array.from(root!.querySelectorAll<HTMLButtonElement>("[data-homepage-controls] button, [data-orbit-filters] button, button[data-apartment-open], button[data-orbit-detail-link], button[data-orbit-fullscreen-open], button[data-orbit-fullscreen-close]"))) {
@@ -853,7 +861,7 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
             {mobilePresentation && useStudio && <style>{homepageMobileOrbitStyles}</style>}
             <div aria-hidden="true" style={{ position: "absolute", inset: 0, background: orbitBackground, opacity: "var(--admiral-studio-light, 0)" as unknown as number, pointerEvents: "none" }} />
             {useStudio && <OrbitApartmentStudio active={!fullscreen.active && (orbitVisible || orbitStatic)} mobile={mobilePresentation} moving={!staticRenderer && orbitMoving} mode={detailsMode} dataset={apartmentData.dataset} dataStatus={apartmentData.status} error={apartmentData.error}
-                filters={filterResult.filters} filterBounds={filterBounds} filterActive={filterResult.active} filterCount={filterResult.matchingIds.length} onFiltersChange={setApartmentFilters}
+                filters={filterResult.filters} filterBounds={filterBounds} filterAreaBounds={filterAreaBounds} filterActive={filterResult.active} filterCount={filterResult.matchingIds.length} onFiltersChange={setApartmentFilters}
                 onRetry={apartmentData.retry} apartment={selectedApartment} onSelect={setSelectedApartmentId} assetBase={apartmentAssetBase} detailsUrl={detailPageUrl} inquiryUrl={inquiryUrl}
                 onViewport={setStudioViewport} language={detailsLanguage} onLayout={refreshStudioLayout} onOpenDetails={() => openApartmentDetails()} />}
             <div ref={heroRootRef} data-admiral-sequence="" style={{ position: "absolute", inset: 0, zIndex: 2, pointerEvents: stage === "orbit" || stage === "handoff" ? "none" : "auto", clipPath: imageClip }}>
@@ -867,7 +875,8 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
                     <canvas ref={orbitCanvasRef} aria-hidden="true" width={1} height={1} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", zIndex: 2, opacity: orbitVisible ? 1 : 0, transition: reduced ? "none" : "opacity .35s", touchAction: fullscreen.active ? "none" : "pan-y pinch-zoom", pointerEvents: orbitVisible ? "auto" : "none", clipPath: fullscreen.active ? "none" : imageClip }} />
                     <canvas ref={maskCanvasRef} data-orbit-mask-overlay="" aria-hidden="true" width={1} height={1} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", zIndex: 3, opacity: orbitVisible ? 1 : 0, pointerEvents: "none", clipPath: fullscreen.active ? "none" : imageClip }} />
                     {maskFailed && fullscreen.active && <button type="button" data-orbit-mask-retry="" data-orbit-ignore="" style={{ ...homepageButton, position: "absolute", left: 16, top: 16, zIndex: 9 }} onClick={() => maskPickerRef.current?.retry()}>{detailsLanguage === "hu" ? "Lakáskijelölés újratöltése" : "Retry apartment picking"}</button>}
-                    {fullscreen.active && <OrbitFullscreenDetails apartment={selectedApartment} assetBase={apartmentAssetBase} language={detailsLanguage}
+                    {fullscreen.active && <OrbitFullscreenDetails apartment={selectedApartment} dataset={apartmentData.dataset} assetBase={apartmentAssetBase} language={detailsLanguage}
+                        filters={filterResult.filters} filterBounds={filterBounds} filterAreaBounds={filterAreaBounds} filterCount={filterResult.matchingIds.length} total={apartmentData.dataset?.apartments.length || 0} onFiltersChange={setApartmentFilters}
                         emptyMessage={filterResult.active && filterResult.matchingIds.length === 0 ? detailsLanguage === "hu" ? "Nincs a szűrésnek megfelelő lakás." : "No apartments match these filters." : undefined}
                         onOpenDetails={() => openApartmentDetails()} moving={orbitMoving} onPrevious={() => actions.current?.orbit?.go(-1)} onNext={() => actions.current?.orbit?.go(1)}
                         onClose={fullscreen.close} checkpoint={orbitInfo.checkpoint} count={checkpoints} />}
@@ -908,7 +917,7 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
             </div>}
             {!useStudio && !fullscreen.active && detailsMode !== "off" && <ApartmentDetailsStrip apartment={detailsData} language={detailsLanguage} visible={detailsVisible} preview={false}
                 bottom={detailsBottom} inset={detailsInset} onHeightChange={setDetailsHeight} onOpen={jsonDetails ? () => openApartmentDetails() : undefined}
-                filtersVisible={orbitPanelVisible} filters={stripFiltersEnabled ? <div data-orbit-desktop-filters=""><OrbitFilterBar active={orbitPanelVisible} language={detailsLanguage} filters={filterResult.filters} bounds={filterBounds} matchCount={filterResult.matchingIds.length} total={apartmentData.dataset?.apartments.length || 0} onChange={setApartmentFilters} presentation="overlay" /></div> : undefined} />}
+                filtersVisible={orbitPanelVisible} filters={stripFiltersEnabled ? <div data-orbit-desktop-filters=""><OrbitFilterBar active={orbitPanelVisible} language={detailsLanguage} filters={filterResult.filters} bounds={filterBounds} areaBounds={filterAreaBounds} matchCount={filterResult.matchingIds.length} total={apartmentData.dataset?.apartments.length || 0} onChange={setApartmentFilters} presentation="overlay" /></div> : undefined} />}
             {!staticRenderer && <AdmiralApartmentDetailCard openId={detailApartmentId} dataUrl={detailDataUrl} assetBase={apartmentAssetBase} inquiryUrl={inquiryUrl} pageUrl={detailPageUrl}
                 onOpenChange={reportDetailOpen} onClosed={closeApartmentDetails} />}
             {!staticRenderer && !useStudio && jsonDetails && orbitVisible && apartmentData.status === "error" && <div data-orbit-ignore="" role="status" style={{ position: "absolute", left: "4%", bottom: 24, zIndex: 4 }}>

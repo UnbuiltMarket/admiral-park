@@ -82,10 +82,10 @@ const apartmentDetailsStyles = `
     right: -200px;
     top: -120px;
     bottom: calc(0px - var(--admiral-details-bottom, 32px));
-    background: linear-gradient(to bottom, rgba(8,15,20,0) 0%, rgba(8,15,20,.28) 28%, rgba(8,15,20,.68) 72%, rgba(8,15,20,.84) 100%);
+    background: linear-gradient(to bottom, rgba(8,15,20,0) 0%, rgba(8,15,20,.16) 28%, rgba(8,15,20,.44) 72%, rgba(8,15,20,.64) 100%);
     pointer-events: none !important;
 }
-[data-apartment-details] .admiral-details-grid *, [data-apartment-details] .admiral-details-grid *::before, [data-apartment-details] .admiral-details-grid *::after {
+[data-apartment-details] .admiral-details-summary *, [data-apartment-details] .admiral-details-plan *, [data-apartment-details] .admiral-details-summary *::before, [data-apartment-details] .admiral-details-summary *::after {
     box-sizing: border-box;
     pointer-events: none !important;
 }
@@ -214,7 +214,42 @@ const apartmentDetailsStyles = `
     [data-apartment-details] .admiral-details-number .admiral-details-value { font-size: 24px; }
     [data-apartment-details] .admiral-details-plan-image, [data-apartment-details] .admiral-details-plan-empty { width: 120px; height: 112px; }
 }
+/* The plan and its selection controls form the primary center composition. */
+[data-apartment-details] .admiral-details-grid { grid-template-columns: minmax(0,1fr) 240px minmax(0,1fr); max-width: 1200px; margin-inline: auto; gap: 28px; padding-top: 12px; align-items: center; }
+[data-apartment-details] .admiral-details-summary { grid-column: 1; grid-row: 1; min-width: 0; width: 100%; max-width: 360px; justify-self: end; display: grid; gap: 14px; transition: opacity 240ms ease; }
+[data-apartment-details] :is(.admiral-details-summary,.admiral-details-plan)[data-info-visible="false"] { opacity: 0; }
+[data-apartment-details] .admiral-details-summary .admiral-details-field { grid-area: auto; justify-self: stretch; min-width: 0; text-align: left; }
+[data-apartment-details] .admiral-details-identity { display: flex; align-items: baseline; flex-wrap: wrap; gap: 8px 14px; }
+[data-apartment-details] .admiral-details-identity .admiral-details-label { display: none; }
+[data-apartment-details] .admiral-details-number .admiral-details-value { font-size: 27px; }
+[data-apartment-details] .admiral-details-status .admiral-details-value { padding: 0; font-size: 12px; letter-spacing: 0; }
+[data-apartment-details] .admiral-details-metrics { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 14px; }
+[data-apartment-details] .admiral-details-metrics .admiral-details-label { font-size: 9px; letter-spacing: .04em; color: rgba(255,255,255,.72); }
+[data-apartment-details] .admiral-details-metrics .admiral-details-value { font-size: 21px; }
+[data-apartment-details] .admiral-details-secondary .admiral-details-field { display: flex; align-items: baseline; gap: 7px; opacity: .75; }
+[data-apartment-details] .admiral-details-secondary :is(.admiral-details-label,.admiral-details-value) { margin: 0; font-size: 11px; letter-spacing: 0; line-height: 1.3; text-transform: none; }
+[data-apartment-details] .admiral-details-plan { grid-column: 2; grid-row: 1; transition: opacity 240ms ease; }
+[data-apartment-details] :is(.admiral-details-plan-image,.admiral-details-plan-empty) { width: 240px; height: 210px; }
+[data-apartment-details] .admiral-details-filter-row { grid-column: 3; grid-row: 1; width: 100%; min-width: 0; padding: 0; justify-content: flex-start; }
+[data-apartment-details] [data-orbit-desktop-filters] { width: 100%; min-width: 0; }
+@container admiral-apartment (max-width: 1000px) {
+    [data-apartment-details] .admiral-details-grid { grid-template-columns: minmax(0,1fr) 200px; gap: 14px 22px; max-width: 700px; }
+    [data-apartment-details] .admiral-details-filter-row { grid-column: 1 / -1; grid-row: 1; justify-self: center; max-width: 520px; }
+    [data-apartment-details] .admiral-details-summary { grid-column: 1; grid-row: 2; }
+    [data-apartment-details] .admiral-details-plan { grid-area: 2 / 2 / 3 / 3; }
+    [data-apartment-details] :is(.admiral-details-plan-image,.admiral-details-plan-empty) { width: 200px; height: 180px; }
+}
+@container admiral-apartment (max-width: 540px) {
+    [data-apartment-details] .admiral-details-grid { grid-template-columns: minmax(0,1fr) minmax(120px,1fr); gap: 10px 14px; }
+    [data-apartment-details] .admiral-details-summary { gap: 9px; }
+    [data-apartment-details] .admiral-details-metrics { grid-template-columns: minmax(0,1fr); gap: 6px; }
+    [data-apartment-details] .admiral-details-metrics .admiral-details-field { display: flex; justify-content: space-between; align-items: baseline; gap: 5px; }
+    [data-apartment-details] .admiral-details-metrics .admiral-details-label { margin: 0; font-size: 8px; }
+    [data-apartment-details] .admiral-details-metrics .admiral-details-value { font-size: 17px; }
+    [data-apartment-details] :is(.admiral-details-plan-image,.admiral-details-plan-empty) { width: 150px; height: 160px; }
+}
 @media (prefers-reduced-motion: reduce) {
+    [data-apartment-details] :is(.admiral-details-summary,.admiral-details-plan) { transition: none; }
     [data-apartment-details], [data-apartment-details] .admiral-details-grid { transform: none; transition: none; }
 }
 `
@@ -243,7 +278,7 @@ function ApartmentDetailsStrip({ apartment, language, visible, preview, bottom, 
         { number: "Apartment", area: "Area", terrace: "Terrace", garden: "Garden", rooms: "Rooms", availability: "Availability", floorplan: "Floor plan" }
     const sampleLabel = hu ? "MINTA" : "SAMPLE"
     const statusCode = data.availability.toLowerCase()
-    const status = statusCode === "available" ? hu ? "Szabad" : "Available" : statusCode === "reserved" ? hu ? "Foglalt" : "Reserved" : statusCode === "sold" ? hu ? "Eladva" : "Sold" : data.availability
+    const status = statusCode === "available" ? hu ? "Elérhető" : "Available" : statusCode === "reserved" ? hu ? "Foglalt" : "Reserved" : statusCode === "sold" ? hu ? "Eladva" : "Sold" : data.availability
     const formatter = new Intl.NumberFormat(hu ? "hu-HU" : "en-GB", { maximumFractionDigits: 2 })
     const root = React.useRef<HTMLDivElement>(null)
     const heightCallback = React.useRef(onHeightChange), measuredHeight = React.useRef(-1)
@@ -279,14 +314,19 @@ function ApartmentDetailsStrip({ apartment, language, visible, preview, bottom, 
         role="region" aria-label={`${hu ? "Lakásadatok" : "Apartment details"}${sample ? hu ? " — minta" : " — sample" : ""}`} aria-hidden={!shellShown} {...(!shellShown ? { inert: "" as any } : {})}
         style={{ position: "absolute", left: `min(${safeInset}px, 4%)`, right: `min(${safeInset}px, 4%)`, bottom: `calc(${safeBottom}px + env(safe-area-inset-bottom, 0px))`, "--admiral-details-bottom": `calc(${safeBottom}px + env(safe-area-inset-bottom, 0px))`, zIndex: 4, pointerEvents: "none" } as React.CSSProperties}>
         <style>{apartmentDetailsStyles}</style>
-        {filters && <div className="admiral-details-filter-row">{filters}</div>}
-        <div className="admiral-details-grid" aria-hidden={!shown} {...(!shown ? { inert: "" as any } : {})}>
+        <div className="admiral-details-grid">
+          <div className="admiral-details-summary" data-info-visible={String(shown)} aria-hidden={!shown} {...(!shown ? { inert: "" as any } : {})}>
+           <div className="admiral-details-identity">
             <div className="admiral-details-field admiral-details-number" data-apartment-field="number">
                 <div className="admiral-details-label">{labels.number}{sample && <span className="admiral-details-sample">{sampleLabel}</span>}</div>
                 <div className="admiral-details-value">{data.number}</div>
             </div>
-            {metric("area")}{metric("terrace")}
-            <div className="admiral-details-field admiral-details-plan" data-apartment-field="floorplan">
+            <div className="admiral-details-field admiral-details-status" data-apartment-field="availability"><div className="admiral-details-label">{labels.availability}</div><div className="admiral-details-value">{status || "—"}</div></div>
+           </div>
+           <div className="admiral-details-metrics">{metric("area")}{metric("terrace")}{metric("garden")}</div>
+           <div className="admiral-details-secondary">{metric("rooms", false)}</div>
+          </div>
+            <div className="admiral-details-field admiral-details-plan" data-apartment-field="floorplan" data-info-visible={String(shown)} aria-hidden={!shown} {...(!shown ? { inert: "" as any } : {})}>
                 <div className="admiral-details-label">{labels.floorplan}</div>
                 {onOpen ? <button type="button" data-apartment-open="" data-orbit-ignore="" aria-label={hu ? `${data.number} lakás részletei` : `Apartment ${data.number} details`} aria-haspopup="dialog" tabIndex={shown ? 0 : -1} disabled={!shown} onClick={onOpen}>
                     {floorplan ? <img className="admiral-details-plan-image" src={floorplan} alt={hu ? `${data.number} lakás alaprajza` : `Floor plan of apartment ${data.number}`} loading="lazy" decoding="async" draggable={false} onError={() => setFailedFloorplan(floorplan)} /> : <span className="admiral-details-plan-empty">{hu ? "Részletek ↗" : "Details ↗"}</span>}
@@ -300,11 +340,7 @@ function ApartmentDetailsStrip({ apartment, language, visible, preview, bottom, 
                         <text x="101" y="73" textAnchor="end" fill="currentColor" fontSize="6" letterSpacing="1.2" fontFamily="inherit" opacity=".75">{sampleLabel}</text>
                     </svg> : <span className="admiral-details-plan-empty">{hu ? "Nem elérhető" : "Unavailable"}</span>}
             </div>
-            {metric("garden")}{metric("rooms", false)}
-            <div className="admiral-details-field admiral-details-status" data-apartment-field="availability">
-                <div className="admiral-details-label">{labels.availability}</div>
-                <div className="admiral-details-value">{status || "—"}</div>
-            </div>
+            {filters && <div className="admiral-details-filter-row">{filters}</div>}
         </div>
     </div>
 }

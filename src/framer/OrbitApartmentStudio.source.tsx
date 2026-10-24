@@ -18,6 +18,7 @@ interface OrbitApartmentStudioProps {
     moving?: boolean
     filters: OrbitApartmentFilters
     filterBounds: OrbitPriceBounds | null
+    filterAreaBounds?: OrbitAreaBounds | null
     filterActive: boolean
     filterCount: number
     onFiltersChange: (filters: OrbitApartmentFilters) => void
@@ -189,6 +190,13 @@ const orbitApartmentStudioStyles = `
 }
 [data-orbit-studio][data-mobile="true"] .orbit-studio-header { display: flex; align-items: center; justify-content: center; gap: 0; min-height: 0; }
 [data-orbit-studio][data-mobile="true"] .orbit-studio-brand { width: 160px; height: auto; max-width: 52cqw; }
+[data-orbit-studio][data-mobile="true"] > [data-orbit-filters] { z-index: 5; }
+[data-orbit-studio][data-mobile="true"] > [data-orbit-filters] [data-orbit-range-popover] { top: var(--orbit-mobile-popup-top,calc(-100% - 7px)); bottom: auto; }
+[data-orbit-studio][data-mobile="true"] > [data-orbit-filters] [data-orbit-range-popover] { height: 64px; padding: 7px 10px; }
+[data-orbit-studio][data-mobile="true"] > [data-orbit-filters] .orbit-filter-price-values { height: 15px; font-size: 10px; }
+[data-orbit-studio][data-mobile="true"] > [data-orbit-filters] .orbit-filter-price-stage { height: 28px; margin-top: 3px; }
+[data-orbit-studio][data-mobile="true"] > [data-orbit-filters] input[type="range"] { height: 28px; }
+[data-orbit-studio][data-mobile="true"] > [data-orbit-filters] :is(.orbit-filter-price-track,.orbit-filter-price-selection) { top: 13px; }
 [data-orbit-studio][data-mobile="true"] .orbit-studio-body { display: grid; grid-template-columns: minmax(0,1fr); grid-template-rows: calc((100cqw + 24px) * 1010 / 1920) minmax(0,1fr); gap: 8px; overflow: hidden; }
 [data-orbit-studio][data-mobile="true"] .orbit-studio-scene { display: contents; }
 [data-orbit-studio][data-mobile="true"] .orbit-studio-image-slot { position: relative; order: 0; width: calc(100% + 24px); height: 100%; margin-inline: -12px; aspect-ratio: 1920 / 1010; container-type: inline-size; }
@@ -212,7 +220,7 @@ const orbitApartmentStudioStyles = `
 [data-orbit-studio][data-mobile="true"] .orbit-studio-mobile-metrics > div:first-child { grid-column: 1 / -1; }
 [data-orbit-studio][data-mobile="true"] .orbit-studio-mobile-metrics dt { margin: 0; color: var(--studio-muted); font-size: 10px; font-weight: 400; line-height: 1.4; }
 [data-orbit-studio][data-mobile="true"] .orbit-studio-mobile-metrics dd { margin: 0; color: #263b32; font-size: 14px; font-weight: 600; line-height: 1.2; letter-spacing: -.025em; white-space: nowrap; }
-[data-orbit-studio][data-mobile="true"] .orbit-studio-mobile-metrics > div:first-child dd { font-size: 24px; line-height: 1.1; letter-spacing: -.05em; }
+[data-orbit-studio][data-mobile="true"] .orbit-studio-mobile-metrics > div:first-child dd { font-size: 21px; line-height: 1.1; letter-spacing: -.05em; }
 [data-orbit-studio][data-mobile="true"] .orbit-studio-mobile-metrics small { margin-left: 2px; color: var(--studio-muted); font-size: 9px; font-weight: 400; letter-spacing: 0; }
 [data-orbit-studio][data-mobile="true"] .orbit-studio-mobile-metrics > div:first-child small { margin-left: 4px; font-size: 11px; }
 [data-orbit-studio][data-mobile="true"] .orbit-studio-mobile-meta { display: flex; align-items: baseline; justify-content: flex-start; flex-wrap: wrap; gap: 2px 7px; margin: 0; padding-top: 6px; border-top: 1px solid var(--studio-line); color: var(--studio-muted); font-size: 10px; line-height: 1.45; text-align: left; }
@@ -221,7 +229,7 @@ const orbitApartmentStudioStyles = `
 [data-orbit-studio][data-mobile="true"] .orbit-studio-mobile-actions .orbit-studio-bottom { display: flex; flex-direction: column; justify-content: flex-start; align-items: stretch; margin: 0; gap: 7px; }
 [data-orbit-studio][data-mobile="true"] .orbit-studio-mobile-actions .orbit-studio-secondary { display: none; }
 [data-orbit-studio][data-mobile="true"] .orbit-studio-label { margin-bottom: 4px; font-size: 9px; line-height: 1.3; }
-[data-orbit-studio][data-mobile="true"] .orbit-studio-price-value { font-size: 21px; line-height: 1.1; font-weight: 500; letter-spacing: -.045em; }
+[data-orbit-studio][data-mobile="true"] .orbit-studio-price-value { font-size: 18px; line-height: 1.1; font-weight: 500; letter-spacing: -.035em; }
 [data-orbit-studio][data-mobile="true"] .orbit-studio-price-value small { font-size: 11px; }
 [data-orbit-studio][data-mobile="true"] .orbit-studio-price-value.orbit-studio-price-empty { font-size: 12px; line-height: 1.4; font-weight: 400; letter-spacing: 0; }
 [data-orbit-studio][data-mobile="true"] .orbit-studio-primary { flex: 0 0 auto; min-height: 44px; padding: 10px 12px; gap: 8px; border: 1px solid #263b32; border-radius: 999px; color: #fff; background: #263b32; box-shadow: 0 3px 10px rgba(29,52,42,.1); font-size: 12px; font-weight: 500; transition: background .18s,box-shadow .18s; }
@@ -230,21 +238,26 @@ const orbitApartmentStudioStyles = `
 [data-orbit-studio][data-mobile="true"] .orbit-studio-primary:active { background: #1c2e25; box-shadow: none; }
 [data-orbit-studio][data-mobile="true"] .orbit-studio-mobile-panel > .orbit-studio-empty { grid-column: 1 / -1; padding: 12px 0; }
 @container orbit-studio-mobile (max-height: 560px) and (max-aspect-ratio: 1/1) {
-    [data-orbit-studio][data-mobile="true"] .orbit-studio-brand { width: 136px; }
-    [data-orbit-studio][data-mobile="true"] .orbit-studio-body { gap: 8px; }
-    [data-orbit-studio][data-mobile="true"] .orbit-studio-mobile-panel { gap: 6px 8px; }
-    [data-orbit-studio][data-mobile="true"] .orbit-studio-mobile-panel { grid-template-columns: minmax(0,1.5fr) minmax(0,1fr); }
+    [data-orbit-studio][data-mobile="true"] .orbit-studio-brand { width: 116px; }
+    [data-orbit-studio][data-mobile="true"] .orbit-studio-body { gap: 4px; }
+    [data-orbit-studio][data-mobile="true"] .orbit-studio-mobile-panel { grid-template-columns: minmax(0,1.5fr) minmax(0,1fr); grid-template-rows: auto minmax(0,1fr); gap: 4px 8px; height: 100%; max-height: 220px; }
+    [data-orbit-studio][data-mobile="true"] .orbit-studio-mobile-panel > .orbit-studio-heading { grid-column: 2; grid-row: 1; align-self: end; }
+    [data-orbit-studio][data-mobile="true"] .orbit-studio-mobile-plan { grid-column: 1; grid-row: 1 / span 2; }
+    [data-orbit-studio][data-mobile="true"] .orbit-studio-mobile-plan-button { max-height: 100%; }
+    [data-orbit-studio][data-mobile="true"] .orbit-studio-mobile-summary { grid-column: 2; grid-row: 2; }
     [data-orbit-studio][data-mobile="true"] .orbit-studio-mobile-summary { gap: 2px; }
     [data-orbit-studio][data-mobile="true"] .orbit-studio-heading { display: flex; align-items: center; gap: 6px; flex-wrap: nowrap; }
-    [data-orbit-studio][data-mobile="true"] .orbit-studio-id { font-size: 23px; margin: 0; }
-    [data-orbit-studio][data-mobile="true"] .orbit-studio-status { font-size: 9.5px; gap: 4px; white-space: nowrap; }
+    [data-orbit-studio][data-mobile="true"] .orbit-studio-id { font-size: 20px; margin: 0; }
+    [data-orbit-studio][data-mobile="true"] .orbit-studio-status { font-size: 8.5px; gap: 4px; white-space: nowrap; }
     [data-orbit-studio][data-mobile="true"] .orbit-studio-mobile-metrics { gap: 2px; }
-    [data-orbit-studio][data-mobile="true"] .orbit-studio-mobile-metrics > div:first-child dd { font-size: 22px; }
-    [data-orbit-studio][data-mobile="true"] .orbit-studio-mobile-meta { padding-top: 3px; }
-    [data-orbit-studio][data-mobile="true"] .orbit-studio-mobile-meta { gap: 3px 6px; font-size: 9.5px; }
+    [data-orbit-studio][data-mobile="true"] .orbit-studio-mobile-metrics > div:first-child dd { font-size: 18px; }
+    [data-orbit-studio][data-mobile="true"] .orbit-studio-mobile-metrics dt { font-size: 9px; }
+    [data-orbit-studio][data-mobile="true"] .orbit-studio-mobile-metrics dd { font-size: 12px; }
+    [data-orbit-studio][data-mobile="true"] .orbit-studio-mobile-meta { display: none; }
     [data-orbit-studio][data-mobile="true"] .orbit-studio-mobile-actions { padding-top: 2px; }
     [data-orbit-studio][data-mobile="true"] .orbit-studio-mobile-actions .orbit-studio-bottom { gap: 3px; }
-    [data-orbit-studio][data-mobile="true"] .orbit-studio-price-value { font-size: 20px; }
+    [data-orbit-studio][data-mobile="true"] .orbit-studio-price-value { font-size: 16px; }
+    [data-orbit-studio][data-mobile="true"] .orbit-studio-primary { padding-inline: 9px; font-size: 11px; }
     [data-orbit-studio][data-mobile="true"] .orbit-studio-plan-note { display: none; }
 }
 @container orbit-studio-mobile (max-height: 480px) and (min-aspect-ratio: 4/3) {
@@ -252,13 +265,16 @@ const orbitApartmentStudioStyles = `
     [data-orbit-studio][data-mobile="true"] .orbit-studio-body { grid-template-columns: minmax(0,1.1fr) minmax(0,1fr); grid-template-rows: minmax(0,1fr); column-gap: 18px; }
     [data-orbit-studio][data-mobile="true"] .orbit-studio-image-slot { grid-column: 1; grid-row: 1; width: 100%; height: 100%; margin: 0; aspect-ratio: auto; container-type: size; }
     [data-orbit-studio][data-mobile="true"] [data-orbit-viewport] { position: relative; inset: auto; width: min(100cqw,calc(100cqh * 1920 / 1010)); height: auto; max-height: 100%; }
-    [data-orbit-studio][data-mobile="true"] .orbit-studio-mobile-panel { grid-column: 2; grid-row: 1; gap: 6px 8px; }
-    [data-orbit-studio][data-mobile="true"] .orbit-studio-mobile-summary { gap: 5px; }
-    [data-orbit-studio][data-mobile="true"] .orbit-studio-id { font-size: 24px; }
+    [data-orbit-studio][data-mobile="true"] .orbit-studio-mobile-panel { grid-column: 2; grid-row: 1; grid-template-rows: auto minmax(0,1fr); gap: 4px 8px; height: 100%; }
+    [data-orbit-studio][data-mobile="true"] .orbit-studio-mobile-panel > .orbit-studio-heading { grid-column: 2; grid-row: 1; }
+    [data-orbit-studio][data-mobile="true"] .orbit-studio-mobile-plan { grid-column: 1; grid-row: 1 / span 2; }
+    [data-orbit-studio][data-mobile="true"] .orbit-studio-mobile-summary { grid-column: 2; grid-row: 2; gap: 3px; }
+    [data-orbit-studio][data-mobile="true"] .orbit-studio-id { font-size: 22px; }
     [data-orbit-studio][data-mobile="true"] .orbit-studio-mobile-metrics { gap: 4px; }
-    [data-orbit-studio][data-mobile="true"] .orbit-studio-mobile-metrics > div:first-child dd { font-size: 23px; }
+    [data-orbit-studio][data-mobile="true"] .orbit-studio-mobile-metrics > div:first-child dd { font-size: 19px; }
+    [data-orbit-studio][data-mobile="true"] .orbit-studio-mobile-meta { display: none; }
     [data-orbit-studio][data-mobile="true"] .orbit-studio-plan-note { display: none; }
-    [data-orbit-studio][data-mobile="true"] .orbit-studio-price-value { font-size: 22px; }
+    [data-orbit-studio][data-mobile="true"] .orbit-studio-price-value { font-size: 17px; }
     [data-orbit-studio][data-mobile="true"] .orbit-studio-primary { padding-inline: 14px; }
 }
 @media (prefers-reduced-motion: reduce) {
@@ -267,14 +283,14 @@ const orbitApartmentStudioStyles = `
 }
 @container orbit-studio-mobile (max-width: 340px) {
     [data-orbit-studio][data-mobile="true"] .orbit-studio-heading { gap: 5px; }
-    [data-orbit-studio][data-mobile="true"] .orbit-studio-id { font-size: 24px; }
-    [data-orbit-studio][data-mobile="true"] .orbit-studio-status { font-size: 9px; gap: 4px; }
+    [data-orbit-studio][data-mobile="true"] .orbit-studio-id { font-size: 20px; }
+    [data-orbit-studio][data-mobile="true"] .orbit-studio-status { font-size: 8.5px; gap: 3px; }
     [data-orbit-studio][data-mobile="true"] .orbit-studio-status-dot { width: 5px; height: 5px; }
 }
 `
 
 function OrbitApartmentStudio(props: OrbitApartmentStudioProps): React.JSX.Element {
-    const { active, mode, dataset, dataStatus, error, onRetry, apartment: currentApartment, onSelect, assetBase, detailsUrl, inquiryUrl, onViewport, language, onLayout, onOpenDetails, mobile = false, moving = false, filters, filterBounds, filterActive, filterCount, onFiltersChange } = props
+    const { active, mode, dataset, dataStatus, error, onRetry, apartment: currentApartment, onSelect, assetBase, detailsUrl, inquiryUrl, onViewport, language, onLayout, onOpenDetails, mobile = false, moving = false, filters, filterBounds, filterAreaBounds = null, filterActive, filterCount, onFiltersChange } = props
     // Retain only the departing visual while it fades; selection and hit testing
     // remain controlled by the parent and are disabled for checkpoint travel.
     const lastApartment = React.useRef<OrbitApartmentRecord | null>(currentApartment)
@@ -336,7 +352,7 @@ function OrbitApartmentStudio(props: OrbitApartmentStudioProps): React.JSX.Eleme
     const record = apartment as unknown as { media?: { datasheet?: { url?: string; label?: string; filename?: string } } } | null
     const download = record?.media?.datasheet?.url ? asset(record.media.datasheet.url) : ""
     const availability = apartment?.status || ""
-    const statusText = availability === "available" ? hu ? "Szabad" : "Available" : availability === "sold" ? hu ? "Eladva" : "Sold" : availability === "under_negotiation" ? hu ? "Tárgyalás alatt" : "In negotiation" : availability === "reserved" ? hu ? "Foglalt" : "Reserved" : apartment?.statusLabel || ""
+    const statusText = availability === "available" ? hu ? "Elérhető" : "Available" : availability === "sold" ? hu ? "Eladva" : "Sold" : availability === "under_negotiation" ? hu ? "Egyeztetés alatt" : "In negotiation" : availability === "reserved" ? hu ? "Foglalt" : "Reserved" : apartment?.statusLabel || ""
     const floor = apartment?.floorLabel || (apartment?.floor === 0 ? hu ? "Földszint" : "Ground floor" : positive(apartment?.floor) ? `${apartment!.floor}. ${labels.floor}` : "")
     const viewportCallback = React.useCallback((element: HTMLDivElement | null) => onViewport(element), [onViewport])
     const share = async () => {
@@ -403,9 +419,9 @@ function OrbitApartmentStudio(props: OrbitApartmentStudioProps): React.JSX.Eleme
                         {!apartment && <option value="">—</option>}{dataset.apartments.map(unit => <option key={unit.id} value={unit.id}>{unit.id}</option>)}
                     </select></div>}
                 </div>}
-                {!mobile && <div data-orbit-studio-filters=""><OrbitFilterBar active={active && !moving} language={language} filters={filters} bounds={filterBounds} matchCount={filterCount} total={dataset?.apartments.length || 0} onChange={onFiltersChange} /></div>}
+                {!mobile && <div data-orbit-studio-filters=""><OrbitFilterBar active={active && !moving} language={language} filters={filters} bounds={filterBounds} areaBounds={filterAreaBounds} matchCount={filterCount} total={dataset?.apartments.length || 0} onChange={onFiltersChange} /></div>}
             </header>
-            {mobile && <OrbitFilterBar active={active && !moving} language={language} filters={filters} bounds={filterBounds} matchCount={filterCount} total={dataset?.apartments.length || 0} onChange={onFiltersChange} />}
+            {mobile && <OrbitFilterBar active={active && !moving} language={language} filters={filters} bounds={filterBounds} areaBounds={filterAreaBounds} matchCount={filterCount} total={dataset?.apartments.length || 0} onChange={onFiltersChange} />}
             <div className="orbit-studio-body">
                 <div className="orbit-studio-scene">
                     <div className="orbit-studio-image-slot"><div ref={viewportCallback} data-orbit-viewport="" aria-hidden="true" /></div>
