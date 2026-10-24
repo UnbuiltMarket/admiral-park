@@ -84,6 +84,10 @@ const orbitApartmentStudioStyles = `
 [data-orbit-studio] .orbit-studio-text-button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 36px; padding: 6px 0; border: 0; border-bottom: 1px solid var(--studio-line); border-radius: 0; color: var(--studio-muted); background: none; font-size: 10px; line-height: 1.4; text-decoration: none; }
 [data-orbit-studio] .orbit-studio-text-button:hover { color: var(--studio-ink); border-bottom-color: var(--studio-ink); }
 [data-orbit-studio] .orbit-studio-share-message { color: var(--studio-muted); font-size: 10px; line-height: 1.5; }
+/* Keep the scene geometry stable while checkpoint information fades away. */
+[data-orbit-studio] :is(.orbit-studio-header-end,.orbit-studio-facts,.orbit-studio-details,.orbit-studio-mobile-panel) { opacity: 1; transition: opacity .24s ease; }
+[data-orbit-studio][data-moving="true"] :is(.orbit-studio-header-end,.orbit-studio-facts,.orbit-studio-details,.orbit-studio-mobile-panel) { opacity: 0; pointer-events: none; }
+
 [data-orbit-studio] .orbit-studio-details { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
 [data-orbit-studio] .orbit-studio-drawing-toolbar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px 18px; margin-bottom: 14px; min-height: 32px; flex-shrink: 0; }
 [data-orbit-studio] .orbit-studio-tabs { display: flex; gap: 18px; align-items: center; }
@@ -180,45 +184,47 @@ const orbitApartmentStudioStyles = `
 /* Phones keep the complete orbit above a compact apartment summary. */
 [data-orbit-studio][data-mobile="true"] {
     container-name: orbit-studio-mobile; container-type: size; overflow: hidden;
-    padding: 8px 12px max(10px,env(safe-area-inset-bottom,0px)); gap: 8px;
+    padding: 8px 12px max(10px,env(safe-area-inset-bottom,0px)); gap: 6px;
     grid-template-rows: auto auto minmax(0,1fr); text-align: left;
 }
 [data-orbit-studio][data-mobile="true"] .orbit-studio-header { display: flex; align-items: center; justify-content: center; gap: 0; min-height: 0; }
 [data-orbit-studio][data-mobile="true"] .orbit-studio-brand { width: 160px; height: auto; max-width: 52cqw; }
-[data-orbit-studio][data-mobile="true"] .orbit-studio-body { display: grid; grid-template-columns: minmax(0,1fr); grid-template-rows: calc((100cqw + 24px) * 1010 / 1920) minmax(0,1fr); gap: 12px; overflow: hidden; }
+[data-orbit-studio][data-mobile="true"] .orbit-studio-body { display: grid; grid-template-columns: minmax(0,1fr); grid-template-rows: calc((100cqw + 24px) * 1010 / 1920) minmax(0,1fr); gap: 8px; overflow: hidden; }
 [data-orbit-studio][data-mobile="true"] .orbit-studio-scene { display: contents; }
 [data-orbit-studio][data-mobile="true"] .orbit-studio-image-slot { position: relative; order: 0; width: calc(100% + 24px); height: 100%; margin-inline: -12px; aspect-ratio: 1920 / 1010; container-type: inline-size; }
 [data-orbit-studio][data-mobile="true"] [data-orbit-viewport] { position: absolute; inset: 0; width: 100%; height: 100%; max-height: none; }
-[data-orbit-studio][data-mobile="true"] .orbit-studio-mobile-panel { display: grid; grid-template-columns: minmax(0,1.3fr) minmax(0,1fr); grid-template-rows: minmax(0,1fr) auto; gap: 12px 16px; min-width: 0; min-height: 0; overflow: hidden; }
+[data-orbit-studio][data-mobile="true"] .orbit-studio-mobile-panel { display: grid; grid-template-columns: minmax(0,1.5fr) minmax(0,1fr); grid-template-rows: auto minmax(0,1fr); gap: 8px 10px; min-width: 0; min-height: 0; height: min(100%,calc(max(200px,(100cqw - 10px) * .6 / var(--studio-plan-aspect,1)) + 36px)); align-self: center; overflow: hidden; }
+[data-orbit-studio][data-mobile="true"] .orbit-studio-mobile-panel > .orbit-studio-heading { grid-column: 1 / -1; justify-content: flex-start; }
 [data-orbit-studio][data-mobile="true"] .orbit-studio-mobile-plan { display: flex; flex-direction: column; justify-content: center; gap: 6px; min-width: 0; min-height: 0; margin: 0; }
 [data-orbit-studio][data-mobile="true"] .orbit-studio-mobile-plan > :is(figcaption,p) { flex-shrink: 0; }
 [data-orbit-studio][data-mobile="true"] .orbit-studio-mobile-eyebrow { margin: 0; color: var(--studio-muted); font-size: 10px; font-weight: 500; line-height: 1.4; letter-spacing: .07em; }
-[data-orbit-studio][data-mobile="true"] .orbit-studio-mobile-plan-button { display: grid; flex: 0 1 auto; min-width: 0; min-height: 0; width: 100%; aspect-ratio: var(--studio-plan-aspect,1); padding: 0; border: 0; border-radius: 12px; background: rgba(255,255,255,.45); text-align: left; }
+[data-orbit-studio][data-mobile="true"] .orbit-studio-mobile-plan-button { display: grid; flex: 0 1 auto; min-width: 0; min-height: 0; width: 100%; aspect-ratio: var(--studio-plan-aspect,1); padding: 0; border: 0; border-radius: 8px; background: rgba(255,255,255,.45); text-align: left; }
 [data-orbit-studio][data-mobile="true"] .orbit-studio-plan-stage { width: 100%; height: 100%; min-height: 0; flex: auto; padding: 0; }
 [data-orbit-studio][data-mobile="true"] .orbit-studio-plan-note { margin: 0; font-size: 8px; line-height: 1.4; text-align: left; }
-[data-orbit-studio][data-mobile="true"] .orbit-studio-mobile-summary { display: flex; flex-direction: column; justify-content: center; align-items: stretch; gap: 10px; min-width: 0; min-height: 0; text-align: left; }
+[data-orbit-studio][data-mobile="true"] .orbit-studio-mobile-summary { display: flex; flex-direction: column; justify-content: center; align-items: stretch; gap: 7px; min-width: 0; min-height: 0; text-align: left; }
 [data-orbit-studio][data-mobile="true"] .orbit-studio-heading { display: flex; align-items: center; flex-wrap: nowrap; gap: 7px; min-width: 0; }
 [data-orbit-studio][data-mobile="true"] .orbit-studio-id { flex: 0 0 auto; margin: 0; font-size: 28px; line-height: 1; font-weight: 600; letter-spacing: -.045em; }
 [data-orbit-studio][data-mobile="true"] .orbit-studio-id small { margin-left: 5px; color: var(--studio-muted); font-size: 10px; font-weight: 400; letter-spacing: 0; }
 [data-orbit-studio][data-mobile="true"] .orbit-studio-status { flex: 0 1 auto; min-width: 0; font-size: 10px; line-height: 1.35; font-weight: 500; gap: 5px; }
 [data-orbit-studio][data-mobile="true"] .orbit-studio-status-text { display: block; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-[data-orbit-studio][data-mobile="true"] .orbit-studio-mobile-metrics { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 9px 8px; margin: 0; min-width: 0; }
-[data-orbit-studio][data-mobile="true"] .orbit-studio-mobile-metrics > div { min-width: 0; }
+[data-orbit-studio][data-mobile="true"] .orbit-studio-mobile-metrics { display: grid; grid-template-columns: minmax(0,1fr); gap: 6px; margin: 0; min-width: 0; }
+[data-orbit-studio][data-mobile="true"] .orbit-studio-mobile-metrics > div { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: 2px 5px; min-width: 0; }
 [data-orbit-studio][data-mobile="true"] .orbit-studio-mobile-metrics > div:first-child { grid-column: 1 / -1; }
-[data-orbit-studio][data-mobile="true"] .orbit-studio-mobile-metrics dt { margin: 0 0 3px; color: var(--studio-muted); font-size: 10px; font-weight: 400; line-height: 1.4; }
+[data-orbit-studio][data-mobile="true"] .orbit-studio-mobile-metrics dt { margin: 0; color: var(--studio-muted); font-size: 10px; font-weight: 400; line-height: 1.4; }
 [data-orbit-studio][data-mobile="true"] .orbit-studio-mobile-metrics dd { margin: 0; color: #263b32; font-size: 14px; font-weight: 600; line-height: 1.2; letter-spacing: -.025em; white-space: nowrap; }
-[data-orbit-studio][data-mobile="true"] .orbit-studio-mobile-metrics > div:first-child dd { font-size: 27px; line-height: 1.1; letter-spacing: -.05em; }
+[data-orbit-studio][data-mobile="true"] .orbit-studio-mobile-metrics > div:first-child dd { font-size: 24px; line-height: 1.1; letter-spacing: -.05em; }
 [data-orbit-studio][data-mobile="true"] .orbit-studio-mobile-metrics small { margin-left: 2px; color: var(--studio-muted); font-size: 9px; font-weight: 400; letter-spacing: 0; }
 [data-orbit-studio][data-mobile="true"] .orbit-studio-mobile-metrics > div:first-child small { margin-left: 4px; font-size: 11px; }
-[data-orbit-studio][data-mobile="true"] .orbit-studio-mobile-meta { display: flex; align-items: baseline; justify-content: flex-start; flex-wrap: wrap; gap: 3px 9px; margin: 0; padding-top: 8px; border-top: 1px solid var(--studio-line); color: var(--studio-muted); font-size: 10px; line-height: 1.45; text-align: left; }
+[data-orbit-studio][data-mobile="true"] .orbit-studio-mobile-meta { display: flex; align-items: baseline; justify-content: flex-start; flex-wrap: wrap; gap: 2px 7px; margin: 0; padding-top: 6px; border-top: 1px solid var(--studio-line); color: var(--studio-muted); font-size: 10px; line-height: 1.45; text-align: left; }
 [data-orbit-studio][data-mobile="true"] .orbit-studio-mobile-meta strong { color: var(--studio-ink); font-weight: 500; }
-[data-orbit-studio][data-mobile="true"] .orbit-studio-mobile-actions { display: block; grid-column: 1 / -1; min-width: 0; margin: 0; padding-top: 10px; border-top: 1px solid var(--studio-line); }
-[data-orbit-studio][data-mobile="true"] .orbit-studio-mobile-actions .orbit-studio-bottom { display: flex; flex-direction: row; justify-content: space-between; align-items: center; margin: 0; gap: 12px; }
+[data-orbit-studio][data-mobile="true"] .orbit-studio-mobile-actions { display: block; min-width: 0; margin: 0; padding-top: 6px; border-top: 1px solid var(--studio-line); }
+[data-orbit-studio][data-mobile="true"] .orbit-studio-mobile-actions .orbit-studio-bottom { display: flex; flex-direction: column; justify-content: flex-start; align-items: stretch; margin: 0; gap: 7px; }
 [data-orbit-studio][data-mobile="true"] .orbit-studio-mobile-actions .orbit-studio-secondary { display: none; }
 [data-orbit-studio][data-mobile="true"] .orbit-studio-label { margin-bottom: 4px; font-size: 9px; line-height: 1.3; }
-[data-orbit-studio][data-mobile="true"] .orbit-studio-price-value { font-size: 25px; line-height: 1.1; font-weight: 500; letter-spacing: -.045em; }
+[data-orbit-studio][data-mobile="true"] .orbit-studio-price-value { font-size: 21px; line-height: 1.1; font-weight: 500; letter-spacing: -.045em; }
 [data-orbit-studio][data-mobile="true"] .orbit-studio-price-value small { font-size: 11px; }
-[data-orbit-studio][data-mobile="true"] .orbit-studio-primary { flex: 0 0 auto; min-height: 44px; padding: 11px 18px; gap: 14px; border: 1px solid #263b32; border-radius: 999px; color: #fff; background: #263b32; box-shadow: 0 3px 10px rgba(29,52,42,.1); font-size: 12px; font-weight: 500; transition: background .18s,box-shadow .18s; }
+[data-orbit-studio][data-mobile="true"] .orbit-studio-price-value.orbit-studio-price-empty { font-size: 12px; line-height: 1.4; font-weight: 400; letter-spacing: 0; }
+[data-orbit-studio][data-mobile="true"] .orbit-studio-primary { flex: 0 0 auto; min-height: 44px; padding: 10px 12px; gap: 8px; border: 1px solid #263b32; border-radius: 999px; color: #fff; background: #263b32; box-shadow: 0 3px 10px rgba(29,52,42,.1); font-size: 12px; font-weight: 500; transition: background .18s,box-shadow .18s; }
 [data-orbit-studio][data-mobile="true"] .orbit-studio-primary svg { width: 16px; height: 16px; flex-shrink: 0; }
 [data-orbit-studio][data-mobile="true"] .orbit-studio-primary:hover { background: #344e41; box-shadow: 0 4px 12px rgba(29,52,42,.16); }
 [data-orbit-studio][data-mobile="true"] .orbit-studio-primary:active { background: #1c2e25; box-shadow: none; }
@@ -226,17 +232,19 @@ const orbitApartmentStudioStyles = `
 @container orbit-studio-mobile (max-height: 560px) and (max-aspect-ratio: 1/1) {
     [data-orbit-studio][data-mobile="true"] .orbit-studio-brand { width: 136px; }
     [data-orbit-studio][data-mobile="true"] .orbit-studio-body { gap: 8px; }
-    [data-orbit-studio][data-mobile="true"] .orbit-studio-mobile-panel { gap: 8px 14px; }
-    [data-orbit-studio][data-mobile="true"] .orbit-studio-mobile-panel { grid-template-columns: minmax(0,1.15fr) minmax(0,1fr); }
-    [data-orbit-studio][data-mobile="true"] .orbit-studio-mobile-summary { gap: 7px; }
+    [data-orbit-studio][data-mobile="true"] .orbit-studio-mobile-panel { gap: 6px 8px; }
+    [data-orbit-studio][data-mobile="true"] .orbit-studio-mobile-panel { grid-template-columns: minmax(0,1.5fr) minmax(0,1fr); }
+    [data-orbit-studio][data-mobile="true"] .orbit-studio-mobile-summary { gap: 2px; }
     [data-orbit-studio][data-mobile="true"] .orbit-studio-heading { display: flex; align-items: center; gap: 6px; flex-wrap: nowrap; }
     [data-orbit-studio][data-mobile="true"] .orbit-studio-id { font-size: 23px; margin: 0; }
     [data-orbit-studio][data-mobile="true"] .orbit-studio-status { font-size: 9.5px; gap: 4px; white-space: nowrap; }
-    [data-orbit-studio][data-mobile="true"] .orbit-studio-mobile-metrics { gap: 6px 6px; }
-    [data-orbit-studio][data-mobile="true"] .orbit-studio-mobile-metrics > div:first-child dd { font-size: 24px; }
-    [data-orbit-studio][data-mobile="true"] .orbit-studio-mobile-meta { padding-top: 6px; }
+    [data-orbit-studio][data-mobile="true"] .orbit-studio-mobile-metrics { gap: 2px; }
+    [data-orbit-studio][data-mobile="true"] .orbit-studio-mobile-metrics > div:first-child dd { font-size: 22px; }
+    [data-orbit-studio][data-mobile="true"] .orbit-studio-mobile-meta { padding-top: 3px; }
     [data-orbit-studio][data-mobile="true"] .orbit-studio-mobile-meta { gap: 3px 6px; font-size: 9.5px; }
-    [data-orbit-studio][data-mobile="true"] .orbit-studio-mobile-actions { padding-top: 8px; }
+    [data-orbit-studio][data-mobile="true"] .orbit-studio-mobile-actions { padding-top: 2px; }
+    [data-orbit-studio][data-mobile="true"] .orbit-studio-mobile-actions .orbit-studio-bottom { gap: 3px; }
+    [data-orbit-studio][data-mobile="true"] .orbit-studio-price-value { font-size: 20px; }
     [data-orbit-studio][data-mobile="true"] .orbit-studio-plan-note { display: none; }
 }
 @container orbit-studio-mobile (max-height: 480px) and (min-aspect-ratio: 4/3) {
@@ -244,17 +252,18 @@ const orbitApartmentStudioStyles = `
     [data-orbit-studio][data-mobile="true"] .orbit-studio-body { grid-template-columns: minmax(0,1.1fr) minmax(0,1fr); grid-template-rows: minmax(0,1fr); column-gap: 18px; }
     [data-orbit-studio][data-mobile="true"] .orbit-studio-image-slot { grid-column: 1; grid-row: 1; width: 100%; height: 100%; margin: 0; aspect-ratio: auto; container-type: size; }
     [data-orbit-studio][data-mobile="true"] [data-orbit-viewport] { position: relative; inset: auto; width: min(100cqw,calc(100cqh * 1920 / 1010)); height: auto; max-height: 100%; }
-    [data-orbit-studio][data-mobile="true"] .orbit-studio-mobile-panel { grid-column: 2; grid-row: 1; column-gap: 12px; gap: 8px 12px; }
-    [data-orbit-studio][data-mobile="true"] .orbit-studio-mobile-summary { gap: 7px; }
+    [data-orbit-studio][data-mobile="true"] .orbit-studio-mobile-panel { grid-column: 2; grid-row: 1; gap: 6px 8px; }
+    [data-orbit-studio][data-mobile="true"] .orbit-studio-mobile-summary { gap: 5px; }
     [data-orbit-studio][data-mobile="true"] .orbit-studio-id { font-size: 24px; }
-    [data-orbit-studio][data-mobile="true"] .orbit-studio-mobile-metrics { gap: 5px 6px; }
+    [data-orbit-studio][data-mobile="true"] .orbit-studio-mobile-metrics { gap: 4px; }
     [data-orbit-studio][data-mobile="true"] .orbit-studio-mobile-metrics > div:first-child dd { font-size: 23px; }
     [data-orbit-studio][data-mobile="true"] .orbit-studio-plan-note { display: none; }
     [data-orbit-studio][data-mobile="true"] .orbit-studio-price-value { font-size: 22px; }
     [data-orbit-studio][data-mobile="true"] .orbit-studio-primary { padding-inline: 14px; }
 }
 @media (prefers-reduced-motion: reduce) {
-    [data-orbit-studio][data-mobile="true"] .orbit-studio-primary { transition: none; }
+    [data-orbit-studio][data-mobile="true"] .orbit-studio-primary,
+    [data-orbit-studio] :is(.orbit-studio-header-end,.orbit-studio-facts,.orbit-studio-details,.orbit-studio-mobile-panel) { transition: none; }
 }
 @container orbit-studio-mobile (max-width: 340px) {
     [data-orbit-studio][data-mobile="true"] .orbit-studio-heading { gap: 5px; }
@@ -265,7 +274,12 @@ const orbitApartmentStudioStyles = `
 `
 
 function OrbitApartmentStudio(props: OrbitApartmentStudioProps): React.JSX.Element {
-    const { active, mode, dataset, dataStatus, error, onRetry, apartment, onSelect, assetBase, detailsUrl, inquiryUrl, onViewport, language, onLayout, onOpenDetails, mobile = false, moving = false, filters, filterBounds, filterActive, filterCount, onFiltersChange } = props
+    const { active, mode, dataset, dataStatus, error, onRetry, apartment: currentApartment, onSelect, assetBase, detailsUrl, inquiryUrl, onViewport, language, onLayout, onOpenDetails, mobile = false, moving = false, filters, filterBounds, filterActive, filterCount, onFiltersChange } = props
+    // Retain only the departing visual while it fades; selection and hit testing
+    // remain controlled by the parent and are disabled for checkpoint travel.
+    const lastApartment = React.useRef<OrbitApartmentRecord | null>(currentApartment)
+    if (currentApartment || !moving) lastApartment.current = currentApartment
+    const apartment = currentApartment || (moving ? lastApartment.current : null)
     const hu = language !== "en"
     const [view, setView] = React.useState<"floorplan" | "floorLayout">("floorplan")
     const [expanded, setExpanded] = React.useState(false), [zoom, setZoom] = React.useState(1)
@@ -293,7 +307,7 @@ function OrbitApartmentStudio(props: OrbitApartmentStudioProps): React.JSX.Eleme
     React.useEffect(() => { setView("floorplan"); setFailedImage(""); setExpanded(false); setShareMessage(""); shareGeneration.current++ }, [apartment?.id])
     React.useEffect(() => { if (mobile) setView("floorplan") }, [mobile])
     React.useEffect(() => { setZoom(1); setPan({ x: 0, y: 0 }); setFailedImage("") }, [view, expanded])
-    React.useEffect(() => { if (!active) setExpanded(false) }, [active])
+    React.useEffect(() => { if (!active || moving) setExpanded(false) }, [active, moving])
     React.useEffect(() => {
         const element = dialog.current
         if (!element) return
@@ -348,7 +362,7 @@ function OrbitApartmentStudio(props: OrbitApartmentStudioProps): React.JSX.Eleme
     </p>
     const conversion = () => <>
         <div className="orbit-studio-bottom">
-            <div className="orbit-studio-price">{!mobile && <p className="orbit-studio-label">{apartment?.priceIncludesVat === false ? hu ? "Nettó vételár" : "Net purchase price" : labels.gross}</p>}<p className="orbit-studio-price-value" data-orbit-apartment-price="" data-orbit-field="price">
+            <div className="orbit-studio-price">{!mobile && <p className="orbit-studio-label">{apartment?.priceIncludesVat === false ? hu ? "Nettó vételár" : "Net purchase price" : labels.gross}</p>}<p className={`orbit-studio-price-value${!positive(apartment?.price) ? " orbit-studio-price-empty" : ""}`} data-orbit-apartment-price="" data-orbit-field="price">
                 {positive(apartment?.price) ? <>{number.format(apartment!.price! / 1000000)}<small>M Ft</small></> : availability === "sold" ? hu ? "Nincs megadva" : "Not provided" : hu ? "Ár kérésre" : "Price on request"}
             </p></div>
             {(mobile || !inquiryLink) && onOpenDetails ? <button type="button" className="orbit-studio-primary" data-orbit-apartment-action="" data-orbit-detail-link="" aria-haspopup="dialog" disabled={mobile && moving} onClick={onOpenDetails}><span>{mobile ? hu ? "Adatlap" : "Details" : labels.details}</span>{mobile ? <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6" /></svg> : <span aria-hidden="true">↗</span>}</button> : (mobile ? detailLink : actionLink) && <a className="orbit-studio-primary" href={mobile ? detailLink : actionLink} data-orbit-apartment-action="" {...(!mobile && inquiryLink ? { "data-orbit-inquiry": "" } : { "data-orbit-detail-link": "" })}><span>{mobile ? hu ? "Adatlap" : "Details" : inquiryLink ? labels.inquire : labels.details}</span>{mobile ? <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6" /></svg> : <span aria-hidden="true">↗</span>}</a>}
@@ -369,18 +383,19 @@ function OrbitApartmentStudio(props: OrbitApartmentStudioProps): React.JSX.Eleme
         {(["floorplan", "floorLayout"] as const).filter(kind => kind === "floorplan" || !!floorLayout).map(kind => <button key={kind} type="button" className="orbit-studio-tab" role="tab" aria-selected={view === kind} aria-controls={planPanelId} tabIndex={view === kind ? 0 : -1}
             onClick={() => setView(kind)} onKeyDown={event => { if (event.key === "ArrowRight" || event.key === "ArrowLeft" || event.key === "Home" || event.key === "End") { event.preventDefault(); const next = floorLayout && (event.key === "End" || (event.key !== "Home" && view === "floorplan")) ? "floorLayout" : "floorplan"; setView(next); const list = event.currentTarget.parentElement; requestAnimationFrame(() => list?.querySelector<HTMLButtonElement>(`[data-plan-tab="${next}"]`)?.focus()) } }} data-plan-tab={kind}>{labels[kind]}</button>)}
     </div>
-    const facts = <div className="orbit-studio-facts" data-orbit-ignore="">
+    const detailsVisibility = { "aria-hidden": !active || moving, ...(!active || moving ? { inert: "" as any } : {}) }
+    const facts = <div className="orbit-studio-facts" data-orbit-ignore="" {...detailsVisibility}>
         <dl className="orbit-studio-areas">
             {([ ["areaInterior", labels.interior, "area"], ["areaTerrace", labels.terrace, "terrace"], ["areaGarden", labels.garden, "garden"] ] as const).map(([key, label, field]) => <div key={key} data-orbit-apartment-metric={key} data-orbit-field={field}><dt>{label}</dt><dd>{positive(apartment?.[key]) && (key === "areaInterior" || apartment![key]! > 0) ? <>{number.format(apartment![key]!)}<small>m²</small></> : "—"}</dd></div>)}
         </dl>
         {meta()}{conversion()}
     </div>
     return <>
-        <section data-orbit-studio="" data-active={active ? "true" : "false"} data-mobile={mobile ? "true" : "false"} data-mode={mode} data-status={dataStatus} data-apartment-id={apartment?.id || ""} aria-hidden={!active} {...(!active ? { inert: "" as any } : {})} aria-labelledby={mobile ? undefined : headingId} aria-label={mobile ? hu ? "Lakásválasztó" : "Apartments" : undefined}>
+        <section data-orbit-studio="" data-active={active ? "true" : "false"} data-mobile={mobile ? "true" : "false"} data-moving={moving ? "true" : "false"} data-mode={mode} data-status={dataStatus} data-apartment-id={apartment?.id || ""} aria-hidden={!active} {...(!active ? { inert: "" as any } : {})} aria-labelledby={mobile ? undefined : headingId} aria-label={mobile ? hu ? "Lakásválasztó" : "Apartments" : undefined}>
             <style>{fontStyles + orbitApartmentStudioStyles}</style>
             <header className="orbit-studio-header" data-orbit-ignore="">
                 {logo && <img className="orbit-studio-brand" src={logo} alt="Admiral Park" width={184} height={78} draggable={false} />}
-                {!mobile && <div className="orbit-studio-header-end">
+                {!mobile && <div className="orbit-studio-header-end" {...detailsVisibility}>
                     <div className="orbit-studio-heading"><h2 id={headingId} className="orbit-studio-id">{apartment?.id || (hu ? "Lakásválasztó" : "Apartments")}</h2>
                         {statusText && <span className="orbit-studio-status" data-status={availability} data-orbit-field="status"><span className="orbit-studio-status-dot" aria-hidden="true" />{statusText}</span>}
                     </div>
@@ -388,16 +403,19 @@ function OrbitApartmentStudio(props: OrbitApartmentStudioProps): React.JSX.Eleme
                         {!apartment && <option value="">—</option>}{dataset.apartments.map(unit => <option key={unit.id} value={unit.id}>{unit.id}</option>)}
                     </select></div>}
                 </div>}
-                {!mobile && <div data-orbit-studio-filters=""><OrbitFilterBar active={active} language={language} filters={filters} bounds={filterBounds} matchCount={filterCount} total={dataset?.apartments.length || 0} onChange={onFiltersChange} /></div>}
+                {!mobile && <div data-orbit-studio-filters=""><OrbitFilterBar active={active && !moving} language={language} filters={filters} bounds={filterBounds} matchCount={filterCount} total={dataset?.apartments.length || 0} onChange={onFiltersChange} /></div>}
             </header>
-            {mobile && <OrbitFilterBar active={active} language={language} filters={filters} bounds={filterBounds} matchCount={filterCount} total={dataset?.apartments.length || 0} onChange={onFiltersChange} />}
+            {mobile && <OrbitFilterBar active={active && !moving} language={language} filters={filters} bounds={filterBounds} matchCount={filterCount} total={dataset?.apartments.length || 0} onChange={onFiltersChange} />}
             <div className="orbit-studio-body">
                 <div className="orbit-studio-scene">
                     <div className="orbit-studio-image-slot"><div ref={viewportCallback} data-orbit-viewport="" aria-hidden="true" /></div>
                     {!mobile && !shortLandscape && facts}
                 </div>
-                {mobile ? <div className="orbit-studio-mobile-panel" data-orbit-studio-details="" data-orbit-ignore="">
+                {mobile ? <div className="orbit-studio-mobile-panel" data-orbit-studio-details="" data-orbit-ignore="" style={aspectStyle} {...detailsVisibility}>
                     {dataStatus === "error" ? <div className="orbit-studio-empty" role="status"><p>{hu ? "A lakásadatok most nem tölthetők be." : "Apartment information could not be loaded."}</p><button type="button" className="orbit-studio-text-button" onClick={onRetry}>{hu ? "Újrapróbálom" : "Try again"}</button></div> : !apartment ? <div className="orbit-studio-empty" role="status" {...(filterActive && filterCount === 0 ? { "data-orbit-filter-empty": "" } : {})}><p>{dataStatus === "loading" || dataStatus === "idle" ? hu ? "Lakásadatok betöltése…" : "Loading apartment information…" : filterActive && filterCount === 0 ? hu ? "Nincs a szűrésnek megfelelő lakás." : "No apartments match these filters." : hu ? "Válasszon egy lakást az épületen." : "Select an apartment on the building."}</p></div> : <>
+                            <div className="orbit-studio-heading"><h2 id={headingId} className="orbit-studio-id">{apartment.id}</h2>
+                                {statusText && <span className="orbit-studio-status" data-status={availability} data-orbit-field="status" title={statusText}><span className="orbit-studio-status-dot" aria-hidden="true" /><span className="orbit-studio-status-text">{availability === "under_negotiation" ? hu ? "Egyeztetés" : "In talks" : statusText}</span></span>}
+                            </div>
                         <figure className="orbit-studio-mobile-plan" style={aspectStyle}>
                             <button type="button" className="orbit-studio-mobile-plan-button" data-orbit-detail-link="" aria-haspopup="dialog" aria-label={hu ? `${apartment.id} adatlap megnyitása` : `Open apartment ${apartment.id} details`} disabled={moving || !onOpenDetails} onClick={onOpenDetails}>
                                 <span className="orbit-studio-plan-stage" style={aspectStyle}>
@@ -406,9 +424,6 @@ function OrbitApartmentStudio(props: OrbitApartmentStudioProps): React.JSX.Eleme
                             </button>
                         </figure>
                         <div className="orbit-studio-mobile-summary" data-orbit-mobile-summary="">
-                            <div className="orbit-studio-heading"><h2 id={headingId} className="orbit-studio-id">{apartment.id}</h2>
-                                {statusText && <span className="orbit-studio-status" data-status={availability} data-orbit-field="status" title={statusText}><span className="orbit-studio-status-dot" aria-hidden="true" /><span className="orbit-studio-status-text">{availability === "under_negotiation" ? hu ? "Egyeztetés" : "In talks" : statusText}</span></span>}
-                            </div>
                             <dl className="orbit-studio-mobile-metrics">
                                 {([ ["areaInterior", hu ? "Lakótér" : labels.interior, "area"], ["areaTerrace", hu ? "Terasz" : labels.terrace, "terrace"], ["areaGarden", labels.garden, "garden"] ] as const).map(([key, label, field]) => <div key={key} data-orbit-apartment-metric={key} data-orbit-field={field}><dt>{label}</dt><dd>{positive(apartment[key]) && (key === "areaInterior" || apartment[key]! > 0) ? <>{number.format(apartment[key]!)}<small>m²</small></> : "—"}</dd></div>)}
                             </dl>
@@ -417,10 +432,10 @@ function OrbitApartmentStudio(props: OrbitApartmentStudioProps): React.JSX.Eleme
                                 {apartment.orientation && <span data-orbit-field="orientation">{apartment.orientation}</span>}
                                 {floor && <span data-orbit-field="floor">{floor}</span>}
                             </p>
+                            <div className="orbit-studio-mobile-actions">{conversion()}</div>
                         </div>
-                        <div className="orbit-studio-mobile-actions">{conversion()}</div>
                     </>}
-                </div> : <div className="orbit-studio-details" data-orbit-studio-details="" data-orbit-ignore="">
+                </div> : <div className="orbit-studio-details" data-orbit-studio-details="" data-orbit-ignore="" {...detailsVisibility}>
                     {dataStatus === "error" ? <div className="orbit-studio-empty" role="status"><p>{hu ? "A lakásadatok most nem tölthetők be." : "Apartment information could not be loaded."}</p>{error && <p>{error}</p>}<button type="button" className="orbit-studio-text-button" onClick={onRetry}>{hu ? "Újrapróbálom" : "Try again"}</button></div> : !apartment ? <div className="orbit-studio-empty" role="status"><p>{dataStatus === "loading" || dataStatus === "idle" ? hu ? "Lakásadatok betöltése…" : "Loading apartment information…" : hu ? "A lakás adatai a kijelölt otthonnál jelennek meg." : "Point to an apartment to see its details."}</p></div> : <>
                         <div className="orbit-studio-drawing-toolbar">{tabs}<button type="button" className="orbit-studio-text-button" aria-label={labels.expand} disabled={!planShown} onClick={() => setExpanded(true)}>{hu ? "Nagyítás" : "Enlarge"}<span aria-hidden="true">↗</span></button></div>
                         {meta(true)}

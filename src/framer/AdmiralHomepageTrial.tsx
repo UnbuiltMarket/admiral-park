@@ -748,17 +748,20 @@ interface OrbitFilterBarProps {
     matchCount: number
     total: number
     onChange: (filters: OrbitApartmentFilters) => void
-    presentation?: "compact" | "floating"
+    presentation?: "compact" | "floating" | "overlay"
 }
 
 const orbitApartmentFilterStyles = `
-[data-orbit-filters] { position: relative; width: 100%; min-width: 0; box-sizing: border-box; color: #26382d; font-family: inherit; isolation: isolate; container-type: inline-size; container-name: orbit-filters; }
+[data-orbit-filters] { position: relative; width: 100%; min-width: 0; box-sizing: border-box; color: #26382d; font-family: inherit; isolation: isolate; container-type: inline-size; container-name: orbit-filters; opacity: 1; transition: opacity 240ms ease; }
+[data-orbit-filters][data-active="false"] { opacity: 0; pointer-events: none; }
+[data-orbit-filters][data-active="false"] * { pointer-events: none !important; }
+[data-orbit-filters][data-active="false"] button:disabled { opacity: 1; }
 [data-orbit-filters] *, [data-orbit-filters] *::before, [data-orbit-filters] *::after { box-sizing: border-box; }
 [data-orbit-filters] [hidden] { display: none !important; }
 [data-orbit-filters] button { display: inline-flex; align-items: center; justify-content: center; min-width: 0; height: 30px; margin: 0; padding: 0; border: 0; border-radius: 8px; color: inherit; background: transparent; font: inherit; cursor: pointer; -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
 [data-orbit-filters] button:disabled { opacity: .4; cursor: default; }
 [data-orbit-filters] :is(button,input):focus-visible { outline: 2px solid #42634c; outline-offset: 2px; }
-[data-orbit-filters] [data-orbit-filter-row] { display: flex; align-items: center; gap: 3px; width: 100%; min-width: 0; height: 32px; padding: 0; border-top: 1px solid rgba(48,67,54,.12); border-bottom: 1px solid rgba(48,67,54,.12); }
+[data-orbit-filters] [data-orbit-filter-row] { display: flex; align-items: center; gap: 3px; width: 100%; min-width: 0; height: 30px; padding: 0; border-top: 1px solid rgba(48,67,54,.12); border-bottom: 1px solid rgba(48,67,54,.12); }
 [data-orbit-filters] .orbit-filter-statuses { display: flex; align-items: center; flex: 1 1 auto; gap: 2px; min-width: 0; }
 [data-orbit-filters] [data-orbit-filter-status] { flex: 1 1 auto; gap: 4px; height: 26px; padding: 0 5px; border: 1px solid transparent; border-radius: 6px; color: #677269; font-size: 10px; font-weight: 500; line-height: 1; letter-spacing: -.15px; white-space: nowrap; }
 [data-orbit-filters] [data-orbit-filter-status] .orbit-filter-status-label { overflow: hidden; min-width: 0; text-overflow: ellipsis; }
@@ -793,9 +796,17 @@ const orbitApartmentFilterStyles = `
 [data-orbit-filters][data-presentation="floating"] [data-orbit-filter-status] { height: 32px; padding: 0 9px; font-size: 12px; }
 [data-orbit-filters][data-presentation="floating"] [data-orbit-price-toggle] { height: 32px; padding: 0 9px; font-size: 12px; }
 [data-orbit-filters][data-presentation="floating"] [data-orbit-filter-count] { min-width: 36px; font-size: 10px; }
+[data-orbit-filters][data-presentation="overlay"] { color: #fff; }
+[data-orbit-filters][data-presentation="overlay"] [data-orbit-filter-row] { height: 30px; border: 0; }
+[data-orbit-filters][data-presentation="overlay"] :is([data-orbit-filter-status],[data-orbit-price-toggle]) { height: 28px; color: rgba(255,255,255,.85); font-size: 11px; }
+[data-orbit-filters][data-presentation="overlay"] [data-orbit-filter-status][aria-pressed="true"], [data-orbit-filters][data-presentation="overlay"] [data-orbit-price-toggle]:is([data-filtered="true"],[aria-expanded="true"]) { color: #fff; border-color: rgba(255,255,255,.45); background: rgba(255,255,255,.13); }
+[data-orbit-filters][data-presentation="overlay"] :is([data-orbit-filter-count],[data-orbit-filter-reset]) { color: rgba(255,255,255,.78); }
+[data-orbit-filters][data-presentation="overlay"] button:not(:disabled):hover { color: #fff; background: rgba(255,255,255,.18); }
+[data-orbit-filters][data-presentation="overlay"] :is(button,input):focus-visible { outline-color: #fff; }
+[data-orbit-filters][data-presentation="overlay"] [data-orbit-price-popover] { color: #26382d; }
 @container orbit-filters (max-width: 330px) { [data-orbit-filters] [data-orbit-filter-count] { display: none; } }
 @media (hover:hover) { [data-orbit-filters] button:not(:disabled):hover { background: #edf1e9; } [data-orbit-filters] [aria-pressed="true"]:hover { background: #dce6da; } }
-@media (prefers-reduced-motion:reduce) { [data-orbit-filters] *, [data-orbit-filters] *::before, [data-orbit-filters] *::after { animation: none !important; transition: none !important; } }
+@media (prefers-reduced-motion:reduce) { [data-orbit-filters], [data-orbit-filters] *, [data-orbit-filters] *::before, [data-orbit-filters] *::after { animation: none !important; transition: none !important; } }
 `
 
 function orbitPricePointerValue(clientX: number, rect: { left: number; width: number }, logicalWidth: number, minimum: number, maximum: number, step: number) {
@@ -940,19 +951,19 @@ function OrbitFilterBar({ active, language, filters, bounds, matchCount, total, 
     ]
     const count = Math.max(0, Math.min(total, matchCount))
     const sliderPercent = (value: number) => hasBounds ? (value - minimum) / (maximum - minimum) * 100 : 0
-    return <div ref={root} data-orbit-filters="" data-orbit-ignore="" data-presentation={presentation} data-filtered={hasFilters ? "true" : "false"}>
+    return <div ref={root} data-orbit-filters="" data-orbit-ignore="" data-active={String(active)} aria-hidden={!active} {...(!active ? { inert: "" as any } : {})} data-presentation={presentation} data-filtered={hasFilters ? "true" : "false"}>
         <style>{orbitApartmentFilterStyles}</style>
         <div data-orbit-filter-row="" role="group" aria-label={hu ? "Lakások szűrése" : "Filter apartments"}>
             <div className="orbit-filter-statuses">
-                {statusOptions.map(option => <button key={option.id} type="button" data-orbit-filter-status={option.id} aria-label={option.accessible} title={option.accessible} aria-pressed={filters.statuses.includes(option.id)} onClick={() => onChange({ ...filters, statuses: filters.statuses.includes(option.id) ? filters.statuses.filter(status => status !== option.id) : [...filters.statuses, option.id] })}>
+                {statusOptions.map(option => <button key={option.id} type="button" disabled={!active} data-orbit-filter-status={option.id} aria-label={option.accessible} title={option.accessible} aria-pressed={filters.statuses.includes(option.id)} onClick={() => onChange({ ...filters, statuses: filters.statuses.includes(option.id) ? filters.statuses.filter(status => status !== option.id) : [...filters.statuses, option.id] })}>
                     <span className="orbit-filter-dot" aria-hidden="true" /><span className="orbit-filter-status-label">{option.label}</span>
                 </button>)}
             </div>
-            <button ref={priceToggle} type="button" data-orbit-price-toggle="" data-filtered={hasPrice ? "true" : "false"} aria-label={hu ? "Ártartomány beállítása" : "Set price range"} title={hasBounds ? (hu ? "Ártartomány" : "Price range") : (hu ? "Az árak még nem érhetők el" : "Prices are not available yet")} aria-expanded={priceOpen} aria-controls={panelId} disabled={!hasBounds} onClick={() => setPriceOpen(open => !open)}>
+            <button ref={priceToggle} type="button" data-orbit-price-toggle="" data-filtered={hasPrice ? "true" : "false"} aria-label={hu ? "Ártartomány beállítása" : "Set price range"} title={hasBounds ? (hu ? "Ártartomány" : "Price range") : (hu ? "Az árak még nem érhetők el" : "Prices are not available yet")} aria-expanded={priceOpen} aria-controls={panelId} disabled={!active || !hasBounds} onClick={() => setPriceOpen(open => !open)}>
                 <span>{hu ? "Ár" : "Price"}</span><svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d={priceOpen ? "M4 10 8 6l4 4" : "m4 6 4 4 4-4"} stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" /></svg>
             </button>
             <span data-orbit-filter-count="" role="status" aria-live="polite" aria-atomic="true" aria-label={hu ? `${count} találat ${total} lakásból` : `${count} matches out of ${total} apartments`}>{count}/{total}</span>
-            {hasFilters && <button type="button" data-orbit-filter-reset="" aria-label={hu ? "Minden szűrő törlése" : "Reset all filters"} title={hu ? "Szűrők törlése" : "Reset filters"} onClick={() => onChange({ statuses: [], priceMin: null, priceMax: null })}>
+            {hasFilters && <button type="button" disabled={!active} data-orbit-filter-reset="" aria-label={hu ? "Minden szűrő törlése" : "Reset all filters"} title={hu ? "Szűrők törlése" : "Reset filters"} onClick={() => onChange({ statuses: [], priceMin: null, priceMax: null })}>
                 <svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="m4 4 8 8M12 4l-8 8" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" /></svg>
             </button>}
         </div>
@@ -960,8 +971,8 @@ function OrbitFilterBar({ active, language, filters, bounds, matchCount, total, 
             <div className="orbit-filter-price-values"><span>{formatPrice(low)}</span><span className="orbit-filter-price-caption">{hu ? "Ártartomány" : "Price range"}</span><span>{formatPrice(high)}</span></div>
             <div ref={priceStage} data-orbit-price-stage="" className="orbit-filter-price-stage">
                 <span className="orbit-filter-price-track" aria-hidden="true" /><span className="orbit-filter-price-selection" aria-hidden="true" style={{ left: `calc(12px + (100% - 24px) * ${sliderPercent(low) / 100})`, right: `calc(12px + (100% - 24px) * ${(100 - sliderPercent(high)) / 100})` }} />
-                <input ref={minimumInput} type="range" data-orbit-price-min="" min={minimum} max={maximum} step={step} value={low} aria-label={hu ? "Minimum ár forintban" : "Minimum price in HUF"} aria-valuetext={formatPrice(low)} disabled={!hasBounds} onChange={event => changePrice("minimum", event.currentTarget.valueAsNumber)} style={{ zIndex: low >= maximum ? 2 : 1 }} />
-                <input ref={maximumInput} type="range" data-orbit-price-max="" min={minimum} max={maximum} step={step} value={high} aria-label={hu ? "Maximum ár forintban" : "Maximum price in HUF"} aria-valuetext={formatPrice(high)} disabled={!hasBounds} onChange={event => changePrice("maximum", event.currentTarget.valueAsNumber)} />
+                <input ref={minimumInput} type="range" data-orbit-price-min="" min={minimum} max={maximum} step={step} value={low} aria-label={hu ? "Minimum ár forintban" : "Minimum price in HUF"} aria-valuetext={formatPrice(low)} disabled={!active || !hasBounds} onChange={event => changePrice("minimum", event.currentTarget.valueAsNumber)} style={{ zIndex: low >= maximum ? 2 : 1 }} />
+                <input ref={maximumInput} type="range" data-orbit-price-max="" min={minimum} max={maximum} step={step} value={high} aria-label={hu ? "Maximum ár forintban" : "Maximum price in HUF"} aria-valuetext={formatPrice(high)} disabled={!active || !hasBounds} onChange={event => changePrice("maximum", event.currentTarget.valueAsNumber)} />
             </div>
         </div>
     </div>
@@ -1053,6 +1064,10 @@ const orbitApartmentStudioStyles = `
 [data-orbit-studio] .orbit-studio-text-button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 36px; padding: 6px 0; border: 0; border-bottom: 1px solid var(--studio-line); border-radius: 0; color: var(--studio-muted); background: none; font-size: 10px; line-height: 1.4; text-decoration: none; }
 [data-orbit-studio] .orbit-studio-text-button:hover { color: var(--studio-ink); border-bottom-color: var(--studio-ink); }
 [data-orbit-studio] .orbit-studio-share-message { color: var(--studio-muted); font-size: 10px; line-height: 1.5; }
+/* Keep the scene geometry stable while checkpoint information fades away. */
+[data-orbit-studio] :is(.orbit-studio-header-end,.orbit-studio-facts,.orbit-studio-details,.orbit-studio-mobile-panel) { opacity: 1; transition: opacity .24s ease; }
+[data-orbit-studio][data-moving="true"] :is(.orbit-studio-header-end,.orbit-studio-facts,.orbit-studio-details,.orbit-studio-mobile-panel) { opacity: 0; pointer-events: none; }
+
 [data-orbit-studio] .orbit-studio-details { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
 [data-orbit-studio] .orbit-studio-drawing-toolbar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px 18px; margin-bottom: 14px; min-height: 32px; flex-shrink: 0; }
 [data-orbit-studio] .orbit-studio-tabs { display: flex; gap: 18px; align-items: center; }
@@ -1149,45 +1164,47 @@ const orbitApartmentStudioStyles = `
 /* Phones keep the complete orbit above a compact apartment summary. */
 [data-orbit-studio][data-mobile="true"] {
     container-name: orbit-studio-mobile; container-type: size; overflow: hidden;
-    padding: 8px 12px max(10px,env(safe-area-inset-bottom,0px)); gap: 8px;
+    padding: 8px 12px max(10px,env(safe-area-inset-bottom,0px)); gap: 6px;
     grid-template-rows: auto auto minmax(0,1fr); text-align: left;
 }
 [data-orbit-studio][data-mobile="true"] .orbit-studio-header { display: flex; align-items: center; justify-content: center; gap: 0; min-height: 0; }
 [data-orbit-studio][data-mobile="true"] .orbit-studio-brand { width: 160px; height: auto; max-width: 52cqw; }
-[data-orbit-studio][data-mobile="true"] .orbit-studio-body { display: grid; grid-template-columns: minmax(0,1fr); grid-template-rows: calc((100cqw + 24px) * 1010 / 1920) minmax(0,1fr); gap: 12px; overflow: hidden; }
+[data-orbit-studio][data-mobile="true"] .orbit-studio-body { display: grid; grid-template-columns: minmax(0,1fr); grid-template-rows: calc((100cqw + 24px) * 1010 / 1920) minmax(0,1fr); gap: 8px; overflow: hidden; }
 [data-orbit-studio][data-mobile="true"] .orbit-studio-scene { display: contents; }
 [data-orbit-studio][data-mobile="true"] .orbit-studio-image-slot { position: relative; order: 0; width: calc(100% + 24px); height: 100%; margin-inline: -12px; aspect-ratio: 1920 / 1010; container-type: inline-size; }
 [data-orbit-studio][data-mobile="true"] [data-orbit-viewport] { position: absolute; inset: 0; width: 100%; height: 100%; max-height: none; }
-[data-orbit-studio][data-mobile="true"] .orbit-studio-mobile-panel { display: grid; grid-template-columns: minmax(0,1.3fr) minmax(0,1fr); grid-template-rows: minmax(0,1fr) auto; gap: 12px 16px; min-width: 0; min-height: 0; overflow: hidden; }
+[data-orbit-studio][data-mobile="true"] .orbit-studio-mobile-panel { display: grid; grid-template-columns: minmax(0,1.5fr) minmax(0,1fr); grid-template-rows: auto minmax(0,1fr); gap: 8px 10px; min-width: 0; min-height: 0; height: min(100%,calc(max(200px,(100cqw - 10px) * .6 / var(--studio-plan-aspect,1)) + 36px)); align-self: center; overflow: hidden; }
+[data-orbit-studio][data-mobile="true"] .orbit-studio-mobile-panel > .orbit-studio-heading { grid-column: 1 / -1; justify-content: flex-start; }
 [data-orbit-studio][data-mobile="true"] .orbit-studio-mobile-plan { display: flex; flex-direction: column; justify-content: center; gap: 6px; min-width: 0; min-height: 0; margin: 0; }
 [data-orbit-studio][data-mobile="true"] .orbit-studio-mobile-plan > :is(figcaption,p) { flex-shrink: 0; }
 [data-orbit-studio][data-mobile="true"] .orbit-studio-mobile-eyebrow { margin: 0; color: var(--studio-muted); font-size: 10px; font-weight: 500; line-height: 1.4; letter-spacing: .07em; }
-[data-orbit-studio][data-mobile="true"] .orbit-studio-mobile-plan-button { display: grid; flex: 0 1 auto; min-width: 0; min-height: 0; width: 100%; aspect-ratio: var(--studio-plan-aspect,1); padding: 0; border: 0; border-radius: 12px; background: rgba(255,255,255,.45); text-align: left; }
+[data-orbit-studio][data-mobile="true"] .orbit-studio-mobile-plan-button { display: grid; flex: 0 1 auto; min-width: 0; min-height: 0; width: 100%; aspect-ratio: var(--studio-plan-aspect,1); padding: 0; border: 0; border-radius: 8px; background: rgba(255,255,255,.45); text-align: left; }
 [data-orbit-studio][data-mobile="true"] .orbit-studio-plan-stage { width: 100%; height: 100%; min-height: 0; flex: auto; padding: 0; }
 [data-orbit-studio][data-mobile="true"] .orbit-studio-plan-note { margin: 0; font-size: 8px; line-height: 1.4; text-align: left; }
-[data-orbit-studio][data-mobile="true"] .orbit-studio-mobile-summary { display: flex; flex-direction: column; justify-content: center; align-items: stretch; gap: 10px; min-width: 0; min-height: 0; text-align: left; }
+[data-orbit-studio][data-mobile="true"] .orbit-studio-mobile-summary { display: flex; flex-direction: column; justify-content: center; align-items: stretch; gap: 7px; min-width: 0; min-height: 0; text-align: left; }
 [data-orbit-studio][data-mobile="true"] .orbit-studio-heading { display: flex; align-items: center; flex-wrap: nowrap; gap: 7px; min-width: 0; }
 [data-orbit-studio][data-mobile="true"] .orbit-studio-id { flex: 0 0 auto; margin: 0; font-size: 28px; line-height: 1; font-weight: 600; letter-spacing: -.045em; }
 [data-orbit-studio][data-mobile="true"] .orbit-studio-id small { margin-left: 5px; color: var(--studio-muted); font-size: 10px; font-weight: 400; letter-spacing: 0; }
 [data-orbit-studio][data-mobile="true"] .orbit-studio-status { flex: 0 1 auto; min-width: 0; font-size: 10px; line-height: 1.35; font-weight: 500; gap: 5px; }
 [data-orbit-studio][data-mobile="true"] .orbit-studio-status-text { display: block; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-[data-orbit-studio][data-mobile="true"] .orbit-studio-mobile-metrics { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 9px 8px; margin: 0; min-width: 0; }
-[data-orbit-studio][data-mobile="true"] .orbit-studio-mobile-metrics > div { min-width: 0; }
+[data-orbit-studio][data-mobile="true"] .orbit-studio-mobile-metrics { display: grid; grid-template-columns: minmax(0,1fr); gap: 6px; margin: 0; min-width: 0; }
+[data-orbit-studio][data-mobile="true"] .orbit-studio-mobile-metrics > div { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: 2px 5px; min-width: 0; }
 [data-orbit-studio][data-mobile="true"] .orbit-studio-mobile-metrics > div:first-child { grid-column: 1 / -1; }
-[data-orbit-studio][data-mobile="true"] .orbit-studio-mobile-metrics dt { margin: 0 0 3px; color: var(--studio-muted); font-size: 10px; font-weight: 400; line-height: 1.4; }
+[data-orbit-studio][data-mobile="true"] .orbit-studio-mobile-metrics dt { margin: 0; color: var(--studio-muted); font-size: 10px; font-weight: 400; line-height: 1.4; }
 [data-orbit-studio][data-mobile="true"] .orbit-studio-mobile-metrics dd { margin: 0; color: #263b32; font-size: 14px; font-weight: 600; line-height: 1.2; letter-spacing: -.025em; white-space: nowrap; }
-[data-orbit-studio][data-mobile="true"] .orbit-studio-mobile-metrics > div:first-child dd { font-size: 27px; line-height: 1.1; letter-spacing: -.05em; }
+[data-orbit-studio][data-mobile="true"] .orbit-studio-mobile-metrics > div:first-child dd { font-size: 24px; line-height: 1.1; letter-spacing: -.05em; }
 [data-orbit-studio][data-mobile="true"] .orbit-studio-mobile-metrics small { margin-left: 2px; color: var(--studio-muted); font-size: 9px; font-weight: 400; letter-spacing: 0; }
 [data-orbit-studio][data-mobile="true"] .orbit-studio-mobile-metrics > div:first-child small { margin-left: 4px; font-size: 11px; }
-[data-orbit-studio][data-mobile="true"] .orbit-studio-mobile-meta { display: flex; align-items: baseline; justify-content: flex-start; flex-wrap: wrap; gap: 3px 9px; margin: 0; padding-top: 8px; border-top: 1px solid var(--studio-line); color: var(--studio-muted); font-size: 10px; line-height: 1.45; text-align: left; }
+[data-orbit-studio][data-mobile="true"] .orbit-studio-mobile-meta { display: flex; align-items: baseline; justify-content: flex-start; flex-wrap: wrap; gap: 2px 7px; margin: 0; padding-top: 6px; border-top: 1px solid var(--studio-line); color: var(--studio-muted); font-size: 10px; line-height: 1.45; text-align: left; }
 [data-orbit-studio][data-mobile="true"] .orbit-studio-mobile-meta strong { color: var(--studio-ink); font-weight: 500; }
-[data-orbit-studio][data-mobile="true"] .orbit-studio-mobile-actions { display: block; grid-column: 1 / -1; min-width: 0; margin: 0; padding-top: 10px; border-top: 1px solid var(--studio-line); }
-[data-orbit-studio][data-mobile="true"] .orbit-studio-mobile-actions .orbit-studio-bottom { display: flex; flex-direction: row; justify-content: space-between; align-items: center; margin: 0; gap: 12px; }
+[data-orbit-studio][data-mobile="true"] .orbit-studio-mobile-actions { display: block; min-width: 0; margin: 0; padding-top: 6px; border-top: 1px solid var(--studio-line); }
+[data-orbit-studio][data-mobile="true"] .orbit-studio-mobile-actions .orbit-studio-bottom { display: flex; flex-direction: column; justify-content: flex-start; align-items: stretch; margin: 0; gap: 7px; }
 [data-orbit-studio][data-mobile="true"] .orbit-studio-mobile-actions .orbit-studio-secondary { display: none; }
 [data-orbit-studio][data-mobile="true"] .orbit-studio-label { margin-bottom: 4px; font-size: 9px; line-height: 1.3; }
-[data-orbit-studio][data-mobile="true"] .orbit-studio-price-value { font-size: 25px; line-height: 1.1; font-weight: 500; letter-spacing: -.045em; }
+[data-orbit-studio][data-mobile="true"] .orbit-studio-price-value { font-size: 21px; line-height: 1.1; font-weight: 500; letter-spacing: -.045em; }
 [data-orbit-studio][data-mobile="true"] .orbit-studio-price-value small { font-size: 11px; }
-[data-orbit-studio][data-mobile="true"] .orbit-studio-primary { flex: 0 0 auto; min-height: 44px; padding: 11px 18px; gap: 14px; border: 1px solid #263b32; border-radius: 999px; color: #fff; background: #263b32; box-shadow: 0 3px 10px rgba(29,52,42,.1); font-size: 12px; font-weight: 500; transition: background .18s,box-shadow .18s; }
+[data-orbit-studio][data-mobile="true"] .orbit-studio-price-value.orbit-studio-price-empty { font-size: 12px; line-height: 1.4; font-weight: 400; letter-spacing: 0; }
+[data-orbit-studio][data-mobile="true"] .orbit-studio-primary { flex: 0 0 auto; min-height: 44px; padding: 10px 12px; gap: 8px; border: 1px solid #263b32; border-radius: 999px; color: #fff; background: #263b32; box-shadow: 0 3px 10px rgba(29,52,42,.1); font-size: 12px; font-weight: 500; transition: background .18s,box-shadow .18s; }
 [data-orbit-studio][data-mobile="true"] .orbit-studio-primary svg { width: 16px; height: 16px; flex-shrink: 0; }
 [data-orbit-studio][data-mobile="true"] .orbit-studio-primary:hover { background: #344e41; box-shadow: 0 4px 12px rgba(29,52,42,.16); }
 [data-orbit-studio][data-mobile="true"] .orbit-studio-primary:active { background: #1c2e25; box-shadow: none; }
@@ -1195,17 +1212,19 @@ const orbitApartmentStudioStyles = `
 @container orbit-studio-mobile (max-height: 560px) and (max-aspect-ratio: 1/1) {
     [data-orbit-studio][data-mobile="true"] .orbit-studio-brand { width: 136px; }
     [data-orbit-studio][data-mobile="true"] .orbit-studio-body { gap: 8px; }
-    [data-orbit-studio][data-mobile="true"] .orbit-studio-mobile-panel { gap: 8px 14px; }
-    [data-orbit-studio][data-mobile="true"] .orbit-studio-mobile-panel { grid-template-columns: minmax(0,1.15fr) minmax(0,1fr); }
-    [data-orbit-studio][data-mobile="true"] .orbit-studio-mobile-summary { gap: 7px; }
+    [data-orbit-studio][data-mobile="true"] .orbit-studio-mobile-panel { gap: 6px 8px; }
+    [data-orbit-studio][data-mobile="true"] .orbit-studio-mobile-panel { grid-template-columns: minmax(0,1.5fr) minmax(0,1fr); }
+    [data-orbit-studio][data-mobile="true"] .orbit-studio-mobile-summary { gap: 2px; }
     [data-orbit-studio][data-mobile="true"] .orbit-studio-heading { display: flex; align-items: center; gap: 6px; flex-wrap: nowrap; }
     [data-orbit-studio][data-mobile="true"] .orbit-studio-id { font-size: 23px; margin: 0; }
     [data-orbit-studio][data-mobile="true"] .orbit-studio-status { font-size: 9.5px; gap: 4px; white-space: nowrap; }
-    [data-orbit-studio][data-mobile="true"] .orbit-studio-mobile-metrics { gap: 6px 6px; }
-    [data-orbit-studio][data-mobile="true"] .orbit-studio-mobile-metrics > div:first-child dd { font-size: 24px; }
-    [data-orbit-studio][data-mobile="true"] .orbit-studio-mobile-meta { padding-top: 6px; }
+    [data-orbit-studio][data-mobile="true"] .orbit-studio-mobile-metrics { gap: 2px; }
+    [data-orbit-studio][data-mobile="true"] .orbit-studio-mobile-metrics > div:first-child dd { font-size: 22px; }
+    [data-orbit-studio][data-mobile="true"] .orbit-studio-mobile-meta { padding-top: 3px; }
     [data-orbit-studio][data-mobile="true"] .orbit-studio-mobile-meta { gap: 3px 6px; font-size: 9.5px; }
-    [data-orbit-studio][data-mobile="true"] .orbit-studio-mobile-actions { padding-top: 8px; }
+    [data-orbit-studio][data-mobile="true"] .orbit-studio-mobile-actions { padding-top: 2px; }
+    [data-orbit-studio][data-mobile="true"] .orbit-studio-mobile-actions .orbit-studio-bottom { gap: 3px; }
+    [data-orbit-studio][data-mobile="true"] .orbit-studio-price-value { font-size: 20px; }
     [data-orbit-studio][data-mobile="true"] .orbit-studio-plan-note { display: none; }
 }
 @container orbit-studio-mobile (max-height: 480px) and (min-aspect-ratio: 4/3) {
@@ -1213,17 +1232,18 @@ const orbitApartmentStudioStyles = `
     [data-orbit-studio][data-mobile="true"] .orbit-studio-body { grid-template-columns: minmax(0,1.1fr) minmax(0,1fr); grid-template-rows: minmax(0,1fr); column-gap: 18px; }
     [data-orbit-studio][data-mobile="true"] .orbit-studio-image-slot { grid-column: 1; grid-row: 1; width: 100%; height: 100%; margin: 0; aspect-ratio: auto; container-type: size; }
     [data-orbit-studio][data-mobile="true"] [data-orbit-viewport] { position: relative; inset: auto; width: min(100cqw,calc(100cqh * 1920 / 1010)); height: auto; max-height: 100%; }
-    [data-orbit-studio][data-mobile="true"] .orbit-studio-mobile-panel { grid-column: 2; grid-row: 1; column-gap: 12px; gap: 8px 12px; }
-    [data-orbit-studio][data-mobile="true"] .orbit-studio-mobile-summary { gap: 7px; }
+    [data-orbit-studio][data-mobile="true"] .orbit-studio-mobile-panel { grid-column: 2; grid-row: 1; gap: 6px 8px; }
+    [data-orbit-studio][data-mobile="true"] .orbit-studio-mobile-summary { gap: 5px; }
     [data-orbit-studio][data-mobile="true"] .orbit-studio-id { font-size: 24px; }
-    [data-orbit-studio][data-mobile="true"] .orbit-studio-mobile-metrics { gap: 5px 6px; }
+    [data-orbit-studio][data-mobile="true"] .orbit-studio-mobile-metrics { gap: 4px; }
     [data-orbit-studio][data-mobile="true"] .orbit-studio-mobile-metrics > div:first-child dd { font-size: 23px; }
     [data-orbit-studio][data-mobile="true"] .orbit-studio-plan-note { display: none; }
     [data-orbit-studio][data-mobile="true"] .orbit-studio-price-value { font-size: 22px; }
     [data-orbit-studio][data-mobile="true"] .orbit-studio-primary { padding-inline: 14px; }
 }
 @media (prefers-reduced-motion: reduce) {
-    [data-orbit-studio][data-mobile="true"] .orbit-studio-primary { transition: none; }
+    [data-orbit-studio][data-mobile="true"] .orbit-studio-primary,
+    [data-orbit-studio] :is(.orbit-studio-header-end,.orbit-studio-facts,.orbit-studio-details,.orbit-studio-mobile-panel) { transition: none; }
 }
 @container orbit-studio-mobile (max-width: 340px) {
     [data-orbit-studio][data-mobile="true"] .orbit-studio-heading { gap: 5px; }
@@ -1234,7 +1254,12 @@ const orbitApartmentStudioStyles = `
 `
 
 function OrbitApartmentStudio(props: OrbitApartmentStudioProps): React.JSX.Element {
-    const { active, mode, dataset, dataStatus, error, onRetry, apartment, onSelect, assetBase, detailsUrl, inquiryUrl, onViewport, language, onLayout, onOpenDetails, mobile = false, moving = false, filters, filterBounds, filterActive, filterCount, onFiltersChange } = props
+    const { active, mode, dataset, dataStatus, error, onRetry, apartment: currentApartment, onSelect, assetBase, detailsUrl, inquiryUrl, onViewport, language, onLayout, onOpenDetails, mobile = false, moving = false, filters, filterBounds, filterActive, filterCount, onFiltersChange } = props
+    // Retain only the departing visual while it fades; selection and hit testing
+    // remain controlled by the parent and are disabled for checkpoint travel.
+    const lastApartment = React.useRef<OrbitApartmentRecord | null>(currentApartment)
+    if (currentApartment || !moving) lastApartment.current = currentApartment
+    const apartment = currentApartment || (moving ? lastApartment.current : null)
     const hu = language !== "en"
     const [view, setView] = React.useState<"floorplan" | "floorLayout">("floorplan")
     const [expanded, setExpanded] = React.useState(false), [zoom, setZoom] = React.useState(1)
@@ -1262,7 +1287,7 @@ function OrbitApartmentStudio(props: OrbitApartmentStudioProps): React.JSX.Eleme
     React.useEffect(() => { setView("floorplan"); setFailedImage(""); setExpanded(false); setShareMessage(""); shareGeneration.current++ }, [apartment?.id])
     React.useEffect(() => { if (mobile) setView("floorplan") }, [mobile])
     React.useEffect(() => { setZoom(1); setPan({ x: 0, y: 0 }); setFailedImage("") }, [view, expanded])
-    React.useEffect(() => { if (!active) setExpanded(false) }, [active])
+    React.useEffect(() => { if (!active || moving) setExpanded(false) }, [active, moving])
     React.useEffect(() => {
         const element = dialog.current
         if (!element) return
@@ -1317,7 +1342,7 @@ function OrbitApartmentStudio(props: OrbitApartmentStudioProps): React.JSX.Eleme
     </p>
     const conversion = () => <>
         <div className="orbit-studio-bottom">
-            <div className="orbit-studio-price">{!mobile && <p className="orbit-studio-label">{apartment?.priceIncludesVat === false ? hu ? "Nettó vételár" : "Net purchase price" : labels.gross}</p>}<p className="orbit-studio-price-value" data-orbit-apartment-price="" data-orbit-field="price">
+            <div className="orbit-studio-price">{!mobile && <p className="orbit-studio-label">{apartment?.priceIncludesVat === false ? hu ? "Nettó vételár" : "Net purchase price" : labels.gross}</p>}<p className={`orbit-studio-price-value${!positive(apartment?.price) ? " orbit-studio-price-empty" : ""}`} data-orbit-apartment-price="" data-orbit-field="price">
                 {positive(apartment?.price) ? <>{number.format(apartment!.price! / 1000000)}<small>M Ft</small></> : availability === "sold" ? hu ? "Nincs megadva" : "Not provided" : hu ? "Ár kérésre" : "Price on request"}
             </p></div>
             {(mobile || !inquiryLink) && onOpenDetails ? <button type="button" className="orbit-studio-primary" data-orbit-apartment-action="" data-orbit-detail-link="" aria-haspopup="dialog" disabled={mobile && moving} onClick={onOpenDetails}><span>{mobile ? hu ? "Adatlap" : "Details" : labels.details}</span>{mobile ? <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6" /></svg> : <span aria-hidden="true">↗</span>}</button> : (mobile ? detailLink : actionLink) && <a className="orbit-studio-primary" href={mobile ? detailLink : actionLink} data-orbit-apartment-action="" {...(!mobile && inquiryLink ? { "data-orbit-inquiry": "" } : { "data-orbit-detail-link": "" })}><span>{mobile ? hu ? "Adatlap" : "Details" : inquiryLink ? labels.inquire : labels.details}</span>{mobile ? <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6" /></svg> : <span aria-hidden="true">↗</span>}</a>}
@@ -1338,18 +1363,19 @@ function OrbitApartmentStudio(props: OrbitApartmentStudioProps): React.JSX.Eleme
         {(["floorplan", "floorLayout"] as const).filter(kind => kind === "floorplan" || !!floorLayout).map(kind => <button key={kind} type="button" className="orbit-studio-tab" role="tab" aria-selected={view === kind} aria-controls={planPanelId} tabIndex={view === kind ? 0 : -1}
             onClick={() => setView(kind)} onKeyDown={event => { if (event.key === "ArrowRight" || event.key === "ArrowLeft" || event.key === "Home" || event.key === "End") { event.preventDefault(); const next = floorLayout && (event.key === "End" || (event.key !== "Home" && view === "floorplan")) ? "floorLayout" : "floorplan"; setView(next); const list = event.currentTarget.parentElement; requestAnimationFrame(() => list?.querySelector<HTMLButtonElement>(`[data-plan-tab="${next}"]`)?.focus()) } }} data-plan-tab={kind}>{labels[kind]}</button>)}
     </div>
-    const facts = <div className="orbit-studio-facts" data-orbit-ignore="">
+    const detailsVisibility = { "aria-hidden": !active || moving, ...(!active || moving ? { inert: "" as any } : {}) }
+    const facts = <div className="orbit-studio-facts" data-orbit-ignore="" {...detailsVisibility}>
         <dl className="orbit-studio-areas">
             {([ ["areaInterior", labels.interior, "area"], ["areaTerrace", labels.terrace, "terrace"], ["areaGarden", labels.garden, "garden"] ] as const).map(([key, label, field]) => <div key={key} data-orbit-apartment-metric={key} data-orbit-field={field}><dt>{label}</dt><dd>{positive(apartment?.[key]) && (key === "areaInterior" || apartment![key]! > 0) ? <>{number.format(apartment![key]!)}<small>m²</small></> : "—"}</dd></div>)}
         </dl>
         {meta()}{conversion()}
     </div>
     return <>
-        <section data-orbit-studio="" data-active={active ? "true" : "false"} data-mobile={mobile ? "true" : "false"} data-mode={mode} data-status={dataStatus} data-apartment-id={apartment?.id || ""} aria-hidden={!active} {...(!active ? { inert: "" as any } : {})} aria-labelledby={mobile ? undefined : headingId} aria-label={mobile ? hu ? "Lakásválasztó" : "Apartments" : undefined}>
+        <section data-orbit-studio="" data-active={active ? "true" : "false"} data-mobile={mobile ? "true" : "false"} data-moving={moving ? "true" : "false"} data-mode={mode} data-status={dataStatus} data-apartment-id={apartment?.id || ""} aria-hidden={!active} {...(!active ? { inert: "" as any } : {})} aria-labelledby={mobile ? undefined : headingId} aria-label={mobile ? hu ? "Lakásválasztó" : "Apartments" : undefined}>
             <style>{fontStyles + orbitApartmentStudioStyles}</style>
             <header className="orbit-studio-header" data-orbit-ignore="">
                 {logo && <img className="orbit-studio-brand" src={logo} alt="Admiral Park" width={184} height={78} draggable={false} />}
-                {!mobile && <div className="orbit-studio-header-end">
+                {!mobile && <div className="orbit-studio-header-end" {...detailsVisibility}>
                     <div className="orbit-studio-heading"><h2 id={headingId} className="orbit-studio-id">{apartment?.id || (hu ? "Lakásválasztó" : "Apartments")}</h2>
                         {statusText && <span className="orbit-studio-status" data-status={availability} data-orbit-field="status"><span className="orbit-studio-status-dot" aria-hidden="true" />{statusText}</span>}
                     </div>
@@ -1357,16 +1383,19 @@ function OrbitApartmentStudio(props: OrbitApartmentStudioProps): React.JSX.Eleme
                         {!apartment && <option value="">—</option>}{dataset.apartments.map(unit => <option key={unit.id} value={unit.id}>{unit.id}</option>)}
                     </select></div>}
                 </div>}
-                {!mobile && <div data-orbit-studio-filters=""><OrbitFilterBar active={active} language={language} filters={filters} bounds={filterBounds} matchCount={filterCount} total={dataset?.apartments.length || 0} onChange={onFiltersChange} /></div>}
+                {!mobile && <div data-orbit-studio-filters=""><OrbitFilterBar active={active && !moving} language={language} filters={filters} bounds={filterBounds} matchCount={filterCount} total={dataset?.apartments.length || 0} onChange={onFiltersChange} /></div>}
             </header>
-            {mobile && <OrbitFilterBar active={active} language={language} filters={filters} bounds={filterBounds} matchCount={filterCount} total={dataset?.apartments.length || 0} onChange={onFiltersChange} />}
+            {mobile && <OrbitFilterBar active={active && !moving} language={language} filters={filters} bounds={filterBounds} matchCount={filterCount} total={dataset?.apartments.length || 0} onChange={onFiltersChange} />}
             <div className="orbit-studio-body">
                 <div className="orbit-studio-scene">
                     <div className="orbit-studio-image-slot"><div ref={viewportCallback} data-orbit-viewport="" aria-hidden="true" /></div>
                     {!mobile && !shortLandscape && facts}
                 </div>
-                {mobile ? <div className="orbit-studio-mobile-panel" data-orbit-studio-details="" data-orbit-ignore="">
+                {mobile ? <div className="orbit-studio-mobile-panel" data-orbit-studio-details="" data-orbit-ignore="" style={aspectStyle} {...detailsVisibility}>
                     {dataStatus === "error" ? <div className="orbit-studio-empty" role="status"><p>{hu ? "A lakásadatok most nem tölthetők be." : "Apartment information could not be loaded."}</p><button type="button" className="orbit-studio-text-button" onClick={onRetry}>{hu ? "Újrapróbálom" : "Try again"}</button></div> : !apartment ? <div className="orbit-studio-empty" role="status" {...(filterActive && filterCount === 0 ? { "data-orbit-filter-empty": "" } : {})}><p>{dataStatus === "loading" || dataStatus === "idle" ? hu ? "Lakásadatok betöltése…" : "Loading apartment information…" : filterActive && filterCount === 0 ? hu ? "Nincs a szűrésnek megfelelő lakás." : "No apartments match these filters." : hu ? "Válasszon egy lakást az épületen." : "Select an apartment on the building."}</p></div> : <>
+                            <div className="orbit-studio-heading"><h2 id={headingId} className="orbit-studio-id">{apartment.id}</h2>
+                                {statusText && <span className="orbit-studio-status" data-status={availability} data-orbit-field="status" title={statusText}><span className="orbit-studio-status-dot" aria-hidden="true" /><span className="orbit-studio-status-text">{availability === "under_negotiation" ? hu ? "Egyeztetés" : "In talks" : statusText}</span></span>}
+                            </div>
                         <figure className="orbit-studio-mobile-plan" style={aspectStyle}>
                             <button type="button" className="orbit-studio-mobile-plan-button" data-orbit-detail-link="" aria-haspopup="dialog" aria-label={hu ? `${apartment.id} adatlap megnyitása` : `Open apartment ${apartment.id} details`} disabled={moving || !onOpenDetails} onClick={onOpenDetails}>
                                 <span className="orbit-studio-plan-stage" style={aspectStyle}>
@@ -1375,9 +1404,6 @@ function OrbitApartmentStudio(props: OrbitApartmentStudioProps): React.JSX.Eleme
                             </button>
                         </figure>
                         <div className="orbit-studio-mobile-summary" data-orbit-mobile-summary="">
-                            <div className="orbit-studio-heading"><h2 id={headingId} className="orbit-studio-id">{apartment.id}</h2>
-                                {statusText && <span className="orbit-studio-status" data-status={availability} data-orbit-field="status" title={statusText}><span className="orbit-studio-status-dot" aria-hidden="true" /><span className="orbit-studio-status-text">{availability === "under_negotiation" ? hu ? "Egyeztetés" : "In talks" : statusText}</span></span>}
-                            </div>
                             <dl className="orbit-studio-mobile-metrics">
                                 {([ ["areaInterior", hu ? "Lakótér" : labels.interior, "area"], ["areaTerrace", hu ? "Terasz" : labels.terrace, "terrace"], ["areaGarden", labels.garden, "garden"] ] as const).map(([key, label, field]) => <div key={key} data-orbit-apartment-metric={key} data-orbit-field={field}><dt>{label}</dt><dd>{positive(apartment[key]) && (key === "areaInterior" || apartment[key]! > 0) ? <>{number.format(apartment[key]!)}<small>m²</small></> : "—"}</dd></div>)}
                             </dl>
@@ -1386,10 +1412,10 @@ function OrbitApartmentStudio(props: OrbitApartmentStudioProps): React.JSX.Eleme
                                 {apartment.orientation && <span data-orbit-field="orientation">{apartment.orientation}</span>}
                                 {floor && <span data-orbit-field="floor">{floor}</span>}
                             </p>
+                            <div className="orbit-studio-mobile-actions">{conversion()}</div>
                         </div>
-                        <div className="orbit-studio-mobile-actions">{conversion()}</div>
                     </>}
-                </div> : <div className="orbit-studio-details" data-orbit-studio-details="" data-orbit-ignore="">
+                </div> : <div className="orbit-studio-details" data-orbit-studio-details="" data-orbit-ignore="" {...detailsVisibility}>
                     {dataStatus === "error" ? <div className="orbit-studio-empty" role="status"><p>{hu ? "A lakásadatok most nem tölthetők be." : "Apartment information could not be loaded."}</p>{error && <p>{error}</p>}<button type="button" className="orbit-studio-text-button" onClick={onRetry}>{hu ? "Újrapróbálom" : "Try again"}</button></div> : !apartment ? <div className="orbit-studio-empty" role="status"><p>{dataStatus === "loading" || dataStatus === "idle" ? hu ? "Lakásadatok betöltése…" : "Loading apartment information…" : hu ? "A lakás adatai a kijelölt otthonnál jelennek meg." : "Point to an apartment to see its details."}</p></div> : <>
                         <div className="orbit-studio-drawing-toolbar">{tabs}<button type="button" className="orbit-studio-text-button" aria-label={labels.expand} disabled={!planShown} onClick={() => setExpanded(true)}>{hu ? "Nagyítás" : "Enlarge"}<span aria-hidden="true">↗</span></button></div>
                         {meta(true)}
@@ -1665,38 +1691,45 @@ const orbitFullscreenStyles = `
 [data-orbit-fullscreen-details] .orbit-fullscreen-close svg { width:19px; height:19px; }
 [data-orbit-fullscreen-details] .orbit-fullscreen-nav { position:absolute; inset:45% 16px auto; display:flex; justify-content:space-between; align-items:center; pointer-events:none; }
 [data-orbit-fullscreen-details] .orbit-fullscreen-nav button { display:grid; place-items:center; width:44px; height:44px; padding:0; border:1px solid rgba(255,255,255,.45); border-radius:50%; background:rgba(16,24,32,.28); pointer-events:auto; font-size:22px; line-height:1; }
-[data-orbit-fullscreen-details] .orbit-fullscreen-bar { position:absolute; inset:auto 0 0; display:grid; grid-template-columns:minmax(0,1fr) 96px minmax(0,1fr); align-items:end; gap:18px; min-width:0; padding:35px 28px 16px; background:linear-gradient(0deg,rgba(7,16,24,.85) 0%,rgba(7,16,24,.65) 55%,rgba(7,16,24,0) 100%); }
+[data-orbit-fullscreen-details] .orbit-fullscreen-bar { position:absolute; inset:auto 0 0; display:grid; grid-template-columns:minmax(0,1fr) 148px minmax(0,1fr); align-items:end; gap:14px; min-width:0; padding:28px 24px 14px; background:linear-gradient(0deg,rgba(7,16,24,.85) 0%,rgba(7,16,24,.65) 55%,rgba(7,16,24,0) 100%); opacity:1; transition:opacity .24s ease; }
+[data-orbit-fullscreen-details] .orbit-fullscreen-bar[data-moving="true"] { opacity:0; pointer-events:none; }
+[data-orbit-fullscreen-details] .orbit-fullscreen-bar[data-moving="true"] * { pointer-events:none; }
 [data-orbit-fullscreen-details] .orbit-fullscreen-left,[data-orbit-fullscreen-details] .orbit-fullscreen-right { min-width:0; text-align:left; }
-[data-orbit-fullscreen-details] .orbit-fullscreen-identity { display:flex; align-items:baseline; flex-wrap:wrap; gap:6px 12px; margin-bottom:10px; }
+[data-orbit-fullscreen-details] .orbit-fullscreen-identity { display:flex; align-items:baseline; flex-wrap:wrap; gap:5px 10px; margin-bottom:7px; }
 [data-orbit-fullscreen-details] .orbit-fullscreen-id { margin:0; font-size:24px; font-weight:600; line-height:1; letter-spacing:-.04em; }
 [data-orbit-fullscreen-details] .orbit-fullscreen-status { margin:0; font-size:10px; font-weight:400; line-height:1.3; }
 [data-orbit-fullscreen-details] .orbit-fullscreen-stats { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; margin:0; }
 [data-orbit-fullscreen-details] .orbit-fullscreen-stats>div { min-width:0; text-align:left; }
-[data-orbit-fullscreen-details] dt { margin:0 0 5px; font-size:9px; font-weight:400; line-height:1.3; opacity:.8; }
+[data-orbit-fullscreen-details] dt { margin:0 0 4px; font-size:9px; font-weight:400; line-height:1.3; opacity:.8; }
 [data-orbit-fullscreen-details] dd { margin:0; font-size:17px; font-weight:500; line-height:1.1; letter-spacing:-.025em; white-space:nowrap; }
 [data-orbit-fullscreen-details] dd small { margin-left:3px; font-size:10px; font-weight:400; }
 [data-orbit-fullscreen-details] .orbit-fullscreen-plan { display:flex; flex-direction:column; align-items:center; justify-content:flex-end; gap:5px; min-width:0; margin:0; }
-[data-orbit-fullscreen-details] .orbit-fullscreen-plan img { display:block; width:82px; height:82px; max-width:100%; object-fit:contain; }
+[data-orbit-fullscreen-details] .orbit-fullscreen-plan img { display:block; width:142px; height:142px; max-width:100%; object-fit:contain; }
 [data-orbit-fullscreen-details] .orbit-fullscreen-plan figcaption { font-size:8px; font-weight:400; opacity:.8; line-height:1.2; }
-[data-orbit-fullscreen-details] .orbit-fullscreen-right { display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:end; column-gap:12px; row-gap:9px; }
-[data-orbit-fullscreen-details] .orbit-fullscreen-meta { grid-column:1/-1; margin:0; font-size:10px; font-weight:400; line-height:1.5; }
+[data-orbit-fullscreen-details] .orbit-fullscreen-right { display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:end; column-gap:10px; row-gap:6px; }
+[data-orbit-fullscreen-details] .orbit-fullscreen-meta { grid-column:1/-1; margin:0; font-size:10px; font-weight:400; line-height:1.4; }
 [data-orbit-fullscreen-details] .orbit-fullscreen-price { margin:0; font-size:19px; font-weight:500; line-height:1.15; letter-spacing:-.035em; white-space:nowrap; }
 [data-orbit-fullscreen-details] .orbit-fullscreen-price small { margin-left:3px; font-size:11px; font-weight:400; }
 [data-orbit-fullscreen-details] .orbit-fullscreen-detail { display:inline-flex; align-items:center; justify-content:center; gap:10px; min-height:44px; padding:10px 16px; border:1px solid rgba(255,255,255,.85); border-radius:999px; background:#fff; color:#242824; box-shadow:0 2px 8px rgba(0,0,0,.08); font-size:11px; font-weight:600; white-space:nowrap; pointer-events:auto; transition:background .18s,box-shadow .18s; }
 [data-orbit-fullscreen-details] .orbit-fullscreen-detail svg { width:15px; height:15px; flex:none; }
 [data-orbit-fullscreen-details] .orbit-fullscreen-detail:active:not(:disabled),[data-orbit-fullscreen-details] .orbit-fullscreen-close:active { background:#e9ede5; box-shadow:none; }
 [data-orbit-fullscreen-details] .orbit-fullscreen-empty { grid-column:1/-1; margin:0; padding:8px 0; text-align:center; font-size:12px; line-height:1.5; }
-[data-orbit-fullscreen-details][data-compact="true"] .orbit-fullscreen-bar { grid-template-columns:minmax(0,1fr) 74px minmax(0,1fr); padding:28px 18px 12px; gap:12px; }
+[data-orbit-fullscreen-details][data-compact="true"] .orbit-fullscreen-bar { grid-template-columns:minmax(0,1fr) 120px minmax(0,1fr); padding:24px 16px 10px; gap:10px; }
 [data-orbit-fullscreen-details][data-compact="true"] .orbit-fullscreen-stats { gap:6px; }
-[data-orbit-fullscreen-details][data-compact="true"] .orbit-fullscreen-plan img { width:68px; height:68px; }
+[data-orbit-fullscreen-details][data-compact="true"] .orbit-fullscreen-plan img { width:116px; height:116px; }
 [data-orbit-fullscreen-details][data-compact="true"] .orbit-fullscreen-right { column-gap:8px; }
 [data-orbit-fullscreen-details][data-compact="true"] .orbit-fullscreen-id { font-size:21px; }
 [data-orbit-fullscreen-details][data-compact="true"] .orbit-fullscreen-price { font-size:16px; }
 [data-orbit-fullscreen-details][data-compact="true"] .orbit-fullscreen-detail { padding:9px 12px; }
-@media (prefers-reduced-motion:reduce) { [data-orbit-fullscreen-details] .orbit-fullscreen-detail { transition:none; } }
+@media (prefers-reduced-motion:reduce) { [data-orbit-fullscreen-details] .orbit-fullscreen-detail,[data-orbit-fullscreen-details] .orbit-fullscreen-bar { transition:none; } }
 `
 
-function OrbitFullscreenDetails({ apartment, assetBase, language, onOpenDetails, moving, onPrevious, onNext, onClose, checkpoint, count, emptyMessage }: OrbitFullscreenDetailsProps) {
+function OrbitFullscreenDetails({ apartment: currentApartment, assetBase, language, onOpenDetails, moving, onPrevious, onNext, onClose, checkpoint, count, emptyMessage }: OrbitFullscreenDetailsProps) {
+    // Keep the departing card image/data intact for the fade, without keeping
+    // the parent's actual hover or selection alive during camera travel.
+    const lastApartment = React.useRef<OrbitApartmentRecord | null>(currentApartment)
+    if (currentApartment || !moving) lastApartment.current = currentApartment
+    const apartment = currentApartment || (moving ? lastApartment.current : null)
     const hu = language !== "en"
     const rootRef = React.useRef<HTMLDivElement>(null)
     const [compact, setCompact] = React.useState(false)
@@ -1721,7 +1754,7 @@ function OrbitFullscreenDetails({ apartment, assetBase, language, onOpenDetails,
         {logo && <span className="orbit-fullscreen-brand" role="img" aria-label="Admiral Park" style={{ "--orbit-fullscreen-logo": `url("${logo.replace(/["\\]/g, "\\// @ORBIT_FULLSCREEN_INSERT")}")` } as React.CSSProperties} />}
         <button type="button" data-orbit-ignore="" data-orbit-fullscreen-close="" className="orbit-fullscreen-close" aria-label={hu ? "Teljes képernyő bezárása" : "Close fullscreen"} onClick={onClose}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true"><path d="m5 5 14 14M19 5 5 19" /></svg></button>
         <div className="orbit-fullscreen-nav" data-orbit-ignore=""><button type="button" data-orbit-fullscreen-step="previous" disabled={moving} aria-label={hu ? "Előző nézet" : "Previous view"} onClick={onPrevious}>←</button><button type="button" data-orbit-fullscreen-step="next" disabled={moving} aria-label={hu ? "Következő nézet" : "Next view"} onClick={onNext}>→</button></div>
-        <div className="orbit-fullscreen-bar" data-orbit-ignore="" aria-live="polite">
+        <div className="orbit-fullscreen-bar" data-orbit-ignore="" data-moving={moving ? "true" : "false"} aria-hidden={moving} {...(moving ? { inert: "" as any } : {})} aria-live="polite">
             {apartment ? <>
                 <div className="orbit-fullscreen-left"><div className="orbit-fullscreen-identity"><p className="orbit-fullscreen-id" data-orbit-fullscreen-field="number">{apartment.id}</p><p className="orbit-fullscreen-status" data-status={state} data-orbit-fullscreen-field="status">{status}</p></div><dl className="orbit-fullscreen-stats"><div data-orbit-fullscreen-field="area"><dt>{hu ? "Lakótér" : "Interior"}</dt><dd>{area(apartment.areaInterior)}</dd></div><div data-orbit-fullscreen-field="terrace"><dt>{hu ? "Terasz" : "Terrace"}</dt><dd>{area(apartment.areaTerrace)}</dd></div><div data-orbit-fullscreen-field="garden"><dt>{hu ? "Kert" : "Garden"}</dt><dd>{area(apartment.areaGarden)}</dd></div></dl></div>
                 <figure className="orbit-fullscreen-plan" data-orbit-fullscreen-field="floorplan">{floorplan && <img src={floorplan} alt={`${apartment.id} · ${hu ? "alaprajz" : "floorplan"}`} decoding="async" draggable={false} />}<figcaption>{hu ? "Alaprajz · illusztráció" : "Illustrative floorplan"}</figcaption></figure>
@@ -2432,10 +2465,11 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
     const detailsData = selectedApartmentDetails ? { ...selectedApartmentDetails, floorplanUrl: stripFloorplanUrl || undefined } : null
     const detailsVisible = !useStudio && (detailsMode === "preview" ? (orbitStatic || (orbitVisible && orbitInfo.state === "checkpoint")) :
         detailsMode === "hover" && orbitVisible && orbitInfo.state === "checkpoint" && orbitInfo.checkpoint >= 0 && detailsData !== null)
-    const floatingFilters = !useStudio && !fullscreen.active && detailsMode !== "off" && (orbitVisible || orbitStatic)
-    const filterBarBottom = detailsBottom + Math.max(140, detailsHeight) + 16
-    const controlsBottom = floatingFilters ? `calc(${filterBarBottom + 58}px + env(safe-area-inset-bottom, 0px))` : detailsVisible ? `calc(${detailsBottom + detailsHeight + 20}px + env(safe-area-inset-bottom, 0px))` : "18px"
-    const diagnosticBottom = detailsVisible ? detailsBottom + detailsHeight + (showControls ? 112 : 20) : 94
+    const stripFiltersEnabled = !useStudio && !fullscreen.active && detailsMode !== "off"
+    const orbitPanelVisible = orbitStatic || orbitVisible && orbitInfo.state === "checkpoint"
+    const classicOrbitPanel = stripFiltersEnabled && (orbitVisible || orbitStatic)
+    const controlsBottom = classicOrbitPanel || detailsVisible ? `calc(${detailsBottom + detailsHeight + 20}px + env(safe-area-inset-bottom, 0px))` : "18px"
+    const diagnosticBottom = classicOrbitPanel || detailsVisible ? detailsBottom + detailsHeight + (showControls ? 112 : 20) : 94
     const studioControls = useStudio && (stage === "orbit" || stage === "handoff")
     const imageClip = "inset(var(--admiral-image-y, 0px) var(--admiral-image-right, 0px) var(--admiral-image-cut, 0px) var(--admiral-image-x, 0px))"
     return (
@@ -2468,9 +2502,6 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.65" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false"><path d="M8 4H4v4m12-4h4v4M4 16v4h4m12-4v4h-4" /></svg>
             </button>}
             {maskFailed && orbitVisible && !fullscreen.active && <button type="button" data-orbit-mask-retry="" data-orbit-ignore="" style={{ ...homepageButton, position: "absolute", left: "calc(var(--admiral-image-x, 0px) + 12px)", top: "calc(var(--admiral-image-y, 0px) + 12px)", zIndex: 5 }} onClick={() => maskPickerRef.current?.retry()}>{detailsLanguage === "hu" ? "Lakáskijelölés újratöltése" : "Retry apartment picking"}</button>}
-            {floatingFilters && <div data-orbit-desktop-filters="" style={{ position: "absolute", left: "50%", bottom: `calc(${filterBarBottom}px + env(safe-area-inset-bottom, 0px))`, transform: "translateX(-50%)", width: "min(560px,calc(100% - 32px))", zIndex: 4 }}>
-                <OrbitFilterBar active={orbitVisible || orbitStatic} language={detailsLanguage} filters={filterResult.filters} bounds={filterBounds} matchCount={filterResult.matchingIds.length} total={apartmentData.dataset?.apartments.length || 0} onChange={setApartmentFilters} presentation="floating" />
-            </div>}
             {orbitStatic && <span style={{ position: "absolute", inset: 0, pointerEvents: "none" }} />}
             <div aria-hidden="true" style={{ position: "absolute", top: "var(--admiral-image-y, 0px)", left: "var(--admiral-image-x, 0px)", width: "var(--admiral-image-width, 100%)", height: "var(--admiral-image-height, 100%)", background: "#000", opacity: darken, pointerEvents: "none", zIndex: 2 }} />
             {!staticRenderer && showControls && !fullscreen.active && <div data-homepage-controls="" data-orbit-ignore="" style={{ position: "absolute", bottom: studioControls ? "auto" : controlsBottom, top: studioControls ? "var(--admiral-controls-top)" : "auto", left: studioControls ? "var(--admiral-controls-left)" : "50%", transform: "translateX(-50%)", display: "flex", alignItems: "center", justifyContent: "center", flexWrap: "wrap", gap: 7, width: "max-content", maxWidth: studioControls ? "var(--admiral-controls-width)" : "94%", zIndex: 3 }}>
@@ -2501,7 +2532,8 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
                 <button type="button" style={homepageButton} onClick={() => { void (rootRef.current as (HTMLElement & { retryOrbit?: () => Promise<void> }) | null)?.retryOrbit?.() }}>Retry orbit</button>
             </div>}
             {!useStudio && !fullscreen.active && detailsMode !== "off" && <ApartmentDetailsStrip apartment={detailsData} language={detailsLanguage} visible={detailsVisible} preview={false}
-                bottom={detailsBottom} inset={detailsInset} onHeightChange={setDetailsHeight} onOpen={jsonDetails && selectedApartment ? () => openApartmentDetails() : undefined} />}
+                bottom={detailsBottom} inset={detailsInset} onHeightChange={setDetailsHeight} onOpen={jsonDetails ? () => openApartmentDetails() : undefined}
+                filtersVisible={orbitPanelVisible} filters={stripFiltersEnabled ? <div data-orbit-desktop-filters=""><OrbitFilterBar active={orbitPanelVisible} language={detailsLanguage} filters={filterResult.filters} bounds={filterBounds} matchCount={filterResult.matchingIds.length} total={apartmentData.dataset?.apartments.length || 0} onChange={setApartmentFilters} presentation="overlay" /></div> : undefined} />}
             {!staticRenderer && <AdmiralApartmentDetailCard openId={detailApartmentId} dataUrl={detailDataUrl} assetBase={apartmentAssetBase} inquiryUrl={inquiryUrl} pageUrl={detailPageUrl}
                 onOpenChange={reportDetailOpen} onClosed={closeApartmentDetails} />}
             {!staticRenderer && !useStudio && jsonDetails && orbitVisible && apartmentData.status === "error" && <div data-orbit-ignore="" role="status" style={{ position: "absolute", left: "4%", bottom: 24, zIndex: 4 }}>
@@ -2782,12 +2814,13 @@ const apartmentDetailsStyles = `
     -webkit-font-smoothing: antialiased;
     pointer-events: none !important;
     isolation: isolate;
+    border-top: 1px solid rgba(255,255,255,.65);
     opacity: 0;
     visibility: hidden;
     transform: translateY(8px);
-    transition: opacity 180ms ease, transform 180ms ease, visibility 0s linear 180ms;
+    transition: opacity 240ms ease, transform 240ms ease, visibility 0s linear 240ms;
 }
-[data-apartment-details][data-details-visible="true"] {
+[data-apartment-details][data-details-shell-visible="true"] {
     opacity: 1;
     visibility: visible;
     transform: translateY(0);
@@ -2804,33 +2837,37 @@ const apartmentDetailsStyles = `
     background: linear-gradient(to bottom, rgba(8,15,20,0) 0%, rgba(8,15,20,.28) 28%, rgba(8,15,20,.68) 72%, rgba(8,15,20,.84) 100%);
     pointer-events: none !important;
 }
-[data-apartment-details] *, [data-apartment-details] *::before, [data-apartment-details] *::after {
+[data-apartment-details] .admiral-details-grid *, [data-apartment-details] .admiral-details-grid *::before, [data-apartment-details] .admiral-details-grid *::after {
     box-sizing: border-box;
     pointer-events: none !important;
 }
+[data-apartment-details] .admiral-details-filter-row { display: flex; justify-content: flex-end; min-width: 0; padding: 5px 0 0; pointer-events: auto !important; }
+[data-apartment-details] [data-orbit-desktop-filters] { width: min(520px,100%); min-width: 0; }
 [data-apartment-details] [data-apartment-open] { display: flex; flex-direction: column; align-items: center; gap: 7px; max-width: 100%; min-width: 48px; min-height: 48px; padding: 0; border: 0; color: inherit; font: inherit; background: none; cursor: pointer; pointer-events: auto !important; }
 [data-apartment-details] [data-apartment-open]:focus-visible { outline: 2px solid currentColor; outline-offset: 5px; }
 [data-apartment-details] [data-apartment-open]:hover .admiral-details-plan-image { opacity: .82; }
 [data-apartment-details] .admiral-details-grid {
     display: grid;
-    grid-template-columns: repeat(3,minmax(0,1fr)) 148px repeat(3,minmax(0,1fr));
-    column-gap: clamp(12px,1.8cqw,32px);
-    align-items: start;
-    padding-top: 19px;
-    border-top: 1px solid rgba(255,255,255,.75);
+    grid-template-columns: repeat(3,minmax(0,1fr)) 220px repeat(3,minmax(0,1fr));
+    column-gap: clamp(8px,1.1cqw,20px);
+    align-items: center;
+    padding-top: 8px;
+    opacity: 1;
+    transition: opacity 240ms ease;
 }
+[data-apartment-details] .admiral-details-grid[aria-hidden="true"] { opacity: 0; }
 [data-apartment-details] .admiral-details-field { min-width: 0; }
 [data-apartment-details] .admiral-details-label {
     display: flex;
     align-items: baseline;
     gap: 7px;
     min-height: 11px;
-    margin: 0 0 12px;
+    margin: 0 0 6px;
     color: rgba(255,255,255,.8);
     font-size: 9px;
     line-height: 1.2;
     font-weight: 400;
-    letter-spacing: .15em;
+    letter-spacing: .08em;
     text-transform: uppercase;
     white-space: nowrap;
 }
@@ -2845,7 +2882,7 @@ const apartmentDetailsStyles = `
     gap: 5px;
     margin: 0;
     color: #fff;
-    font-size: 28px;
+    font-size: 24px;
     line-height: 1.08;
     font-weight: 400;
     letter-spacing: -.035em;
@@ -2856,7 +2893,7 @@ const apartmentDetailsStyles = `
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    font-size: 32px;
+    font-size: 29px;
 }
 [data-apartment-details] .admiral-details-unit {
     flex-shrink: 0;
@@ -2868,18 +2905,19 @@ const apartmentDetailsStyles = `
 [data-apartment-details] .admiral-details-numeric { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 [data-apartment-details] .admiral-details-status .admiral-details-value {
     padding-top: 5px;
-    font-size: 15px;
+    font-size: 13px;
     line-height: 1.45;
     letter-spacing: .015em;
     overflow-wrap: anywhere;
 }
 [data-apartment-details] .admiral-details-plan { justify-self: center; text-align: center; }
-[data-apartment-details] .admiral-details-plan .admiral-details-label { justify-content: center; margin-bottom: 10px; }
+[data-apartment-details] .admiral-details-rooms .admiral-details-value { font-size: 18px; }
+[data-apartment-details] .admiral-details-plan .admiral-details-label { display: none; }
 [data-apartment-details] .admiral-details-plan-caption { color: rgba(255,255,255,.85); font-size: 9px; line-height: 1.3; letter-spacing: .06em; }
 [data-apartment-details] .admiral-details-plan-image {
     display: block;
-    width: 148px;
-    height: 100px;
+    width: 220px;
+    height: 190px;
     max-width: 100%;
     object-fit: contain;
     object-position: center;
@@ -2889,8 +2927,8 @@ const apartmentDetailsStyles = `
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 148px;
-    height: 100px;
+    width: 220px;
+    height: 190px;
     max-width: 100%;
     color: rgba(255,255,255,.6);
     font-size: 10px;
@@ -2919,21 +2957,21 @@ const apartmentDetailsStyles = `
     [data-apartment-details] .admiral-details-unit { font-size: 10px; }
     [data-apartment-details] .admiral-details-status .admiral-details-value { padding-top: 2px; font-size: 13px; }
     [data-apartment-details] .admiral-details-plan .admiral-details-label { margin-bottom: 6px; text-align: center; justify-content: center; }
-    [data-apartment-details] .admiral-details-plan-image, [data-apartment-details] .admiral-details-plan-empty { width: 124px; height: 82px; }
+    [data-apartment-details] .admiral-details-plan-image, [data-apartment-details] .admiral-details-plan-empty { width: 148px; height: 128px; }
 }
 @container admiral-apartment (max-width: 360px) {
     [data-apartment-details] .admiral-details-grid { column-gap: 8px; }
     [data-apartment-details] .admiral-details-label { font-size: 8px; letter-spacing: .07em; }
     [data-apartment-details] .admiral-details-value { font-size: 20px; }
     [data-apartment-details] .admiral-details-number .admiral-details-value { font-size: 24px; }
-    [data-apartment-details] .admiral-details-plan-image, [data-apartment-details] .admiral-details-plan-empty { width: 100px; height: 70px; }
+    [data-apartment-details] .admiral-details-plan-image, [data-apartment-details] .admiral-details-plan-empty { width: 120px; height: 112px; }
 }
 @media (prefers-reduced-motion: reduce) {
-    [data-apartment-details] { transform: none; transition: none; }
+    [data-apartment-details], [data-apartment-details] .admiral-details-grid { transform: none; transition: none; }
 }
 `
 
-function ApartmentDetailsStrip({ apartment, language, visible, preview, bottom, inset, onHeightChange, onOpen }: {
+function ApartmentDetailsStrip({ apartment, language, visible, preview, bottom, inset, onHeightChange, onOpen, filters, filtersVisible = false }: {
     apartment: ApartmentDetailsData | null
     language: ApartmentDetailsLanguage
     visible: boolean
@@ -2942,6 +2980,8 @@ function ApartmentDetailsStrip({ apartment, language, visible, preview, bottom, 
     inset: number
     onHeightChange?: (height: number) => void
     onOpen?: () => void
+    filters?: React.ReactNode
+    filtersVisible?: boolean
 }): React.JSX.Element {
     const last = React.useRef<{ apartment: ApartmentDetailsData; preview: boolean } | null>(apartment ? { apartment, preview } : null)
     if (apartment) last.current = { apartment, preview }
@@ -2949,6 +2989,7 @@ function ApartmentDetailsStrip({ apartment, language, visible, preview, bottom, 
     const data: ApartmentDetailsData = displayed?.apartment ?? { number: "—", area: null, terrace: null, garden: null, rooms: null, availability: "" }
     const sample = displayed?.preview ?? preview
     const shown = visible && apartment !== null
+    const shellShown = shown || !!filters && filtersVisible
     const hu = language !== "en"
     const labels = hu ? { number: "Lakás", area: "Alapterület", terrace: "Terasz", garden: "Kert", rooms: "Szobák", availability: "Státusz", floorplan: "Alaprajz" } :
         { number: "Apartment", area: "Area", terrace: "Terrace", garden: "Garden", rooms: "Rooms", availability: "Availability", floorplan: "Floor plan" }
@@ -2986,11 +3027,12 @@ function ApartmentDetailsStrip({ apartment, language, visible, preview, bottom, 
     const safeBottom = Number.isFinite(bottom) ? Math.max(0, Math.min(400, bottom)) : 24
     const safeInset = Number.isFinite(inset) ? Math.max(0, Math.min(200, inset)) : 48
     const floorplan = data.floorplanUrl && data.floorplanUrl !== failedFloorplan ? data.floorplanUrl : ""
-    return <div ref={root} data-apartment-details="" data-details-preview={sample ? "true" : "false"} data-details-visible={shown ? "true" : "false"}
-        role="region" aria-label={`${hu ? "Lakásadatok" : "Apartment details"}${sample ? hu ? " — minta" : " — sample" : ""}`} aria-hidden={!shown}
+    return <div ref={root} data-apartment-details="" data-details-preview={sample ? "true" : "false"} data-details-visible={shown ? "true" : "false"} data-details-shell-visible={String(shellShown)}
+        role="region" aria-label={`${hu ? "Lakásadatok" : "Apartment details"}${sample ? hu ? " — minta" : " — sample" : ""}`} aria-hidden={!shellShown} {...(!shellShown ? { inert: "" as any } : {})}
         style={{ position: "absolute", left: `min(${safeInset}px, 4%)`, right: `min(${safeInset}px, 4%)`, bottom: `calc(${safeBottom}px + env(safe-area-inset-bottom, 0px))`, "--admiral-details-bottom": `calc(${safeBottom}px + env(safe-area-inset-bottom, 0px))`, zIndex: 4, pointerEvents: "none" } as React.CSSProperties}>
         <style>{apartmentDetailsStyles}</style>
-        <div className="admiral-details-grid">
+        {filters && <div className="admiral-details-filter-row">{filters}</div>}
+        <div className="admiral-details-grid" aria-hidden={!shown} {...(!shown ? { inert: "" as any } : {})}>
             <div className="admiral-details-field admiral-details-number" data-apartment-field="number">
                 <div className="admiral-details-label">{labels.number}{sample && <span className="admiral-details-sample">{sampleLabel}</span>}</div>
                 <div className="admiral-details-value">{data.number}</div>
@@ -3000,7 +3042,7 @@ function ApartmentDetailsStrip({ apartment, language, visible, preview, bottom, 
                 <div className="admiral-details-label">{labels.floorplan}</div>
                 {onOpen ? <button type="button" data-apartment-open="" data-orbit-ignore="" aria-label={hu ? `${data.number} lakás részletei` : `Apartment ${data.number} details`} aria-haspopup="dialog" tabIndex={shown ? 0 : -1} disabled={!shown} onClick={onOpen}>
                     {floorplan ? <img className="admiral-details-plan-image" src={floorplan} alt={hu ? `${data.number} lakás alaprajza` : `Floor plan of apartment ${data.number}`} loading="lazy" decoding="async" draggable={false} onError={() => setFailedFloorplan(floorplan)} /> : <span className="admiral-details-plan-empty">{hu ? "Részletek ↗" : "Details ↗"}</span>}
-                    {floorplan && <span className="admiral-details-plan-caption">{hu ? "Részletek ↗" : "Details ↗"}</span>}
+                    {floorplan && <span className="admiral-details-plan-caption">{hu ? "Adatlap ↗" : "Details ↗"}</span>}
                 </button> : floorplan ? <img className="admiral-details-plan-image" src={floorplan} alt={hu ? `${data.number} lakás alaprajza` : `Floor plan of apartment ${data.number}`} loading="lazy" decoding="async" draggable={false} onError={() => setFailedFloorplan(floorplan)} /> : sample ?
                     <svg className="admiral-details-plan-image" viewBox="0 0 112 78" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label={hu ? "Mintaalaprajz — nem valódi lakás" : "Sample floor plan — not an actual apartment"}>
                         <path d="M7 6H105V58H77V69H7V6Z" stroke="currentColor" strokeWidth="1.3" />

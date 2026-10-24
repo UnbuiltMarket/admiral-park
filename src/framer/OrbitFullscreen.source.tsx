@@ -238,38 +238,45 @@ const orbitFullscreenStyles = `
 [data-orbit-fullscreen-details] .orbit-fullscreen-close svg { width:19px; height:19px; }
 [data-orbit-fullscreen-details] .orbit-fullscreen-nav { position:absolute; inset:45% 16px auto; display:flex; justify-content:space-between; align-items:center; pointer-events:none; }
 [data-orbit-fullscreen-details] .orbit-fullscreen-nav button { display:grid; place-items:center; width:44px; height:44px; padding:0; border:1px solid rgba(255,255,255,.45); border-radius:50%; background:rgba(16,24,32,.28); pointer-events:auto; font-size:22px; line-height:1; }
-[data-orbit-fullscreen-details] .orbit-fullscreen-bar { position:absolute; inset:auto 0 0; display:grid; grid-template-columns:minmax(0,1fr) 96px minmax(0,1fr); align-items:end; gap:18px; min-width:0; padding:35px 28px 16px; background:linear-gradient(0deg,rgba(7,16,24,.85) 0%,rgba(7,16,24,.65) 55%,rgba(7,16,24,0) 100%); }
+[data-orbit-fullscreen-details] .orbit-fullscreen-bar { position:absolute; inset:auto 0 0; display:grid; grid-template-columns:minmax(0,1fr) 148px minmax(0,1fr); align-items:end; gap:14px; min-width:0; padding:28px 24px 14px; background:linear-gradient(0deg,rgba(7,16,24,.85) 0%,rgba(7,16,24,.65) 55%,rgba(7,16,24,0) 100%); opacity:1; transition:opacity .24s ease; }
+[data-orbit-fullscreen-details] .orbit-fullscreen-bar[data-moving="true"] { opacity:0; pointer-events:none; }
+[data-orbit-fullscreen-details] .orbit-fullscreen-bar[data-moving="true"] * { pointer-events:none; }
 [data-orbit-fullscreen-details] .orbit-fullscreen-left,[data-orbit-fullscreen-details] .orbit-fullscreen-right { min-width:0; text-align:left; }
-[data-orbit-fullscreen-details] .orbit-fullscreen-identity { display:flex; align-items:baseline; flex-wrap:wrap; gap:6px 12px; margin-bottom:10px; }
+[data-orbit-fullscreen-details] .orbit-fullscreen-identity { display:flex; align-items:baseline; flex-wrap:wrap; gap:5px 10px; margin-bottom:7px; }
 [data-orbit-fullscreen-details] .orbit-fullscreen-id { margin:0; font-size:24px; font-weight:600; line-height:1; letter-spacing:-.04em; }
 [data-orbit-fullscreen-details] .orbit-fullscreen-status { margin:0; font-size:10px; font-weight:400; line-height:1.3; }
 [data-orbit-fullscreen-details] .orbit-fullscreen-stats { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; margin:0; }
 [data-orbit-fullscreen-details] .orbit-fullscreen-stats>div { min-width:0; text-align:left; }
-[data-orbit-fullscreen-details] dt { margin:0 0 5px; font-size:9px; font-weight:400; line-height:1.3; opacity:.8; }
+[data-orbit-fullscreen-details] dt { margin:0 0 4px; font-size:9px; font-weight:400; line-height:1.3; opacity:.8; }
 [data-orbit-fullscreen-details] dd { margin:0; font-size:17px; font-weight:500; line-height:1.1; letter-spacing:-.025em; white-space:nowrap; }
 [data-orbit-fullscreen-details] dd small { margin-left:3px; font-size:10px; font-weight:400; }
 [data-orbit-fullscreen-details] .orbit-fullscreen-plan { display:flex; flex-direction:column; align-items:center; justify-content:flex-end; gap:5px; min-width:0; margin:0; }
-[data-orbit-fullscreen-details] .orbit-fullscreen-plan img { display:block; width:82px; height:82px; max-width:100%; object-fit:contain; }
+[data-orbit-fullscreen-details] .orbit-fullscreen-plan img { display:block; width:142px; height:142px; max-width:100%; object-fit:contain; }
 [data-orbit-fullscreen-details] .orbit-fullscreen-plan figcaption { font-size:8px; font-weight:400; opacity:.8; line-height:1.2; }
-[data-orbit-fullscreen-details] .orbit-fullscreen-right { display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:end; column-gap:12px; row-gap:9px; }
-[data-orbit-fullscreen-details] .orbit-fullscreen-meta { grid-column:1/-1; margin:0; font-size:10px; font-weight:400; line-height:1.5; }
+[data-orbit-fullscreen-details] .orbit-fullscreen-right { display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:end; column-gap:10px; row-gap:6px; }
+[data-orbit-fullscreen-details] .orbit-fullscreen-meta { grid-column:1/-1; margin:0; font-size:10px; font-weight:400; line-height:1.4; }
 [data-orbit-fullscreen-details] .orbit-fullscreen-price { margin:0; font-size:19px; font-weight:500; line-height:1.15; letter-spacing:-.035em; white-space:nowrap; }
 [data-orbit-fullscreen-details] .orbit-fullscreen-price small { margin-left:3px; font-size:11px; font-weight:400; }
 [data-orbit-fullscreen-details] .orbit-fullscreen-detail { display:inline-flex; align-items:center; justify-content:center; gap:10px; min-height:44px; padding:10px 16px; border:1px solid rgba(255,255,255,.85); border-radius:999px; background:#fff; color:#242824; box-shadow:0 2px 8px rgba(0,0,0,.08); font-size:11px; font-weight:600; white-space:nowrap; pointer-events:auto; transition:background .18s,box-shadow .18s; }
 [data-orbit-fullscreen-details] .orbit-fullscreen-detail svg { width:15px; height:15px; flex:none; }
 [data-orbit-fullscreen-details] .orbit-fullscreen-detail:active:not(:disabled),[data-orbit-fullscreen-details] .orbit-fullscreen-close:active { background:#e9ede5; box-shadow:none; }
 [data-orbit-fullscreen-details] .orbit-fullscreen-empty { grid-column:1/-1; margin:0; padding:8px 0; text-align:center; font-size:12px; line-height:1.5; }
-[data-orbit-fullscreen-details][data-compact="true"] .orbit-fullscreen-bar { grid-template-columns:minmax(0,1fr) 74px minmax(0,1fr); padding:28px 18px 12px; gap:12px; }
+[data-orbit-fullscreen-details][data-compact="true"] .orbit-fullscreen-bar { grid-template-columns:minmax(0,1fr) 120px minmax(0,1fr); padding:24px 16px 10px; gap:10px; }
 [data-orbit-fullscreen-details][data-compact="true"] .orbit-fullscreen-stats { gap:6px; }
-[data-orbit-fullscreen-details][data-compact="true"] .orbit-fullscreen-plan img { width:68px; height:68px; }
+[data-orbit-fullscreen-details][data-compact="true"] .orbit-fullscreen-plan img { width:116px; height:116px; }
 [data-orbit-fullscreen-details][data-compact="true"] .orbit-fullscreen-right { column-gap:8px; }
 [data-orbit-fullscreen-details][data-compact="true"] .orbit-fullscreen-id { font-size:21px; }
 [data-orbit-fullscreen-details][data-compact="true"] .orbit-fullscreen-price { font-size:16px; }
 [data-orbit-fullscreen-details][data-compact="true"] .orbit-fullscreen-detail { padding:9px 12px; }
-@media (prefers-reduced-motion:reduce) { [data-orbit-fullscreen-details] .orbit-fullscreen-detail { transition:none; } }
+@media (prefers-reduced-motion:reduce) { [data-orbit-fullscreen-details] .orbit-fullscreen-detail,[data-orbit-fullscreen-details] .orbit-fullscreen-bar { transition:none; } }
 `
 
-function OrbitFullscreenDetails({ apartment, assetBase, language, onOpenDetails, moving, onPrevious, onNext, onClose, checkpoint, count, emptyMessage }: OrbitFullscreenDetailsProps) {
+function OrbitFullscreenDetails({ apartment: currentApartment, assetBase, language, onOpenDetails, moving, onPrevious, onNext, onClose, checkpoint, count, emptyMessage }: OrbitFullscreenDetailsProps) {
+    // Keep the departing card image/data intact for the fade, without keeping
+    // the parent's actual hover or selection alive during camera travel.
+    const lastApartment = React.useRef<OrbitApartmentRecord | null>(currentApartment)
+    if (currentApartment || !moving) lastApartment.current = currentApartment
+    const apartment = currentApartment || (moving ? lastApartment.current : null)
     const hu = language !== "en"
     const rootRef = React.useRef<HTMLDivElement>(null)
     const [compact, setCompact] = React.useState(false)
@@ -294,7 +301,7 @@ function OrbitFullscreenDetails({ apartment, assetBase, language, onOpenDetails,
         {logo && <span className="orbit-fullscreen-brand" role="img" aria-label="Admiral Park" style={{ "--orbit-fullscreen-logo": `url("${logo.replace(/["\\]/g, "\\$&")}")` } as React.CSSProperties} />}
         <button type="button" data-orbit-ignore="" data-orbit-fullscreen-close="" className="orbit-fullscreen-close" aria-label={hu ? "Teljes képernyő bezárása" : "Close fullscreen"} onClick={onClose}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true"><path d="m5 5 14 14M19 5 5 19" /></svg></button>
         <div className="orbit-fullscreen-nav" data-orbit-ignore=""><button type="button" data-orbit-fullscreen-step="previous" disabled={moving} aria-label={hu ? "Előző nézet" : "Previous view"} onClick={onPrevious}>←</button><button type="button" data-orbit-fullscreen-step="next" disabled={moving} aria-label={hu ? "Következő nézet" : "Next view"} onClick={onNext}>→</button></div>
-        <div className="orbit-fullscreen-bar" data-orbit-ignore="" aria-live="polite">
+        <div className="orbit-fullscreen-bar" data-orbit-ignore="" data-moving={moving ? "true" : "false"} aria-hidden={moving} {...(moving ? { inert: "" as any } : {})} aria-live="polite">
             {apartment ? <>
                 <div className="orbit-fullscreen-left"><div className="orbit-fullscreen-identity"><p className="orbit-fullscreen-id" data-orbit-fullscreen-field="number">{apartment.id}</p><p className="orbit-fullscreen-status" data-status={state} data-orbit-fullscreen-field="status">{status}</p></div><dl className="orbit-fullscreen-stats"><div data-orbit-fullscreen-field="area"><dt>{hu ? "Lakótér" : "Interior"}</dt><dd>{area(apartment.areaInterior)}</dd></div><div data-orbit-fullscreen-field="terrace"><dt>{hu ? "Terasz" : "Terrace"}</dt><dd>{area(apartment.areaTerrace)}</dd></div><div data-orbit-fullscreen-field="garden"><dt>{hu ? "Kert" : "Garden"}</dt><dd>{area(apartment.areaGarden)}</dd></div></dl></div>
                 <figure className="orbit-fullscreen-plan" data-orbit-fullscreen-field="floorplan">{floorplan && <img src={floorplan} alt={`${apartment.id} · ${hu ? "alaprajz" : "floorplan"}`} decoding="async" draggable={false} />}<figcaption>{hu ? "Alaprajz · illusztráció" : "Illustrative floorplan"}</figcaption></figure>

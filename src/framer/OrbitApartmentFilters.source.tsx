@@ -7,17 +7,20 @@ interface OrbitFilterBarProps {
     matchCount: number
     total: number
     onChange: (filters: OrbitApartmentFilters) => void
-    presentation?: "compact" | "floating"
+    presentation?: "compact" | "floating" | "overlay"
 }
 
 const orbitApartmentFilterStyles = `
-[data-orbit-filters] { position: relative; width: 100%; min-width: 0; box-sizing: border-box; color: #26382d; font-family: inherit; isolation: isolate; container-type: inline-size; container-name: orbit-filters; }
+[data-orbit-filters] { position: relative; width: 100%; min-width: 0; box-sizing: border-box; color: #26382d; font-family: inherit; isolation: isolate; container-type: inline-size; container-name: orbit-filters; opacity: 1; transition: opacity 240ms ease; }
+[data-orbit-filters][data-active="false"] { opacity: 0; pointer-events: none; }
+[data-orbit-filters][data-active="false"] * { pointer-events: none !important; }
+[data-orbit-filters][data-active="false"] button:disabled { opacity: 1; }
 [data-orbit-filters] *, [data-orbit-filters] *::before, [data-orbit-filters] *::after { box-sizing: border-box; }
 [data-orbit-filters] [hidden] { display: none !important; }
 [data-orbit-filters] button { display: inline-flex; align-items: center; justify-content: center; min-width: 0; height: 30px; margin: 0; padding: 0; border: 0; border-radius: 8px; color: inherit; background: transparent; font: inherit; cursor: pointer; -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
 [data-orbit-filters] button:disabled { opacity: .4; cursor: default; }
 [data-orbit-filters] :is(button,input):focus-visible { outline: 2px solid #42634c; outline-offset: 2px; }
-[data-orbit-filters] [data-orbit-filter-row] { display: flex; align-items: center; gap: 3px; width: 100%; min-width: 0; height: 32px; padding: 0; border-top: 1px solid rgba(48,67,54,.12); border-bottom: 1px solid rgba(48,67,54,.12); }
+[data-orbit-filters] [data-orbit-filter-row] { display: flex; align-items: center; gap: 3px; width: 100%; min-width: 0; height: 30px; padding: 0; border-top: 1px solid rgba(48,67,54,.12); border-bottom: 1px solid rgba(48,67,54,.12); }
 [data-orbit-filters] .orbit-filter-statuses { display: flex; align-items: center; flex: 1 1 auto; gap: 2px; min-width: 0; }
 [data-orbit-filters] [data-orbit-filter-status] { flex: 1 1 auto; gap: 4px; height: 26px; padding: 0 5px; border: 1px solid transparent; border-radius: 6px; color: #677269; font-size: 10px; font-weight: 500; line-height: 1; letter-spacing: -.15px; white-space: nowrap; }
 [data-orbit-filters] [data-orbit-filter-status] .orbit-filter-status-label { overflow: hidden; min-width: 0; text-overflow: ellipsis; }
@@ -52,9 +55,17 @@ const orbitApartmentFilterStyles = `
 [data-orbit-filters][data-presentation="floating"] [data-orbit-filter-status] { height: 32px; padding: 0 9px; font-size: 12px; }
 [data-orbit-filters][data-presentation="floating"] [data-orbit-price-toggle] { height: 32px; padding: 0 9px; font-size: 12px; }
 [data-orbit-filters][data-presentation="floating"] [data-orbit-filter-count] { min-width: 36px; font-size: 10px; }
+[data-orbit-filters][data-presentation="overlay"] { color: #fff; }
+[data-orbit-filters][data-presentation="overlay"] [data-orbit-filter-row] { height: 30px; border: 0; }
+[data-orbit-filters][data-presentation="overlay"] :is([data-orbit-filter-status],[data-orbit-price-toggle]) { height: 28px; color: rgba(255,255,255,.85); font-size: 11px; }
+[data-orbit-filters][data-presentation="overlay"] [data-orbit-filter-status][aria-pressed="true"], [data-orbit-filters][data-presentation="overlay"] [data-orbit-price-toggle]:is([data-filtered="true"],[aria-expanded="true"]) { color: #fff; border-color: rgba(255,255,255,.45); background: rgba(255,255,255,.13); }
+[data-orbit-filters][data-presentation="overlay"] :is([data-orbit-filter-count],[data-orbit-filter-reset]) { color: rgba(255,255,255,.78); }
+[data-orbit-filters][data-presentation="overlay"] button:not(:disabled):hover { color: #fff; background: rgba(255,255,255,.18); }
+[data-orbit-filters][data-presentation="overlay"] :is(button,input):focus-visible { outline-color: #fff; }
+[data-orbit-filters][data-presentation="overlay"] [data-orbit-price-popover] { color: #26382d; }
 @container orbit-filters (max-width: 330px) { [data-orbit-filters] [data-orbit-filter-count] { display: none; } }
 @media (hover:hover) { [data-orbit-filters] button:not(:disabled):hover { background: #edf1e9; } [data-orbit-filters] [aria-pressed="true"]:hover { background: #dce6da; } }
-@media (prefers-reduced-motion:reduce) { [data-orbit-filters] *, [data-orbit-filters] *::before, [data-orbit-filters] *::after { animation: none !important; transition: none !important; } }
+@media (prefers-reduced-motion:reduce) { [data-orbit-filters], [data-orbit-filters] *, [data-orbit-filters] *::before, [data-orbit-filters] *::after { animation: none !important; transition: none !important; } }
 `
 
 function orbitPricePointerValue(clientX: number, rect: { left: number; width: number }, logicalWidth: number, minimum: number, maximum: number, step: number) {
@@ -199,19 +210,19 @@ function OrbitFilterBar({ active, language, filters, bounds, matchCount, total, 
     ]
     const count = Math.max(0, Math.min(total, matchCount))
     const sliderPercent = (value: number) => hasBounds ? (value - minimum) / (maximum - minimum) * 100 : 0
-    return <div ref={root} data-orbit-filters="" data-orbit-ignore="" data-presentation={presentation} data-filtered={hasFilters ? "true" : "false"}>
+    return <div ref={root} data-orbit-filters="" data-orbit-ignore="" data-active={String(active)} aria-hidden={!active} {...(!active ? { inert: "" as any } : {})} data-presentation={presentation} data-filtered={hasFilters ? "true" : "false"}>
         <style>{orbitApartmentFilterStyles}</style>
         <div data-orbit-filter-row="" role="group" aria-label={hu ? "Lakások szűrése" : "Filter apartments"}>
             <div className="orbit-filter-statuses">
-                {statusOptions.map(option => <button key={option.id} type="button" data-orbit-filter-status={option.id} aria-label={option.accessible} title={option.accessible} aria-pressed={filters.statuses.includes(option.id)} onClick={() => onChange({ ...filters, statuses: filters.statuses.includes(option.id) ? filters.statuses.filter(status => status !== option.id) : [...filters.statuses, option.id] })}>
+                {statusOptions.map(option => <button key={option.id} type="button" disabled={!active} data-orbit-filter-status={option.id} aria-label={option.accessible} title={option.accessible} aria-pressed={filters.statuses.includes(option.id)} onClick={() => onChange({ ...filters, statuses: filters.statuses.includes(option.id) ? filters.statuses.filter(status => status !== option.id) : [...filters.statuses, option.id] })}>
                     <span className="orbit-filter-dot" aria-hidden="true" /><span className="orbit-filter-status-label">{option.label}</span>
                 </button>)}
             </div>
-            <button ref={priceToggle} type="button" data-orbit-price-toggle="" data-filtered={hasPrice ? "true" : "false"} aria-label={hu ? "Ártartomány beállítása" : "Set price range"} title={hasBounds ? (hu ? "Ártartomány" : "Price range") : (hu ? "Az árak még nem érhetők el" : "Prices are not available yet")} aria-expanded={priceOpen} aria-controls={panelId} disabled={!hasBounds} onClick={() => setPriceOpen(open => !open)}>
+            <button ref={priceToggle} type="button" data-orbit-price-toggle="" data-filtered={hasPrice ? "true" : "false"} aria-label={hu ? "Ártartomány beállítása" : "Set price range"} title={hasBounds ? (hu ? "Ártartomány" : "Price range") : (hu ? "Az árak még nem érhetők el" : "Prices are not available yet")} aria-expanded={priceOpen} aria-controls={panelId} disabled={!active || !hasBounds} onClick={() => setPriceOpen(open => !open)}>
                 <span>{hu ? "Ár" : "Price"}</span><svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d={priceOpen ? "M4 10 8 6l4 4" : "m4 6 4 4 4-4"} stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" /></svg>
             </button>
             <span data-orbit-filter-count="" role="status" aria-live="polite" aria-atomic="true" aria-label={hu ? `${count} találat ${total} lakásból` : `${count} matches out of ${total} apartments`}>{count}/{total}</span>
-            {hasFilters && <button type="button" data-orbit-filter-reset="" aria-label={hu ? "Minden szűrő törlése" : "Reset all filters"} title={hu ? "Szűrők törlése" : "Reset filters"} onClick={() => onChange({ statuses: [], priceMin: null, priceMax: null })}>
+            {hasFilters && <button type="button" disabled={!active} data-orbit-filter-reset="" aria-label={hu ? "Minden szűrő törlése" : "Reset all filters"} title={hu ? "Szűrők törlése" : "Reset filters"} onClick={() => onChange({ statuses: [], priceMin: null, priceMax: null })}>
                 <svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="m4 4 8 8M12 4l-8 8" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" /></svg>
             </button>}
         </div>
@@ -219,8 +230,8 @@ function OrbitFilterBar({ active, language, filters, bounds, matchCount, total, 
             <div className="orbit-filter-price-values"><span>{formatPrice(low)}</span><span className="orbit-filter-price-caption">{hu ? "Ártartomány" : "Price range"}</span><span>{formatPrice(high)}</span></div>
             <div ref={priceStage} data-orbit-price-stage="" className="orbit-filter-price-stage">
                 <span className="orbit-filter-price-track" aria-hidden="true" /><span className="orbit-filter-price-selection" aria-hidden="true" style={{ left: `calc(12px + (100% - 24px) * ${sliderPercent(low) / 100})`, right: `calc(12px + (100% - 24px) * ${(100 - sliderPercent(high)) / 100})` }} />
-                <input ref={minimumInput} type="range" data-orbit-price-min="" min={minimum} max={maximum} step={step} value={low} aria-label={hu ? "Minimum ár forintban" : "Minimum price in HUF"} aria-valuetext={formatPrice(low)} disabled={!hasBounds} onChange={event => changePrice("minimum", event.currentTarget.valueAsNumber)} style={{ zIndex: low >= maximum ? 2 : 1 }} />
-                <input ref={maximumInput} type="range" data-orbit-price-max="" min={minimum} max={maximum} step={step} value={high} aria-label={hu ? "Maximum ár forintban" : "Maximum price in HUF"} aria-valuetext={formatPrice(high)} disabled={!hasBounds} onChange={event => changePrice("maximum", event.currentTarget.valueAsNumber)} />
+                <input ref={minimumInput} type="range" data-orbit-price-min="" min={minimum} max={maximum} step={step} value={low} aria-label={hu ? "Minimum ár forintban" : "Minimum price in HUF"} aria-valuetext={formatPrice(low)} disabled={!active || !hasBounds} onChange={event => changePrice("minimum", event.currentTarget.valueAsNumber)} style={{ zIndex: low >= maximum ? 2 : 1 }} />
+                <input ref={maximumInput} type="range" data-orbit-price-max="" min={minimum} max={maximum} step={step} value={high} aria-label={hu ? "Maximum ár forintban" : "Maximum price in HUF"} aria-valuetext={formatPrice(high)} disabled={!active || !hasBounds} onChange={event => changePrice("maximum", event.currentTarget.valueAsNumber)} />
             </div>
         </div>
     </div>

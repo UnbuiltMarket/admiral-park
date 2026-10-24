@@ -840,10 +840,11 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
     const detailsData = selectedApartmentDetails ? { ...selectedApartmentDetails, floorplanUrl: stripFloorplanUrl || undefined } : null
     const detailsVisible = !useStudio && (detailsMode === "preview" ? (orbitStatic || (orbitVisible && orbitInfo.state === "checkpoint")) :
         detailsMode === "hover" && orbitVisible && orbitInfo.state === "checkpoint" && orbitInfo.checkpoint >= 0 && detailsData !== null)
-    const floatingFilters = !useStudio && !fullscreen.active && detailsMode !== "off" && (orbitVisible || orbitStatic)
-    const filterBarBottom = detailsBottom + Math.max(140, detailsHeight) + 16
-    const controlsBottom = floatingFilters ? `calc(${filterBarBottom + 58}px + env(safe-area-inset-bottom, 0px))` : detailsVisible ? `calc(${detailsBottom + detailsHeight + 20}px + env(safe-area-inset-bottom, 0px))` : "18px"
-    const diagnosticBottom = detailsVisible ? detailsBottom + detailsHeight + (showControls ? 112 : 20) : 94
+    const stripFiltersEnabled = !useStudio && !fullscreen.active && detailsMode !== "off"
+    const orbitPanelVisible = orbitStatic || orbitVisible && orbitInfo.state === "checkpoint"
+    const classicOrbitPanel = stripFiltersEnabled && (orbitVisible || orbitStatic)
+    const controlsBottom = classicOrbitPanel || detailsVisible ? `calc(${detailsBottom + detailsHeight + 20}px + env(safe-area-inset-bottom, 0px))` : "18px"
+    const diagnosticBottom = classicOrbitPanel || detailsVisible ? detailsBottom + detailsHeight + (showControls ? 112 : 20) : 94
     const studioControls = useStudio && (stage === "orbit" || stage === "handoff")
     const imageClip = "inset(var(--admiral-image-y, 0px) var(--admiral-image-right, 0px) var(--admiral-image-cut, 0px) var(--admiral-image-x, 0px))"
     return (
@@ -876,9 +877,6 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.65" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false"><path d="M8 4H4v4m12-4h4v4M4 16v4h4m12-4v4h-4" /></svg>
             </button>}
             {maskFailed && orbitVisible && !fullscreen.active && <button type="button" data-orbit-mask-retry="" data-orbit-ignore="" style={{ ...homepageButton, position: "absolute", left: "calc(var(--admiral-image-x, 0px) + 12px)", top: "calc(var(--admiral-image-y, 0px) + 12px)", zIndex: 5 }} onClick={() => maskPickerRef.current?.retry()}>{detailsLanguage === "hu" ? "Lakáskijelölés újratöltése" : "Retry apartment picking"}</button>}
-            {floatingFilters && <div data-orbit-desktop-filters="" style={{ position: "absolute", left: "50%", bottom: `calc(${filterBarBottom}px + env(safe-area-inset-bottom, 0px))`, transform: "translateX(-50%)", width: "min(560px,calc(100% - 32px))", zIndex: 4 }}>
-                <OrbitFilterBar active={orbitVisible || orbitStatic} language={detailsLanguage} filters={filterResult.filters} bounds={filterBounds} matchCount={filterResult.matchingIds.length} total={apartmentData.dataset?.apartments.length || 0} onChange={setApartmentFilters} presentation="floating" />
-            </div>}
             {orbitStatic && <span style={{ position: "absolute", inset: 0, pointerEvents: "none" }} />}
             <div aria-hidden="true" style={{ position: "absolute", top: "var(--admiral-image-y, 0px)", left: "var(--admiral-image-x, 0px)", width: "var(--admiral-image-width, 100%)", height: "var(--admiral-image-height, 100%)", background: "#000", opacity: darken, pointerEvents: "none", zIndex: 2 }} />
             {!staticRenderer && showControls && !fullscreen.active && <div data-homepage-controls="" data-orbit-ignore="" style={{ position: "absolute", bottom: studioControls ? "auto" : controlsBottom, top: studioControls ? "var(--admiral-controls-top)" : "auto", left: studioControls ? "var(--admiral-controls-left)" : "50%", transform: "translateX(-50%)", display: "flex", alignItems: "center", justifyContent: "center", flexWrap: "wrap", gap: 7, width: "max-content", maxWidth: studioControls ? "var(--admiral-controls-width)" : "94%", zIndex: 3 }}>
@@ -909,7 +907,8 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
                 <button type="button" style={homepageButton} onClick={() => { void (rootRef.current as (HTMLElement & { retryOrbit?: () => Promise<void> }) | null)?.retryOrbit?.() }}>Retry orbit</button>
             </div>}
             {!useStudio && !fullscreen.active && detailsMode !== "off" && <ApartmentDetailsStrip apartment={detailsData} language={detailsLanguage} visible={detailsVisible} preview={false}
-                bottom={detailsBottom} inset={detailsInset} onHeightChange={setDetailsHeight} onOpen={jsonDetails && selectedApartment ? () => openApartmentDetails() : undefined} />}
+                bottom={detailsBottom} inset={detailsInset} onHeightChange={setDetailsHeight} onOpen={jsonDetails ? () => openApartmentDetails() : undefined}
+                filtersVisible={orbitPanelVisible} filters={stripFiltersEnabled ? <div data-orbit-desktop-filters=""><OrbitFilterBar active={orbitPanelVisible} language={detailsLanguage} filters={filterResult.filters} bounds={filterBounds} matchCount={filterResult.matchingIds.length} total={apartmentData.dataset?.apartments.length || 0} onChange={setApartmentFilters} presentation="overlay" /></div> : undefined} />}
             {!staticRenderer && <AdmiralApartmentDetailCard openId={detailApartmentId} dataUrl={detailDataUrl} assetBase={apartmentAssetBase} inquiryUrl={inquiryUrl} pageUrl={detailPageUrl}
                 onOpenChange={reportDetailOpen} onClosed={closeApartmentDetails} />}
             {!staticRenderer && !useStudio && jsonDetails && orbitVisible && apartmentData.status === "error" && <div data-orbit-ignore="" role="status" style={{ position: "absolute", left: "4%", bottom: 24, zIndex: 4 }}>
