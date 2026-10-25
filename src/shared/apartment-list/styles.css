@@ -44,11 +44,11 @@ input:focus-visible, select:focus-visible { outline-offset: 2px; }
 .mobile-sort-slot:empty, .unit-identification .unit-status, .unit-mobile-meta { display: none; }
 #desktop-sort-slot:empty { display: none; }
 
-/* A page header surface reaches the component edges; controls align with the list. */
+/* The header spans the component; its centered controls are capped at 900px. */
 .filter-header { padding-top: var(--list-top-space, 120px); border: 0; border-bottom: 1px solid color-mix(in srgb, var(--line) 65%, var(--filter-background)); border-radius: 0; background: var(--filter-background); }
 .filter-inner.page-width { padding-block: 30px 18px; }
 .list-content.page-width { padding-top: 0; }
-.filters { margin: 0; }
+.filters { max-width: 900px; margin: 0 auto; }
 .primary-filters { display: grid; grid-template-columns: 1.1fr repeat(4, minmax(0, 1fr)); gap: 28px; }
 .field { min-width: 0; }
 .field > label, .range-field legend { display: block; color: var(--muted); font-size: 12px; font-weight: 400; letter-spacing: 0; line-height: 1.4; }
