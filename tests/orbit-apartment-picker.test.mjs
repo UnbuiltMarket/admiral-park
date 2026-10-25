@@ -27,9 +27,9 @@ function cssContext(initial='rgb(46, 119, 255)',initialPixel=[46,119,255,255]){
  return{ownerDocument,probes,surfaces,fills,setResolved(value,nextPixel=pixel){resolved=value;pixel=nextPixel;},stats:()=>({reads,removed})};
 }
 
-function harness({fetchFailure=false,deferredDecode=false,decodeFailure=false,highlightColor,preserveModalHover=false,colorContext}={}){
+function harness({fetchFailure=false,deferredDecode=false,decodeFailure=false,highlightColor,highlightOpacity,preserveModalHover=false,colorContext,highlightColors={}}={}){
  const listeners=new Map(),animation=new Map(),draws=[],hovered=[],picked=[],created=[],requests=[],watchdogs=new Map();
- let rafId=0,highlights=[],allowed=['A001','A002'],fetches=0,inFlight=0,maxFetches=0,closed=0,decodes=0,decodeResolve,mapper=(x,y)=>({x,y});
+ let rafId=0,highlights=[],allowed=['A001','A002'],filterActive=false,fetches=0,inFlight=0,maxFetches=0,closed=0,decodes=0,decodeResolve,mapper=(x,y)=>({x,y});
  class Element{
   constructor({control=false,bounds={left:0,top:0,right:100,bottom:100,width:100,height:100}}={}){this.control=control;this.bounds=bounds;this.dataset={};this.style={};this.parentElement=null;}
   matches(selector){return this.fullscreenSurface&&selector.includes(":not([data-orbit-fullscreen-surface])")?false:this.control;}
@@ -60,11 +60,12 @@ function harness({fetchFailure=false,deferredDecode=false,decodeFailure=false,hi
  vm.runInNewContext(script,context);
  const engine=context.exports.createOrbitApartmentPicker({root,canvas,urls:Array.from({length:8},(_,index)=>'mask'+index),palette,
   getView:()=>view,inputPoint:(x,y)=>mapper(x,y),getAllowedIds:()=>allowed,getHighlightIds:()=>highlights,
-  highlightColor,onHover(id){hovered.push(id);if(preserveModalHover&&view.suspended&&id===null)return;highlights=id?[id]:[];},onPick(id){picked.push(id);}});
+  getHighlightColor:id=>highlightColors[id],isFilterActive:()=>filterActive,
+  highlightColor,highlightOpacity,onHover(id){hovered.push(id);if(preserveModalHover&&view.suspended&&id===null)return;if(!filterActive)highlights=id?[id]:[];},onPick(id){picked.push(id);}});
  function emit(type,extra={}){const event={pointerId:1,pointerType:'mouse',isPrimary:true,button:0,buttons:0,clientX:20,clientY:40,target:root,relatedTarget:root,defaultPrevented:false,...extra};for(const listener of listeners.get(type)??[])listener(event);return event;}
  function flush(){const tasks=[...animation.values()];animation.clear();tasks.forEach(fn=>fn());}
  return{api:context.exports,engine,view,root,canvas,draws,hovered,picked,created,requests,emit,flush,listeners,Element,
-  setAllowed(value){allowed=value;},setHighlights(value){highlights=value;},setMapper(value){mapper=value;},resolveDecode(){decodeResolve?.();},
+  setAllowed(value){allowed=value;},setHighlights(value){highlights=value;},setFilterActive(value){filterActive=value;},setHighlightColor(id,color){highlightColors[id]=color;},setMapper(value){mapper=value;},resolveDecode(){decodeResolve?.();},
   expireWatchdogs(){for(const[timer,fn]of watchdogs){clearTimeout(timer);watchdogs.delete(timer);fn();}},
   stats:()=>({fetches,inFlight,maxFetches,closed,decodes}),context};
 }
@@ -114,6 +115,61 @@ test('numeric CSS highlight colour reaches the rendered overlay and unchanged di
   let writes=0;app.root.dataset=new Proxy(app.root.dataset,{set(target,key,value){writes++;target[key]=value;return true;}});
   for(let step=0;step<10;step++)app.engine.refresh();
   assert.equal(writes,0,'Unchanged mask state must not retrigger root mutation observers');
+ }finally{app.engine.destroy();}
+});
+
+test('availability tints render per apartment and changing status repaints the same downloaded mask',async()=>{
+ const app=harness({highlightColor:'#123456',highlightColors:{A001:'#46A66A',A002:'#DA5961'}});
+ const tint=x=>{const layer=app.draws.filter(draw=>draw.surface===app.canvas).at(-1).image;return[...layer.rgba.slice((4*10+x)*4,(4*10+x)*4+4)];};
+ try{
+  await until(()=>app.engine.snapshot().state==='ready'&&app.engine.snapshot().downloaded===8);
+  app.setHighlights(['A001','A002']);app.engine.refresh();
+  assert.deepEqual(tint(2),[70,166,106,69]);assert.deepEqual(tint(7),[218,89,97,69]);
+  const before=app.stats();app.setHighlightColor('A002','#E2B849');app.engine.refresh();
+  assert.deepEqual(tint(7),[226,184,73,69]);assert.deepEqual(app.stats(),before,'Status changes cannot refetch or redecode mask files');
+  app.setHighlightColor('A002',undefined);app.engine.refresh();assert.deepEqual(tint(7),[18,52,86,69],'Unknown availability keeps the existing configured fallback');
+ }finally{app.engine.destroy();}
+});
+
+test('availability colour tokens are cached across pointer updates and can resolve again without redecoding',async()=>{
+ const css=cssContext('rgb(70, 166, 106)'),app=harness({colorContext:css,highlightColors:{A001:'var(--available, #46A66A)'}});
+ const tint=()=>{const layer=app.draws.filter(draw=>draw.surface===app.canvas).at(-1).image;return[...layer.rgba.slice((4*10+2)*4,(4*10+2)*4+3)];};
+ try{
+  await until(()=>app.engine.snapshot().state==='ready');app.emit('pointermove');app.flush();assert.deepEqual(tint(),[70,166,106]);
+  const reads=css.stats().reads,before=app.stats();for(let step=0;step<10;step++){app.emit('pointermove');app.flush();app.engine.refresh();}
+  assert.equal(css.stats().reads,reads,'A shared status token must not add DOM reads to pointer frames');
+  css.setResolved('rgb(226, 184, 73)');app.engine.setHighlightStyle();assert.deepEqual(tint(),[226,184,73]);assert.deepEqual(app.stats(),before);
+ }finally{app.engine.destroy();}
+});
+
+test('active filters add thirty opacity points only to the actual eligible desktop hover and preserve other fills',async()=>{
+ const app=harness({highlightColors:{A001:'#46A66A',A002:'#DA5961'}});
+ const tint=x=>{const layer=app.draws.filter(draw=>draw.surface===app.canvas).at(-1).image;return[...layer.rgba.slice((4*10+x)*4,(4*10+x)*4+4)];};
+ try{
+  await until(()=>app.engine.snapshot().state==='ready');
+  app.setFilterActive(true);app.setHighlights(['A001','A002']);app.engine.refresh();assert.equal(tint(2)[3],69);assert.equal(tint(7)[3],69);
+  const before=app.stats();app.emit('pointermove');app.flush();
+  assert.deepEqual(tint(2),[70,166,106,145]);assert.equal(tint(7)[3],69);
+  const count=app.created.length;app.emit('pointermove');app.flush();assert.equal(app.created.length,count,'The same hovered apartment must reuse its tint texture');
+  app.emit('pointermove',{clientX:70});app.flush();assert.equal(tint(2)[3],69);assert.equal(tint(7)[3],145);
+  app.emit('pointermove',{clientX:0,clientY:0});app.flush();assert.equal(tint(2)[3],69);assert.equal(tint(7)[3],69);assert.equal(app.hovered.at(-1),null);
+  app.setAllowed(['A002']);app.engine.refresh();app.emit('pointermove');app.flush();assert.equal(app.hovered.at(-1),null);assert.equal(tint(2)[3],0);assert.equal(tint(7)[3],69);
+  app.emit('pointerdown');app.emit('pointerup');assert.equal(app.picked.length,0,'An excluded apartment remains unclickable');
+  app.emit('pointermove',{clientX:70});app.flush();app.engine.setHighlightStyle('#123456',.85);assert.equal(tint(7)[3],255,'Hover opacity clamps at one');
+  assert.deepEqual(app.stats(),before,'Pointer tint updates must not allocate another decoded mask or download');
+ }finally{app.engine.destroy();}
+});
+
+test('unfiltered hover and persistent mobile tap use base opacity while pointer departure restores filtered base fills',async()=>{
+ const app=harness({highlightColors:{A001:'#46A66A',A002:'#E2B849'}});
+ const alpha=x=>{const layer=app.draws.filter(draw=>draw.surface===app.canvas).at(-1).image;return layer.rgba[(4*10+x)*4+3];};
+ try{
+  await until(()=>app.engine.snapshot().state==='ready');app.emit('pointermove');app.flush();assert.equal(alpha(2),69);
+  app.setFilterActive(true);app.setHighlights(['A001','A002']);app.engine.refresh();assert.equal(alpha(2),145);
+  app.emit('pointerout',{relatedTarget:null});assert.equal(app.hovered.at(-1),null);assert.equal(alpha(2),69);assert.equal(alpha(7),69);
+  app.view.mobile=true;app.emit('pointerdown',{pointerType:'touch'});app.emit('pointerup',{pointerType:'touch'});
+  assert.equal(app.hovered.at(-1),'A001');assert.equal(alpha(2),69);assert.equal(alpha(7),69);
+  app.emit('pointermove',{pointerType:'touch',clientX:0});app.flush();assert.equal(app.hovered.at(-1),'A001','Moving a finger does not clear the tapped selection');
  }finally{app.engine.destroy();}
 });
 

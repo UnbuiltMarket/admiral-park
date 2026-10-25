@@ -11,6 +11,10 @@ export interface OrbitApartmentPickerOptions {
     inputPoint: (clientX: number, clientY: number) => { x: number; y: number };
     onHover: (id: string | null) => void; onPick: (id: string) => void;
     getAllowedIds: () => readonly string[]; getHighlightIds: () => readonly string[];
+    /** Availability colour for this apartment; absent values retain the configured fallback tint. */
+    getHighlightColor?: (id: string) => string | undefined;
+    /** Filter fills receive extra emphasis only under an actual desktop pointer. */
+    isFilterActive?: () => boolean;
     highlightColor?: string; highlightOpacity?: number;
 }
 export interface OrbitMaskIndex { width: number; height: number; pixels: Uint8Array }
@@ -121,9 +125,10 @@ export function createOrbitApartmentPicker(options: OrbitApartmentPickerOptions)
     const indices = new Map(ids.map((id, index) => [id, index + 1]));
     let highlightColor = options.highlightColor, highlightRGB = orbitMaskHighlightRGB(highlightColor, root);
     let highlightOpacity = Math.max(0, Math.min(1, Number.isFinite(options.highlightOpacity) ? options.highlightOpacity! : .27));
+    const colorCache = new Map<string, [number, number, number]>();
     let styleBounds: string | null = null;
     const controls = "nav,header,a,button,input,textarea,select,option,[contenteditable]:not([contenteditable='false']),[role='button'],[role='link'],[role='dialog']:not([data-orbit-fullscreen-surface]),[data-orbit-ignore]";
-    let destroyed = false, begun = false, decodingIndex = -1, frame = 0, hovered: string | null = null, currentCheckpoint = -1;
+    let destroyed = false, begun = false, decodingIndex = -1, frame = 0, hovered: string | null = null, pointerHovered: string | null = null, currentCheckpoint = -1;
     let texture: HTMLCanvasElement | null = null, textureKey = "", paintKey = "";
     let latestPoint: { clientX: number; clientY: number; target: EventTarget | null } | null = null;
     let down: { id: number; x: number; y: number; checkpoint: number; mobile: boolean; dragged: boolean } | null = null;
@@ -140,7 +145,8 @@ export function createOrbitApartmentPicker(options: OrbitApartmentPickerOptions)
             view.width > 0 && view.height > 0 && view.viewport.width > 0 && view.viewport.height > 0;
     }
 
-    function setHover(id: string | null, force = false) {
+    function setHover(id: string | null, force = false, pointer = false) {
+        pointerHovered = pointer ? id : null;
         if (hovered === id) { if (force) options.onHover(id); return; }
         hovered = id; setDiagnostic("orbitMaskHovered", id ?? "");
         options.onHover(id);
@@ -153,6 +159,9 @@ export function createOrbitApartmentPicker(options: OrbitApartmentPickerOptions)
 
     function resolveHighlightStyle(color = highlightColor, opacity = highlightOpacity) {
         highlightColor = color;
+        // Resolve inherited status tokens again after explicit style or viewport
+        // changes, without probing the DOM on every pointer movement.
+        colorCache.clear();
         const rgb = orbitMaskHighlightRGB(color, root), alpha = Math.max(0, Math.min(1, Number.isFinite(opacity) ? opacity : .27));
         if (rgb.every((channel, index) => channel === highlightRGB[index]) && alpha === highlightOpacity) return false;
         highlightRGB = rgb; highlightOpacity = alpha; clearTexture(); paintKey = "";
@@ -160,7 +169,7 @@ export function createOrbitApartmentPicker(options: OrbitApartmentPickerOptions)
     }
 
     function setHighlightStyle(color = highlightColor, opacity = highlightOpacity) {
-        if (!destroyed && resolveHighlightStyle(color, opacity)) refresh();
+        if (!destroyed) { resolveHighlightStyle(color, opacity); refresh(); }
     }
 
     function updateDiagnostics(view: OrbitApartmentPickerView, highlighted: string[] = []) {
@@ -278,25 +287,48 @@ export function createOrbitApartmentPicker(options: OrbitApartmentPickerOptions)
         if (target >= 0 && blobs.has(target) && !masks.has(target) && !decoding.has(target) && !failures.has(target)) void decodeMask(target);
     }
 
-    function makeTexture(mask: OrbitMaskIndex, highlighted: string[]) {
-        const key = currentCheckpoint + ":" + highlighted.join(",");
+    function highlightStyles(highlighted: string[], view: OrbitApartmentPickerView) {
+        const boost = !view.mobile && options.isFilterActive?.() ? pointerHovered : null;
+        return highlighted.map(id => {
+            const color = options.getHighlightColor?.(id)?.trim();
+            let rgb = highlightRGB;
+            if (color) {
+                const cached = colorCache.get(color);
+                rgb = cached ?? orbitMaskHighlightRGB(color, root);
+                if (!cached) colorCache.set(color, rgb);
+            }
+            const opacity = Math.min(1, highlightOpacity + (id === boost ? .30 : 0));
+            return { index: indices.get(id)!, rgb, opacity };
+        });
+    }
+
+    function makeTexture(mask: OrbitMaskIndex, styles: ReturnType<typeof highlightStyles>, key: string) {
         if (key === textureKey && texture) return texture;
         clearTexture();
-        if (!highlighted.length) return null;
-        const wanted = new Set(highlighted.map(id => indices.get(id)).filter((id): id is number => id !== undefined));
+        if (!styles.length) return null;
+        // A tiny per-ID table resolves all strings once before the pixel loop.
+        // We still retain one overlay texture, rather than an image per unit.
+        const tint = new Uint8ClampedArray(255 * 4), borders = new Uint8Array(255), wanted = new Uint8Array(255);
+        for (const style of styles) {
+            const channel = style.index * 4;
+            wanted[style.index] = 1;
+            tint[channel] = style.rgb[0]; tint[channel + 1] = style.rgb[1]; tint[channel + 2] = style.rgb[2];
+            tint[channel + 3] = Math.round(255 * style.opacity);
+            borders[style.index] = Math.round(255 * Math.min(1, style.opacity + .5));
+        }
         const surface = document.createElement("canvas"); surface.width = mask.width; surface.height = mask.height;
         const drawing = surface.getContext("2d");
         if (!drawing) return null;
         const image = drawing.createImageData(mask.width, mask.height), data = image.data, pixels = mask.pixels;
         for (let offset = 0; offset < pixels.length; offset++) {
             const apartment = pixels[offset];
-            if (!apartment || !wanted.has(apartment)) continue;
+            if (!apartment || !wanted[apartment]) continue;
             const x = offset % mask.width, y = Math.floor(offset / mask.width);
             const border = x === 0 || y === 0 || x === mask.width - 1 || y === mask.height - 1 ||
                 pixels[offset - 1] !== apartment || pixels[offset + 1] !== apartment || pixels[offset - mask.width] !== apartment || pixels[offset + mask.width] !== apartment;
-            const channel = offset * 4;
-            data[channel] = highlightRGB[0]; data[channel + 1] = highlightRGB[1]; data[channel + 2] = highlightRGB[2];
-            data[channel + 3] = Math.round(255 * (border ? Math.min(1, highlightOpacity + .5) : highlightOpacity));
+            const channel = offset * 4, color = apartment * 4;
+            data[channel] = tint[color]; data[channel + 1] = tint[color + 1]; data[channel + 2] = tint[color + 2];
+            data[channel + 3] = border ? borders[apartment] : tint[color + 3];
         }
         drawing.putImageData(image, 0, 0); texture = surface; textureKey = key;
         return texture;
@@ -313,17 +345,19 @@ export function createOrbitApartmentPicker(options: OrbitApartmentPickerOptions)
         const mask = ready ? touchMask(checkpoint) : undefined;
         const allowed = new Set(options.getAllowedIds()), highlighted = mask ? [...new Set(options.getHighlightIds())].filter(id => allowed.has(id) && indices.has(id)).sort() : [];
         if (hovered && !allowed.has(hovered)) setHover(null);
+        const styles = highlightStyles(highlighted, view);
+        const textureSignature = checkpoint + ":" + styles.map(style => [style.index, ...style.rgb, style.opacity].join(",")).join(";");
         const logicalWidth = Number.isFinite(view.width) && view.width > 0 ? view.width : 1;
         const logicalHeight = Number.isFinite(view.height) && view.height > 0 ? view.height : 1;
         // A transparent full-window backing can otherwise allocate 32+ MB on
         // a 4K screen. Native masks have no additional detail above this budget.
         const dpr = Math.min(window.devicePixelRatio || 1, 2, Math.sqrt(1920 * 1010 / (logicalWidth * logicalHeight)));
         const width = Math.max(1, Math.floor(logicalWidth * dpr)), height = Math.max(1, Math.floor(logicalHeight * dpr));
-        const signature = [checkpoint, !!mask, width, height, ...Object.values(view.viewport), view.focalX, view.focalY, highlighted.join(",")].join("|");
+        const signature = [checkpoint, !!mask, width, height, ...Object.values(view.viewport), view.focalX, view.focalY, textureSignature].join("|");
         if (signature !== paintKey && context) {
             if (canvas.width !== width || canvas.height !== height) { canvas.width = width; canvas.height = height; }
             context.clearRect(0, 0, canvas.width, canvas.height);
-            const layer = mask ? makeTexture(mask, highlighted) : null;
+            const layer = mask ? makeTexture(mask, styles, textureSignature) : null;
             if (layer && mask) {
                 const rect = orbitMaskCoverRect(mask.width, mask.height, view.viewport, view.focalX, view.focalY);
                 context.save(); context.scale(width / view.width, height / view.height);
@@ -382,7 +416,7 @@ export function createOrbitApartmentPicker(options: OrbitApartmentPickerOptions)
         // Lifecycle clears can be intentionally ignored by the parent while a
         // detail card is open. Explicit background input still clears that
         // parent's restored highlight after the card has closed.
-        setHover(id, id === null); refresh();
+        setHover(id, id === null, true); refresh();
     }
 
     function onPointerMove(event: PointerEvent) {
@@ -405,7 +439,7 @@ export function createOrbitApartmentPicker(options: OrbitApartmentPickerOptions)
         if (!down || down.id !== event.pointerId) return;
         const press = down; down = null;
         if (press.dragged || Math.hypot(event.clientX - press.x, event.clientY - press.y) > 6 || options.getView().checkpoint !== press.checkpoint || event.defaultPrevented) return;
-        const id = hit(event.clientX, event.clientY, event.target); setHover(id, id === null); refresh();
+        const id = hit(event.clientX, event.clientY, event.target); setHover(id, id === null, !press.mobile); refresh();
         if (id && !press.mobile) options.onPick(id);
     }
 
@@ -443,7 +477,7 @@ export function createOrbitApartmentPicker(options: OrbitApartmentPickerOptions)
             window.removeEventListener("pointerup", onPointerUp, true); window.removeEventListener("pointercancel", onPointerCancel, true);
             window.removeEventListener("pointerout", onPointerOut, true); window.removeEventListener("resize", onResize);
             document.removeEventListener("visibilitychange", onVisibility);
-            down = latestPoint = null; clearTexture(); masks.clear(); blobs.clear(); failures.clear(); generations.clear(); reload.clear();
+            down = latestPoint = null; clearTexture(); colorCache.clear(); masks.clear(); blobs.clear(); failures.clear(); generations.clear(); reload.clear();
             context?.clearRect(0, 0, canvas.width, canvas.height); setHover(null);
             setDiagnostic("orbitMaskState", "off"); setDiagnostic("orbitMaskCached", "0"); setDiagnostic("orbitMaskDownloaded", "0");
             setDiagnostic("orbitMaskHighlights", "");

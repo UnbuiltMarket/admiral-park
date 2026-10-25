@@ -24,6 +24,7 @@ const notifyHomepage = () => homepageSubscribers.forEach(update => update())
 interface AdmiralHomepageTrialProps {
     useGitHubAssets?: boolean; heroBaseUrl?: string; connectionBaseUrl?: string; orbitBaseUrl?: string
     maskPicking?: boolean; maskBaseUrl?: string; maskHighlightColor?: string; maskHighlightOpacity?: number
+    maskAvailableColor?: string; maskNegotiationColor?: string; maskSoldColor?: string
     startView?: "opening" | "orbit"; editorView?: "opening" | "building" | "connection" | "orbit"; editorOrbitView?: string; orbitStartFrame?: number
     duration?: number; connectionDuration?: number; maxSpeed?: number; momentum?: number; triggerDistance?: number
     checkpointCount?: number; motionWidth?: number; orbitMobileWidth?: number; inspectionWidth?: number
@@ -386,6 +387,43 @@ export function OrbitView8(Component: ComponentType<any>): ComponentType<any> { 
 
 // Canonical apartment JSON adapter. Inlined into the standalone Framer component.
 type OrbitApartmentStatus = "available" | "under_negotiation" | "reserved" | "sold" | "unknown"
+
+// Shared facade and orbitdata availability language. Framer colour controls set
+// the custom properties on the viewer; the fallbacks also work in isolated UI.
+const ORBIT_AVAILABILITY_COLORS = { available: "#46A66A", under_negotiation: "#E2B849", reserved: "#E2B849", sold: "#DA5961", unknown: "#A8AFB4" } as const
+function orbitAvailabilityColor(status: string | undefined): string {
+    return status === "available" ? "var(--orbit-available-color,#46A66A)" : status === "sold" ? "var(--orbit-sold-color,#DA5961)" : status === "under_negotiation" || status === "reserved" ? "var(--orbit-negotiation-color,#E2B849)" : "#A8AFB4"
+}
+const orbitDataDividerStyles = `
+[data-orbitdata-divider] { position:absolute; z-index:0; top:var(--orbitdata-divider-y,0px); height:1px; background:rgba(255,255,255,.62); pointer-events:none !important; opacity:1; transition:opacity 240ms ease; }
+[data-orbitdata-divider="left"] { left:0; width:var(--orbitdata-divider-left,0px); }
+[data-orbitdata-divider="right"] { left:var(--orbitdata-divider-right,100%); right:0; }
+[data-orbitdata-divider][data-info-visible="false"] { opacity:0; }
+@media (prefers-reduced-motion:reduce) { [data-orbitdata-divider] { transition:none; } }
+`
+function useOrbitDataDividers(root: React.RefObject<HTMLElement | null>, selector: string, revision: string): void {
+    React.useEffect(() => {
+        const host = root.current, plan = host?.querySelector<HTMLElement>(selector)
+        if (!host || !plan) return
+        // offset geometry remains in layout coordinates when the phone's entire
+        // fullscreen surface is rotated. A screen-space rect would swap axes.
+        const measure = () => {
+            let node: HTMLElement | null = plan, left = 0, top = 0
+            while (node && node !== host) { left += node.offsetLeft; top += node.offsetTop; node = node.offsetParent as HTMLElement | null }
+            if (node !== host) return
+            host.style.setProperty("--orbitdata-divider-y", `${top + plan.offsetHeight / 2}px`)
+            host.style.setProperty("--orbitdata-divider-left", `${Math.max(0,left - 16)}px`)
+            host.style.setProperty("--orbitdata-divider-right", `${Math.min(host.clientWidth,left + plan.offsetWidth + 16)}px`)
+        }
+        measure()
+        if (typeof ResizeObserver !== "undefined") {
+            const observer = new ResizeObserver(measure); observer.observe(host); observer.observe(plan)
+            return () => observer.disconnect()
+        }
+        window.addEventListener("resize", measure)
+        return () => window.removeEventListener("resize", measure)
+    }, [root,selector,revision])
+}
 interface OrbitApartmentImage {
     thumbnail?: string
     full: string
@@ -811,9 +849,9 @@ const orbitApartmentFilterStyles = `
 [data-orbit-filters] .orbit-filter-statuses { display: flex; align-items: center; flex: 1 1 auto; gap: 2px; min-width: 0; }
 [data-orbit-filters] [data-orbit-filter-status] { flex: 1 1 auto; gap: 4px; height: 26px; padding: 0 5px; border: 1px solid transparent; border-radius: 6px; color: #677269; font-size: 10px; font-weight: 500; line-height: 1; letter-spacing: -.15px; white-space: nowrap; }
 [data-orbit-filters] [data-orbit-filter-status] .orbit-filter-status-label { overflow: hidden; min-width: 0; text-overflow: ellipsis; }
-[data-orbit-filters] .orbit-filter-dot { flex: 0 0 auto; width: 4px; height: 4px; border-radius: 50%; background: var(--filter-dot,#617764); opacity: .85; }
-[data-orbit-filters] [data-orbit-filter-status="under_negotiation"] { --filter-dot: #ae843e; }
-[data-orbit-filters] [data-orbit-filter-status="sold"] { --filter-dot: #ae655e; }
+[data-orbit-filters] .orbit-filter-dot { flex: 0 0 auto; width: 4px; height: 4px; border-radius: 50%; background: var(--filter-dot,var(--orbit-available-color,#46A66A)); opacity: 1; }
+[data-orbit-filters] [data-orbit-filter-status="under_negotiation"] { --filter-dot: var(--orbit-negotiation-color,#E2B849); }
+[data-orbit-filters] [data-orbit-filter-status="sold"] { --filter-dot: var(--orbit-sold-color,#DA5961); }
 [data-orbit-filters] [data-orbit-filter-status][aria-pressed="true"] { border-color: rgba(50,79,59,.2); color: #263f2e; background: #e3eae2; }
 [data-orbit-filters] [data-orbit-price-toggle] { flex: 0 0 auto; gap: 3px; height: 26px; padding: 0 6px; color: #56635a; font-size: 10px; font-weight: 600; line-height: 1; }
 [data-orbit-filters] [data-orbit-price-toggle][data-filtered="true"], [data-orbit-filters] [data-orbit-price-toggle][aria-expanded="true"] { color: #263f2e; background: #e3eae2; }
@@ -853,7 +891,7 @@ const orbitApartmentFilterStyles = `
 /* Availability is the primary action; price and area share a quieter second row. */
 [data-orbit-filters] [data-orbit-filter-row], [data-orbit-filters][data-presentation="floating"] [data-orbit-filter-row], [data-orbit-filters][data-presentation="overlay"] [data-orbit-filter-row] { height: auto; border: 0; gap: 0; }
 [data-orbit-filters] .orbit-filter-statuses { display: grid; grid-template-columns: 1fr 1.65fr .85fr; width: 100%; gap: 4px; }
-[data-orbit-filters] [data-orbit-filter-status] { height: 38px; padding: 0 6px; gap: 5px; border-color: rgba(48,67,54,.15); border-radius: 7px; color: #4d5f51; font-size: 11px; font-weight: 600; line-height: 1.1; letter-spacing: -.2px; }
+[data-orbit-filters] [data-orbit-filter-status] { height: 38px; padding: 0 6px; gap: 5px; border-color: rgba(48,67,54,.32); border-radius: 7px; color: #4d5f51; font-size: 11px; font-weight: 600; line-height: 1.1; letter-spacing: -.2px; }
 [data-orbit-filters] [data-orbit-filter-status] .orbit-filter-status-label { overflow: visible; text-overflow: clip; }
 [data-orbit-filters] .orbit-filter-dot { width: 5px; height: 5px; }
 [data-orbit-filters] [data-orbit-filter-status][aria-pressed="true"] { border-color: #526e57; box-shadow: inset 0 0 0 .5px #526e57; }
@@ -870,8 +908,8 @@ const orbitApartmentFilterStyles = `
 [data-orbit-filters] .orbit-filter-price-track, [data-orbit-filters] .orbit-filter-price-selection { top: 15px; }
 [data-orbit-filters] input[type="range"] { height: 32px; }
 [data-orbit-filters][data-presentation="floating"] { padding: 8px; }
-[data-orbit-filters][data-presentation="overlay"] [data-orbit-filter-status] { height: 39px; padding: 0 6px; color: #fff; border-color: rgba(255,255,255,.32); font-size: 13px; }
-[data-orbit-filters][data-presentation="overlay"] [data-orbit-range-toggle] { color: rgba(255,255,255,.92); border-color: rgba(255,255,255,.24); font-size: 12px; }
+[data-orbit-filters][data-presentation="overlay"] [data-orbit-filter-status] { height: 39px; padding: 0 6px; color: #fff; border-color: rgba(255,255,255,.57); font-size: 13px; }
+[data-orbit-filters][data-presentation="overlay"] [data-orbit-range-toggle] { color: rgba(255,255,255,.92); border-color: rgba(255,255,255,.45); font-size: 12px; }
 [data-orbit-filters][data-presentation="overlay"] [data-orbit-filter-status][aria-pressed="true"], [data-orbit-filters][data-presentation="overlay"] [data-orbit-range-toggle]:is([data-filtered="true"],[aria-expanded="true"]) { color: #fff; border-color: rgba(255,255,255,.75); background: rgba(255,255,255,.2); box-shadow: inset 0 0 0 .5px rgba(255,255,255,.55); }
 @container orbit-filters (max-width: 330px) { [data-orbit-filters][data-presentation="overlay"] [data-orbit-filter-status] { font-size: 11px; padding: 0 4px; gap: 4px; } }
 @container orbit-filters (max-width: 260px) { [data-orbit-filters] .orbit-filter-statuses { gap: 2px; } [data-orbit-filters] [data-orbit-filter-status], [data-orbit-filters][data-presentation="overlay"] [data-orbit-filter-status] { font-size: 10px; padding: 0 3px; gap: 3px; letter-spacing: -.3px; } [data-orbit-filters] [data-orbit-filter-count] { min-width: 29px; padding: 0; font-size: 9px; } [data-orbit-filters] [data-orbit-range-toggle] { padding: 0 4px; font-size: 10px; } }
@@ -1152,13 +1190,13 @@ const orbitApartmentStudioStyles = `
 [data-orbit-studio] .orbit-studio-preview label { white-space: nowrap; }
 [data-orbit-studio] select { width: 98px; max-width: 100%; min-height: 38px; padding: 5px 24px 5px 10px; border: 1px solid var(--studio-line); border-radius: 0; background: transparent; font-size: 12px; }
 [data-orbit-studio] .orbit-studio-heading { display: flex; align-items: center; gap: 20px; min-width: 0; }
-[data-orbit-studio] .orbit-studio-id { margin: 0; font-size: clamp(27px,3vw,44px); font-weight: 600; line-height: 1; letter-spacing: -.065em; }
+[data-orbit-studio] .orbit-studio-id { margin: 0; font-size: clamp(27px,3vw,44px); font-weight: 700; line-height: 1; letter-spacing: -.065em; }
 [data-orbit-studio] .orbit-studio-status { display: inline-flex; align-items: center; gap: 8px; color: var(--studio-muted); font-size: 12px; font-weight: 500; line-height: 1.4; }
 [data-orbit-studio] .orbit-studio-status-dot { position: relative; display: block; width: 6px; height: 6px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
-[data-orbit-studio] .orbit-studio-status[data-status="available"] { color: #4f7959; }
+[data-orbit-studio] .orbit-studio-status[data-status="available"] { color: #35764c; color: color-mix(in srgb,var(--orbit-available-color,#46A66A) 65%,#263b32); }
 [data-orbit-studio] .orbit-studio-status[data-status="available"] .orbit-studio-status-dot::after { position: absolute; content: ""; inset: -3px; border: 1px solid currentColor; border-radius: 50%; animation: orbitStudioAvailablePulse 2.4s ease-out infinite; }
-[data-orbit-studio] .orbit-studio-status[data-status="under_negotiation"],[data-orbit-studio] .orbit-studio-status[data-status="reserved"] { color: #a77e25; }
-[data-orbit-studio] .orbit-studio-status[data-status="sold"] { color: #b4564f; }
+[data-orbit-studio] .orbit-studio-status[data-status="under_negotiation"],[data-orbit-studio] .orbit-studio-status[data-status="reserved"] { color: #79723c; color: color-mix(in srgb,var(--orbit-negotiation-color,#E2B849) 45%,#263b32); }
+[data-orbit-studio] .orbit-studio-status[data-status="sold"] { color: #ae4f56; color: color-mix(in srgb,var(--orbit-sold-color,#DA5961) 75%,#263b32); }
 @keyframes orbitStudioAvailablePulse { 0%,15% { opacity: .55; transform: scale(.6); } 75%,100% { opacity: 0; transform: scale(1.5); } }
 [data-orbit-studio] .orbit-studio-body { display: grid; grid-template-columns: minmax(0,1.5fr) minmax(300px,1fr); gap: clamp(22px,3vw,48px); min-width: 0; min-height: 0; }
 [data-orbit-studio] .orbit-studio-scene { display: grid; grid-template-rows: minmax(0,1fr) auto; gap: 18px; min-width: 0; min-height: 0; }
@@ -1169,7 +1207,7 @@ const orbitApartmentStudioStyles = `
 [data-orbit-studio] .orbit-studio-areas { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 16px; margin: 0 0 18px; }
 [data-orbit-studio] .orbit-studio-areas > div { min-width: 0; }
 [data-orbit-studio] .orbit-studio-areas dt { margin: 0 0 8px; color: var(--studio-muted); font-size: 11px; line-height: 1.4; }
-[data-orbit-studio] .orbit-studio-areas dd { margin: 0; font-size: clamp(24px,2.4vw,36px); font-weight: 600; line-height: 1; letter-spacing: -.045em; white-space: nowrap; }
+[data-orbit-studio] .orbit-studio-areas dd { margin: 0; font-size: clamp(24px,2.4vw,36px); font-weight: 700; line-height: 1; letter-spacing: -.045em; white-space: nowrap; }
 [data-orbit-studio] .orbit-studio-areas small { margin-left: 4px; color: var(--studio-muted); font-size: 12px; font-weight: 400; letter-spacing: 0; }
 [data-orbit-studio] .orbit-studio-meta { display: flex; align-items: baseline; flex-wrap: wrap; gap: 8px 16px; margin: 0; color: var(--studio-muted); font-size: 11px; line-height: 1.6; }
 [data-orbit-studio] .orbit-studio-meta strong { color: var(--studio-ink); font-weight: 600; }
@@ -1311,7 +1349,7 @@ const orbitApartmentStudioStyles = `
 [data-orbit-studio][data-mobile="true"] .orbit-studio-plan-note { margin: 0; font-size: 8px; line-height: 1.4; text-align: left; }
 [data-orbit-studio][data-mobile="true"] .orbit-studio-mobile-summary { display: flex; flex-direction: column; justify-content: center; align-items: stretch; gap: 7px; min-width: 0; min-height: 0; text-align: left; }
 [data-orbit-studio][data-mobile="true"] .orbit-studio-heading { display: flex; align-items: center; flex-wrap: nowrap; gap: 7px; min-width: 0; }
-[data-orbit-studio][data-mobile="true"] .orbit-studio-id { flex: 0 0 auto; margin: 0; font-size: 28px; line-height: 1; font-weight: 600; letter-spacing: -.045em; }
+[data-orbit-studio][data-mobile="true"] .orbit-studio-id { flex: 0 0 auto; margin: 0; font-size: 28px; line-height: 1; font-weight: 700; letter-spacing: -.045em; }
 [data-orbit-studio][data-mobile="true"] .orbit-studio-id small { margin-left: 5px; color: var(--studio-muted); font-size: 10px; font-weight: 400; letter-spacing: 0; }
 [data-orbit-studio][data-mobile="true"] .orbit-studio-status { flex: 0 1 auto; min-width: 0; font-size: 10px; line-height: 1.35; font-weight: 500; gap: 5px; }
 [data-orbit-studio][data-mobile="true"] .orbit-studio-status-text { display: block; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -1319,7 +1357,7 @@ const orbitApartmentStudioStyles = `
 [data-orbit-studio][data-mobile="true"] .orbit-studio-mobile-metrics > div { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: 2px 5px; min-width: 0; }
 [data-orbit-studio][data-mobile="true"] .orbit-studio-mobile-metrics > div:first-child { grid-column: 1 / -1; }
 [data-orbit-studio][data-mobile="true"] .orbit-studio-mobile-metrics dt { margin: 0; color: var(--studio-muted); font-size: 10px; font-weight: 400; line-height: 1.4; }
-[data-orbit-studio][data-mobile="true"] .orbit-studio-mobile-metrics dd { margin: 0; color: #263b32; font-size: 14px; font-weight: 600; line-height: 1.2; letter-spacing: -.025em; white-space: nowrap; }
+[data-orbit-studio][data-mobile="true"] .orbit-studio-mobile-metrics dd { margin: 0; color: #263b32; font-size: 14px; font-weight: 700; line-height: 1.2; letter-spacing: -.025em; white-space: nowrap; }
 [data-orbit-studio][data-mobile="true"] .orbit-studio-mobile-metrics > div:first-child dd { font-size: 21px; line-height: 1.1; letter-spacing: -.05em; }
 [data-orbit-studio][data-mobile="true"] .orbit-studio-mobile-metrics small { margin-left: 2px; color: var(--studio-muted); font-size: 9px; font-weight: 400; letter-spacing: 0; }
 [data-orbit-studio][data-mobile="true"] .orbit-studio-mobile-metrics > div:first-child small { margin-left: 4px; font-size: 11px; }
@@ -1823,7 +1861,7 @@ interface OrbitFullscreenDetailsProps {
     onFiltersChange: (filters: OrbitApartmentFilters) => void
 }
 
-const orbitFullscreenStyles = `
+const orbitFullscreenStyles = `${orbitDataDividerStyles}
 [data-orbit-fullscreen-details] { position:absolute; inset:0; z-index:8; color:#fff; font-family:Montserrat,Arial,Helvetica,sans-serif; pointer-events:none; -webkit-font-smoothing:antialiased; }
 [data-orbit-fullscreen-details] * { box-sizing:border-box; }
 [data-orbit-fullscreen-details] button { font:inherit; color:inherit; cursor:pointer; -webkit-tap-highlight-color:transparent; touch-action:manipulation; }
@@ -1834,25 +1872,30 @@ const orbitFullscreenStyles = `
 [data-orbit-fullscreen-details] .orbit-fullscreen-close svg { width:19px; height:19px; }
 [data-orbit-fullscreen-details] .orbit-fullscreen-nav { position:absolute; inset:45% 16px auto; display:flex; justify-content:space-between; align-items:center; pointer-events:none; }
 [data-orbit-fullscreen-details] .orbit-fullscreen-nav button { display:grid; place-items:center; width:44px; height:44px; padding:0; border:1px solid rgba(255,255,255,.45); border-radius:50%; background:rgba(16,24,32,.28); pointer-events:auto; font-size:22px; line-height:1; }
-[data-orbit-fullscreen-details] .orbit-fullscreen-bar { position:absolute; inset:auto 0 0; display:grid; grid-template-columns:minmax(100px,.9fr) 180px minmax(272px,1.45fr); align-items:center; gap:18px; min-width:0; padding:24px 24px 14px; background:linear-gradient(0deg,rgba(7,16,24,.66) 0%,rgba(7,16,24,.42) 55%,rgba(7,16,24,0) 100%); opacity:1; transition:opacity .24s ease; }
+[data-orbit-fullscreen-details] .orbit-fullscreen-bar { --orbit-fullscreen-plan-size:176px; position:absolute; inset:auto 0 0; display:grid; grid-template-columns:minmax(100px,.9fr) 180px minmax(272px,1.45fr); align-items:start; gap:18px; min-width:0; padding:24px 24px 14px; background:linear-gradient(0deg,rgba(7,16,24,.66) 0%,rgba(7,16,24,.42) 55%,rgba(7,16,24,0) 100%); opacity:1; transition:opacity .24s ease; }
 [data-orbit-fullscreen-details] .orbit-fullscreen-bar[data-moving="true"] { opacity:0; pointer-events:none; }
 [data-orbit-fullscreen-details] .orbit-fullscreen-bar[data-moving="true"] * { pointer-events:none; }
 [data-orbit-fullscreen-details] .orbit-fullscreen-left,[data-orbit-fullscreen-details] .orbit-fullscreen-right { min-width:0; text-align:left; }
-[data-orbit-fullscreen-details] .orbit-fullscreen-identity { display:flex; align-items:baseline; flex-wrap:wrap; gap:5px 10px; margin-bottom:7px; }
-[data-orbit-fullscreen-details] .orbit-fullscreen-id { margin:0; font-size:24px; font-weight:600; line-height:1; letter-spacing:-.04em; }
-[data-orbit-fullscreen-details] .orbit-fullscreen-status { margin:0; font-size:10px; font-weight:400; line-height:1.3; }
-[data-orbit-fullscreen-details] .orbit-fullscreen-stats { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; margin:0; }
+[data-orbit-fullscreen-details] .orbit-fullscreen-left { height:var(--orbit-fullscreen-plan-size); display:grid; grid-template-rows:minmax(0,1fr) minmax(0,1fr); row-gap:32px; }
+[data-orbit-fullscreen-details] .orbit-fullscreen-identity { display:flex; align-items:baseline; flex-wrap:wrap; gap:5px 10px; align-self:end; margin:0; }
+[data-orbit-fullscreen-details] .orbit-fullscreen-id { margin:0; font-size:24px; font-weight:700; line-height:1; letter-spacing:-.04em; }
+[data-orbit-fullscreen-details] .orbit-fullscreen-status { margin:0; font-size:10px; font-weight:500; line-height:1.3; }
+[data-orbit-fullscreen-details] .orbit-fullscreen-stats { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; margin:0; align-self:start; }
 [data-orbit-fullscreen-details] .orbit-fullscreen-stats>div { min-width:0; text-align:left; }
 [data-orbit-fullscreen-details] dt { margin:0 0 4px; font-size:9px; font-weight:400; line-height:1.3; opacity:.8; }
-[data-orbit-fullscreen-details] dd { margin:0; font-size:15px; font-weight:500; line-height:1.1; letter-spacing:-.025em; white-space:nowrap; }
+[data-orbit-fullscreen-details] dd { margin:0; font-size:15px; font-weight:700; line-height:1.1; letter-spacing:-.025em; white-space:nowrap; }
 [data-orbit-fullscreen-details] dd small { margin-left:3px; font-size:10px; font-weight:400; }
-[data-orbit-fullscreen-details] .orbit-fullscreen-plan { --orbit-fullscreen-plan-size:176px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:5px; min-width:0; margin:0; }
+[data-orbit-fullscreen-details] .orbit-fullscreen-plan { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:5px; min-width:0; min-height:var(--orbit-fullscreen-plan-size); margin:0; }
 [data-orbit-fullscreen-details] .orbit-fullscreen-plan-stage { display:grid; place-items:center; width:var(--orbit-fullscreen-plan-size); height:var(--orbit-fullscreen-plan-size); max-width:100%; }
 [data-orbit-fullscreen-details] .orbit-fullscreen-plan-crop { position:relative; display:block; width:min(100%,calc(var(--orbit-fullscreen-plan-size) * var(--orbit-fullscreen-plan-aspect,.75))); max-height:100%; aspect-ratio:var(--orbit-fullscreen-plan-aspect,.75); overflow:hidden; }
 [data-orbit-fullscreen-details] .orbit-fullscreen-plan img { position:absolute; display:block; max-width:none; object-fit:fill; }
 [data-orbit-fullscreen-details] .orbit-fullscreen-plan figcaption { font-size:8px; font-weight:400; opacity:.8; line-height:1.2; }
 [data-orbit-fullscreen-details] .orbit-fullscreen-right { display:flex; flex-direction:column; align-items:stretch; gap:10px; }
 [data-orbit-fullscreen-details] .orbit-fullscreen-filters { min-width:0; pointer-events:auto; }
+[data-orbit-fullscreen-details] .orbit-fullscreen-filters > [data-orbit-filters] { display:grid; grid-template-rows:calc(var(--orbit-fullscreen-plan-size) / 2 - 16px) auto; row-gap:32px; }
+[data-orbit-fullscreen-details] .orbit-fullscreen-filters [data-orbit-filter-row] { align-self:end; }
+[data-orbit-fullscreen-details] .orbit-fullscreen-filters [data-orbit-filter-ranges] { margin-top:0; }
+
 [data-orbit-fullscreen-details] .orbit-fullscreen-conversion { display:flex; align-items:center; justify-content:space-between; gap:10px; min-width:0; }
 [data-orbit-fullscreen-details] .orbit-fullscreen-meta { grid-column:1/-1; margin:0; font-size:10px; font-weight:400; line-height:1.4; }
 [data-orbit-fullscreen-details] .orbit-fullscreen-price { margin:0; font-size:17px; font-weight:500; line-height:1.15; letter-spacing:-.035em; white-space:nowrap; }
@@ -1861,12 +1904,11 @@ const orbitFullscreenStyles = `
 [data-orbit-fullscreen-details] .orbit-fullscreen-detail svg { width:15px; height:15px; flex:none; }
 [data-orbit-fullscreen-details] .orbit-fullscreen-detail:active:not(:disabled),[data-orbit-fullscreen-details] .orbit-fullscreen-close:active { background:#e9ede5; box-shadow:none; }
 [data-orbit-fullscreen-details] .orbit-fullscreen-empty { margin:0; padding:8px 0; text-align:left; font-size:12px; line-height:1.5; }
-[data-orbit-fullscreen-details][data-compact="true"] .orbit-fullscreen-bar { grid-template-columns:minmax(76px,1fr) 148px minmax(256px,1.8fr); padding:20px 16px 10px; gap:10px; }
+[data-orbit-fullscreen-details][data-compact="true"] .orbit-fullscreen-bar { --orbit-fullscreen-plan-size:148px; grid-template-columns:minmax(76px,1fr) 148px minmax(256px,1.8fr); padding:20px 16px 10px; gap:10px; }
 [data-orbit-fullscreen-details][data-compact="true"] .orbit-fullscreen-stats { grid-template-columns:minmax(0,1fr); gap:5px; }
 [data-orbit-fullscreen-details][data-compact="true"] .orbit-fullscreen-stats>div { display:flex; align-items:baseline; flex-wrap:wrap; gap:2px 5px; }
 [data-orbit-fullscreen-details][data-compact="true"] dt { margin:0; font-size:9px; }
 [data-orbit-fullscreen-details][data-compact="true"] dd { font-size:14px; }
-[data-orbit-fullscreen-details][data-compact="true"] .orbit-fullscreen-plan { --orbit-fullscreen-plan-size:144px; }
 [data-orbit-fullscreen-details][data-compact="true"] .orbit-fullscreen-right { gap:7px; }
 [data-orbit-fullscreen-details][data-compact="true"] .orbit-fullscreen-meta { display:none; }
 [data-orbit-fullscreen-details][data-compact="true"] .orbit-fullscreen-id { font-size:21px; }
@@ -1883,11 +1925,14 @@ function OrbitFullscreenDetails({ apartment: currentApartment, dataset = null, a
     const apartment = currentApartment || (moving ? lastApartment.current : null)
     const hu = language !== "en"
     const rootRef = React.useRef<HTMLDivElement>(null)
+    const barRef = React.useRef<HTMLDivElement>(null)
     const [compact, setCompact] = React.useState(false)
     React.useEffect(() => {
         const root = rootRef.current
         if (!root) return
-        const update = () => setCompact(root.clientWidth < 740 || root.clientHeight < 360)
+        // A short landscape phone needs the 148px plan and no secondary meta
+        // so the two filter rows plus the 44px action leave room for the building.
+        const update = () => setCompact(root.clientWidth < 740 || root.clientHeight < 440)
         const observer = new ResizeObserver(update); observer.observe(root); update()
         return () => observer.disconnect()
     }, [])
@@ -1897,6 +1942,7 @@ function OrbitFullscreenDetails({ apartment: currentApartment, dataset = null, a
     const plan = apartment && dataset ? orbitApartmentPlan(apartment, dataset, assetBase, "floorplan", true) : null
     const floorplanSource = plan?.url || (apartment && orbitApartmentAssetUrl(apartment.media?.floorplan?.thumbnail || apartment.media?.floorplan?.full || apartment.floorplan, assetBase))
     const floorplan = useOrbitPreviewImage(floorplanSource)
+    useOrbitDataDividers(barRef, ".orbit-fullscreen-plan-crop,.orbit-fullscreen-plan-stage,.orbit-fullscreen-plan", `${apartment?.id || ""}|${floorplan || ""}|${compact}`)
     const viewBox = plan?.viewBox || { x: 0, y: 0, width: 1, height: 1 }
     const planAspect = { "--orbit-fullscreen-plan-aspect": plan?.aspect || .75 } as React.CSSProperties
     const planStyle: React.CSSProperties = { left: `${-viewBox.x / viewBox.width * 100}%`, top: `${-viewBox.y / viewBox.height * 100}%`, width: `${100 / viewBox.width}%`, height: `${100 / viewBox.height}%` }
@@ -1909,9 +1955,10 @@ function OrbitFullscreenDetails({ apartment: currentApartment, dataset = null, a
         {logo && <span className="orbit-fullscreen-brand" role="img" aria-label="Admiral Park" style={{ "--orbit-fullscreen-logo": `url("${logo.replace(/["\\]/g, "\\// @ORBIT_FULLSCREEN_INSERT")}")` } as React.CSSProperties} />}
         <button type="button" data-orbit-ignore="" data-orbit-fullscreen-close="" className="orbit-fullscreen-close" aria-label={hu ? "Teljes képernyő bezárása" : "Close fullscreen"} onClick={onClose}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true"><path d="m5 5 14 14M19 5 5 19" /></svg></button>
         <div className="orbit-fullscreen-nav" data-orbit-ignore=""><button type="button" data-orbit-fullscreen-step="previous" disabled={moving} aria-label={hu ? "Előző nézet" : "Previous view"} onClick={onPrevious}>←</button><button type="button" data-orbit-fullscreen-step="next" disabled={moving} aria-label={hu ? "Következő nézet" : "Next view"} onClick={onNext}>→</button></div>
-        <div className="orbit-fullscreen-bar" data-orbit-ignore="" data-moving={moving ? "true" : "false"} aria-hidden={moving} {...(moving ? { inert: "" as any } : {})} aria-live="polite">
+        <div ref={barRef} className="orbit-fullscreen-bar" data-orbit-ignore="" data-moving={moving ? "true" : "false"} aria-hidden={moving} {...(moving ? { inert: "" as any } : {})} aria-live="polite">
+            <span data-orbitdata-divider="left" data-info-visible={String(!!apartment)} aria-hidden="true" /><span data-orbitdata-divider="right" data-info-visible={String(!!apartment)} aria-hidden="true" />
             {apartment ? <>
-                <div className="orbit-fullscreen-left"><div className="orbit-fullscreen-identity"><p className="orbit-fullscreen-id" data-orbit-fullscreen-field="number">{apartment.id}</p><p className="orbit-fullscreen-status" data-status={state} data-orbit-fullscreen-field="status">{status}</p></div><dl className="orbit-fullscreen-stats"><div data-orbit-fullscreen-field="area"><dt>{hu ? "Lakótér" : "Interior"}</dt><dd>{area(apartment.areaInterior)}</dd></div><div data-orbit-fullscreen-field="terrace"><dt>{hu ? "Terasz" : "Terrace"}</dt><dd>{area(apartment.areaTerrace)}</dd></div><div data-orbit-fullscreen-field="garden"><dt>{hu ? "Kert" : "Garden"}</dt><dd>{area(apartment.areaGarden)}</dd></div></dl></div>
+                <div className="orbit-fullscreen-left"><div className="orbit-fullscreen-identity"><p className="orbit-fullscreen-id" data-orbit-fullscreen-field="number">{apartment.id}</p><p className="orbit-fullscreen-status" data-status={state} data-orbit-fullscreen-field="status" style={{ color: orbitAvailabilityColor(state) }}>{status}</p></div><dl className="orbit-fullscreen-stats"><div data-orbit-fullscreen-field="area"><dt>{hu ? "Lakótér" : "Interior"}</dt><dd>{area(apartment.areaInterior)}</dd></div><div data-orbit-fullscreen-field="terrace"><dt>{hu ? "Terasz" : "Terrace"}</dt><dd>{area(apartment.areaTerrace)}</dd></div><div data-orbit-fullscreen-field="garden"><dt>{hu ? "Kert" : "Garden"}</dt><dd>{area(apartment.areaGarden)}</dd></div></dl></div>
                 <figure className="orbit-fullscreen-plan" data-orbit-fullscreen-field="floorplan" style={planAspect}>{floorplan && <span className="orbit-fullscreen-plan-stage"><span className="orbit-fullscreen-plan-crop" data-orbit-plan-crop=""><img src={floorplan} style={planStyle} alt={`${apartment.id} · ${hu ? "alaprajz" : "floorplan"}`} decoding="async" draggable={false} /></span></span>}</figure>
             </> : <><p className="orbit-fullscreen-empty">{emptyMessage || (hu ? "Koppintson egy lakásra a részletekhez." : "Tap an apartment to see its details.")}</p><div className="orbit-fullscreen-plan" aria-hidden="true" /></>}
             <div className="orbit-fullscreen-right">
@@ -1934,6 +1981,7 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
     const {
         useGitHubAssets = true, heroBaseUrl = "", connectionBaseUrl = "", orbitBaseUrl = "", startView = "opening", editorView = "opening", editorOrbitView = "entry", orbitStartFrame = 45,
         maskPicking = true, maskBaseUrl = "", maskHighlightColor = "#f8d68b", maskHighlightOpacity = 27,
+        maskAvailableColor = "#46A66A", maskNegotiationColor = "#E2B849", maskSoldColor = "#DA5961",
         duration = 2.5, connectionDuration = 2.5, maxSpeed = 1.8, momentum = .22, triggerDistance = 28, checkpointCount = 8,
         motionWidth = 960, orbitMobileWidth = 640, inspectionWidth = 1920, desktopBuffer = 2, phoneBuffer = 1, snapDuration = 1.5, frameBlend = 0,
         phoneFraming = true, phoneImageWidth = 100, phoneImageTop = 80,
@@ -1983,6 +2031,10 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
     const jsonDetails = detailsMode !== "off"
     const [selectedApartmentId, setSelectedApartmentId] = React.useState<string | null>(null)
     const [interactionApartmentId, setInteractionApartmentId] = React.useState<string | null>(null)
+    // A001 is only the initial preview. Real desktop hover takes ownership of
+    // orbitdata; leaving the facade must not restore a stale preview record.
+    const [apartmentInteracted, setApartmentInteracted] = React.useState(false)
+    const mobilePresentationRef = React.useRef(mobilePresentation); mobilePresentationRef.current = mobilePresentation
     const [apartmentFilters, setApartmentFilters] = React.useState<OrbitApartmentFilters>({ statuses: [], priceMin: null, priceMax: null })
     const [detailApartmentId, setDetailApartmentId] = React.useState<string | null>(null)
     const detailOpen = React.useRef(false)
@@ -1993,8 +2045,8 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
     const filterMatches = React.useMemo(() => new Set(filterResult.matchingIds), [filterResult])
     const selectedApartment = React.useMemo(() => {
         const records = (apartmentData.dataset?.apartments || []).filter(item => filterMatches.has(item.id))
-        return records.find(item => item.id === selectedApartmentId) || (detailsMode === "preview" ? records.find(item => item.id === previewApartmentId) || records[0] || null : null)
-    }, [apartmentData.dataset, selectedApartmentId, previewApartmentId, detailsMode, filterMatches])
+        return records.find(item => item.id === selectedApartmentId) || (detailsMode === "preview" && !apartmentInteracted ? records.find(item => item.id === previewApartmentId) || records[0] || null : null)
+    }, [apartmentData.dataset, selectedApartmentId, previewApartmentId, detailsMode, filterMatches, apartmentInteracted])
     React.useEffect(() => {
         if (selectedApartmentId && !filterMatches.has(selectedApartmentId)) setSelectedApartmentId(null)
         if (interactionApartmentId && !filterMatches.has(interactionApartmentId)) setInteractionApartmentId(null)
@@ -2002,13 +2054,12 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
     const selectedApartmentDetails = React.useMemo<ApartmentDetailsData | null>(() => selectedApartment ? {
         id: selectedApartment.id, number: selectedApartment.id, area: selectedApartment.areaInterior, terrace: selectedApartment.areaTerrace,
         garden: selectedApartment.areaGarden, rooms: selectedApartment.rooms,
-        availability: selectedApartment.status === "under_negotiation" ? detailsLanguage === "en" ? "Under negotiation" : selectedApartment.statusLabel || "Tárgyalás alatt" : selectedApartment.status,
+        availability: selectedApartment.status,
         floorplanUrl: orbitApartmentAssetUrl(selectedApartment.media?.floorplan?.thumbnail || selectedApartment.media?.floorplan?.full || selectedApartment.floorplan || "", apartmentAssetBase) || undefined,
     } : null, [selectedApartment, apartmentAssetBase, detailsLanguage])
-    const detailsModeRef = React.useRef(detailsMode); detailsModeRef.current = detailsMode
     const clearApartmentDetails = React.useCallback(() => {
         setInteractionApartmentId(null)
-        if (detailsModeRef.current === "hover") setSelectedApartmentId(null)
+        setSelectedApartmentId(null)
     }, [])
     const rootRef = React.useRef<HTMLDivElement>(null), heroRootRef = React.useRef<HTMLDivElement>(null)
     const heroCanvasRef = React.useRef<HTMLCanvasElement>(null), orbitCanvasRef = React.useRef<HTMLCanvasElement>(null), posterRef = React.useRef<HTMLImageElement>(null)
@@ -2019,10 +2070,11 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
         const value = id || selectedApartment?.id, root = rootRef.current
         if (!jsonDetails || staticRenderer || !value || !filterMatches.has(value) || !apartmentData.dataset?.apartments.some(apartment => apartment.id === value) || !root ||
             root.dataset.homepageStage !== "orbit" || root.dataset.orbitState !== "checkpoint" || Number(root.dataset.orbitCheckpoint) < 0) return
-        setSelectedApartmentId(value); detailOpen.current = true; actions.current?.orbit?.setSuspended(true); setDetailApartmentId(value)
+        setApartmentInteracted(true); setSelectedApartmentId(value); detailOpen.current = true; actions.current?.orbit?.setSuspended(true); setDetailApartmentId(value)
     }, [jsonDetails, staticRenderer, selectedApartment?.id, apartmentData.dataset, filterMatches])
     const closeApartmentDetails = React.useCallback(() => {
         detailOpen.current = false; setDetailApartmentId(null); actions.current?.orbit?.setSuspended(false)
+        if (!mobilePresentationRef.current) { setInteractionApartmentId(null); setSelectedApartmentId(null) }
     }, [])
     const reportDetailOpen = React.useCallback((open: boolean) => {
         if (rootRef.current) rootRef.current.dataset.apartmentDetailOpen = String(open)
@@ -2040,8 +2092,13 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
         actions.current?.orbit?.setSuspended(detailOpen.current)
     }, [])
     const fullscreen = useOrbitFullscreen(refreshFullscreenLayout, detailOpen)
-    const pickerLatest = React.useRef({ hostVisible, mobilePresentation, focalX, focalY, filterResult, jsonDetails })
-    pickerLatest.current = { hostVisible, mobilePresentation, focalX, focalY, filterResult, jsonDetails }
+    const apartmentHighlightColors = React.useMemo(() => new Map((apartmentData.dataset?.apartments || []).flatMap(apartment => {
+        const color = apartment.status === "available" ? maskAvailableColor : apartment.status === "sold" ? maskSoldColor :
+            apartment.status === "under_negotiation" || apartment.status === "reserved" ? maskNegotiationColor : null
+        return color ? [[apartment.id, color] as const] : []
+    })), [apartmentData.dataset, maskAvailableColor, maskNegotiationColor, maskSoldColor])
+    const pickerLatest = React.useRef({ hostVisible, mobilePresentation, focalX, focalY, filterResult, jsonDetails, apartmentHighlightColors })
+    pickerLatest.current = { hostVisible, mobilePresentation, focalX, focalY, filterResult, jsonDetails, apartmentHighlightColors }
     const pickerStyle = React.useRef({ color: maskHighlightColor, opacity: maskHighlightOpacity / 100 })
     pickerStyle.current = { color: maskHighlightColor, opacity: maskHighlightOpacity / 100 }
 
@@ -2074,12 +2131,14 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
                 return { x: (clientX - bounds.left) * root.clientWidth / Math.max(1, bounds.width), y: (clientY - bounds.top) * root.clientHeight / Math.max(1, bounds.height) }
             },
             getAllowedIds: () => pickerLatest.current.filterResult.matchingIds,
+            getHighlightColor: id => pickerLatest.current.apartmentHighlightColors.get(id),
+            isFilterActive: () => pickerLatest.current.filterResult.active,
             getHighlightIds: () => {
                 try { return JSON.parse(root.dataset.orbitHighlightIds || "[]") as string[] } catch { return [] }
             },
             onHover: id => {
-                // The modal hides picking, but closing it restores the selected
-                // apartment. A camera move still clears the selection highlight.
+                // The card owns its ID independently while picking is suspended.
+                // Its transient null hover must not change the open datasheet.
                 if (id === null && detailOpen.current) return
                 root.dispatchEvent(new CustomEvent("admiral:apartment-hover", { detail: { id } }))
             },
@@ -2095,7 +2154,7 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
         return () => { observer.disconnect(); status.disconnect(); root.removeEventListener("admiral:orbit-filter-change", refresh); root.removeEventListener("admiral:orbit-mask-retry", retry); picker.destroy(); setMaskFailed(false); if (maskPickerRef.current === picker) maskPickerRef.current = null }
     }, [staticRenderer, maskPicking, checkpointCount, maskUrls])
     React.useEffect(() => { maskPickerRef.current?.setHighlightStyle(maskHighlightColor, maskHighlightOpacity / 100) }, [maskHighlightColor, maskHighlightOpacity, mobilePresentation, fullscreen.active])
-    React.useEffect(() => { maskPickerRef.current?.refresh() }, [hostVisible, mobilePresentation, stage, orbitInfo.state, orbitInfo.checkpoint, detailApartmentId, fullscreen.active, focalX, focalY, filterResult])
+    React.useEffect(() => { maskPickerRef.current?.refresh() }, [hostVisible, mobilePresentation, stage, orbitInfo.state, orbitInfo.checkpoint, detailApartmentId, fullscreen.active, focalX, focalY, filterResult, apartmentHighlightColors])
 
     React.useEffect(() => {
         const root = rootRef.current
@@ -2423,7 +2482,7 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
         function resetHome() {
             if (disposed || staticRenderer || !isVisible()) return
             closeApartmentDetails(); fullscreen.close()
-            setSelectedApartmentId(null); setInteractionApartmentId(null)
+            setSelectedApartmentId(null); setInteractionApartmentId(null); setApartmentInteracted(false)
             setApartmentFilters({ statuses: [], priceMin: null, priceMax: null })
             wheelIntent = 0; wheelCanEnter = false; lastWheelAt = arrivedAt = -Infinity
             touchY = null; touchCanEnter = touchInside = false
@@ -2571,9 +2630,13 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
             const detail = (event as CustomEvent<unknown>).detail
             const values = detail && typeof detail === "object" ? detail as { id?: unknown; apartmentId?: unknown; number?: unknown } : null
             const value = typeof detail === "string" ? detail : values?.id ?? values?.apartmentId ?? values?.number
-            if (detail === null || detail === "" || values && (values.id === null || values.apartmentId === null || values.number === null)) { setInteractionApartmentId(null); return }
+            if (detail === null || detail === "" || values && (values.id === null || values.apartmentId === null || values.number === null)) {
+                setInteractionApartmentId(null)
+                if (!mobilePresentationRef.current) setSelectedApartmentId(null)
+                return
+            }
             if (typeof value === "string" && filterMatches.has(value) && apartmentData.dataset?.apartments.some(item => item.id === value)) {
-                setInteractionApartmentId(value); setSelectedApartmentId(value)
+                setApartmentInteracted(true); setInteractionApartmentId(value); setSelectedApartmentId(value)
             }
         }
         root.addEventListener("admiral:apartment-hover", selectFromMask)
@@ -2592,7 +2655,7 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
                 // Touch selects first; the explicit Details action opens the
                 // shared card. Desktop facade clicks retain their direct action.
                 if (jsonDetails && root!.dataset.homepageStage === "orbit" && root!.dataset.orbitState === "checkpoint" && Number(root!.dataset.orbitCheckpoint) >= 0 &&
-                    apartmentData.dataset?.apartments.some(apartment => apartment.id === id)) { setInteractionApartmentId(id); setSelectedApartmentId(id) }
+                    apartmentData.dataset?.apartments.some(apartment => apartment.id === id)) { setApartmentInteracted(true); setInteractionApartmentId(id); setSelectedApartmentId(id) }
             } else openApartmentDetails(id)
         }
         root.addEventListener("admiral:apartment-click", click)
@@ -2612,8 +2675,8 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
         const root = rootRef.current
         if (!root || staticRenderer) return
         clearApartmentDetails()
-        // Keep the last valid facade hover readable while the pointer moves to
-        // its floorplan. A camera move or leaving this viewer clears Hover mode.
+        // Mouse orbitdata follows the facade. A phone tap remains selected so
+        // its explicit Adatlap action is still reachable after lifting a finger.
         const leave = () => { if (!mobilePresentation) clearApartmentDetails() }
         root.addEventListener("pointerleave", leave)
         return () => root.removeEventListener("pointerleave", leave)
@@ -2629,7 +2692,7 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
     const orbitButtonStyle: React.CSSProperties = { ...homepageButton, opacity: orbitMoving ? .45 : 1, cursor: orbitMoving ? "default" : "pointer" }
     const stripFloorplanUrl = useOrbitPreviewImage(selectedApartmentDetails?.floorplanUrl || null, !useStudio && detailsMode !== "off")
     const detailsData = selectedApartmentDetails ? { ...selectedApartmentDetails, floorplanUrl: stripFloorplanUrl || undefined } : null
-    const detailsVisible = !useStudio && (detailsMode === "preview" ? (orbitStatic || (orbitVisible && orbitInfo.state === "checkpoint")) :
+    const detailsVisible = !useStudio && (detailsMode === "preview" ? detailsData !== null && (orbitStatic || (orbitVisible && orbitInfo.state === "checkpoint")) :
         detailsMode === "hover" && orbitVisible && orbitInfo.state === "checkpoint" && orbitInfo.checkpoint >= 0 && detailsData !== null)
     const stripFiltersEnabled = !useStudio && !fullscreen.active && detailsMode !== "off"
     const orbitPanelVisible = orbitStatic || orbitVisible && orbitInfo.state === "checkpoint"
@@ -2640,7 +2703,8 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
     const imageClip = "inset(var(--admiral-image-y, 0px) var(--admiral-image-right, 0px) var(--admiral-image-cut, 0px) var(--admiral-image-x, 0px))"
     return (
         <div ref={rootRef} data-admiral-homepage="" data-admiral-orbit="" data-homepage-stage={stage} data-orbit-fullscreen={String(fullscreen.active)} role="region" aria-label={alt} tabIndex={0}
-            style={{ position: "relative", width: "100%", height: "100%", overflow: "hidden", background, "--admiral-orbit-background": orbitBackground, ...style } as React.CSSProperties}>
+            style={{ position: "relative", width: "100%", height: "100%", overflow: "hidden", background, "--admiral-orbit-background": orbitBackground, "--orbit-available-color": maskAvailableColor,
+                "--orbit-negotiation-color": maskNegotiationColor, "--orbit-sold-color": maskSoldColor, ...style } as React.CSSProperties}>
             {mobilePresentation && useStudio && <style>{homepageMobileOrbitStyles}</style>}
             <div aria-hidden="true" style={{ position: "absolute", inset: 0, background: orbitBackground, opacity: "var(--admiral-studio-light, 0)" as unknown as number, pointerEvents: "none" }} />
             {useStudio && <OrbitApartmentStudio active={!fullscreen.active && (orbitVisible || orbitStatic)} mobile={mobilePresentation} moving={!staticRenderer && orbitMoving} mode={detailsMode} dataset={apartmentData.dataset} dataStatus={apartmentData.status} error={apartmentData.error}
@@ -2681,7 +2745,7 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
                 {(stage === "building" || stage === "handoff" || stage === "orbit") && orbitInfo.state === "error" && <button type="button" style={homepageButton} onClick={() => { void (rootRef.current as (HTMLElement & { retryOrbit?: () => Promise<void> }) | null)?.retryOrbit?.() }}>Retry orbit</button>}
                 {(stage === "building" || stage === "connection" || stage === "handoff" || stage === "orbit") && <button type="button" style={homepageButton} onClick={() => actions.current?.overview()}>Overview</button>}
                 {stage === "orbit" && <>
-                    {detailsMode === "preview" && selectedApartment && <button type="button" disabled={orbitMoving} style={orbitButtonStyle} onClick={() => openApartmentDetails()}>Open apartment details</button>}
+                    {detailsMode === "preview" && <button type="button" disabled={orbitMoving || !selectedApartment} style={{ ...orbitButtonStyle, opacity: orbitMoving || !selectedApartment ? .45 : 1 }} onClick={() => openApartmentDetails()}>Open apartment details</button>}
                     <button type="button" aria-label="Previous view" disabled={orbitMoving} style={orbitButtonStyle} onClick={() => actions.current?.orbit?.go(-1)}>←</button>
                     <span aria-live="polite" style={{ ...homepageButton, cursor: "default", minWidth: 65, textAlign: "center" }}>{orbitInfo.checkpoint >= 0 ? `View ${orbitInfo.checkpoint + 1} / ${checkpoints}` : orbitInfo.state === "checkpoint" ? "Custom view" : orbitInfo.state === "buffering" ? "Preparing view…" : orbitInfo.state === "error" ? "View unavailable" : "Looking around"}</span>
                     <button type="button" aria-label="Next view" disabled={orbitMoving} style={orbitButtonStyle} onClick={() => actions.current?.orbit?.go(1)}>→</button>
@@ -2815,7 +2879,10 @@ addPropertyControls(AdmiralHomepageTrial, {
     orbitBaseUrl: { type: ControlType.String, title: "Orbit folder", defaultValue: "", hidden: p => p.useGitHubAssets !== false },
     maskPicking: { type: ControlType.Boolean, title: "Apartment masks", defaultValue: true, description: "Hover on desktop or tap on phones to select an apartment at the eight parked camera views." },
     maskBaseUrl: { type: ControlType.String, title: "Mask folder", defaultValue: "", hidden: p => p.useGitHubAssets !== false || p.maskPicking === false },
-    maskHighlightColor: { type: ControlType.Color, title: "Highlight colour", defaultValue: "#f8d68b", hidden: p => p.maskPicking === false },
+    maskAvailableColor: { type: ControlType.Color, title: "Available colour", defaultValue: "#46A66A", hidden: p => p.maskPicking === false },
+    maskNegotiationColor: { type: ControlType.Color, title: "Negotiation colour", defaultValue: "#E2B849", hidden: p => p.maskPicking === false },
+    maskSoldColor: { type: ControlType.Color, title: "Sold colour", defaultValue: "#DA5961", hidden: p => p.maskPicking === false },
+    maskHighlightColor: { type: ControlType.Color, title: "Other status colour", defaultValue: "#f8d68b", hidden: p => p.maskPicking === false },
     maskHighlightOpacity: { type: ControlType.Number, title: "Highlight opacity", defaultValue: 27, min: 5, max: 70, step: 1, unit: "%", hidden: p => p.maskPicking === false },
     startView: { type: ControlType.Enum, title: "Start trial", options: ["opening", "orbit"], optionTitles: ["Full journey", "Orbit directly"], defaultValue: "opening" },
     editorView: { type: ControlType.Enum, title: "Editor view", options: ["opening", "building", "connection", "orbit"], optionTitles: ["SEQ_01 opening", "SEQ_01 arrival", "SEQ_02 midway", "Orbit"], defaultValue: "opening" },
@@ -2972,7 +3039,7 @@ function createApartmentPreview(preview: ApartmentDetailsPreview = {}): Apartmen
     }) ?? { number: "A.204", area: 66.4, terrace: 12.8, garden: 0, rooms: 3, availability: "available" }
 }
 
-const apartmentDetailsStyles = `
+const apartmentDetailsStyles = `${orbitDataDividerStyles}
 [data-apartment-details] {
     container: admiral-apartment / inline-size;
     box-sizing: border-box;
@@ -2981,7 +3048,6 @@ const apartmentDetailsStyles = `
     -webkit-font-smoothing: antialiased;
     pointer-events: none !important;
     isolation: isolate;
-    border-top: 1px solid rgba(255,255,255,.65);
     opacity: 0;
     visibility: hidden;
     transform: translateY(8px);
@@ -3134,33 +3200,40 @@ const apartmentDetailsStyles = `
     [data-apartment-details] .admiral-details-plan-image, [data-apartment-details] .admiral-details-plan-empty { width: 120px; height: 112px; }
 }
 /* The plan and its selection controls form the primary center composition. */
-[data-apartment-details] .admiral-details-grid { grid-template-columns: minmax(0,1fr) 240px minmax(0,1fr); max-width: 1200px; margin-inline: auto; gap: 28px; padding-top: 12px; align-items: center; }
-[data-apartment-details] .admiral-details-summary { grid-column: 1; grid-row: 1; min-width: 0; width: 100%; max-width: 360px; justify-self: end; display: grid; gap: 14px; transition: opacity 240ms ease; }
+[data-apartment-details] .admiral-details-grid { grid-template-columns: minmax(0,1fr) 240px minmax(0,1fr); max-width: 1200px; margin-inline: auto; gap: 28px; padding-top: 12px; align-items: start; }
+[data-apartment-details] .admiral-details-summary { grid-column: 1; grid-row: 1; min-width: 0; width: 100%; height: 210px; max-width: 360px; justify-self: end; display: grid; grid-template-rows: minmax(0,1fr) minmax(0,1fr); gap: 32px; transition: opacity 240ms ease; }
 [data-apartment-details] :is(.admiral-details-summary,.admiral-details-plan)[data-info-visible="false"] { opacity: 0; }
 [data-apartment-details] .admiral-details-summary .admiral-details-field { grid-area: auto; justify-self: stretch; min-width: 0; text-align: left; }
-[data-apartment-details] .admiral-details-identity { display: flex; align-items: baseline; flex-wrap: wrap; gap: 8px 14px; }
+[data-apartment-details] .admiral-details-identity { display: flex; align-items: baseline; align-self: end; flex-wrap: wrap; gap: 8px 14px; }
+[data-apartment-details] .admiral-details-facts { align-self: start; min-width: 0; }
 [data-apartment-details] .admiral-details-identity .admiral-details-label { display: none; }
-[data-apartment-details] .admiral-details-number .admiral-details-value { font-size: 27px; }
-[data-apartment-details] .admiral-details-status .admiral-details-value { padding: 0; font-size: 12px; letter-spacing: 0; }
+[data-apartment-details] .admiral-details-number .admiral-details-value { font-size: 29px; font-weight: 700; }
+[data-apartment-details] .admiral-details-status .admiral-details-value { padding: 0; font-size: 12px; font-weight: 500; letter-spacing: 0; }
 [data-apartment-details] .admiral-details-metrics { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 14px; }
 [data-apartment-details] .admiral-details-metrics .admiral-details-label { font-size: 9px; letter-spacing: .04em; color: rgba(255,255,255,.72); }
-[data-apartment-details] .admiral-details-metrics .admiral-details-value { font-size: 21px; }
-[data-apartment-details] .admiral-details-secondary .admiral-details-field { display: flex; align-items: baseline; gap: 7px; opacity: .75; }
+[data-apartment-details] .admiral-details-metrics .admiral-details-value { font-size: 22px; font-weight: 700; }
+[data-apartment-details] .admiral-details-secondary .admiral-details-field { display: flex; align-items: baseline; gap: 7px; margin-top: 12px; opacity: .75; }
 [data-apartment-details] .admiral-details-secondary :is(.admiral-details-label,.admiral-details-value) { margin: 0; font-size: 11px; letter-spacing: 0; line-height: 1.3; text-transform: none; }
 [data-apartment-details] .admiral-details-plan { grid-column: 2; grid-row: 1; transition: opacity 240ms ease; }
 [data-apartment-details] :is(.admiral-details-plan-image,.admiral-details-plan-empty) { width: 240px; height: 210px; }
 [data-apartment-details] .admiral-details-filter-row { grid-column: 3; grid-row: 1; width: 100%; min-width: 0; padding: 0; justify-content: flex-start; }
 [data-apartment-details] [data-orbit-desktop-filters] { width: 100%; min-width: 0; }
+[data-apartment-details] [data-orbit-desktop-filters] > [data-orbit-filters] { display: grid; grid-template-rows: minmax(0,1fr) minmax(0,1fr); align-items: start; row-gap: 32px; height: 210px; }
+[data-apartment-details] [data-orbit-desktop-filters] [data-orbit-filter-row] { align-self: end; }
+[data-apartment-details] [data-orbit-desktop-filters] [data-orbit-filter-ranges] { margin-top: 0; }
+
 @container admiral-apartment (max-width: 1000px) {
     [data-apartment-details] .admiral-details-grid { grid-template-columns: minmax(0,1fr) 200px; gap: 14px 22px; max-width: 700px; }
     [data-apartment-details] .admiral-details-filter-row { grid-column: 1 / -1; grid-row: 1; justify-self: center; max-width: 520px; }
-    [data-apartment-details] .admiral-details-summary { grid-column: 1; grid-row: 2; }
+    [data-apartment-details] .admiral-details-summary { grid-column: 1; grid-row: 2; height: 180px; }
+    [data-apartment-details] [data-orbit-desktop-filters] > [data-orbit-filters] { display: block; height: auto; }
+    [data-apartment-details] [data-orbit-desktop-filters] [data-orbit-filter-ranges] { margin-top: 5px; }
     [data-apartment-details] .admiral-details-plan { grid-area: 2 / 2 / 3 / 3; }
     [data-apartment-details] :is(.admiral-details-plan-image,.admiral-details-plan-empty) { width: 200px; height: 180px; }
 }
 @container admiral-apartment (max-width: 540px) {
     [data-apartment-details] .admiral-details-grid { grid-template-columns: minmax(0,1fr) minmax(120px,1fr); gap: 10px 14px; }
-    [data-apartment-details] .admiral-details-summary { gap: 9px; }
+    [data-apartment-details] .admiral-details-summary { height: 160px; gap: 24px; }
     [data-apartment-details] .admiral-details-metrics { grid-template-columns: minmax(0,1fr); gap: 6px; }
     [data-apartment-details] .admiral-details-metrics .admiral-details-field { display: flex; justify-content: space-between; align-items: baseline; gap: 5px; }
     [data-apartment-details] .admiral-details-metrics .admiral-details-label { margin: 0; font-size: 8px; }
@@ -3197,9 +3270,10 @@ function ApartmentDetailsStrip({ apartment, language, visible, preview, bottom, 
         { number: "Apartment", area: "Area", terrace: "Terrace", garden: "Garden", rooms: "Rooms", availability: "Availability", floorplan: "Floor plan" }
     const sampleLabel = hu ? "MINTA" : "SAMPLE"
     const statusCode = data.availability.toLowerCase()
-    const status = statusCode === "available" ? hu ? "Elérhető" : "Available" : statusCode === "reserved" ? hu ? "Foglalt" : "Reserved" : statusCode === "sold" ? hu ? "Eladva" : "Sold" : data.availability
+    const status = statusCode === "available" ? hu ? "Elérhető" : "Available" : statusCode === "reserved" ? hu ? "Foglalt" : "Reserved" : statusCode === "under_negotiation" ? hu ? "Egyeztetés alatt" : "In negotiation" : statusCode === "sold" ? hu ? "Eladva" : "Sold" : data.availability
     const formatter = new Intl.NumberFormat(hu ? "hu-HU" : "en-GB", { maximumFractionDigits: 2 })
     const root = React.useRef<HTMLDivElement>(null)
+    useOrbitDataDividers(root, ".admiral-details-plan-image,.admiral-details-plan-empty", `${data.number}|${data.floorplanUrl || ""}`)
     const heightCallback = React.useRef(onHeightChange), measuredHeight = React.useRef(-1)
     heightCallback.current = onHeightChange
     const [failedFloorplan, setFailedFloorplan] = React.useState("")
@@ -3233,6 +3307,7 @@ function ApartmentDetailsStrip({ apartment, language, visible, preview, bottom, 
         role="region" aria-label={`${hu ? "Lakásadatok" : "Apartment details"}${sample ? hu ? " — minta" : " — sample" : ""}`} aria-hidden={!shellShown} {...(!shellShown ? { inert: "" as any } : {})}
         style={{ position: "absolute", left: `min(${safeInset}px, 4%)`, right: `min(${safeInset}px, 4%)`, bottom: `calc(${safeBottom}px + env(safe-area-inset-bottom, 0px))`, "--admiral-details-bottom": `calc(${safeBottom}px + env(safe-area-inset-bottom, 0px))`, zIndex: 4, pointerEvents: "none" } as React.CSSProperties}>
         <style>{apartmentDetailsStyles}</style>
+        <span data-orbitdata-divider="left" data-info-visible={String(shown)} aria-hidden="true" /><span data-orbitdata-divider="right" data-info-visible={String(shown)} aria-hidden="true" />
         <div className="admiral-details-grid">
           <div className="admiral-details-summary" data-info-visible={String(shown)} aria-hidden={!shown} {...(!shown ? { inert: "" as any } : {})}>
            <div className="admiral-details-identity">
@@ -3240,10 +3315,10 @@ function ApartmentDetailsStrip({ apartment, language, visible, preview, bottom, 
                 <div className="admiral-details-label">{labels.number}{sample && <span className="admiral-details-sample">{sampleLabel}</span>}</div>
                 <div className="admiral-details-value">{data.number}</div>
             </div>
-            <div className="admiral-details-field admiral-details-status" data-apartment-field="availability"><div className="admiral-details-label">{labels.availability}</div><div className="admiral-details-value">{status || "—"}</div></div>
+            <div className="admiral-details-field admiral-details-status" data-apartment-field="availability" data-status={statusCode} style={{ color: orbitAvailabilityColor(statusCode) }}><div className="admiral-details-label">{labels.availability}</div><div className="admiral-details-value" style={{ color: "inherit" }}>{status || "—"}</div></div>
            </div>
-           <div className="admiral-details-metrics">{metric("area")}{metric("terrace")}{metric("garden")}</div>
-           <div className="admiral-details-secondary">{metric("rooms", false)}</div>
+           <div className="admiral-details-facts"><div className="admiral-details-metrics">{metric("area")}{metric("terrace")}{metric("garden")}</div>
+           <div className="admiral-details-secondary">{metric("rooms", false)}</div></div>
           </div>
             <div className="admiral-details-field admiral-details-plan" data-apartment-field="floorplan" data-info-visible={String(shown)} aria-hidden={!shown} {...(!shown ? { inert: "" as any } : {})}>
                 <div className="admiral-details-label">{labels.floorplan}</div>
@@ -4615,6 +4690,10 @@ interface OrbitApartmentPickerOptions {
     inputPoint: (clientX: number, clientY: number) => { x: number; y: number };
     onHover: (id: string | null) => void; onPick: (id: string) => void;
     getAllowedIds: () => readonly string[]; getHighlightIds: () => readonly string[];
+    /** Availability colour for this apartment; absent values retain the configured fallback tint. */
+    getHighlightColor?: (id: string) => string | undefined;
+    /** Filter fills receive extra emphasis only under an actual desktop pointer. */
+    isFilterActive?: () => boolean;
     highlightColor?: string; highlightOpacity?: number;
 }
 interface OrbitMaskIndex { width: number; height: number; pixels: Uint8Array }
@@ -4725,9 +4804,10 @@ function createOrbitApartmentPicker(options: OrbitApartmentPickerOptions) {
     const indices = new Map(ids.map((id, index) => [id, index + 1]));
     let highlightColor = options.highlightColor, highlightRGB = orbitMaskHighlightRGB(highlightColor, root);
     let highlightOpacity = Math.max(0, Math.min(1, Number.isFinite(options.highlightOpacity) ? options.highlightOpacity! : .27));
+    const colorCache = new Map<string, [number, number, number]>();
     let styleBounds: string | null = null;
     const controls = "nav,header,a,button,input,textarea,select,option,[contenteditable]:not([contenteditable='false']),[role='button'],[role='link'],[role='dialog']:not([data-orbit-fullscreen-surface]),[data-orbit-ignore]";
-    let destroyed = false, begun = false, decodingIndex = -1, frame = 0, hovered: string | null = null, currentCheckpoint = -1;
+    let destroyed = false, begun = false, decodingIndex = -1, frame = 0, hovered: string | null = null, pointerHovered: string | null = null, currentCheckpoint = -1;
     let texture: HTMLCanvasElement | null = null, textureKey = "", paintKey = "";
     let latestPoint: { clientX: number; clientY: number; target: EventTarget | null } | null = null;
     let down: { id: number; x: number; y: number; checkpoint: number; mobile: boolean; dragged: boolean } | null = null;
@@ -4744,7 +4824,8 @@ function createOrbitApartmentPicker(options: OrbitApartmentPickerOptions) {
             view.width > 0 && view.height > 0 && view.viewport.width > 0 && view.viewport.height > 0;
     }
 
-    function setHover(id: string | null, force = false) {
+    function setHover(id: string | null, force = false, pointer = false) {
+        pointerHovered = pointer ? id : null;
         if (hovered === id) { if (force) options.onHover(id); return; }
         hovered = id; setDiagnostic("orbitMaskHovered", id ?? "");
         options.onHover(id);
@@ -4757,6 +4838,9 @@ function createOrbitApartmentPicker(options: OrbitApartmentPickerOptions) {
 
     function resolveHighlightStyle(color = highlightColor, opacity = highlightOpacity) {
         highlightColor = color;
+        // Resolve inherited status tokens again after explicit style or viewport
+        // changes, without probing the DOM on every pointer movement.
+        colorCache.clear();
         const rgb = orbitMaskHighlightRGB(color, root), alpha = Math.max(0, Math.min(1, Number.isFinite(opacity) ? opacity : .27));
         if (rgb.every((channel, index) => channel === highlightRGB[index]) && alpha === highlightOpacity) return false;
         highlightRGB = rgb; highlightOpacity = alpha; clearTexture(); paintKey = "";
@@ -4764,7 +4848,7 @@ function createOrbitApartmentPicker(options: OrbitApartmentPickerOptions) {
     }
 
     function setHighlightStyle(color = highlightColor, opacity = highlightOpacity) {
-        if (!destroyed && resolveHighlightStyle(color, opacity)) refresh();
+        if (!destroyed) { resolveHighlightStyle(color, opacity); refresh(); }
     }
 
     function updateDiagnostics(view: OrbitApartmentPickerView, highlighted: string[] = []) {
@@ -4882,25 +4966,48 @@ function createOrbitApartmentPicker(options: OrbitApartmentPickerOptions) {
         if (target >= 0 && blobs.has(target) && !masks.has(target) && !decoding.has(target) && !failures.has(target)) void decodeMask(target);
     }
 
-    function makeTexture(mask: OrbitMaskIndex, highlighted: string[]) {
-        const key = currentCheckpoint + ":" + highlighted.join(",");
+    function highlightStyles(highlighted: string[], view: OrbitApartmentPickerView) {
+        const boost = !view.mobile && options.isFilterActive?.() ? pointerHovered : null;
+        return highlighted.map(id => {
+            const color = options.getHighlightColor?.(id)?.trim();
+            let rgb = highlightRGB;
+            if (color) {
+                const cached = colorCache.get(color);
+                rgb = cached ?? orbitMaskHighlightRGB(color, root);
+                if (!cached) colorCache.set(color, rgb);
+            }
+            const opacity = Math.min(1, highlightOpacity + (id === boost ? .30 : 0));
+            return { index: indices.get(id)!, rgb, opacity };
+        });
+    }
+
+    function makeTexture(mask: OrbitMaskIndex, styles: ReturnType<typeof highlightStyles>, key: string) {
         if (key === textureKey && texture) return texture;
         clearTexture();
-        if (!highlighted.length) return null;
-        const wanted = new Set(highlighted.map(id => indices.get(id)).filter((id): id is number => id !== undefined));
+        if (!styles.length) return null;
+        // A tiny per-ID table resolves all strings once before the pixel loop.
+        // We still retain one overlay texture, rather than an image per unit.
+        const tint = new Uint8ClampedArray(255 * 4), borders = new Uint8Array(255), wanted = new Uint8Array(255);
+        for (const style of styles) {
+            const channel = style.index * 4;
+            wanted[style.index] = 1;
+            tint[channel] = style.rgb[0]; tint[channel + 1] = style.rgb[1]; tint[channel + 2] = style.rgb[2];
+            tint[channel + 3] = Math.round(255 * style.opacity);
+            borders[style.index] = Math.round(255 * Math.min(1, style.opacity + .5));
+        }
         const surface = document.createElement("canvas"); surface.width = mask.width; surface.height = mask.height;
         const drawing = surface.getContext("2d");
         if (!drawing) return null;
         const image = drawing.createImageData(mask.width, mask.height), data = image.data, pixels = mask.pixels;
         for (let offset = 0; offset < pixels.length; offset++) {
             const apartment = pixels[offset];
-            if (!apartment || !wanted.has(apartment)) continue;
+            if (!apartment || !wanted[apartment]) continue;
             const x = offset % mask.width, y = Math.floor(offset / mask.width);
             const border = x === 0 || y === 0 || x === mask.width - 1 || y === mask.height - 1 ||
                 pixels[offset - 1] !== apartment || pixels[offset + 1] !== apartment || pixels[offset - mask.width] !== apartment || pixels[offset + mask.width] !== apartment;
-            const channel = offset * 4;
-            data[channel] = highlightRGB[0]; data[channel + 1] = highlightRGB[1]; data[channel + 2] = highlightRGB[2];
-            data[channel + 3] = Math.round(255 * (border ? Math.min(1, highlightOpacity + .5) : highlightOpacity));
+            const channel = offset * 4, color = apartment * 4;
+            data[channel] = tint[color]; data[channel + 1] = tint[color + 1]; data[channel + 2] = tint[color + 2];
+            data[channel + 3] = border ? borders[apartment] : tint[color + 3];
         }
         drawing.putImageData(image, 0, 0); texture = surface; textureKey = key;
         return texture;
@@ -4917,17 +5024,19 @@ function createOrbitApartmentPicker(options: OrbitApartmentPickerOptions) {
         const mask = ready ? touchMask(checkpoint) : undefined;
         const allowed = new Set(options.getAllowedIds()), highlighted = mask ? [...new Set(options.getHighlightIds())].filter(id => allowed.has(id) && indices.has(id)).sort() : [];
         if (hovered && !allowed.has(hovered)) setHover(null);
+        const styles = highlightStyles(highlighted, view);
+        const textureSignature = checkpoint + ":" + styles.map(style => [style.index, ...style.rgb, style.opacity].join(",")).join(";");
         const logicalWidth = Number.isFinite(view.width) && view.width > 0 ? view.width : 1;
         const logicalHeight = Number.isFinite(view.height) && view.height > 0 ? view.height : 1;
         // A transparent full-window backing can otherwise allocate 32+ MB on
         // a 4K screen. Native masks have no additional detail above this budget.
         const dpr = Math.min(window.devicePixelRatio || 1, 2, Math.sqrt(1920 * 1010 / (logicalWidth * logicalHeight)));
         const width = Math.max(1, Math.floor(logicalWidth * dpr)), height = Math.max(1, Math.floor(logicalHeight * dpr));
-        const signature = [checkpoint, !!mask, width, height, ...Object.values(view.viewport), view.focalX, view.focalY, highlighted.join(",")].join("|");
+        const signature = [checkpoint, !!mask, width, height, ...Object.values(view.viewport), view.focalX, view.focalY, textureSignature].join("|");
         if (signature !== paintKey && context) {
             if (canvas.width !== width || canvas.height !== height) { canvas.width = width; canvas.height = height; }
             context.clearRect(0, 0, canvas.width, canvas.height);
-            const layer = mask ? makeTexture(mask, highlighted) : null;
+            const layer = mask ? makeTexture(mask, styles, textureSignature) : null;
             if (layer && mask) {
                 const rect = orbitMaskCoverRect(mask.width, mask.height, view.viewport, view.focalX, view.focalY);
                 context.save(); context.scale(width / view.width, height / view.height);
@@ -4986,7 +5095,7 @@ function createOrbitApartmentPicker(options: OrbitApartmentPickerOptions) {
         // Lifecycle clears can be intentionally ignored by the parent while a
         // detail card is open. Explicit background input still clears that
         // parent's restored highlight after the card has closed.
-        setHover(id, id === null); refresh();
+        setHover(id, id === null, true); refresh();
     }
 
     function onPointerMove(event: PointerEvent) {
@@ -5009,7 +5118,7 @@ function createOrbitApartmentPicker(options: OrbitApartmentPickerOptions) {
         if (!down || down.id !== event.pointerId) return;
         const press = down; down = null;
         if (press.dragged || Math.hypot(event.clientX - press.x, event.clientY - press.y) > 6 || options.getView().checkpoint !== press.checkpoint || event.defaultPrevented) return;
-        const id = hit(event.clientX, event.clientY, event.target); setHover(id, id === null); refresh();
+        const id = hit(event.clientX, event.clientY, event.target); setHover(id, id === null, !press.mobile); refresh();
         if (id && !press.mobile) options.onPick(id);
     }
 
@@ -5047,7 +5156,7 @@ function createOrbitApartmentPicker(options: OrbitApartmentPickerOptions) {
             window.removeEventListener("pointerup", onPointerUp, true); window.removeEventListener("pointercancel", onPointerCancel, true);
             window.removeEventListener("pointerout", onPointerOut, true); window.removeEventListener("resize", onResize);
             document.removeEventListener("visibilitychange", onVisibility);
-            down = latestPoint = null; clearTexture(); masks.clear(); blobs.clear(); failures.clear(); generations.clear(); reload.clear();
+            down = latestPoint = null; clearTexture(); colorCache.clear(); masks.clear(); blobs.clear(); failures.clear(); generations.clear(); reload.clear();
             context?.clearRect(0, 0, canvas.width, canvas.height); setHover(null);
             setDiagnostic("orbitMaskState", "off"); setDiagnostic("orbitMaskCached", "0"); setDiagnostic("orbitMaskDownloaded", "0");
             setDiagnostic("orbitMaskHighlights", "");

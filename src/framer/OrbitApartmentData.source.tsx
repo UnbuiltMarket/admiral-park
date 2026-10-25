@@ -1,5 +1,42 @@
 // Canonical apartment JSON adapter. Inlined into the standalone Framer component.
 type OrbitApartmentStatus = "available" | "under_negotiation" | "reserved" | "sold" | "unknown"
+
+// Shared facade and orbitdata availability language. Framer colour controls set
+// the custom properties on the viewer; the fallbacks also work in isolated UI.
+const ORBIT_AVAILABILITY_COLORS = { available: "#46A66A", under_negotiation: "#E2B849", reserved: "#E2B849", sold: "#DA5961", unknown: "#A8AFB4" } as const
+function orbitAvailabilityColor(status: string | undefined): string {
+    return status === "available" ? "var(--orbit-available-color,#46A66A)" : status === "sold" ? "var(--orbit-sold-color,#DA5961)" : status === "under_negotiation" || status === "reserved" ? "var(--orbit-negotiation-color,#E2B849)" : "#A8AFB4"
+}
+const orbitDataDividerStyles = `
+[data-orbitdata-divider] { position:absolute; z-index:0; top:var(--orbitdata-divider-y,0px); height:1px; background:rgba(255,255,255,.62); pointer-events:none !important; opacity:1; transition:opacity 240ms ease; }
+[data-orbitdata-divider="left"] { left:0; width:var(--orbitdata-divider-left,0px); }
+[data-orbitdata-divider="right"] { left:var(--orbitdata-divider-right,100%); right:0; }
+[data-orbitdata-divider][data-info-visible="false"] { opacity:0; }
+@media (prefers-reduced-motion:reduce) { [data-orbitdata-divider] { transition:none; } }
+`
+function useOrbitDataDividers(root: React.RefObject<HTMLElement | null>, selector: string, revision: string): void {
+    React.useEffect(() => {
+        const host = root.current, plan = host?.querySelector<HTMLElement>(selector)
+        if (!host || !plan) return
+        // offset geometry remains in layout coordinates when the phone's entire
+        // fullscreen surface is rotated. A screen-space rect would swap axes.
+        const measure = () => {
+            let node: HTMLElement | null = plan, left = 0, top = 0
+            while (node && node !== host) { left += node.offsetLeft; top += node.offsetTop; node = node.offsetParent as HTMLElement | null }
+            if (node !== host) return
+            host.style.setProperty("--orbitdata-divider-y", `${top + plan.offsetHeight / 2}px`)
+            host.style.setProperty("--orbitdata-divider-left", `${Math.max(0,left - 16)}px`)
+            host.style.setProperty("--orbitdata-divider-right", `${Math.min(host.clientWidth,left + plan.offsetWidth + 16)}px`)
+        }
+        measure()
+        if (typeof ResizeObserver !== "undefined") {
+            const observer = new ResizeObserver(measure); observer.observe(host); observer.observe(plan)
+            return () => observer.disconnect()
+        }
+        window.addEventListener("resize", measure)
+        return () => window.removeEventListener("resize", measure)
+    }, [root,selector,revision])
+}
 interface OrbitApartmentImage {
     thumbnail?: string
     full: string
