@@ -205,6 +205,11 @@ const orbitApartmentStudioStyles = `
 [data-orbit-studio][data-mobile="false"] .orbit-studio-body { grid-template-columns: minmax(0,1fr) clamp(380px,34vw,640px); gap: clamp(20px,1.25vw,24px); }
 [data-orbit-studio][data-mobile="false"] .orbit-studio-scene { grid-template-rows: minmax(0,1fr); gap: 0; }
 [data-orbit-studio][data-mobile="false"] .orbit-studio-details { display: grid; grid-template-rows: 42px 62px minmax(0,1fr) auto; gap: 12px; padding-left: 16px; border-left: 1px solid var(--studio-line); overflow: visible; }
+[data-orbit-studio][data-mobile="false"] .orbit-studio-summary { display: contents; }
+[data-orbit-studio][data-mobile="false"] .orbit-studio-summary > .orbit-studio-heading { grid-column: 1; grid-row: 1; }
+[data-orbit-studio][data-mobile="false"] .orbit-studio-summary > .orbit-studio-facts { grid-column: 1; grid-row: 2; }
+[data-orbit-studio][data-mobile="false"] .orbit-studio-plan-workspace { grid-column: 1; grid-row: 3; }
+[data-orbit-studio][data-mobile="false"] .orbit-studio-summary > .orbit-studio-apartment-footer { grid-column: 1; grid-row: 4; }
 [data-orbit-studio][data-mobile="false"] .orbit-studio-heading { justify-content: space-between; gap: 10px; min-height: 0; }
 [data-orbit-studio][data-mobile="false"] .orbit-studio-id { font-size: clamp(30px,2.4vw,40px); }
 [data-orbit-studio][data-mobile="false"] .orbit-studio-status { gap: 6px; font-size: 10px; white-space: nowrap; }
@@ -249,6 +254,17 @@ const orbitApartmentStudioStyles = `
 @media (max-width: 900px) {
     [data-orbit-studio][data-mobile="false"] [data-orbit-filters] { flex-wrap: wrap; gap: 5px; }
     [data-orbit-studio][data-mobile="false"] [data-orbit-filter-row], [data-orbit-studio][data-mobile="false"] [data-orbit-filter-ranges] { flex: 1 0 100%; }
+}
+/* On desktop the drawing and apartment summary sit beside each other. The plan
+   gets the full panel height rather than the space between data rows. */
+@media (min-width: 1180px) {
+    [data-orbit-studio][data-mobile="false"] .orbit-studio-body { grid-template-columns: minmax(0,1.1fr) minmax(0,1fr); }
+    [data-orbit-studio][data-mobile="false"] .orbit-studio-details { grid-template-columns: minmax(0,1fr) clamp(220px,16vw,300px); grid-template-rows: minmax(0,1fr); column-gap: 20px; }
+    [data-orbit-studio][data-mobile="false"] .orbit-studio-plan-workspace { grid-column: 1; grid-row: 1; }
+    [data-orbit-studio][data-mobile="false"] .orbit-studio-summary { display: grid; grid-column: 2; grid-row: 1; grid-template-rows: 42px 62px auto; align-self: center; gap: 12px; min-width: 0; min-height: 0; }
+    [data-orbit-studio][data-mobile="false"] .orbit-studio-summary > .orbit-studio-apartment-footer { grid-row: 3; }
+    [data-orbit-studio][data-mobile="false"] .orbit-studio-bottom { display: flex; flex-direction: column; align-items: stretch; gap: 10px; }
+    [data-orbit-studio][data-mobile="false"] .orbit-studio-meta { min-height: 34px; }
 }
 /* Phones keep the complete orbit above a compact apartment summary. */
 [data-orbit-studio][data-mobile="true"] {
@@ -516,10 +532,6 @@ function OrbitApartmentStudio(props: OrbitApartmentStudioProps): React.JSX.Eleme
                         </div>
                     </>}
                 </div> : <div className="orbit-studio-details" data-orbit-studio-details="" data-orbit-ignore="" {...panelFade} {...detailsVisibility}>
-                    <div className="orbit-studio-heading" {...recordFade}><h2 id={headingId} className="orbit-studio-id">{apartment?.id || "—"}</h2>
-                        {statusText && <span className="orbit-studio-status" data-status={availability} data-orbit-field="status"><span className="orbit-studio-status-dot" aria-hidden="true" />{statusText}</span>}
-                    </div>
-                    {facts}
                     <div className="orbit-studio-plan-workspace">
                         <div className="orbit-studio-drawing-toolbar">{tabs}<button type="button" className="orbit-studio-text-button" aria-label={labels.expand} disabled={!planShown} onClick={() => setExpanded(true)}>{hu ? "Nagyítás" : "Enlarge"}<span aria-hidden="true">↗</span></button></div>
                         <section className="orbit-studio-plan-section" id={planPanelId} role="tabpanel" aria-label={labels[view]}>
@@ -529,7 +541,13 @@ function OrbitApartmentStudio(props: OrbitApartmentStudioProps): React.JSX.Eleme
                             <p className="orbit-studio-plan-note">{note}</p>
                         </section>
                     </div>
-                    <div className="orbit-studio-apartment-footer" {...recordFade}>{conversion()}{meta()}</div>
+                    <div className="orbit-studio-summary">
+                        <div className="orbit-studio-heading" {...recordFade}><h2 id={headingId} className="orbit-studio-id">{apartment?.id || "—"}</h2>
+                            {statusText && <span className="orbit-studio-status" data-status={availability} data-orbit-field="status"><span className="orbit-studio-status-dot" aria-hidden="true" />{statusText}</span>}
+                        </div>
+                        {facts}
+                        <div className="orbit-studio-apartment-footer" {...recordFade}>{conversion()}{meta()}</div>
+                    </div>
                 </div>}
             </div>
         </section>
