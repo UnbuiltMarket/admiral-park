@@ -8,6 +8,7 @@ interface OrbitApartmentCardController {
     open: (id: string) => void
     close: () => void
     retry: () => unknown
+    refreshFacts?: () => void
     download: (id: string, trigger?: HTMLElement) => Promise<AdmiralApartmentDownloadResult>
     dispose: () => void
 }
@@ -26,6 +27,8 @@ export interface AdmiralApartmentDetailCardProps {
     onReady?: () => void
     /** Reuse the list's loaded JSON instead of issuing another request. */
     dataset?: unknown
+    /** Current orbit facts; drawing/room metadata remains owned by detail JSON. */
+    liveDataset?: unknown
     /** Shared card colour variables; updates without rebuilding the runtime. */
     theme?: React.CSSProperties
     /** Export the selected apartment through the same PDF path, without opening it. */
@@ -91,6 +94,7 @@ export default function AdmiralApartmentDetailCard(props: AdmiralApartmentDetail
             const runtime = mountOrbitApartmentCardRuntime(shadow, {
                 dataUrl,
                 dataset,
+                getLiveDataset: () => current.current.liveDataset,
                 assetBaseUrl: assetBase,
                 inquiryUrl,
                 pageUrl: pageUrl || window.location.href,
@@ -130,6 +134,8 @@ export default function AdmiralApartmentDetailCard(props: AdmiralApartmentDetail
         if (openId) controller.current?.open(openId)
         else controller.current?.close()
     }, [openId, started, dataUrl, assetBase, inquiryUrl, pageUrl, dataset])
+
+    React.useEffect(() => { controller.current?.refreshFacts?.() }, [props.liveDataset, started])
 
     React.useEffect(() => {
         if (!started || !downloadRequest || !controller.current) return

@@ -173,8 +173,8 @@ input[aria-invalid="true"] { border-color: var(--negotiating); }
 .status-pill { display: inline-flex; align-items: center; gap: 7px; color: var(--muted); font-size: 12px; font-weight: 400; line-height: 1.5; white-space: nowrap; }
 .status-pill::before { content: ''; width: 5px; height: 5px; flex-shrink: 0; border-radius: 50%; background: currentColor; }
 .status-available { color: var(--available); }
-.status-under_negotiation { color: color-mix(in srgb, var(--negotiating) 72%, var(--ink)); }
-.status-under_negotiation::before { background: var(--negotiating); }
+.status-under_negotiation, .status-reserved { color: color-mix(in srgb, var(--negotiating) 72%, var(--ink)); }
+.status-under_negotiation::before, .status-reserved::before { background: var(--negotiating); }
 .status-sold { color: var(--sold); }
 .status-unknown { color: var(--muted); }
 .cell-actions { text-align: right; }

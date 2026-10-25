@@ -5,12 +5,12 @@
   "updated": "2026-10-25",
   "canonicalSources": {
     "app.js": {
-      "sha256": "5484c5ad5e3823355ca06bdecfc016126153d848f58f3e270464f759e7247638",
-      "bytes": 46774
+      "sha256": "617d31e8152fc0d162c2d7e044a5f07608ea3e0fc7fb224a8eb2fff99411e18a",
+      "bytes": 46804
     },
     "styles.css": {
-      "sha256": "7d3a80fda90d94e4d0bb076ba163384555971850f4f50c78fedaaa8a9c896b19",
-      "bytes": 41550
+      "sha256": "9310e143724dde74eb48652cc2366f41240ac0f94155028dfd4a09074973607f",
+      "bytes": 41594
     },
     "shell.html": {
       "sha256": "f249d7cff974255cd81b4195fca2886d9b993f7a969173351121a444f1483d45",

@@ -30,7 +30,7 @@ const pause=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 async function fixture(options={}){
  const context=await browser.newContext({viewport:{width:1200,height:800},...options.context});
  const page=await context.newPage(),errors=[],heroRequests=[],connectionRequests=[],orbitRequests=[],maskRequests=[],floorplanRequests=[],apartmentRequests=[],apartmentMediaRequests=[],detailRequests=[],pdfLibraryRequests=[];
- let failIndex=options.failOrbit,corruptIndex=options.corruptOrbit,failConnection=options.failConnection,corruptConnection=options.corruptConnection,failMask=options.failMask,corruptMask=options.corruptMask,failApartment=!!options.failApartment,failDetails=!!options.failDetails,detailGateOpen=!options.gateDetails;const detailWaiters=[];
+ let failHero=options.failHero,failIndex=options.failOrbit,corruptIndex=options.corruptOrbit,failConnection=options.failConnection,corruptConnection=options.corruptConnection,failMask=options.failMask,corruptMask=options.corruptMask,failApartment=!!options.failApartment,failDetails=!!options.failDetails,detailGateOpen=!options.gateDetails;const detailWaiters=[];
  page.on('pageerror',error=>errors.push(error.message));
  await page.route(/https:\/\/(?:cdn\.jsdelivr\.net|unpkg\.com)\/(?:npm\/)?(?:pdf-lib@1\.17\.1\/dist\/pdf-lib\.min\.js|@pdf-lib\/fontkit@1\.1\.1\/dist\/fontkit\.umd\.min\.js)(?:\?.*)?$/,async route=>{
   const url=route.request().url();pdfLibraryRequests.push(url);const name=url.includes('@pdf-lib/fontkit@')?'fontkit-1.1.1.umd.min.js':'pdf-lib-1.17.1.min.js';
@@ -76,6 +76,7 @@ async function fixture(options={}){
   }
   if(pathname.startsWith('/hero/')){
    const index=Number(pathname.match(/sequence(\d+)/)?.[1]);heroRequests.push(index);
+   if(index===failHero)return route.fulfill({status:503,body:'Deliberate trial opening outage'});
    return route.fulfill({contentType:'image/avif',headers:{'Cache-Control':'public,max-age=3600'},body:heroes[index]});
   }
   if(pathname.startsWith('/connection/')){
@@ -179,7 +180,7 @@ async function fixture(options={}){
  if(options.listMode)await page.locator('[data-detail="A001"]').first().waitFor({state:'visible'});
  else{await page.waitForSelector('[data-admiral-homepage]');await page.waitForFunction(()=>[...document.images].some(image=>image.naturalWidth>0));}
  await page.mouse.move(450,500);
- return {context,page,errors,heroRequests,connectionRequests,orbitRequests,maskRequests,floorplanRequests,apartmentRequests,apartmentMediaRequests,detailRequests,pdfLibraryRequests,releaseDetails(){detailGateOpen=true;detailWaiters.splice(0).forEach(resolve=>resolve());},restoreDetails(){failDetails=false;},restoreApartment(){failApartment=false;},restoreOrbit(){failIndex=undefined;corruptIndex=undefined;},restoreMasks(){failMask=undefined;corruptMask=undefined;},restoreConnection(){failConnection=undefined;corruptConnection=undefined;},async close(){detailGateOpen=true;detailWaiters.splice(0).forEach(resolve=>resolve());if(options.props?.orbitLayout==='studio'){await page.screenshot({path:fileURLToPath(new URL('studio-last-state.png',out))}).catch(()=>{});await writeFile(new URL('studio-last-state.json',out),JSON.stringify(await page.evaluate(()=>({root:{...document.querySelector('[data-admiral-homepage]')?.dataset},studio:{...document.querySelector('[data-orbit-studio]')?.dataset},text:document.querySelector('[data-orbit-studio]')?.innerText})).catch(()=>({})),null,2));}await page.evaluate(()=>{window.releaseDecodeGates?.();window.releaseNativeDecodeGates?.();window.releaseSequenceDecodeGates?.();}).catch(()=>{});assert.deepEqual(errors,[]);await context.close();}};
+ return {context,page,errors,heroRequests,connectionRequests,orbitRequests,maskRequests,floorplanRequests,apartmentRequests,apartmentMediaRequests,detailRequests,pdfLibraryRequests,restoreHero(){failHero=undefined;},setApartmentPayload(value){options.apartmentPayload=value;},releaseDetails(){detailGateOpen=true;detailWaiters.splice(0).forEach(resolve=>resolve());},restoreDetails(){failDetails=false;},restoreApartment(){failApartment=false;},restoreOrbit(){failIndex=undefined;corruptIndex=undefined;},restoreMasks(){failMask=undefined;corruptMask=undefined;},restoreConnection(){failConnection=undefined;corruptConnection=undefined;},async close(){detailGateOpen=true;detailWaiters.splice(0).forEach(resolve=>resolve());if(options.props?.orbitLayout==='studio'){await page.screenshot({path:fileURLToPath(new URL('studio-last-state.png',out))}).catch(()=>{});await writeFile(new URL('studio-last-state.json',out),JSON.stringify(await page.evaluate(()=>({root:{...document.querySelector('[data-admiral-homepage]')?.dataset},studio:{...document.querySelector('[data-orbit-studio]')?.dataset},text:document.querySelector('[data-orbit-studio]')?.innerText})).catch(()=>({})),null,2));}await page.evaluate(()=>{window.releaseDecodeGates?.();window.releaseNativeDecodeGates?.();window.releaseSequenceDecodeGates?.();}).catch(()=>{});assert.deepEqual(errors,[]);await context.close();}};
 }
 const orbitSelector='[data-admiral-orbit]';
 async function orbitData(page){return page.locator(orbitSelector).evaluate(element=>({...element.dataset}));}
@@ -542,6 +543,58 @@ try{
    assert.equal(await page.evaluate(()=>window.auditStallCalls),2,'retry starts a new request after a stalled download');
   }finally{await f.close();}
  });
+ for(const phone of [false,true])await pass('audit priority full orbit downloads without decoding during SEQ01 '+(phone?'phone':'desktop'),async()=>{
+  const f=await fixture({cleanFixture:true,context:phone?{viewport:{width:390,height:844},isMobile:true,hasTouch:true,deviceScaleFactor:2}:{viewport:{width:1440,height:900}},props:{showControls:false,duration:.6,connectionDuration:1,maxSpeed:1}}),{page}=f;
+  try{
+   await page.waitForFunction(()=>Number(document.querySelector('[data-admiral-orbit]').dataset.orbitDownloaded)===120,null,{timeout:30000});
+   assert.equal(new Set(f.orbitRequests).size,120,'All 120 compressed orbit sources are downloaded before interaction');
+   const encodedOnly=()=>page.evaluate(()=>({stage:document.querySelector('[data-admiral-homepage]').dataset.homepageStage,decoded:Number(document.querySelector('[data-admiral-orbit]').dataset.orbitDecoded),native:window.bitmapRecords.filter(record=>Number.isFinite(record.index)).length,live:window.orbitLive}));
+   assert.deepEqual(await encodedOnly(),{stage:'opening',decoded:0,native:0,live:0},'Opening keeps only compressed orbit bytes, with no orbit decoding calls');
+   if(phone)await phoneSwipe(page,{x:190,y:700,dy:-100});else await page.mouse.wheel(0,120);
+   await waitStage(page,'building');assert.deepEqual(await encodedOnly(),{stage:'building',decoded:0,native:0,live:0},'SEQ01 completion still retains no invisible decoded orbit');
+   const bytes=[...f.orbitRequests];
+   if(phone){await page.waitForTimeout(250);await phoneSwipe(page,{x:190,y:700,dy:-100});}else await freshWheel(page,120);
+   await waitOrbit(page);await waitBuffer(page,phone?31:61);assert.equal(Number((await orbitData(page)).orbitMotionWidth),phone?640:960,'The configured movement resolution is unchanged');
+   assert.deepEqual(f.orbitRequests,bytes,'Handoff reuses all encoded frames without downloading the orbit again');
+   const before=await orbitData(page);if(phone)await phoneSwipe(page,{x:230,y:350,dx:-110,dy:0});else await freshWheel(page,100);await waitFrame(page,15);assert.equal(Number((await orbitData(page)).orbitCheckpoint),1,'A fresh gesture still moves to exactly the next checkpoint');
+   assert.equal(before.orbitCheckpoint,'0');
+   const home=await addHomeNavigation(page);await home.click();await waitStage(page,'opening');await page.waitForFunction(()=>window.orbitLive===0&&Number(document.querySelector('[data-admiral-orbit]').dataset.orbitDecoded)===0);await page.waitForTimeout(300);assert.equal(await page.evaluate(()=>window.orbitLive),0,'Returning Home releases the decoded orbit again');assert.deepEqual(f.orbitRequests,bytes,'Returning Home preserves the full compressed orbit download');
+  }finally{await f.close();}
+ });
+ for(const interruption of ['network','visibility'])await pass('audit priority SEQ01 hidden controls recover after '+interruption,async()=>{
+  const f=await fixture({cleanFixture:true,failHero:interruption==='network'?1:undefined,props:{showControls:false,duration:1.8,maxSpeed:1}}),{page}=f;
+  try{
+   await page.waitForTimeout(180);assert.equal(await page.locator('[data-homepage-recovery]').count(),0,'Normal opening has no extra recovery UI');await page.mouse.wheel(0,120);
+   if(interruption==='network')await page.waitForFunction(()=>document.querySelector('[data-admiral-sequence]').dataset.sequenceState==='error');
+   else{
+    await page.waitForFunction(()=>document.querySelector('[data-admiral-sequence]').dataset.sequencePlaying==='true');
+    await page.evaluate(()=>{Object.defineProperty(document,'hidden',{configurable:true,value:true});document.dispatchEvent(new Event('visibilitychange'));Object.defineProperty(document,'hidden',{configurable:true,value:false});document.dispatchEvent(new Event('visibilitychange'));});
+    await page.waitForFunction(()=>document.querySelector('[data-admiral-sequence]').dataset.sequenceState==='paused');
+   }
+   const recovery=page.locator('[data-homepage-recovery="SEQ_01"]');await recovery.waitFor({state:'visible'});assert.equal(await recovery.getByRole('button',{name:'Skip approach',exact:true}).count(),1,'The fallback includes an escape path');
+   f.restoreHero();await recovery.getByRole('button',{name:interruption==='network'?'Retry approach':'Continue approach',exact:true}).click();await waitStage(page,'building');assert.equal(await page.locator('[data-homepage-recovery]').count(),0,'Recovery UI disappears when normal playback completes');
+   const rendering=await page.locator('[data-admiral-sequence] img').evaluate(image=>({posterReady:image.complete&&image.naturalWidth>0}));assert.equal(rendering.posterReady,true,'The completed sequence retains a decoded visible still');
+  }finally{await f.close();}
+ });
+ await pass('audit priority expired apartment data refreshes hover facts and the cached shared card',async()=>{
+  const payload=JSON.parse(await readFile(new URL('data/apartments.json',root),'utf8')),probe=realMaskViews[0].probe;
+  const f=await fixture({cleanFixture:true,props:{...maskProps,orbitLayout:'classic'}}),{page}=f;
+  try{
+   await waitOrbit(page);await waitMask(page);await hoverRealMask(page,probe);await waitOrbitdataRecord(page,'[data-apartment-details]',probe.id);let point=await projectMaskPoint(page,probe);
+   await page.mouse.click(point.x,point.y);await waitApartmentCard(page,probe.id);await closeApartmentCard(page);const detailsBefore=f.detailRequests.length;
+   const next=structuredClone(payload),unit=next.apartments.find(apartment=>apartment.id===probe.id);unit.status='sold';unit.statusLabel='Eladva';unit.price+=17000000;f.setApartmentPayload(next);
+   const requests=f.apartmentRequests.length,camera=await orbitData(page),encoded=[...f.orbitRequests];
+   await page.evaluate(()=>{const native=Date.now.bind(Date);Date.now=()=>native()+61000;Object.defineProperty(document,'hidden',{configurable:true,value:false});document.dispatchEvent(new Event('visibilitychange'));window.dispatchEvent(new Event('focus'));});
+   await hoverRealMask(page,probe);await page.waitForFunction(()=>document.querySelector('[data-apartment-field="availability"]')?.textContent.includes('Eladva'),null,{timeout:12000});
+   await waitOrbitdataRecord(page,'[data-apartment-details]',probe.id);assert.equal(f.apartmentRequests.length,requests+1,'Visibility and focus coalesce into one expired-data revalidation');
+   await assertActualMaskColour(page,probe,statusHighlightRGB.sold,'Revalidated sold facade');point=await projectMaskPoint(page,probe);await page.mouse.click(point.x,point.y);const card=await waitApartmentCard(page,probe.id);assert.match(await card.locator('.detail-status').innerText(),/Eladva/,'The cached shared card uses the active orbit status');
+   assert.equal(Number((await card.locator('.price-value').innerText()).replace(/\s/g,'').replace(',','.')),unit.price/1000000,'The cached card uses the active orbit price');assert.equal(f.detailRequests.length,detailsBefore,'Refreshing orbit facts does not download the full room dataset again');
+   const final=structuredClone(next),finalUnit=final.apartments.find(apartment=>apartment.id===probe.id);finalUnit.status='under_negotiation';finalUnit.statusLabel='Egyeztetés alatt';finalUnit.price+=1000000;f.setApartmentPayload(final);await card.evaluate(dialog=>{window.auditOpenCard=dialog;});
+   await page.evaluate(()=>{const previous=Date.now;Date.now=()=>previous()+61000;window.dispatchEvent(new Event('focus'));});
+   await page.waitForFunction(()=>{const host=document.querySelector('[data-orbit-detail-card]'),dialog=host?.querySelector('div')?.shadowRoot?.querySelector('#detail-dialog');return dialog?.open&&dialog.querySelector('.detail-status')?.textContent.includes('Egyeztetés alatt');});
+   assert.equal(await card.evaluate(dialog=>dialog===window.auditOpenCard),true,'Refreshing facts leaves the same detail dialog mounted and open');assert.equal(Number((await card.locator('.price-value').innerText()).replace(/\s/g,'').replace(',','.')),finalUnit.price/1000000,'An already-open card receives the new price');assert.equal(f.detailRequests.length,detailsBefore,'An open-card facts refresh still reuses its full room dataset');assertSameCamera(camera,await orbitData(page),'Apartment-data revalidation');assert.deepEqual(f.orbitRequests,encoded,'Apartment-data refresh does not re-download orbit frames');
+  }finally{await f.close();}
+ });
  for(const layout of ['classic','studio'])await pass('orbitdata fade desktop '+layout+' retains outgoing facts and drawing, swaps smoothly and clears on leave',async()=>{
   const f=await fixture({cleanFixture:true,useDefaultOrbitLayout:layout==='classic',context:{viewport:{width:1440,height:900}},props:{...maskProps,orbitLayout:layout}}),{page}=f,scope=layout==='classic'?'[data-apartment-details]':'[data-orbit-studio]';
   try{
@@ -592,10 +645,13 @@ try{
     await page.mouse.move(background.x,background.y);await waitClear();await waitMaskOverlay(page,await projectMaskPoint(page,probe),false);assert.equal(await page.locator('[data-orbit-filters]:visible').count(),1,'Clearing hover leaves the primary filters available');
    }
    await hoverRealMask(page,statusControlProbes.available);await activateOrbitControl(page,'[data-orbit-filter-status="available"]',false);await waitOrbitFilters(page,{statuses:['available'],priceMin:null,priceMax:null});await waitClear();
-   const first=await projectMaskPoint(page,statusControlProbes.available),second=await projectMaskPoint(page,realMaskViews[0].second),sold=await projectMaskPoint(page,statusControlProbes.sold);
+   const first=await projectMaskPoint(page,statusControlProbes.available),second=await projectMaskPoint(page,realMaskViews[0].second);
    await waitMaskOverlay(page,first,true);const base=await maskOverlayPixel(page,first);assert.ok(Math.abs(base[3]-69)<=1,'Available filtering lights facades at the configured 27% base alpha');
    await hoverRealMask(page,statusControlProbes.available);await waitNumber(statusControlProbes.available.id);await page.waitForFunction(point=>{const canvas=document.querySelector('canvas[data-orbit-mask-overlay]'),x=Math.floor(point.lx/point.logicalWidth*canvas.width),y=Math.floor(point.ly/point.logicalHeight*canvas.height);return Math.abs(canvas.getContext('2d').getImageData(x,y,1,1).data[3]-145)<=1;},first);const boosted=await maskOverlayPixel(page,first);assert.ok(Math.abs(boosted[3]-Math.round(255*.57))<=1,'Actual filtered mouse hover adds 30 percentage points: 27% becomes 57%');assert.ok(Math.abs((await maskOverlayPixel(page,second))[3]-69)<=1,'Other eligible apartments retain the base filter strength');
    await page.mouse.move(background.x,background.y);await waitClear();await waitMaskAlpha(page,first,69);assert.ok(Math.abs((await maskOverlayPixel(page,first))[3]-69)<=1,'Leaving the facade removes the boost while retaining its active filter light');
+   // Clearing Studio facts can resize its image slot. Reproject the audited
+   // B105 mask pixel now, rather than hovering a stale coordinate on another unit.
+   const sold=await projectMaskPoint(page,statusControlProbes.sold);
    await page.mouse.move(sold.x,sold.y);await waitClear();assert.equal((await maskOverlayPixel(page,sold))[3],0,'A sold apartment excluded by the filter cannot gain a hover overlay');await page.mouse.click(sold.x,sold.y);assert.equal(await page.locator('#detail-dialog[open]').count(),0,'An excluded apartment cannot open a datasheet');
    await hoverRealMask(page,statusControlProbes.available);const filterPoint=await orbitControlPoint(page,'[data-orbit-area-toggle]');await page.mouse.move(filterPoint.x,filterPoint.y);await waitClear();await waitMaskAlpha(page,first,69);assert.ok(Math.abs((await maskOverlayPixel(page,first))[3]-69)<=1,'Moving onto a real filter control clears hover emphasis without clearing criteria');assertSameCamera(camera,await orbitData(page),'Mouse hover and status filters');assert.ok(Number(await page.locator('[data-admiral-homepage]').getAttribute('data-orbit-mask-cached'))<=2,'Status colours and hover emphasis retain the bounded two-mask decoded cache');await componentScreenshot(page,'status-hover-'+layout+(externalOverlay?'-covered':'-native')+'.png');
   }finally{await f.close();}
@@ -1225,7 +1281,7 @@ try{
    assert.equal(Number((await orbitData(page)).orbitFrame),0,'The floor-layout tab cannot trigger camera motion');await page.getByRole('tab',{name:'Alaprajz',exact:true}).click();
    await page.getByRole('button',{name:'Alaprajz nagyítása',exact:true}).click();const dialog=page.locator('[data-orbit-plan-dialog]');await dialog.waitFor({state:'visible'});assert.ok((await dialog.boundingBox()).height>geometry.plan.height,'Expanded plan gets a larger reading area');await page.keyboard.press('Escape');
    for(const selector of ['[data-orbit-inquiry]','[data-orbit-download]']){const action=page.locator(selector+':visible').first();assert.ok(await action.getAttribute('href'),'Native action has a concrete destination');await action.evaluate(element=>element.addEventListener('click',event=>{event.preventDefault();window.studioActionClick=(window.studioActionClick||0)+1;},{once:true}));await action.click();}
-   assert.equal(await page.evaluate(()=>window.studioActionClick),2);await page.locator('[data-orbit-detail-link]:visible').click();await waitApartmentCard(page);await closeApartmentCard(page);await page.evaluate(()=>{Object.defineProperty(navigator,'share',{configurable:true,value:undefined});Object.defineProperty(navigator,'clipboard',{configurable:true,value:{writeText:async value=>{window.sharedStudioUrl=value;}}});});await page.getByRole('button',{name:'Megosztás',exact:false}).click();assert.match(await page.evaluate(()=>window.sharedStudioUrl),/\/lista\?apartment=A001/,'Sharing uses the selected apartment detail link');assert.equal(Number((await orbitData(page)).orbitFrame),0,'Detail actions never rotate the orbit');
+   assert.equal(await page.evaluate(()=>window.studioActionClick),2);await page.locator('[data-orbit-detail-link]:visible').click();await waitApartmentCard(page);await closeApartmentCard(page);await sendApartment(page,{id:'A001'});await waitStudio(page,'A001');await page.evaluate(()=>{Object.defineProperty(navigator,'share',{configurable:true,value:undefined});Object.defineProperty(navigator,'clipboard',{configurable:true,value:{writeText:async value=>{window.sharedStudioUrl=value;}}});});await page.getByRole('button',{name:'Megosztás',exact:false}).click();assert.match(await page.evaluate(()=>window.sharedStudioUrl),/\/lista\?apartment=A001/,'Sharing uses the selected apartment detail link');assert.equal(Number((await orbitData(page)).orbitFrame),0,'Detail actions never rotate the orbit');
   }finally{await f.close();}
  });
  await pass('upright full-width phone defaults ignore the old turning setting and preserve buttons and swipes',async()=>{

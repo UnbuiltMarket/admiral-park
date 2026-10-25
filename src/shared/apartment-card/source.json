@@ -5,12 +5,12 @@
   "updated": "2026-10-25",
   "canonicalSources": {
     "card-runtime.js": {
-      "sha256": "ea8f1641f82cd43a24b9f99add5115152234161d455de003eaf232d9377a649b",
-      "bytes": 56835
+      "sha256": "21c105f695042e208e8efbd77c50a883a750c4c11fdf4cdf558f706357340481",
+      "bytes": 60545
     },
     "card.css": {
-      "sha256": "12e99887cb070a044f32f3aebe800ee255366fbaf2af4bce2977a13730166057",
-      "bytes": 43341
+      "sha256": "0f05258a0b139e0efb9e8818ac172b0c0d2f3917c89fcb4c1d48c9a14a8efef3",
+      "bytes": 43962
     },
     "card-shell.html": {
       "sha256": "93638e8f18b7a11da371804032266ac9c76932c21baeea10fa7bfe6068308370",
@@ -21,8 +21,8 @@
       "bytes": 13948
     },
     "card-pdf-actions.js": {
-      "sha256": "c3df47e74788eab40561252a70d1aafa1b3acd63821c4c9b30afaeb5ad18b62b",
-      "bytes": 8221
+      "sha256": "5e613596c59ecd98dcfec869cee2b0a4b02c461a3732a7b30e22ba1f40302f78",
+      "bytes": 8286
     }
   },
   "framerWrapper": "src/framer/OrbitApartmentCard.source.tsx",

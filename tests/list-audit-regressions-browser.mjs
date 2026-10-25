@@ -8,6 +8,7 @@ const [runtime,css,shell,json]=await Promise.all(['src/shared/apartment-list/app
 const dataset=JSON.parse(json),require=createRequire(import.meta.url);
 dataset.apartments.find(a=>a.id==='A001').status='under_negotiation';
 dataset.apartments.find(a=>a.id==='A002').areaGarden=12;
+dataset.apartments.find(a=>a.id==='A003').status='reserved';
 const {chromium}=require(process.env.PLAYWRIGHT_MODULE_PATH||'playwright');
 const browser=await chromium.launch({headless:true,channel:process.env.PLAYWRIGHT_CHANNEL||'chrome'});
 const checks=[];
@@ -76,6 +77,8 @@ try {
   });
   check('Negotiation text meets 4.5:1 contrast',contrast.ratio>=4.5);
   check('Negotiation dot retains original yellow',JSON.stringify(contrast.dot)==='[178,138,47]');
+  check('Reserved status remains supported after integration',await f.list.locator('[data-unit="A003"] .cell-status .status-reserved').count()===1);
+  check('Reserved text uses the same readable hue',await f.list.locator('[data-unit="A003"] .cell-status .status-pill').evaluate(el=>getComputedStyle(el).color===getComputedStyle(el.closest('table').querySelector('[data-unit="A001"] .cell-status .status-pill')).color));
   await f.page.setViewportSize({width:390,height:844});
   check('Absent mobile garden remains omitted',!await f.list.locator('[data-unit="A001"] .cell-garden').isVisible());
   check('Known mobile garden area remains visible',await f.list.locator('[data-unit="A002"] .cell-garden').isVisible());

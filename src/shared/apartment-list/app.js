@@ -29,7 +29,7 @@ const area = (value) => Number.isFinite(value) ? `${number.format(value)} m²` :
 const price = (value) => Number.isFinite(value) ? `${priceNumber.format(value)} Ft` : 'Ár kérésre';
 const apartmentPrice = (a) => a.price == null && a.status === 'sold' ? 'Nincs megadva' : price(a.price);
 const floorText = (a) => a.floorLabel || (a.floor === 0 ? 'Földszint' : a.floor == null ? 'Nincs adat' : `${a.floor}. emelet`);
-const labels = {available:'Elérhető', under_negotiation:'Tárgyalás alatt', sold:'Elkelt', unknown:'Érdeklődjön'};
+const labels = {available:'Elérhető', under_negotiation:'Tárgyalás alatt', reserved:'Egyeztetés alatt', sold:'Elkelt', unknown:'Érdeklődjön'};
 const statusText = (a) => a.statusLabel || labels[a.status] || labels.unknown;
 function assetUrl(value) {
   if(typeof value!=='string'||!value.trim())return null;

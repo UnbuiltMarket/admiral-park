@@ -545,7 +545,6 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
                 if (disposed) return
                 maskPickerRef.current?.refresh()
                 orbitSnapshot = snapshot; publish()
-                root!.dataset.orbitDownloaded = String(snapshot.downloaded)
                 if (snapshot.state !== "checkpoint" || snapshot.checkpoint < 0) clearApartmentDetails()
                 const key = `${snapshot.state}:${snapshot.checkpoint}:${Math.floor(snapshot.ready / 6)}:${Math.floor(snapshot.buffered / 6)}:${Math.floor(snapshot.requiredReady / 3)}:${snapshot.buffered === snapshot.bufferTotal}:${snapshot.requiredReady === snapshot.requiredTotal}:${snapshot.decoded > snapshot.buffered}`
                 const now = performance.now()
@@ -577,7 +576,7 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
         }
         function mountHero(atEnd = false) {
             if (disposed) return
-            enterToken++; orbit?.deactivate(); destroyHero()
+            enterToken++; orbit?.deactivate(true); destroyHero()
             presentationProgress = 0; applyPresentation()
             activeSequence = "SEQ_01"; root!.dataset.activeSequence = activeSequence
             changePoster(heroUrls[atEnd ? heroUrls.length - 1 : 0])
@@ -622,7 +621,7 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
             activeSequence = "SEQ_02"; root!.dataset.activeSequence = activeSequence
             changePoster(heroUrls[heroUrls.length - 1]); changeStage("connection")
             const generation = ++heroGeneration
-            let completed = false
+            let completed = false, orbitPreparing = false
             hero = createHeroSequence({
                 root: heroRoot!, canvas: heroCanvas!, poster: poster!, urls: connectionPlaybackUrls,
                 duration: connectionDuration, maxSpeed, momentum, triggerDistance, preservePresentation: true,
@@ -633,6 +632,11 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
                     if (disposed || generation !== heroGeneration) return
                     heroSnapshot = snapshot; setHeroState(previous => previous === snapshot.state ? previous : snapshot.state)
                     presentationProgress = snapshot.progress; applyPresentation()
+                    // Compressed orbit downloads run from page load; decode its
+                    // bounded window only near the connecting flight's handoff.
+                    if (!orbitPreparing && snapshot.direction > 0 && snapshot.progress >= .55) {
+                        orbitPreparing = true; void orbit.prepare().catch(() => {})
+                    }
                     publish()
                     const arrived = (snapshot.state === "arrival" || snapshot.state === "reduced") && snapshot.frame === connectionPlaybackUrls.length - 1
                     const returned = snapshot.state === "opening" && snapshot.direction < 0 && snapshot.frame === 0
@@ -769,8 +773,9 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
             changeStage("opening")
             if (startView === "orbit") { changePoster(orbitPoster); void activateOrbit() }
             else mountHero()
-            // The opening picture wins the first network requests; preload the entire orbit behind it.
-            const warm = window.setTimeout(() => { if (!disposed && isVisible()) void orbit!.prepare().catch(() => {}) }, 300)
+            // Keep the complete orbit download, without retaining its decoded
+            // window beside SEQ_01. Preparation starts near the SEQ_02 handoff.
+            const warm = window.setTimeout(() => { if (!disposed && isVisible()) orbit!.prefetch() }, 300)
             signal.addEventListener("abort", () => clearTimeout(warm), { once: true })
         }
         publish()
@@ -800,8 +805,11 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
         let facadeOrigin: { x: number; y: number } | null = null
         let bridgeClearTimer: ReturnType<typeof setTimeout> | null = null
         const dataSelector = "[data-apartment-field='floorplan'],[data-orbit-studio-details],.orbit-studio-facts"
+        // Studio's facts wrapper spans otherwise empty façade space. Only its
+        // actual controls and drawing pane are pointer destinations.
+        const pointerDataSelector = "[data-apartment-open],[data-orbit-detail-link],[data-orbit-apartment-action],.orbit-studio-secondary,[data-orbit-studio-details]"
         const cancelBridgeClear = () => { if (bridgeClearTimer !== null) clearTimeout(bridgeClearTimer); bridgeClearTimer = null }
-        const pointerInsideData = () => !!pointer && Array.from(root!.querySelectorAll<HTMLElement>(dataSelector)).some(panel => {
+        const pointerInsideData = () => !!pointer && Array.from(root!.querySelectorAll<HTMLElement>(pointerDataSelector)).some(panel => {
             const bounds = panel.getBoundingClientRect()
             return bounds.width > 0 && bounds.height > 0 && pointer!.x >= bounds.left && pointer!.x <= bounds.right && pointer!.y >= bounds.top && pointer!.y <= bounds.bottom
         })
@@ -822,7 +830,7 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
             // Navigation and filters are separate interactions, never bridges.
             const control = pointer.target.closest("a,button,input,select,textarea,[role='button']")
             if (control && !control.closest(dataSelector)) return false
-            return Array.from(root!.querySelectorAll<HTMLElement>(dataSelector)).some(panel => {
+            return Array.from(root!.querySelectorAll<HTMLElement>(pointerDataSelector)).some(panel => {
                 const bounds = panel.getBoundingClientRect()
                 // Record transitions briefly make the panel inert while its
                 // drawing swaps. Its parked bounds still define the approach.
@@ -990,9 +998,9 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
                         style={{ ...orbitButtonStyle, padding: "7px 9px", background: orbitInfo.checkpoint === i ? "rgba(255,255,255,.9)" : homepageButton.background, color: orbitInfo.checkpoint === i ? "#101820" : "#fff" }} onClick={() => actions.current?.orbit?.setCheckpoint(i)}>{i + 1}</button>)}
                 </>}
             </div>}
-            {!staticRenderer && !showControls && stage === "connection" && (heroState === "paused" || heroState === "error") && <div data-homepage-controls="" data-orbit-ignore="" style={{ position: "absolute", bottom: 18, left: "50%", transform: "translateX(-50%)", display: "flex", gap: 7, zIndex: 3 }}>
-                <button type="button" style={homepageButton} onClick={() => actions.current?.resumeHero()}>{heroState === "error" ? "Retry connection" : "Continue connection"}</button>
-                <button type="button" style={homepageButton} onClick={() => actions.current?.overview()}>Overview</button>
+            {!staticRenderer && !showControls && ["opening", "approach", "connection"].includes(stage) && (heroState === "paused" || heroState === "error") && <div data-homepage-controls="" data-homepage-recovery={stage === "connection" ? "SEQ_02" : "SEQ_01"} data-orbit-ignore="" role="group" aria-label="Animation recovery" style={{ position: "absolute", bottom: 18, left: "50%", transform: "translateX(-50%)", display: "flex", gap: 7, zIndex: 3 }}>
+                <button type="button" style={homepageButton} onClick={() => actions.current?.resumeHero()}>{stage === "connection" ? heroState === "error" ? "Retry connection" : "Continue connection" : heroState === "error" ? "Retry approach" : "Continue approach"}</button>
+                {stage === "connection" ? <button type="button" style={homepageButton} onClick={() => actions.current?.overview()}>Overview</button> : <button type="button" style={homepageButton} onClick={() => actions.current?.skip()}>Skip approach</button>}
             </div>}
             {!staticRenderer && !showControls && orbitInfo.state === "buffering" && <span role="status" style={{ ...homepageButton, position: "absolute", bottom: 18, left: "50%", transform: "translateX(-50%)", pointerEvents: "none", zIndex: 3 }}>Preparing view…</span>}
             {!staticRenderer && !showControls && orbitInfo.state === "error" && <div data-homepage-controls="" data-orbit-ignore="" style={{ position: "absolute", bottom: 18, left: "50%", transform: "translateX(-50%)", zIndex: 3 }}>
@@ -1002,7 +1010,7 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
                 bottom={detailsBottom} inset={detailsInset} onHeightChange={setDetailsHeight} onOpen={jsonDetails ? () => openApartmentDetails() : undefined}
                 moving={orbitVisible && orbitMoving} filtersVisible={orbitPanelVisible} filters={stripFiltersEnabled ? <div data-orbit-desktop-filters=""><OrbitFilterBar active={orbitPanelVisible} language={detailsLanguage} filters={filterResult.filters} bounds={filterBounds} areaBounds={filterAreaBounds} matchCount={filterResult.matchingIds.length} total={apartmentData.dataset?.apartments.length || 0} onChange={setApartmentFilters} presentation="overlay" /></div> : undefined} />}
             {!staticRenderer && <AdmiralApartmentDetailCard openId={detailApartmentId} dataUrl={detailDataUrl} assetBase={apartmentAssetBase} inquiryUrl={inquiryUrl} pageUrl={detailPageUrl}
-                onOpenChange={reportDetailOpen} onClosed={closeApartmentDetails} />}
+                onOpenChange={reportDetailOpen} onClosed={closeApartmentDetails} liveDataset={apartmentData.dataset} />}
             {!staticRenderer && !useStudio && jsonDetails && orbitVisible && apartmentData.status === "error" && <div data-orbit-ignore="" role="status" style={{ position: "absolute", left: "4%", bottom: 24, zIndex: 4 }}>
                 <button type="button" style={homepageButton} onClick={apartmentData.retry}>{detailsLanguage === "en" ? "Retry apartment data" : "Lakásadatok újratöltése"}</button>
             </div>}

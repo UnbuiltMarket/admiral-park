@@ -24,7 +24,7 @@ test('a stalled orbit download times out, aborts, evicts and can retry successfu
     [...timers.values()][0]();await rejected;
     assert.equal(signal.aborted,true);assert.equal(timers.size,0);
     const retry=api.requestOrbitApartmentDataset('https://test/apartments.json');assert.equal((await retry).apartments.length,69);assert.equal(calls,2);
-    assert.equal(api.requestOrbitApartmentDataset('https://test/apartments.json'),retry);assert.equal(timers.size,0);
+    assert.equal(await api.requestOrbitApartmentDataset('https://test/apartments.json'),await retry);assert.equal(timers.size,0);
 });
 
 test('a stalled response body also times out and explicit retry never reuses pending work',async()=>{
@@ -34,7 +34,7 @@ test('a stalled response body also times out and explicit retry never reuses pen
     await Promise.resolve();api.invalidateOrbitApartmentDataset('https://test/body.json');
     const retry=api.requestOrbitApartmentDataset('https://test/body.json');await rejected;assert.equal((await retry).apartments.length,69);
     assert.equal(signals[0].aborted,true);assert.equal(signals[1].aborted,false);assert.equal(calls,2);assert.equal(timers.size,0);
-    assert.equal(api.requestOrbitApartmentDataset('https://test/body.json'),retry,'late old cleanup preserves the new cache entry');
+    assert.equal(await api.requestOrbitApartmentDataset('https://test/body.json'),await retry,'late old cleanup preserves the new cache entry');
 });
 
 test('orbitdata corridor retains only the control bounds and direct pointer approach',()=>{

@@ -315,6 +315,14 @@ function createOrbitStoryOverlay(Component: ComponentType<any>, viewIndex: numbe
             }
             function update() {
                 if (disposed) return
+                // Checkpoint groups cannot appear during either approach flight.
+                // Stage changes already notify every subscriber, so no geometry
+                // or ancestor styles are needed to keep these groups hidden.
+                if (![...homepageChannels.values()].some(channel => channel.stage === "orbit" && channel.story.enabled)) {
+                    if (state !== "hidden" || target || opacity !== 0 || timer || frame) hide()
+                    restoreLayout()
+                    return
+                }
                 const root = resolve()
                 if (selected !== root) { hide(); selected = root; observeSource(root) }
                 const channel = root && homepageChannels.get(root)
@@ -716,6 +724,9 @@ function useOrbitPreviewImage(url: string | null | undefined, enabled = true): s
 const ORBIT_APARTMENT_REQUEST_TIMEOUT = 15000
 interface OrbitApartmentRequest { promise: Promise<OrbitApartmentDataset>; cancel: () => void; pending: boolean }
 const orbitApartmentRequests = new Map<string, OrbitApartmentRequest>()
+const orbitApartmentCache = new Map<string, { dataset: OrbitApartmentDataset; refreshedAt: number }>()
+const orbitApartmentSubscribers = new Map<string, Set<(dataset: OrbitApartmentDataset) => void>>()
+const ORBIT_APARTMENT_FRESH_MS = 60_000
 function orbitApartmentRequestUrl(value: string): string | null {
     if (!value.trim()) return null
     try {
@@ -723,9 +734,11 @@ function orbitApartmentRequestUrl(value: string): string | null {
         return url.protocol === "http:" || url.protocol === "https:" ? url.href : null
     } catch { return null }
 }
-function requestOrbitApartmentDataset(url: string): Promise<OrbitApartmentDataset> {
+function requestOrbitApartmentDataset(url: string, force = false): Promise<OrbitApartmentDataset> {
     const previous = orbitApartmentRequests.get(url)
     if (previous) return previous.promise
+    const cached = orbitApartmentCache.get(url)
+    if (!force && cached && Date.now() - cached.refreshedAt < ORBIT_APARTMENT_FRESH_MS) return Promise.resolve(cached.dataset)
     const controller = new AbortController()
     let timer: ReturnType<typeof setTimeout>, cancel!: () => void
     const cancellation = new Promise<never>((_, reject) => {
@@ -735,19 +748,30 @@ function requestOrbitApartmentDataset(url: string): Promise<OrbitApartmentDatase
             reject(new Error("Apartment data request timed out. Please retry."))
         }, ORBIT_APARTMENT_REQUEST_TIMEOUT)
     })
-    const download = fetch(url, { mode: "cors", credentials: "omit", headers: { Accept: "application/json" }, signal: controller.signal }).then(response => {
+    const download = fetch(url, { mode: "cors", credentials: "omit", cache: "no-cache", headers: { Accept: "application/json" }, signal: controller.signal }).then(response => {
         if (!response.ok) throw new Error(`Apartment data could not be loaded (${response.status}).`)
         return response.json()
     }).then(parseOrbitApartmentDataset)
     const entry: OrbitApartmentRequest = { promise: null as unknown as Promise<OrbitApartmentDataset>, cancel, pending: true }
-    entry.promise = Promise.race([download, cancellation]).catch(error => {
+    entry.promise = Promise.race([download, cancellation]).then(parsed => {
+        // Retain identity when revalidation returns unchanged facts, avoiding
+        // unnecessary hover, filter and card rebuilds every minute.
+        const dataset = cached && JSON.stringify(cached.dataset) === JSON.stringify(parsed) ? cached.dataset : parsed
+        orbitApartmentCache.set(url, { dataset, refreshedAt: Date.now() })
+        if (orbitApartmentCache.size > 8) for (const key of orbitApartmentCache.keys()) {
+            if (key !== url && !orbitApartmentSubscribers.get(key)?.size) { orbitApartmentCache.delete(key); break }
+        }
+        orbitApartmentSubscribers.get(url)?.forEach(listener => listener(dataset))
+        return dataset
+    }).finally(() => {
+        entry.pending = false; clearTimeout(timer)
         if (orbitApartmentRequests.get(url) === entry) orbitApartmentRequests.delete(url)
-        throw error
-    }).finally(() => { entry.pending = false; clearTimeout(timer) })
+    })
     orbitApartmentRequests.set(url, entry)
     return entry.promise
 }
 function invalidateOrbitApartmentDataset(url: string): void {
+    orbitApartmentCache.delete(url)
     const entry = orbitApartmentRequests.get(url)
     if (!entry) return
     orbitApartmentRequests.delete(url)
@@ -761,11 +785,31 @@ function useOrbitApartments(url: string, enabled: boolean): { dataset: OrbitApar
         if (!enabled) return
         if (!resolved) { setState({ url: url.trim(), dataset: null, status: "error", error: "Set a valid apartment JSON address." }); return }
         let active = true
-        setState(previous => previous.url === resolved && previous.dataset ? previous : { url: resolved, dataset: null, status: "loading", error: "" })
-        requestOrbitApartmentDataset(resolved).then(dataset => { if (active) setState({ url: resolved, dataset, status: "ready", error: "" }) }, error => {
-            if (active) setState({ url: resolved, dataset: null, status: "error", error: error instanceof Error ? error.message : "Apartment data could not be loaded." })
-        })
-        return () => { active = false }
+        const accept = (dataset: OrbitApartmentDataset) => {
+            if (active) setState(previous => previous.url === resolved && previous.dataset === dataset && previous.status === "ready" && !previous.error ? previous : { url: resolved, dataset, status: "ready", error: "" })
+        }
+        let subscribers = orbitApartmentSubscribers.get(resolved)
+        if (!subscribers) { subscribers = new Set(); orbitApartmentSubscribers.set(resolved, subscribers) }
+        subscribers.add(accept)
+        const load = (force = false) => {
+            if (!active) return
+            setState(previous => previous.url === resolved && previous.dataset ? previous : { url: resolved, dataset: null, status: "loading", error: "" })
+            requestOrbitApartmentDataset(resolved, force).then(accept, error => {
+                if (active) setState(previous => previous.url === resolved && previous.dataset ? { ...previous, error: error instanceof Error ? error.message : "Apartment data could not be refreshed." } :
+                    { url: resolved, dataset: null, status: "error", error: error instanceof Error ? error.message : "Apartment data could not be loaded." })
+            })
+        }
+        const refresh = () => { if (!document.hidden) load() }
+        load(attempt > 0)
+        const interval = window.setInterval(refresh, ORBIT_APARTMENT_FRESH_MS)
+        document.addEventListener("visibilitychange", refresh)
+        window.addEventListener("focus", refresh); window.addEventListener("pageshow", refresh)
+        return () => {
+            active = false; subscribers!.delete(accept)
+            if (!subscribers!.size) orbitApartmentSubscribers.delete(resolved)
+            window.clearInterval(interval); document.removeEventListener("visibilitychange", refresh)
+            window.removeEventListener("focus", refresh); window.removeEventListener("pageshow", refresh)
+        }
     }, [resolved, url, enabled, attempt])
     const retry = React.useCallback(() => { if (resolved) invalidateOrbitApartmentDataset(resolved); setAttempt(value => value + 1) }, [resolved])
     if (!enabled) return { dataset: state.url === resolved ? state.dataset : null, status: "idle", error: "", retry }
@@ -2515,7 +2559,6 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
                 if (disposed) return
                 maskPickerRef.current?.refresh()
                 orbitSnapshot = snapshot; publish()
-                root!.dataset.orbitDownloaded = String(snapshot.downloaded)
                 if (snapshot.state !== "checkpoint" || snapshot.checkpoint < 0) clearApartmentDetails()
                 const key = `${snapshot.state}:${snapshot.checkpoint}:${Math.floor(snapshot.ready / 6)}:${Math.floor(snapshot.buffered / 6)}:${Math.floor(snapshot.requiredReady / 3)}:${snapshot.buffered === snapshot.bufferTotal}:${snapshot.requiredReady === snapshot.requiredTotal}:${snapshot.decoded > snapshot.buffered}`
                 const now = performance.now()
@@ -2547,7 +2590,7 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
         }
         function mountHero(atEnd = false) {
             if (disposed) return
-            enterToken++; orbit?.deactivate(); destroyHero()
+            enterToken++; orbit?.deactivate(true); destroyHero()
             presentationProgress = 0; applyPresentation()
             activeSequence = "SEQ_01"; root!.dataset.activeSequence = activeSequence
             changePoster(heroUrls[atEnd ? heroUrls.length - 1 : 0])
@@ -2592,7 +2635,7 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
             activeSequence = "SEQ_02"; root!.dataset.activeSequence = activeSequence
             changePoster(heroUrls[heroUrls.length - 1]); changeStage("connection")
             const generation = ++heroGeneration
-            let completed = false
+            let completed = false, orbitPreparing = false
             hero = createHeroSequence({
                 root: heroRoot!, canvas: heroCanvas!, poster: poster!, urls: connectionPlaybackUrls,
                 duration: connectionDuration, maxSpeed, momentum, triggerDistance, preservePresentation: true,
@@ -2603,6 +2646,11 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
                     if (disposed || generation !== heroGeneration) return
                     heroSnapshot = snapshot; setHeroState(previous => previous === snapshot.state ? previous : snapshot.state)
                     presentationProgress = snapshot.progress; applyPresentation()
+                    // Compressed orbit downloads run from page load; decode its
+                    // bounded window only near the connecting flight's handoff.
+                    if (!orbitPreparing && snapshot.direction > 0 && snapshot.progress >= .55) {
+                        orbitPreparing = true; void orbit.prepare().catch(() => {})
+                    }
                     publish()
                     const arrived = (snapshot.state === "arrival" || snapshot.state === "reduced") && snapshot.frame === connectionPlaybackUrls.length - 1
                     const returned = snapshot.state === "opening" && snapshot.direction < 0 && snapshot.frame === 0
@@ -2739,8 +2787,9 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
             changeStage("opening")
             if (startView === "orbit") { changePoster(orbitPoster); void activateOrbit() }
             else mountHero()
-            // The opening picture wins the first network requests; preload the entire orbit behind it.
-            const warm = window.setTimeout(() => { if (!disposed && isVisible()) void orbit!.prepare().catch(() => {}) }, 300)
+            // Keep the complete orbit download, without retaining its decoded
+            // window beside SEQ_01. Preparation starts near the SEQ_02 handoff.
+            const warm = window.setTimeout(() => { if (!disposed && isVisible()) orbit!.prefetch() }, 300)
             signal.addEventListener("abort", () => clearTimeout(warm), { once: true })
         }
         publish()
@@ -2770,8 +2819,11 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
         let facadeOrigin: { x: number; y: number } | null = null
         let bridgeClearTimer: ReturnType<typeof setTimeout> | null = null
         const dataSelector = "[data-apartment-field='floorplan'],[data-orbit-studio-details],.orbit-studio-facts"
+        // Studio's facts wrapper spans otherwise empty façade space. Only its
+        // actual controls and drawing pane are pointer destinations.
+        const pointerDataSelector = "[data-apartment-open],[data-orbit-detail-link],[data-orbit-apartment-action],.orbit-studio-secondary,[data-orbit-studio-details]"
         const cancelBridgeClear = () => { if (bridgeClearTimer !== null) clearTimeout(bridgeClearTimer); bridgeClearTimer = null }
-        const pointerInsideData = () => !!pointer && Array.from(root!.querySelectorAll<HTMLElement>(dataSelector)).some(panel => {
+        const pointerInsideData = () => !!pointer && Array.from(root!.querySelectorAll<HTMLElement>(pointerDataSelector)).some(panel => {
             const bounds = panel.getBoundingClientRect()
             return bounds.width > 0 && bounds.height > 0 && pointer!.x >= bounds.left && pointer!.x <= bounds.right && pointer!.y >= bounds.top && pointer!.y <= bounds.bottom
         })
@@ -2792,7 +2844,7 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
             // Navigation and filters are separate interactions, never bridges.
             const control = pointer.target.closest("a,button,input,select,textarea,[role='button']")
             if (control && !control.closest(dataSelector)) return false
-            return Array.from(root!.querySelectorAll<HTMLElement>(dataSelector)).some(panel => {
+            return Array.from(root!.querySelectorAll<HTMLElement>(pointerDataSelector)).some(panel => {
                 const bounds = panel.getBoundingClientRect()
                 // Record transitions briefly make the panel inert while its
                 // drawing swaps. Its parked bounds still define the approach.
@@ -2960,9 +3012,9 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
                         style={{ ...orbitButtonStyle, padding: "7px 9px", background: orbitInfo.checkpoint === i ? "rgba(255,255,255,.9)" : homepageButton.background, color: orbitInfo.checkpoint === i ? "#101820" : "#fff" }} onClick={() => actions.current?.orbit?.setCheckpoint(i)}>{i + 1}</button>)}
                 </>}
             </div>}
-            {!staticRenderer && !showControls && stage === "connection" && (heroState === "paused" || heroState === "error") && <div data-homepage-controls="" data-orbit-ignore="" style={{ position: "absolute", bottom: 18, left: "50%", transform: "translateX(-50%)", display: "flex", gap: 7, zIndex: 3 }}>
-                <button type="button" style={homepageButton} onClick={() => actions.current?.resumeHero()}>{heroState === "error" ? "Retry connection" : "Continue connection"}</button>
-                <button type="button" style={homepageButton} onClick={() => actions.current?.overview()}>Overview</button>
+            {!staticRenderer && !showControls && ["opening", "approach", "connection"].includes(stage) && (heroState === "paused" || heroState === "error") && <div data-homepage-controls="" data-homepage-recovery={stage === "connection" ? "SEQ_02" : "SEQ_01"} data-orbit-ignore="" role="group" aria-label="Animation recovery" style={{ position: "absolute", bottom: 18, left: "50%", transform: "translateX(-50%)", display: "flex", gap: 7, zIndex: 3 }}>
+                <button type="button" style={homepageButton} onClick={() => actions.current?.resumeHero()}>{stage === "connection" ? heroState === "error" ? "Retry connection" : "Continue connection" : heroState === "error" ? "Retry approach" : "Continue approach"}</button>
+                {stage === "connection" ? <button type="button" style={homepageButton} onClick={() => actions.current?.overview()}>Overview</button> : <button type="button" style={homepageButton} onClick={() => actions.current?.skip()}>Skip approach</button>}
             </div>}
             {!staticRenderer && !showControls && orbitInfo.state === "buffering" && <span role="status" style={{ ...homepageButton, position: "absolute", bottom: 18, left: "50%", transform: "translateX(-50%)", pointerEvents: "none", zIndex: 3 }}>Preparing view…</span>}
             {!staticRenderer && !showControls && orbitInfo.state === "error" && <div data-homepage-controls="" data-orbit-ignore="" style={{ position: "absolute", bottom: 18, left: "50%", transform: "translateX(-50%)", zIndex: 3 }}>
@@ -2972,7 +3024,7 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
                 bottom={detailsBottom} inset={detailsInset} onHeightChange={setDetailsHeight} onOpen={jsonDetails ? () => openApartmentDetails() : undefined}
                 moving={orbitVisible && orbitMoving} filtersVisible={orbitPanelVisible} filters={stripFiltersEnabled ? <div data-orbit-desktop-filters=""><OrbitFilterBar active={orbitPanelVisible} language={detailsLanguage} filters={filterResult.filters} bounds={filterBounds} areaBounds={filterAreaBounds} matchCount={filterResult.matchingIds.length} total={apartmentData.dataset?.apartments.length || 0} onChange={setApartmentFilters} presentation="overlay" /></div> : undefined} />}
             {!staticRenderer && <AdmiralApartmentDetailCard openId={detailApartmentId} dataUrl={detailDataUrl} assetBase={apartmentAssetBase} inquiryUrl={inquiryUrl} pageUrl={detailPageUrl}
-                onOpenChange={reportDetailOpen} onClosed={closeApartmentDetails} />}
+                onOpenChange={reportDetailOpen} onClosed={closeApartmentDetails} liveDataset={apartmentData.dataset} />}
             {!staticRenderer && !useStudio && jsonDetails && orbitVisible && apartmentData.status === "error" && <div data-orbit-ignore="" role="status" style={{ position: "absolute", left: "4%", bottom: 24, zIndex: 4 }}>
                 <button type="button" style={homepageButton} onClick={apartmentData.retry}>{detailsLanguage === "en" ? "Retry apartment data" : "Lakásadatok újratöltése"}</button>
             </div>}
@@ -4134,8 +4186,10 @@ function createOrbitPlayer(options: OrbitOptions) {
     let preparePromise: Promise<void> | null = null, prepareResolve: (() => void) | null = null;
     let prepareReject: ((reason: Error) => void) | null = null;
     let inspection: OrbitBitmap | null = null, inspectionFrame = -1, inspectionGeneration = 0, qualityStartedAt = 0, inspectionDecoding = false, inspectionWanted = false;
-    let nativeDecodes = 0;
+    let nativeDecodes = 0, decodeGeneration = 0;
     let lastPaint = "", lastNotification = "";
+    let residentFramesDirty = true, requiredFramesDirty = true;
+    let residentFramesText = "", requiredFramesText = "";
     let drag: { id: number; x: number; y: number; moved: boolean; triggered: boolean } | null = null;
     let touchDragging = false;
     let suspended = false, suspendedAt = 0;
@@ -4164,23 +4218,30 @@ function createOrbitPlayer(options: OrbitOptions) {
             userPaused: state === "paused" && !automaticPause, suspended, ...(error ? { error } : {}) };
     }
 
+    function setData(name: string, text: string) {
+        if (root.dataset[name] !== text) root.dataset[name] = text;
+    }
+
     function notify() {
         if (destroyed) return;
         const value = snapshot();
-        root.dataset.orbitState = state; root.dataset.orbitFrame = String(value.frame);
-        root.dataset.orbitCheckpoint = String(value.checkpoint); root.dataset.orbitReady = String(value.ready);
-        root.dataset.orbitDecoded = String(value.decoded); root.dataset.orbitDownloaded = String(value.downloaded);
-        root.dataset.orbitPosition = position.toFixed(4); root.dataset.orbitMotionWidth = String(motionWidth);
-        root.dataset.orbitTarget = (pendingMove?.target ?? settling?.target ?? position).toFixed(4);
-        root.dataset.orbitFrameBlend = String(frameBlend);
-        root.dataset.orbitLocked = String(!!settling || !!pendingMove);
-        root.dataset.orbitSuspended = String(suspended);
-        root.dataset.orbitBuffered = String(value.buffered); root.dataset.orbitBufferTotal = String(value.bufferTotal);
-        root.dataset.orbitRequiredReady = String(value.requiredReady); root.dataset.orbitRequiredTotal = String(value.requiredTotal);
-        root.dataset.orbitDecoding = String(nativeDecodes);
-        root.dataset.orbitCacheLimit = String(desired.size); root.dataset.orbitBufferCheckpoints = String(bufferCheckpoints);
-        root.dataset.orbitResidentFrames = [...frames.keys()].sort((a, b) => a - b).join(",");
-        root.dataset.orbitRequiredFrames = [...required].sort((a, b) => a - b).join(",");
+        // These attributes are also consumed by picking and Framer overlays. Keep
+        // them current without scheduling MutationObserver work for unchanged data.
+        setData("orbitState", state); setData("orbitFrame", String(value.frame));
+        setData("orbitCheckpoint", String(value.checkpoint)); setData("orbitReady", String(value.ready));
+        setData("orbitDecoded", String(value.decoded)); setData("orbitDownloaded", String(value.downloaded));
+        setData("orbitPosition", position.toFixed(4)); setData("orbitMotionWidth", String(motionWidth));
+        setData("orbitTarget", (pendingMove?.target ?? settling?.target ?? position).toFixed(4));
+        setData("orbitFrameBlend", String(frameBlend));
+        setData("orbitLocked", String(!!settling || !!pendingMove));
+        setData("orbitSuspended", String(suspended));
+        setData("orbitBuffered", String(value.buffered)); setData("orbitBufferTotal", String(value.bufferTotal));
+        setData("orbitRequiredReady", String(value.requiredReady)); setData("orbitRequiredTotal", String(value.requiredTotal));
+        setData("orbitDecoding", String(nativeDecodes));
+        setData("orbitCacheLimit", String(desired.size)); setData("orbitBufferCheckpoints", String(bufferCheckpoints));
+        if (residentFramesDirty) { residentFramesText = [...frames.keys()].sort((a, b) => a - b).join(","); residentFramesDirty = false; }
+        if (requiredFramesDirty) { requiredFramesText = [...required].sort((a, b) => a - b).join(","); requiredFramesDirty = false; }
+        setData("orbitResidentFrames", residentFramesText); setData("orbitRequiredFrames", requiredFramesText);
         const signature = [state, value.frame, value.checkpoint, direction, value.ready, value.decoded, value.bufferTotal,
             value.requiredReady, value.requiredTotal, position.toFixed(4), value.target, value.userPaused, suspended, error].join("|");
         if (signature !== lastNotification) { lastNotification = signature; options.onUpdate?.(value); }
@@ -4249,9 +4310,12 @@ function createOrbitPlayer(options: OrbitOptions) {
     }
 
     function setBuffer(wanted: number[], essential: number[], first = essential) {
-        desired = new Set(wanted); required = new Set(essential);
+        desired = new Set(wanted);
+        if (essential.length !== required.size || essential.some(index => !required.has(index))) {
+            required = new Set(essential); requiredFramesDirty = true;
+        }
         priority = [...new Set([...first, ...wanted])].filter(index => desired.has(index));
-        for (const [index, bitmap] of frames) if (!desired.has(index)) { bitmap.close(); frames.delete(index); }
+        for (const [index, bitmap] of frames) if (!desired.has(index)) { bitmap.close(); frames.delete(index); residentFramesDirty = true; }
         resourcesChanged();
     }
 
@@ -4329,12 +4393,13 @@ function createOrbitPlayer(options: OrbitOptions) {
     }
 
     async function decodeFrame(index: number) {
+        const generation = decodeGeneration;
         decoding.add(index);
         try {
             const bitmap = await decodeBlob(blobs.get(index)!, motionWidth);
-            if (destroyed || !desired.has(index)) bitmap.close();
-            else { frames.get(index)?.close(); frames.set(index, bitmap); }
-        } catch (reason) { if (!destroyed) decodeFailed.set(index, String(reason)); }
+            if (destroyed || generation !== decodeGeneration || !desired.has(index)) bitmap.close();
+            else { if (!frames.has(index)) residentFramesDirty = true; frames.get(index)?.close(); frames.set(index, bitmap); }
+        } catch (reason) { if (!destroyed && generation === decodeGeneration) decodeFailed.set(index, String(reason)); }
         finally {
             decoding.delete(index);
             if (!destroyed) resourcesChanged();
@@ -4356,6 +4421,13 @@ function createOrbitPlayer(options: OrbitOptions) {
             if (desired.has(index) && blobs.has(index) && !frames.has(index) && !decoding.has(index) && !decodeFailed.has(index)) void decodeFrame(index);
         }
         notify();
+    }
+
+    /** Download the complete compressed orbit without allocating decoded frames. */
+    function prefetch(): void {
+        if (destroyed || started || !total) return;
+        started = true;
+        pump();
     }
 
     function prepare(): Promise<void> {
@@ -4465,8 +4537,7 @@ function createOrbitPlayer(options: OrbitOptions) {
             context.globalAlpha = mix; drawImage(inspection, destination, logicalRatio); context.globalAlpha = 1;
         }
         if (destination) context.restore();
-        root.dataset.orbitFrameFrom = String(from); root.dataset.orbitFrameTo = String(to);
-        root.dataset.orbitFrameMix = frameMix.toFixed(4);
+        setData("orbitFrameFrom", String(from)); setData("orbitFrameTo", String(to)); setData("orbitFrameMix", frameMix.toFixed(4));
         lastPaint = signature;
     }
 
@@ -4810,13 +4881,28 @@ function createOrbitPlayer(options: OrbitOptions) {
         else if (target !== undefined) resourcesChanged();
     }
 
-    function deactivate() {
+    /** Retain compressed downloads while optionally releasing all parked/motion bitmaps. */
+    function deactivate(releaseDecoded = false) {
         activation++; active = false; automaticPause = false; releaseDrag(); settling = null; pendingMove = null; pausedAt = 0;
         if (raf) cancelAnimationFrame(raf); raf = 0; dropInspection();
         canvas.style.touchAction = originalTouchAction;
         error = undefined;
+        if (releaseDecoded) {
+            // The opening sequence must not share memory with an invisible orbit
+            // window. Late native decodes keep their permits, then close instead
+            // of entering a later preparation that happens to want the same IDs.
+            decodeGeneration++; prepared = preparing = false;
+            desired.clear(); required.clear(); priority = []; preparationRequired = [];
+            residentFramesDirty = requiredFramesDirty = true;
+            frames.forEach(bitmap => bitmap.close()); frames.clear();
+            const resolve = prepareResolve; prepareResolve = prepareReject = null; preparePromise = null;
+            // Old activation waiters observe the incremented activation token.
+            // Finish abandoned warm-up promises without an unhandled rejection.
+            resolve?.(); state = "idle"; finishWaiters(); notify(); pump();
+            return;
+        }
         state = prepared ? "idle" : preparing ? "loading" : "idle";
-        if (started && !destroyed) setRestBuffer(startFrame, true);
+        if ((prepared || preparing) && !destroyed) setRestBuffer(startFrame, true);
         else { finishWaiters(); notify(); }
     }
 
@@ -4869,7 +4955,7 @@ function createOrbitPlayer(options: OrbitOptions) {
     notify();
 
     return {
-        prepare, activate, deactivate, go, setCheckpoint, pause: () => pauseInternal(false), resume, retry, snapshot, setSuspended, redraw: () => paint(performance.now()),
+        prefetch, prepare, activate, deactivate, go, setCheckpoint, pause: () => pauseInternal(false), resume, retry, snapshot, setSuspended, redraw: () => paint(performance.now()),
         destroy() {
             if (destroyed) return;
             destroyed = true; deactivate(); cancellation.abort();

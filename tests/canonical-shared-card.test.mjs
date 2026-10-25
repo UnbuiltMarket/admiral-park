@@ -88,9 +88,9 @@ function renderDetail(apartment){
   const context={apartment,byId:()=>apartment,$:()=>dialog,mediaEntries:()=>[],floorText:()=> 'Földszint',
     assetUrl:()=>null,esc:String,number:{format:String},priceNumber:{format:String},hasNumber:Number.isFinite,
     detailRooms:()=>'',detailPlan:()=>'',inquiry:()=>'',downloadLink:()=>'',shareControl:()=>'',saveButton:()=>'',
-    apartmentPrice:()=> 'Ár kérésre',statusText:()=> 'Elérhető',openDialog(){},initializeInlineMedia(){},
+    apartmentPrice:()=> 'Ár kérésre',statusText:()=> 'Elérhető',factsSignature:()=>'',openDialog(){},initializeDetailImages(){},
     ResizeObserver:class{observe(){}},requestAnimationFrame(){},fitDetailRooms(){}};
-  vm.runInNewContext('let selectedPlanRoom=null,hoverPlanRoom=null,focusedPlanRoom=null,detailResize=null;\n'+card.get('detailMetric')+'\n'+card.get('detail')+'\ndetail(apartment.id);',context);
+  vm.runInNewContext('let selectedPlanRoom=null,hoverPlanRoom=null,focusedPlanRoom=null,detailResize=null,renderedFactsSignature="";\n'+['detailMetric','detailMetrics','detailPrice','detailUnitMeta','detail'].map(name=>card.get(name)).join('\n')+'\ndetail(apartment.id);',context);
   return dialog.innerHTML;
 }
 test('rendered shared card keeps Lakásszám in its metrics row and gross-price copy in the footer',()=>{

@@ -66,8 +66,8 @@ input[aria-invalid="true"] { border-color: var(--negotiating); }
 .status-pill { display: inline-flex; align-items: center; gap: 7px; color: var(--muted); font-size: 10px; line-height: 1.5; white-space: nowrap; }
 .status-pill::before { content: ''; width: 4px; height: 4px; flex-shrink: 0; border-radius: 50%; background: currentColor; }
 .status-available { color: var(--available); }
-.status-under_negotiation { color: color-mix(in srgb, var(--negotiating) 60%, var(--detail-ink)); }
-.status-under_negotiation::before { background: var(--negotiating); }
+.status-under_negotiation, .status-reserved { color: color-mix(in srgb, var(--negotiating) 60%, var(--detail-ink)); }
+.status-under_negotiation::before, .status-reserved::before { background: var(--negotiating); }
 .status-sold { color: var(--sold); }
 .status-unknown { color: var(--muted); }
 .save-button { display: inline-grid; place-items: center; width: 31px; height: 34px; vertical-align: middle; padding: 6px; color: color-mix(in srgb, var(--muted) 65%, var(--paper)); }
@@ -143,8 +143,6 @@ input[aria-invalid="true"] { border-color: var(--negotiating); }
 #detail-dialog .detail-plan, #detail-dialog .detail-floor-plan { position: relative; display: flex; flex: 1; flex-direction: column; min-width: 0; min-height: 0; margin: 0; }
 #detail-dialog [data-image-state]:not([data-image-state="ready"]) :is(.detail-plan-image, .detail-floor-image) { opacity: 0; }
 #detail-dialog [data-image-state]:not([data-image-state="ready"]) .detail-plan-markers { visibility: hidden; }
-#detail-dialog .inline-media-feedback { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; min-width: 0; padding: 12px; color: var(--detail-muted); font-size: 11px; line-height: 1.5; text-align: center; }
-#detail-dialog .inline-media-feedback .button-secondary { min-height: 34px; padding: 7px 12px; font-size: 11px; border-radius: 999px; }
 #detail-dialog .detail-section-label { flex-shrink: 0; margin: 0 0 9px; color: var(--detail-muted); font-size: 10px; font-weight: 400; letter-spacing: 1.1px; line-height: 1.4; text-transform: uppercase; }
 #detail-dialog .detail-plan-stage { position: relative; container-type: size; display: grid; flex: 1; place-items: center; min-width: 0; min-height: 0; margin: 0; padding: 0; border: 0; background: none; }
 #detail-dialog .detail-plan-canvas { position: relative; width: min(100cqw, calc(100cqh * var(--plan-aspect, 1))); max-width: 100%; max-height: 100%; aspect-ratio: var(--plan-aspect, 1); overflow: hidden; border: 0; background: none; }
@@ -197,8 +195,8 @@ input[aria-invalid="true"] { border-color: var(--negotiating); }
 #detail-dialog .detail-status .status-pill::before { display: block; width: 6px; height: 6px; flex-shrink: 0; border-radius: 50%; background: currentColor; }
 #detail-dialog .detail-status .status-available { color: var(--available); }
 #detail-dialog .detail-status .status-sold { color: var(--sold); }
-#detail-dialog .detail-status .status-under_negotiation { color: color-mix(in srgb, var(--negotiating) 60%, var(--detail-ink)); }
-#detail-dialog .detail-status .status-under_negotiation::before { background: var(--negotiating); }
+#detail-dialog .detail-status .status-under_negotiation, #detail-dialog .detail-status .status-reserved { color: color-mix(in srgb, var(--negotiating) 60%, var(--detail-ink)); }
+#detail-dialog .detail-status .status-under_negotiation::before, #detail-dialog .detail-status .status-reserved::before { background: var(--negotiating); }
 #detail-dialog .detail-status .status-available::before { animation: detail-availability-pulse 2.3s ease-in-out infinite; }
 @keyframes detail-availability-pulse { 0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--available) 24%, transparent); } 50% { box-shadow: 0 0 0 4px color-mix(in srgb, var(--available) 8%, transparent); } }
 @media (prefers-reduced-motion: reduce) {
@@ -416,3 +414,12 @@ input[aria-invalid="true"] { border-color: var(--negotiating); }
 @media (prefers-reduced-motion: reduce) {
 *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
 }
+
+/* Recover failed drawings without changing the normal card composition. */
+#detail-dialog [data-detail-image-stage] { position:relative; }
+#detail-dialog .detail-image-feedback { position:absolute; inset:0; z-index:4; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:12px; padding:20px; text-align:center; color:var(--detail-muted); background:none; }
+#detail-dialog .detail-image-feedback[hidden] { display:none; }
+#detail-dialog .detail-image-feedback p { margin:0; font-size:11px; line-height:1.5; }
+#detail-dialog .detail-image-feedback .button-secondary { min-height:34px; padding:7px 12px; font-size:11px; border-radius:999px; }
+#detail-dialog [data-image-state="error"] .detail-plan-markers { visibility:hidden; pointer-events:none; }
+#detail-dialog [data-image-state="error"] :is(.detail-plan-image,.detail-floor-image) { visibility:hidden; }
