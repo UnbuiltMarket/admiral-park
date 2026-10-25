@@ -1506,7 +1506,7 @@ const orbitApartmentStudioStyles = `
 [data-orbit-studio][data-mobile="false"] .orbit-studio-preview { gap: 0; }
 [data-orbit-studio][data-mobile="false"] .orbit-studio-preview label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
 [data-orbit-studio][data-mobile="false"] .orbit-studio-preview select { width: 84px; min-height: 36px; font-size: 11px; border-radius: 6px; }
-[data-orbit-studio][data-mobile="false"] .orbit-studio-body { grid-template-columns: minmax(0,1fr) clamp(240px,18vw,360px); gap: clamp(20px,1.25vw,24px); }
+[data-orbit-studio][data-mobile="false"] .orbit-studio-body { grid-template-columns: minmax(0,1fr) clamp(380px,34vw,640px); gap: clamp(20px,1.25vw,24px); }
 [data-orbit-studio][data-mobile="false"] .orbit-studio-scene { grid-template-rows: minmax(0,1fr); gap: 0; }
 [data-orbit-studio][data-mobile="false"] .orbit-studio-details { display: grid; grid-template-rows: 42px 62px minmax(0,1fr) auto; gap: 12px; padding-left: 16px; border-left: 1px solid var(--studio-line); overflow: visible; }
 [data-orbit-studio][data-mobile="false"] .orbit-studio-heading { justify-content: space-between; gap: 10px; min-height: 0; }
@@ -1526,12 +1526,12 @@ const orbitApartmentStudioStyles = `
 [data-orbit-studio][data-mobile="false"] .orbit-studio-plan-stage > .orbit-studio-empty { max-height: 100%; overflow: auto; padding: 8px 0; font-size: 11px; }
 [data-orbit-studio][data-mobile="false"] .orbit-studio-plan-note { margin-top: 8px; font-size: 8px; line-height: 1.4; }
 [data-orbit-studio][data-mobile="false"] .orbit-studio-apartment-footer { min-width: 0; border-top: 1px solid var(--studio-line); padding-top: 12px; }
-[data-orbit-studio][data-mobile="false"] .orbit-studio-bottom { flex-direction: column; align-items: stretch; gap: 10px; margin: 0; }
+[data-orbit-studio][data-mobile="false"] .orbit-studio-bottom { display: grid; grid-template-columns: minmax(0,1fr) auto; align-items: center; gap: 16px; margin: 0; }
 [data-orbit-studio][data-mobile="false"] .orbit-studio-label { margin-bottom: 3px; font-size: 9px; }
 [data-orbit-studio][data-mobile="false"] .orbit-studio-price-value { font-size: clamp(26px,2vw,34px); font-weight: 600; min-height: 37.4px; }
 [data-orbit-studio][data-mobile="false"] .orbit-studio-primary { min-height: 40px; padding: 9px 12px; justify-content: space-between; border-color: #263b32; border-radius: 6px; color: #fff; background: #263b32; font-size: 11px; }
 [data-orbit-studio][data-mobile="false"] .orbit-studio-primary:hover { background: #365043; }
-[data-orbit-studio][data-mobile="false"] .orbit-studio-meta { min-height: 34px; gap: 2px 10px; margin-top: 10px; font-size: 10px; line-height: 1.6; }
+[data-orbit-studio][data-mobile="false"] .orbit-studio-meta { min-height: 18px; gap: 2px 10px; margin-top: 6px; font-size: 10px; line-height: 1.6; }
 [data-orbit-studio][data-mobile="false"] .orbit-studio-secondary { min-height: 30px; gap: 6px 12px; margin-top: 6px; }
 [data-orbit-studio][data-mobile="false"] .orbit-studio-text-button { min-height: 30px; font-size: 9px; }
 [data-orbit-studio][data-mobile="false"] .orbit-studio-share-message:empty { display: none; }
@@ -1539,7 +1539,7 @@ const orbitApartmentStudioStyles = `
     [data-orbit-studio][data-mobile="false"] { padding: 10px 16px; gap: 10px; }
     [data-orbit-studio][data-mobile="false"] .orbit-studio-header { gap: 12px; min-height: 44px; }
     [data-orbit-studio][data-mobile="false"] .orbit-studio-brand { width: 100px; }
-    [data-orbit-studio][data-mobile="false"] .orbit-studio-body { grid-template-columns: minmax(0,1fr) 240px; gap: 16px; }
+    [data-orbit-studio][data-mobile="false"] .orbit-studio-body { grid-template-columns: minmax(0,1fr) clamp(300px,34vw,420px); gap: 16px; }
     [data-orbit-studio][data-mobile="false"] .orbit-studio-details { grid-template-rows: 32px 48px minmax(0,1fr) auto; gap: 8px; padding-left: 12px; }
     [data-orbit-studio][data-mobile="false"] .orbit-studio-id { font-size: 28px; }
     [data-orbit-studio][data-mobile="false"] .orbit-studio-areas dd { font-size: 20px; }
@@ -3273,7 +3273,7 @@ addPropertyControls(AdmiralHomepageStudio, {
     showControls: { type: ControlType.Boolean, title: "Trial controls", defaultValue: true },
     showViewpoints: { type: ControlType.Boolean, title: "View buttons", defaultValue: true },
     showDiagnostics: { type: ControlType.Boolean, title: "Diagnostics", defaultValue: false },
-    orbitLayout: { type: ControlType.Enum, title: "Orbit layout", options: ["mobile", "studio", "classic"], optionTitles: ["Fullscreen desktop", "Apartment studio", "Classic"], defaultValue: "studio", description: "Apartment studio pairs a large desktop orbit with a compact floorplan and data sidebar. SEQ_02 shrinks into that slot. Phones keep the current workspace. Keep the component at 100vh." },
+    orbitLayout: { type: ControlType.Enum, title: "Orbit layout", options: ["mobile", "studio", "classic"], optionTitles: ["Fullscreen desktop", "Apartment studio", "Classic"], defaultValue: "studio", description: "Apartment studio pairs the contained desktop orbit with a large floorplan and grouped apartment data. SEQ_02 shrinks into that slot. Phones keep the current workspace. Keep the component at 100vh." },
     orbitBackground: { type: ControlType.Color, title: "Orbit background", defaultValue: "#fdfbfb", hidden: p => p.orbitLayout === "classic" },
     apartmentDataUrl: { type: ControlType.String, title: "Apartment JSON", defaultValue: "https://raw.githubusercontent.com/UnbuiltMarket/admiral-park/main/data/apartments.json", hidden: p => p.detailsMode === "off", description: "Apartment facts and media paths. All 69 records are small; only the selected plan is loaded." },
     apartmentAssetBase: { type: ControlType.String, title: "Media base", defaultValue: HOMEPAGE_ASSETS + "/apartment-list/", hidden: p => p.detailsMode === "off" },
