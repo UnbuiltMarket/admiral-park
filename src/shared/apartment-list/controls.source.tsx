@@ -26,4 +26,6 @@ addPropertyControls(AdmiralApartmentList, {
         watermarkBottom: {type: ControlType.Color, title: "Motif bottom", defaultValue: DEFAULT_DETAIL_COLORS.watermarkBottom},
     }},
     inset: {type: ControlType.Number, title: "Inset", defaultValue: 32, min: 0, max: 120, step: 1, unit: "px"},
+    topSpacing: {type: ControlType.Number, title: "Navbar space", defaultValue: 120, min: 0, max: 320, step: 4, unit: "px", description: "Empty space above the filters for your overlay navbar. The header background continues behind it."},
+    mobileTopSpacing: {type: ControlType.Number, title: "Mobile navbar", defaultValue: 88, min: 0, max: 240, step: 4, unit: "px", description: "Navbar space in list containers up to 760px wide."},
 })

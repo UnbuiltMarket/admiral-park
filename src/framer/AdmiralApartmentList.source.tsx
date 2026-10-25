@@ -19,7 +19,7 @@ const DEFAULT_COLORS = {
 type ListProps = {
     dataUrl?: string; assetBaseUrl?: string; inquiryUrl?: string; pageUrl?: string;
     colors?: Partial<typeof DEFAULT_COLORS>; detailColors?: Partial<typeof DEFAULT_DETAIL_COLORS>;
-    inset?: number; style?: React.CSSProperties;
+    inset?: number; topSpacing?: number; mobileTopSpacing?: number; style?: React.CSSProperties;
 }
 type ListPdfResult = { id: string; status: "downloaded" | "cancelled" | "error" }
 type ListPdfRequest = { id: string; token: number; trigger?: HTMLElement }
@@ -35,7 +35,7 @@ type ListController = {
  * @framerIntrinsicHeight 1400
  */
 export default function AdmiralApartmentList(props: ListProps) {
-    const { dataUrl = DEFAULT_DATA_URL, assetBaseUrl = DEFAULT_ASSET_BASE, inquiryUrl = "", pageUrl = "", colors = DEFAULT_COLORS, detailColors = DEFAULT_DETAIL_COLORS, inset = 32, style } = props
+    const { dataUrl = DEFAULT_DATA_URL, assetBaseUrl = DEFAULT_ASSET_BASE, inquiryUrl = "", pageUrl = "", colors = DEFAULT_COLORS, detailColors = DEFAULT_DETAIL_COLORS, inset = 32, topSpacing = 120, mobileTopSpacing = 88, style } = props
     const host = React.useRef<HTMLDivElement>(null)
     const controller = React.useRef<ListController | null>(null)
     const [dataset, setDataset] = React.useState<unknown>(null)
@@ -64,6 +64,8 @@ export default function AdmiralApartmentList(props: ListProps) {
         "--button": palette.button, "--button-text": palette.buttonText, "--available": palette.available,
         "--negotiating": palette.negotiating, "--sold": palette.sold,
         "--component-padding": inset + "px",
+        "--list-top-space": Math.max(0, Number.isFinite(topSpacing) ? topSpacing : 120) + "px",
+        "--list-mobile-top-space": Math.max(0, Number.isFinite(mobileTopSpacing) ? mobileTopSpacing : 88) + "px",
         "--detail-top": detailPalette.top, "--detail-bottom": detailPalette.bottom,
         "--detail-ink": detailPalette.text, "--detail-muted": detailPalette.muted,
         "--detail-watermark-top": detailPalette.watermarkTop, "--detail-watermark-bottom": detailPalette.watermarkBottom,

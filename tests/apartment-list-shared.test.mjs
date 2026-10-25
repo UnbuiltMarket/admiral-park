@@ -28,9 +28,11 @@ test('the list keeps its Framer controls and can render on the server without fe
  const stub={ControlType:new Proxy({},{get:(_,name)=>name}),RenderTarget:{canvas:'canvas',current:()=> 'canvas'},addPropertyControls:(value,props)=>{component=value;controls=props;}};
  vm.runInNewContext(compiled,{exports,require:name=>name==='react'?React:name==='framer'?stub:name==='./AdmiralApartmentDetailCard.tsx'?{default:()=>null}:assert.fail('Unexpected dependency '+name),fetch:noFetch});
  assert.equal(component,exports.default);
- for(const key of ['dataUrl','assetBaseUrl','inquiryUrl','pageUrl','colors','detailColors','inset'])assert.ok(controls[key],key);
+ for(const key of ['dataUrl','assetBaseUrl','inquiryUrl','pageUrl','colors','detailColors','inset','topSpacing','mobileTopSpacing'])assert.ok(controls[key],key);
  assert.match(controls.dataUrl.defaultValue,/\/data\/apartment-details\.json$/);
  assert.equal(controls.detailColors.controls.watermarkBottom.defaultValue,'#d9dfe2');
+ assert.equal(controls.topSpacing.defaultValue,120);
+ assert.equal(controls.mobileTopSpacing.defaultValue,88);
  const html=ReactDOMServer.renderToString(React.createElement(exports.default,{}));
  assert.match(html,/data-admiral-apartment-list="shared"/);
  assert.match(html,/data-orbit-ignore=""/);

@@ -24,13 +24,15 @@ const mode=preview?'preview':'framer',checks=[],failures=[],measurements=[],erro
 const check=(name,passes,detail)=>{checks.push(name);if(!passes)failures.push({name,detail});};
 const browser=await chromium.launch({headless:true,channel:process.env.PLAYWRIGHT_CHANNEL||'chrome'});
 
-async function fixture(props={}){
+async function fixture(props={},options={}){
   const context=await browser.newContext({viewport:{width:1440,height:1000},locale:'hu-HU'}),page=await context.newPage();
   page.on('pageerror',error=>errors.push(error.message));
   await page.addInitScript(()=>{Object.defineProperty(navigator,'clipboard',{value:{writeText:async text=>{window.rowInquiryClipboard=text;}},configurable:true});});
+  const fixtureDataset=options.garden?structuredClone(dataset):dataset;
+  if(options.garden)fixtureDataset.apartments.find(a=>a.id==='A001').areaGarden=options.garden;
   await page.route('http://apartment-row.test/**',async route=>{
     const pathname=decodeURIComponent(new URL(route.request().url()).pathname);
-    if(pathname==='/apartment-details.json')return route.fulfill({contentType:'application/json',json:dataset});
+    if(pathname==='/apartment-details.json')return route.fulfill({contentType:'application/json',json:fixtureDataset});
     if(pathname.startsWith('/assets/')){
       const relative=pathname.slice(8).replace(/^assets\//,'');assert.ok(!relative.split('/').includes('..'));
       const file=path.join(mediaRoot,relative),contentType={'.webp':'image/webp','.png':'image/png','.svg':'image/svg+xml','.ttf':'font/ttf','.woff2':'font/woff2'}[path.extname(file)]||'application/octet-stream';
@@ -38,6 +40,7 @@ async function fixture(props={}){
     }
     return route.fulfill({contentType:'text/html',body:'<!doctype html><meta name="viewport" content="width=device-width,initial-scale=1"><style>body{margin:0;background:#fcfcfa}</style><div id="mount"></div>'});
   });
+  if(preview&&options.garden)await page.route('**/apartments.json',async route=>{const response=await route.fetch(),json=await response.json();json.apartments.find(a=>a.id==='A001').areaGarden=options.garden;return route.fulfill({response,json});});
   await page.goto(preview||'http://apartment-row.test/');
   if(!preview){
     await page.addScriptTag({content:react});await page.addScriptTag({content:dom});
@@ -63,6 +66,8 @@ try{
     const first=f.list.locator('[data-unit="A001"]');
     check('Type has no stacked building or floor beneath it',normalize(await first.locator('.cell-type').innerText())==='B'&&await first.locator('.cell-type .unit-location').count()===0);
     check('Building and floor belong to the apartment identity group',await first.locator('.unit-identification .unit-desktop-location').innerText().then(text=>/A épület\s*·\s*Földszint/.test(normalize(text))));
+    check('Missing garden area stays blank in its own cell',await first.locator('td.cell-garden').count()===1&&normalize(await first.locator('td.cell-garden').textContent())==='');
+    check('Terrace cell no longer contains garden data',await first.locator('.cell-outdoor .cell-garden').count()===0);
 
     // Capture the two priority widths before interaction and before all checks.
     for(const width of [1440,320,1366,1920,1280,1101,1024,390]){
@@ -72,7 +77,7 @@ try{
       if(width===1440||width===320)console.log(JSON.stringify({screenshot:fileURLToPath(new URL(`${mode}-row-${width}.png`,out))}));
       const m=await f.list.evaluate(host=>{
         const r=host.shadowRoot||host,rows=[...r.querySelectorAll('.apartment-row')],row=rows[0],rect=e=>e?.getBoundingClientRect().toJSON();
-        const headings=[...r.querySelectorAll('thead th')].map(e=>({text:e.textContent.trim(),rect:rect(e),display:getComputedStyle(e).display}));
+        const headings=[...r.querySelectorAll('thead th')].map(e=>{const range=document.createRange();range.selectNodeContents(e);return {text:e.textContent.trim(),rect:rect(e),textRect:range.getBoundingClientRect().toJSON(),display:getComputedStyle(e).display};});
         const statusIndex=headings.findIndex(e=>e.text==='Elérhetőség'),statusCell=row.children[statusIndex],priceCell=row.querySelector('.price-amount')?.closest('td');
         const pills=[...row.querySelectorAll('.action-pill')].map(e=>({text:e.textContent.trim(),rect:rect(e),bg:getComputedStyle(e).backgroundImage,color:getComputedStyle(e).backgroundColor}));
         const clipping=rows.flatMap(row=>[...row.querySelectorAll('.price-amount,.unit-id,.action-pill,.status-pill')].filter(e=>e.clientWidth>0&&e.scrollWidth>e.clientWidth+1).map(e=>({id:row.dataset.unit,text:e.textContent,client:e.clientWidth,scroll:e.scrollWidth,rect:rect(e)})));
@@ -86,12 +91,17 @@ try{
       check('Inquiry is the final gold pill at '+width,m.pills[2].text==='Érdeklődöm'&&(m.pills[2].bg!=='none'||m.pills[2].color!=='rgba(0, 0, 0, 0)'),m.pills[2]);
       check('Row does not repeat an Erkély label at '+width,!m.rowText.includes('Erkély'),m.rowText);
       if(width>=1101){
-        check('Desktop exposes separate Terasz and Elérhetőség headings at '+width,m.headings.length===9&&m.headings.some(h=>h.text==='Terasz'&&h.display!=='none'&&h.rect.height>0)&&m.headings.some(h=>h.text==='Elérhetőség'&&h.display!=='none'&&h.rect.height>0),m.headings);
+        check('Desktop exposes separate Terasz, Kert and Elérhetőség headings at '+width,m.headings.length===10&&['Terasz','Kert','Elérhetőség'].every(text=>m.headings.some(h=>h.text===text&&h.display!=='none'&&h.rect.height>0)),m.headings);
+        check('Rooms and interior headings stay clearly separated at '+width,m.headings[2].textRect.right<=m.headings[3].textRect.left-2,{rooms:m.headings[2],interior:m.headings[3]});
         check('Price and availability occupy distinct visible desktop columns at '+width,m.separateStatus&&m.priceCell.width>0&&m.statusCell.width>0&&m.statusCell.left>=m.priceCell.right-1,{price:m.priceCell,status:m.statusCell});
         check('Desktop row height is preserved at '+width,Math.max(...m.rowHeights)<=157,{maxHeight:Math.max(...m.rowHeights)});
         check('Desktop pills stay 112 by 36 at '+width,m.pills.every(p=>Math.abs(p.rect.width-112)<=1&&Math.abs(p.rect.height-36)<=1),m.pills);
       }
       if(width<500)check('Mobile pills retain 44-pixel touch targets at '+width,m.pills.every(p=>p.rect.width>=44&&p.rect.height>=44),m.pills);
+      if(width===1440||width===320){
+        const gap=await f.list.evaluate(host=>{const root=host.shadowRoot||host,header=root.querySelector('.filter-header'),control=innerWidth<500?root.querySelector('#mobile-filters'):root.querySelector('.primary-filters');return control.getBoundingClientRect().top-header.getBoundingClientRect().top;});
+        check('Navbar has clear space above controls at '+width,gap>=(width<500?88:120)-1,{gap});
+      }
     }
 
     await f.page.setViewportSize({width:1440,height:1000});
@@ -122,7 +132,23 @@ try{
     check('Floorplan inspection remains independent from details',await f.list.locator('#media-title').innerText()==='Alaprajz'&&await f.card.locator('#detail-dialog[open]').count()===0);
     await f.page.keyboard.press('Escape');
   }finally{await f.close();}
+  const garden=await fixture({}, {garden:18.5});
+  try{
+    const row=garden.list.locator('[data-unit="A001"]');
+    for(const width of [1440,1101,1024,390,320]){
+      await garden.page.setViewportSize({width,height:width<500?900:1000});await garden.page.waitForTimeout(80);
+      const measured=await row.evaluate(row=>{const garden=row.querySelector('td.cell-garden'),terrace=row.querySelector('.cell-outdoor'),value=garden.querySelector('.garden-value'),rect=e=>e.getBoundingClientRect().toJSON();return {garden:rect(garden),terrace:rect(terrace),value:rect(value),text:value.textContent,display:getComputedStyle(garden).display};});
+      check('Positive garden area is visible and correctly labelled at '+width,measured.display!=='none'&&measured.garden.width>0&&normalize(measured.text)==='18,5 m²'&&await row.locator('td.cell-garden').getAttribute('data-label')==='Kert',measured);
+      check('Garden and terrace values remain separated at '+width,width>=1101?measured.garden.left>=measured.terrace.right-1:measured.value.left>=measured.garden.left-1&&measured.value.right<=measured.garden.right+1,measured);
+    }
+  }finally{await garden.close();}
   if(!preview){
+    const spacing=await fixture({topSpacing:64,mobileTopSpacing:52});
+    try{
+      await spacing.list.locator('#search').fill('A001');
+      for(const width of [1440,390]){await spacing.page.setViewportSize({width,height:900});await spacing.page.waitForTimeout(80);const padding=await spacing.list.locator('.filter-header').evaluate(element=>parseFloat(getComputedStyle(element).paddingTop));check('Framer navbar spacing override is respected at '+width,Math.abs(padding-(width<500?52:64))<1,{padding});}
+      check('Changing responsive spacing preserves search state',await spacing.list.locator('#search').inputValue()==='A001'&&await spacing.list.locator('[data-unit]').count()===1);
+    }finally{await spacing.close();}
     const configured=await fixture({inquiryUrl:'https://example.test/contact?campaign=summer&apartment=old#inquiry'});
     try{
       const link=configured.list.locator('[data-unit="A001"] a.inquiry-link'),url=new URL(await link.getAttribute('href'));
