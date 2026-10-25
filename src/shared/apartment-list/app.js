@@ -29,7 +29,7 @@ const area = (value) => Number.isFinite(value) ? `${number.format(value)} m²` :
 const price = (value) => Number.isFinite(value) ? `${priceNumber.format(value)} Ft` : 'Ár kérésre';
 const apartmentPrice = (a) => a.price == null && a.status === 'sold' ? 'Nincs megadva' : price(a.price);
 const floorText = (a) => a.floorLabel || (a.floor === 0 ? 'Földszint' : a.floor == null ? 'Nincs adat' : `${a.floor}. emelet`);
-const labels = {available:'Elérhető', under_negotiation:'Tárgyalás alatt', sold:'Elkelt', unknown:'Érdeklődjön'};
+const labels = {available:'Elérhető', under_negotiation:'Tárgyalás alatt', reserved:'Egyeztetés alatt', sold:'Elkelt', unknown:'Érdeklődjön'};
 const statusText = (a) => a.statusLabel || labels[a.status] || labels.unknown;
 function assetUrl(value) {
   if(typeof value!=='string'||!value.trim())return null;
@@ -269,7 +269,7 @@ function render() {
   const invalidArea = state.minArea!=='' && state.maxArea!=='' && Number(state.minArea)>Number(state.maxArea);
   const invalidPrice = state.minPrice!=='' && state.maxPrice!=='' && Number(state.minPrice)>Number(state.maxPrice);
   $('result-count').innerHTML = `<strong>${list.length}</strong> lakás${list.length===apartments.length?'':` <span class="result-total">/ ${apartments.length}</span>`}`;
-  $('results').innerHTML = list.length ? `<table class="apartment-table"><caption class="sr-only">Lakások. A nettó belső terület, az terasz és a kert külön szerepel, az árak bruttó forintárak.</caption><thead><tr><th scope="col" class="heading-unit">Lakás</th><th scope="col" class="heading-type">Típus</th><th scope="col" class="heading-rooms">Szobák</th><th scope="col" class="heading-interior"><button data-sort="area">Beltér ${state.sort.startsWith('area')?(state.sort.endsWith('desc')?'↓':'↑'):'↕'}</button></th><th scope="col" class="heading-outdoor">Terasz</th><th scope="col" class="heading-price"><button data-sort="price">Bruttó ár ${state.sort.startsWith('price')?(state.sort.endsWith('desc')?'↓':'↑'):'↕'}</button></th><th scope="col" class="heading-status">Elérhetőség</th><th scope="col" class="heading-floor-layout">Szintrajz</th><th scope="col" class="heading-actions"><span class="sr-only">Műveletek</span></th></tr></thead><tbody>${list.map(row).join('')}</tbody></table>` : `<div class="empty-state"><span class="empty-mark" aria-hidden="true">⌕</span><h2>${invalidArea||invalidPrice?'Ellenőrizze a megadott tartományt.':'Most nincs ilyen lakás.'}</h2><p>${invalidArea||invalidPrice?'A kezdőérték legyen kisebb vagy egyenlő a záróértékkel.':'Módosítsa a szűrőket, vagy nézze meg a teljes kínálatot.'}</p><button class="button-primary" data-reset>Szűrők törlése</button></div>`;
+  $('results').innerHTML = list.length ? `<table class="apartment-table"><caption class="sr-only">Lakások. A nettó belső terület, a terasz és a kert külön szerepel, az árak bruttó forintárak.</caption><thead><tr><th scope="col" class="heading-unit">Lakás</th><th scope="col" class="heading-type">Típus</th><th scope="col" class="heading-rooms">Szobák</th><th scope="col" class="heading-interior"><button data-sort="area">Beltér ${state.sort.startsWith('area')?(state.sort.endsWith('desc')?'↓':'↑'):'↕'}</button></th><th scope="col" class="heading-outdoor">Terasz</th><th scope="col" class="heading-price"><button data-sort="price">Bruttó ár ${state.sort.startsWith('price')?(state.sort.endsWith('desc')?'↓':'↑'):'↕'}</button></th><th scope="col" class="heading-status">Elérhetőség</th><th scope="col" class="heading-floor-layout">Szintrajz</th><th scope="col" class="heading-actions"><span class="sr-only">Műveletek</span></th></tr></thead><tbody>${list.map(row).join('')}</tbody></table>` : `<div class="empty-state"><span class="empty-mark" aria-hidden="true">⌕</span><h2>${invalidArea||invalidPrice?'Ellenőrizze a megadott tartományt.':'Most nincs ilyen lakás.'}</h2><p>${invalidArea||invalidPrice?'A kezdőérték legyen kisebb vagy egyenlő a záróértékkel.':'Módosítsa a szűrőket, vagy nézze meg a teljes kínálatot.'}</p><button class="button-primary" data-reset>Szűrők törlése</button></div>`;
   $('minArea').setAttribute('aria-invalid', String(invalidArea)); $('maxArea').setAttribute('aria-invalid', String(invalidArea));
   $('minPrice').setAttribute('aria-invalid', String(invalidPrice)); $('maxPrice').setAttribute('aria-invalid', String(invalidPrice));
   $('reset').hidden=!filterIds.some(id=>state[id]!==''&&state[id]!==false)&&state.sort==='id';
@@ -428,7 +428,7 @@ root.addEventListener('click',event=>{
   if(t.id==='reset'||t.hasAttribute('data-reset')) reset();
   if(t.id==='mobile-filters') { const open=$('filters').dataset.open!=='true'; $('filters').dataset.open=String(open); t.setAttribute('aria-expanded',String(open)); resizeEmbed(); }
   if(t.hasAttribute('data-remove-filter')) { const id=t.dataset.removeFilter; state[id]=defaults[id]; syncControls(); render(); }
-  if(t.hasAttribute('data-sort')) { const key=t.dataset.sort; state.sort=key==='floor'?'floor':`${key}-${state.sort===`${key}-asc`?'desc':'asc'}`; syncControls(); render(); }
+  if(t.hasAttribute('data-sort')) { const key=t.dataset.sort,restoreFocus=root.activeElement===t||document.activeElement===t; state.sort=key==='floor'?'floor':`${key}-${state.sort===`${key}-asc`?'desc':'asc'}`; syncControls(); render(); if(restoreFocus)$('results').querySelector(`[data-sort="${CSS.escape(key)}"]`)?.focus({preventScroll:true}); }
   if(t.hasAttribute('data-save')) {
     const id=t.dataset.save; if(favorites.has(id)) favorites.delete(id); else favorites.add(id);
     try{localStorage.setItem('admiral-park:favorites:v1',JSON.stringify([...favorites]));}catch{storage=false;}
@@ -542,7 +542,7 @@ async function load() {
     setupOptions('floor',[...new Set(apartments.map(a=>a.floor).filter(v=>v!=null))].sort((a,b)=>a-b).map(v=>[String(v),v===0?'Földszint':`${v}. emelet`]));
     setupOptions('rooms',[...new Set(apartments.map(a=>a.rooms).filter(v=>v!=null).map(v=>v>=4?'4+':String(v)))].sort().map(v=>[v,`${v==='4+'?v:number.format(Number(v))} szoba`]));
     setupRanges();readUrl();syncControls();
-    $('data-note').textContent='A nettó belső alapterület, az terasz és a kert külön szerepel. Az árak bruttó árak. A helyiségadatok munkaközi tervből származnak; az aktuális árat és elérhetőséget az értékesítő erősíti meg.';
+    $('data-note').textContent='A nettó belső alapterület, a terasz és a kert külön szerepel. Az árak bruttó árak. A helyiségadatok munkaközi tervből származnak; az aktuális árat és elérhetőséget az értékesítő erősíti meg.';
     render();
     const id=config.apartment||(useUrl?new URL(location.href).searchParams.get('apartment'):null);
     if(id&&byId(id))detail(id);

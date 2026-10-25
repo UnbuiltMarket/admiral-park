@@ -7,7 +7,7 @@ import {ts} from '../scripts/tooling.mjs';
 const dataset=JSON.parse(await readFile(new URL('../data/apartments.json',import.meta.url),'utf8'));
 const source=await readFile(new URL('../src/framer/OrbitApartmentData.source.tsx',import.meta.url),'utf8');
 const script=ts.transpileModule(source+'\nglobalThis.adapter={parseOrbitApartmentDataset,requestOrbitApartmentDataset,orbitApartmentPlan,orbitApartmentAssetUrl,useOrbitPreviewImage};',{compilerOptions:{target:ts.ScriptTarget.ES2020,module:ts.ModuleKind.CommonJS,jsx:ts.JsxEmit.React}}).outputText;
-function adapter(fetch=()=>Promise.reject(new Error('Unexpected fetch')),extra={}){const context={URL,fetch,console,...extra};vm.runInNewContext(script,context);return context.adapter;}
+function adapter(fetch=()=>Promise.reject(new Error('Unexpected fetch')),extra={}){const context={URL,fetch,console,AbortController,setTimeout,clearTimeout,...extra};vm.runInNewContext(script,context);return context.adapter;}
 
 test('orbit JSON retains all 69 canonical units, honest nulls and floorplan crop metadata without room lists',()=>{
  const api=adapter(),parsed=api.parseOrbitApartmentDataset(dataset);
@@ -87,5 +87,19 @@ test('orbit apartment requests share one in-flight download, cache success and a
  const first=api.requestOrbitApartmentDataset('https://data.test/apartments.json'),same=api.requestOrbitApartmentDataset('https://data.test/apartments.json');
  assert.equal(first,same);assert.equal(calls,1);resolve({ok:false,status:503});await assert.rejects(first,/503/);
  const retry=api.requestOrbitApartmentDataset('https://data.test/apartments.json');assert.equal(calls,2);resolve({ok:true,json:async()=>structuredClone(dataset)});assert.equal((await retry).apartments.length,69);
- assert.equal(api.requestOrbitApartmentDataset('https://data.test/apartments.json'),retry);assert.equal(calls,2);
+ assert.equal(await api.requestOrbitApartmentDataset('https://data.test/apartments.json'),await retry);assert.equal(calls,2);
+});
+
+
+test('apartment cache revalidates after its lease, deduplicates refreshes, and keeps identity for unchanged data',async()=>{
+ let now=1000,calls=0,revision=structuredClone(dataset);
+ const api=adapter(async()=>{calls++;return{ok:true,json:async()=>structuredClone(revision)};},{Date:{now:()=>now}});
+ const first=await api.requestOrbitApartmentDataset('https://data.test/apartments.json');
+ assert.equal(calls,1);assert.equal(await api.requestOrbitApartmentDataset('https://data.test/apartments.json'),first);
+ now+=60001;const [a,b]=await Promise.all([api.requestOrbitApartmentDataset('https://data.test/apartments.json'),api.requestOrbitApartmentDataset('https://data.test/apartments.json')]);
+ assert.equal(calls,2);assert.equal(a,first);assert.equal(b,first,'Unchanged records retain identity');
+ revision.apartments[0].status='sold';revision.apartments[0].price=123456789;now+=60001;
+ const changed=await api.requestOrbitApartmentDataset('https://data.test/apartments.json');
+ assert.equal(calls,3);assert.notEqual(changed,first);assert.equal(changed.apartments[0].status,'sold');assert.equal(changed.apartments[0].price,123456789);
+ await api.requestOrbitApartmentDataset('https://data.test/apartments.json',true);assert.equal(calls,4,'Explicit retry revalidates within the lease');
 });

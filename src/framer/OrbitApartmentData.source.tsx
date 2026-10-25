@@ -324,6 +324,9 @@ function useOrbitPreviewImage(url: string | null | undefined, enabled = true): s
 }
 
 const orbitApartmentRequests = new Map<string, Promise<OrbitApartmentDataset>>()
+const orbitApartmentCache = new Map<string, { dataset: OrbitApartmentDataset; refreshedAt: number }>()
+const orbitApartmentSubscribers = new Map<string, Set<(dataset: OrbitApartmentDataset) => void>>()
+const ORBIT_APARTMENT_FRESH_MS = 60_000
 function orbitApartmentRequestUrl(value: string): string | null {
     if (!value.trim()) return null
     try {
@@ -331,15 +334,30 @@ function orbitApartmentRequestUrl(value: string): string | null {
         return url.protocol === "http:" || url.protocol === "https:" ? url.href : null
     } catch { return null }
 }
-function requestOrbitApartmentDataset(url: string): Promise<OrbitApartmentDataset> {
-    const previous = orbitApartmentRequests.get(url)
-    if (previous) return previous
-    const request = fetch(url, { mode: "cors", credentials: "omit", headers: { Accept: "application/json" } }).then(response => {
+function requestOrbitApartmentDataset(url: string, force = false): Promise<OrbitApartmentDataset> {
+    const pending = orbitApartmentRequests.get(url)
+    if (pending) return pending
+    const cached = orbitApartmentCache.get(url)
+    if (!force && cached && Date.now() - cached.refreshedAt < ORBIT_APARTMENT_FRESH_MS) return Promise.resolve(cached.dataset)
+    const cancellation = new AbortController(), timeout = setTimeout(() => cancellation.abort(), 15_000)
+    const request = fetch(url, { mode: "cors", credentials: "omit", cache: "no-cache", signal: cancellation.signal,
+        headers: { Accept: "application/json" } }).then(response => {
         if (!response.ok) throw new Error(`Apartment data could not be loaded (${response.status}).`)
         return response.json()
-    }).then(parseOrbitApartmentDataset).catch(error => {
+    }).then(parseOrbitApartmentDataset).then(parsed => {
+        // Retain object identity on unchanged refreshes, avoiding unnecessary
+        // filter, hover and card rebuilds every minute.
+        const dataset = cached && JSON.stringify(cached.dataset) === JSON.stringify(parsed) ? cached.dataset : parsed
+        orbitApartmentCache.set(url, { dataset, refreshedAt: Date.now() })
+        // A handful of custom URLs must not accumulate cached datasets forever.
+        if (orbitApartmentCache.size > 8) for (const key of orbitApartmentCache.keys()) {
+            if (key !== url && !orbitApartmentSubscribers.get(key)?.size) { orbitApartmentCache.delete(key); break }
+        }
+        orbitApartmentSubscribers.get(url)?.forEach(listener => listener(dataset))
+        return dataset
+    }).finally(() => {
+        clearTimeout(timeout)
         if (orbitApartmentRequests.get(url) === request) orbitApartmentRequests.delete(url)
-        throw error
     })
     orbitApartmentRequests.set(url, request)
     return request
@@ -352,11 +370,31 @@ function useOrbitApartments(url: string, enabled: boolean): { dataset: OrbitApar
         if (!enabled) return
         if (!resolved) { setState({ url: url.trim(), dataset: null, status: "error", error: "Set a valid apartment JSON address." }); return }
         let active = true
-        setState(previous => previous.url === resolved && previous.dataset ? previous : { url: resolved, dataset: null, status: "loading", error: "" })
-        requestOrbitApartmentDataset(resolved).then(dataset => { if (active) setState({ url: resolved, dataset, status: "ready", error: "" }) }, error => {
-            if (active) setState({ url: resolved, dataset: null, status: "error", error: error instanceof Error ? error.message : "Apartment data could not be loaded." })
-        })
-        return () => { active = false }
+        const accept = (dataset: OrbitApartmentDataset) => {
+            if (active) setState(previous => previous.url === resolved && previous.dataset === dataset && previous.status === "ready" && !previous.error ? previous : { url: resolved, dataset, status: "ready", error: "" })
+        }
+        let subscribers = orbitApartmentSubscribers.get(resolved)
+        if (!subscribers) { subscribers = new Set(); orbitApartmentSubscribers.set(resolved, subscribers) }
+        subscribers.add(accept)
+        const load = (force = false) => {
+            if (!active) return
+            setState(previous => previous.url === resolved && previous.dataset ? previous : { url: resolved, dataset: null, status: "loading", error: "" })
+            requestOrbitApartmentDataset(resolved, force).then(accept, error => {
+                if (active) setState(previous => previous.url === resolved && previous.dataset ? { ...previous, error: error instanceof Error ? error.message : "Apartment data could not be refreshed." } :
+                    { url: resolved, dataset: null, status: "error", error: error instanceof Error ? error.message : "Apartment data could not be loaded." })
+            })
+        }
+        const refresh = () => { if (!document.hidden) load() }
+        load(attempt > 0)
+        const interval = window.setInterval(refresh, ORBIT_APARTMENT_FRESH_MS)
+        document.addEventListener("visibilitychange", refresh)
+        window.addEventListener("focus", refresh); window.addEventListener("pageshow", refresh)
+        return () => {
+            active = false; subscribers!.delete(accept)
+            if (!subscribers!.size) orbitApartmentSubscribers.delete(resolved)
+            window.clearInterval(interval); document.removeEventListener("visibilitychange", refresh)
+            window.removeEventListener("focus", refresh); window.removeEventListener("pageshow", refresh)
+        }
     }, [resolved, url, enabled, attempt])
     const retry = React.useCallback(() => { setAttempt(value => value + 1) }, [])
     if (!enabled) return { dataset: state.url === resolved ? state.dataset : null, status: "idle", error: "", retry }

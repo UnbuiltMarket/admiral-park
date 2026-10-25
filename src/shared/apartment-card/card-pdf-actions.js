@@ -34,8 +34,8 @@ async function downloadDatasheet(id,trigger) {
   const shell=job.fromDialog?dialog.querySelector('.detail-shell'):null,computed=getComputedStyle(shell||dialog);
   const colors={};
   for(const [key,property,fallback] of [['top','--detail-top','#fdfbfb'],['bottom','--detail-bottom','#e4e9ec'],['ink','--detail-ink','#242824'],['muted','--detail-muted','#687074'],['watermarkTop','--detail-watermark-top','#f2f0f1'],['watermarkBottom','--detail-watermark-bottom','#d9dfe2'],['accent','--accent','#a38c69']])colors[key]=computed.getPropertyValue(property).trim()||fallback;
-  const statusProperty={available:'--available',sold:'--sold',under_negotiation:'--negotiating'}[a.status]||'--detail-muted';
-  colors.status=job.fromDialog?getComputedStyle(dialog.querySelector('.status-pill')).color:computed.getPropertyValue(statusProperty).trim()||({available:'#4f7959',sold:'#b4564f',under_negotiation:'#b28a2f'}[a.status]||colors.muted);
+  const statusProperty={available:'--available',sold:'--sold',under_negotiation:'--negotiating',reserved:'--negotiating'}[a.status]||'--detail-muted';
+  colors.status=job.fromDialog?getComputedStyle(dialog.querySelector('.status-pill')).color:computed.getPropertyValue(statusProperty).trim()||({available:'#4f7959',sold:'#b4564f',under_negotiation:'#b28a2f',reserved:'#b28a2f'}[a.status]||colors.muted);
   const layout=data.roomLayouts?.[a.apartmentType],markers=validPlanMarkers(layout),rooms=Array.isArray(a.roomList)?a.roomList:[];
   const mapped=markers.length&&rooms.length===markers.length&&markers.every(marker=>rooms.some(room=>room.planNumber===marker.number));
   const unitRows=rooms.map(room=>({name:roomLabel(room.name),area:area(room.area)}));

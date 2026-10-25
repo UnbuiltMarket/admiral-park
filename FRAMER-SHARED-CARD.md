@@ -84,3 +84,10 @@ Official availability references used to assess comparison structure and action 
 Desktop filters now form an open header section. Its editable Filter header background reaches the component's top and both sides, with a subtle bottom boundary and no enclosing rounded border. The inner controls share the list's 1560px content cap and horizontal inset. In Framer, use width Fill and place the list component at the top of its page section to extend this surface to those edges. The existing compact mobile disclosure remains unchanged. This update only requires replacing AdmiralApartmentList.tsx.
 
 The row action stack is ordered Adatlap, Összevetés, Érdeklődöm, with the gold enquiry pill last. Desktop Terasz rows show the area and unit without a repeated label. The list filter, comparison and copy-detail terminology also uses Terasz; internal terrace data keys and units remain unchanged. Availability has its own desktop column. Mobile retains its distinct status beside the apartment identity and labels its terrace metric for context.
+
+
+## Live facts and drawing recovery
+
+The homepage passes `liveDataset` to the shared card. The runtime overlays validated price, availability, area and other canonical facts on each selected detailed record; it does not replace room lists, plan geometry, apartment type or media. Updates patch facts in an open card without rebuilding its dialog, changing the selected tab or losing focus. PDF exports use those same current facts. The list continues reusing its loaded full dataset.
+
+Both consumers accept `available`, `under_negotiation`, `reserved`, `sold` and `unknown`. Reserved uses the negotiation colour. The main drawing remains the existing source image. Its failure state now offers a drawing-only retry, and the hidden full Szintrajz source is not assigned until that tab is opened. A retry does not reload the apartment dataset or close the dialog.

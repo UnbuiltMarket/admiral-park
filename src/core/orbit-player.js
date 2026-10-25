@@ -27,8 +27,10 @@ export function createOrbitPlayer(options) {
     let preparePromise = null, prepareResolve = null;
     let prepareReject = null;
     let inspection = null, inspectionFrame = -1, inspectionGeneration = 0, qualityStartedAt = 0, inspectionDecoding = false, inspectionWanted = false;
-    let nativeDecodes = 0;
+    let nativeDecodes = 0, decodeGeneration = 0;
     let lastPaint = "", lastNotification = "";
+    let residentFramesDirty = true, requiredFramesDirty = true;
+    let residentFramesText = "", requiredFramesText = "";
     let drag = null;
     let touchDragging = false;
     let suspended = false, suspendedAt = 0;
@@ -55,31 +57,45 @@ export function createOrbitPlayer(options) {
             requiredTotal: required.size, position, target: pendingMove?.target ?? settling?.target,
             userPaused: state === "paused" && !automaticPause, suspended, ...(error ? { error } : {}) };
     }
+    function setData(name, text) {
+        if (root.dataset[name] !== text)
+            root.dataset[name] = text;
+    }
     function notify() {
         if (destroyed)
             return;
         const value = snapshot();
-        root.dataset.orbitState = state;
-        root.dataset.orbitFrame = String(value.frame);
-        root.dataset.orbitCheckpoint = String(value.checkpoint);
-        root.dataset.orbitReady = String(value.ready);
-        root.dataset.orbitDecoded = String(value.decoded);
-        root.dataset.orbitDownloaded = String(value.downloaded);
-        root.dataset.orbitPosition = position.toFixed(4);
-        root.dataset.orbitMotionWidth = String(motionWidth);
-        root.dataset.orbitTarget = (pendingMove?.target ?? settling?.target ?? position).toFixed(4);
-        root.dataset.orbitFrameBlend = String(frameBlend);
-        root.dataset.orbitLocked = String(!!settling || !!pendingMove);
-        root.dataset.orbitSuspended = String(suspended);
-        root.dataset.orbitBuffered = String(value.buffered);
-        root.dataset.orbitBufferTotal = String(value.bufferTotal);
-        root.dataset.orbitRequiredReady = String(value.requiredReady);
-        root.dataset.orbitRequiredTotal = String(value.requiredTotal);
-        root.dataset.orbitDecoding = String(nativeDecodes);
-        root.dataset.orbitCacheLimit = String(desired.size);
-        root.dataset.orbitBufferCheckpoints = String(bufferCheckpoints);
-        root.dataset.orbitResidentFrames = [...frames.keys()].sort((a, b) => a - b).join(",");
-        root.dataset.orbitRequiredFrames = [...required].sort((a, b) => a - b).join(",");
+        // These attributes are also consumed by picking and Framer overlays. Keep
+        // them current without scheduling MutationObserver work for unchanged data.
+        setData("orbitState", state);
+        setData("orbitFrame", String(value.frame));
+        setData("orbitCheckpoint", String(value.checkpoint));
+        setData("orbitReady", String(value.ready));
+        setData("orbitDecoded", String(value.decoded));
+        setData("orbitDownloaded", String(value.downloaded));
+        setData("orbitPosition", position.toFixed(4));
+        setData("orbitMotionWidth", String(motionWidth));
+        setData("orbitTarget", (pendingMove?.target ?? settling?.target ?? position).toFixed(4));
+        setData("orbitFrameBlend", String(frameBlend));
+        setData("orbitLocked", String(!!settling || !!pendingMove));
+        setData("orbitSuspended", String(suspended));
+        setData("orbitBuffered", String(value.buffered));
+        setData("orbitBufferTotal", String(value.bufferTotal));
+        setData("orbitRequiredReady", String(value.requiredReady));
+        setData("orbitRequiredTotal", String(value.requiredTotal));
+        setData("orbitDecoding", String(nativeDecodes));
+        setData("orbitCacheLimit", String(desired.size));
+        setData("orbitBufferCheckpoints", String(bufferCheckpoints));
+        if (residentFramesDirty) {
+            residentFramesText = [...frames.keys()].sort((a, b) => a - b).join(",");
+            residentFramesDirty = false;
+        }
+        if (requiredFramesDirty) {
+            requiredFramesText = [...required].sort((a, b) => a - b).join(",");
+            requiredFramesDirty = false;
+        }
+        setData("orbitResidentFrames", residentFramesText);
+        setData("orbitRequiredFrames", requiredFramesText);
         const signature = [state, value.frame, value.checkpoint, direction, value.ready, value.decoded, value.bufferTotal,
             value.requiredReady, value.requiredTotal, position.toFixed(4), value.target, value.userPaused, suspended, error].join("|");
         if (signature !== lastNotification) {
@@ -165,12 +181,16 @@ export function createOrbitPlayer(options) {
     }
     function setBuffer(wanted, essential, first = essential) {
         desired = new Set(wanted);
-        required = new Set(essential);
+        if (essential.length !== required.size || essential.some(index => !required.has(index))) {
+            required = new Set(essential);
+            requiredFramesDirty = true;
+        }
         priority = [...new Set([...first, ...wanted])].filter(index => desired.has(index));
         for (const [index, bitmap] of frames)
             if (!desired.has(index)) {
                 bitmap.close();
                 frames.delete(index);
+                residentFramesDirty = true;
             }
         resourcesChanged();
     }
@@ -274,18 +294,21 @@ export function createOrbitPlayer(options) {
         }
     }
     async function decodeFrame(index) {
+        const generation = decodeGeneration;
         decoding.add(index);
         try {
             const bitmap = await decodeBlob(blobs.get(index), motionWidth);
-            if (destroyed || !desired.has(index))
+            if (destroyed || generation !== decodeGeneration || !desired.has(index))
                 bitmap.close();
             else {
+                if (!frames.has(index))
+                    residentFramesDirty = true;
                 frames.get(index)?.close();
                 frames.set(index, bitmap);
             }
         }
         catch (reason) {
-            if (!destroyed)
+            if (!destroyed && generation === decodeGeneration)
                 decodeFailed.set(index, String(reason));
         }
         finally {
@@ -315,6 +338,13 @@ export function createOrbitPlayer(options) {
                 void decodeFrame(index);
         }
         notify();
+    }
+    /** Download the complete compressed orbit without allocating decoded frames. */
+    function prefetch() {
+        if (destroyed || started || !total)
+            return;
+        started = true;
+        pump();
     }
     function prepare() {
         if (destroyed)
@@ -470,9 +500,9 @@ export function createOrbitPlayer(options) {
         }
         if (destination)
             context.restore();
-        root.dataset.orbitFrameFrom = String(from);
-        root.dataset.orbitFrameTo = String(to);
-        root.dataset.orbitFrameMix = frameMix.toFixed(4);
+        setData("orbitFrameFrom", String(from));
+        setData("orbitFrameTo", String(to));
+        setData("orbitFrameMix", frameMix.toFixed(4));
         lastPaint = signature;
     }
     function requestPaint() {
@@ -957,7 +987,8 @@ export function createOrbitPlayer(options) {
         else if (target !== undefined)
             resourcesChanged();
     }
-    function deactivate() {
+    /** Retain compressed downloads while optionally releasing all parked/motion bitmaps. */
+    function deactivate(releaseDecoded = false) {
         activation++;
         active = false;
         automaticPause = false;
@@ -971,8 +1002,33 @@ export function createOrbitPlayer(options) {
         dropInspection();
         canvas.style.touchAction = originalTouchAction;
         error = undefined;
+        if (releaseDecoded) {
+            // The opening sequence must not share memory with an invisible orbit
+            // window. Late native decodes keep their permits, then close instead
+            // of entering a later preparation that happens to want the same IDs.
+            decodeGeneration++;
+            prepared = preparing = false;
+            desired.clear();
+            required.clear();
+            priority = [];
+            preparationRequired = [];
+            residentFramesDirty = requiredFramesDirty = true;
+            frames.forEach(bitmap => bitmap.close());
+            frames.clear();
+            const resolve = prepareResolve;
+            prepareResolve = prepareReject = null;
+            preparePromise = null;
+            // Old activation waiters observe the incremented activation token.
+            // Finish abandoned warm-up promises without an unhandled rejection.
+            resolve?.();
+            state = "idle";
+            finishWaiters();
+            notify();
+            pump();
+            return;
+        }
         state = prepared ? "idle" : preparing ? "loading" : "idle";
-        if (started && !destroyed)
+        if ((prepared || preparing) && !destroyed)
             setRestBuffer(startFrame, true);
         else {
             finishWaiters();
@@ -1066,7 +1122,7 @@ export function createOrbitPlayer(options) {
     reducedQuery?.addEventListener?.("change", reducedChanged);
     notify();
     return {
-        prepare, activate, deactivate, go, setCheckpoint, pause: () => pauseInternal(false), resume, retry, snapshot, setSuspended, redraw: () => paint(performance.now()),
+        prefetch, prepare, activate, deactivate, go, setCheckpoint, pause: () => pauseInternal(false), resume, retry, snapshot, setSuspended, redraw: () => paint(performance.now()),
         destroy() {
             if (destroyed)
                 return;

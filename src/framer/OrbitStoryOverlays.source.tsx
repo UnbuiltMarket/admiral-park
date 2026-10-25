@@ -176,6 +176,14 @@ function createOrbitStoryOverlay(Component: ComponentType<any>, viewIndex: numbe
             }
             function update() {
                 if (disposed) return
+                // Checkpoint groups cannot appear during either approach flight.
+                // Stage changes already notify every subscriber, so no geometry
+                // or ancestor styles are needed to keep these groups hidden.
+                if (![...homepageChannels.values()].some(channel => channel.stage === "orbit" && channel.story.enabled)) {
+                    if (state !== "hidden" || target || opacity !== 0 || timer || frame) hide()
+                    restoreLayout()
+                    return
+                }
                 const root = resolve()
                 if (selected !== root) { hide(); selected = root; observeSource(root) }
                 const channel = root && homepageChannels.get(root)

@@ -164,3 +164,16 @@ Start with a short heading, a brief supporting text and one graphic per view, ad
 | 8 | Lakásválasztás | OrbitView8 |
 
 Camera 8 may contain a native **Lakások megtekintése** button linked to the apartment-list page through Framer's Link setting. The facade picker also works at every other parked checkpoint with visible apartments.
+
+
+## Audit priority fixes - 25 October 2026
+
+The complete 120-frame orbit still downloads after the opening poster receives its first requests. This background phase now retains compressed bytes only. Its normal decoded camera window starts preparing after SEQ_02 passes 55% in the forward direction; direct orbit entry still prepares immediately. Returning through Home or Overview releases decoded orbit images, preserves the downloaded bytes and keeps the same checkpoint, gesture, easing and framing rules for subsequent entry. Diagnostics only write changed values and rebuild cache-list strings when membership changes.
+
+When the optional demonstration controls are hidden, an interrupted or failed SEQ_01 now exposes Continue/Retry and Skip approach. SEQ_02 keeps its existing recovery controls. These controls appear only during a paused/error state; normal layouts are unchanged.
+
+The compact apartment dataset has a 60-second freshness lease. Visible viewers revalidate periodically and on return/focus, sharing concurrent requests and retaining record identities if nothing changed. A failed background refresh retains the last usable dataset; explicit retry revalidates. Refreshing data never recreates the orbit player or its downloads. The shared detail card receives the same live sales facts for display and PDF export while retaining detailed room/plan metadata from its own source. Inactive orbit checkpoint groups skip geometry/style reads during the approach flights.
+
+The shared card and list now accept the supported `reserved` status. Full floor-layout images load only when Szintrajz is selected. Failed apartment/floor drawings show a local retry action. Sorting restores keyboard focus to its header control. Replace AdmiralApartmentDetailCard.tsx, AdmiralHomepageTrial.tsx and AdmiralApartmentList.tsx together for this audit batch.
+
+Remaining audit work includes hover texture/control-hit-test optimization, sequence fallback decode sizing, a keyboard apartment-selection alternative, immutable asset delivery/mobile exports, and lower-priority cleanup/tooling. The original full-resolution apartment-plan source is retained for this batch; its format/quality is not changed automatically.

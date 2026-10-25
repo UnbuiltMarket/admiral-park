@@ -29,7 +29,7 @@ const area = (value) => Number.isFinite(value) ? `${number.format(value)} m²` :
 const price = (value) => Number.isFinite(value) ? `${priceNumber.format(value / 1000000)} M Ft` : 'Ár kérésre';
 const apartmentPrice = (a) => a.price == null && a.status === 'sold' ? 'Nincs megadva' : price(a.price);
 const floorText = (a) => a.floorLabel || (a.floor === 0 ? 'Földszint' : a.floor == null ? 'Nincs adat' : `${a.floor}. emelet`);
-const labels = {available:'Elérhető', under_negotiation:'Tárgyalás alatt', sold:'Elkelt', unknown:'Érdeklődjön'};
+const labels = {available:'Elérhető', under_negotiation:'Tárgyalás alatt', reserved:'Egyeztetés alatt', sold:'Elkelt', unknown:'Érdeklődjön'};
 const statusText = (a) => a.statusLabel || labels[a.status] || labels.unknown;
 const safeUrl = (value) => { if (typeof value !== 'string' || !value.trim()) return null; try { const u = new URL(value, location.href); return ['http:', 'https:'].includes(u.protocol) ? u.href : null; } catch { return null; } };
 function assetUrl(value) {
@@ -64,7 +64,29 @@ function toast(message) {
   $('toast').classList.add('visible');
   clearTimeout(toastTimer); toastTimer = setTimeout(() => $('toast').classList.remove('visible'), 4200);
 }
-const byId = (id) => apartments.find(a => a.id === id);
+// The orbit's compact dataset owns live sales facts; full card geometry and
+// room/media metadata stay on the detailed record. Never mutate either source.
+const liveNumberFacts = ['floor','rooms','bedrooms','areaInterior','areaTerrace','areaGarden','price'];
+const liveTextFacts = ['name','building','floorLabel','orientation','layoutLabel','statusLabel','currency'];
+const liveFactKeys = [...liveNumberFacts,...liveTextFacts,'status','priceIncludesVat'];
+function byId(id) {
+  const record=apartments.find(a=>a.id===id);if(!record)return undefined;
+  let live;
+  try{const dataset=config.getLiveDataset?.();live=Array.isArray(dataset?.apartments)?dataset.apartments.find(a=>a?.id===id):null;}catch{return record;}
+  if(!live)return record;
+  const facts={};
+  for(const key of liveNumberFacts)if(Object.hasOwn(live,key)){
+    const value=live[key];if(value===null||(hasNumber(value)&&value>=0&&(!['floor','price'].includes(key)||Number.isSafeInteger(value))))facts[key]=value;
+  }
+  for(const key of liveTextFacts)if(Object.hasOwn(live,key)){
+    const value=live[key];if(value===null&&!['building','currency'].includes(key)||typeof value==='string'&&value.length<=1024&&(!['building','currency'].includes(key)||value.trim()))facts[key]=value;
+  }
+  if(Object.hasOwn(labels,live.status))facts.status=live.status;
+  if(live.priceIncludesVat===null||typeof live.priceIncludesVat==='boolean')facts.priceIncludesVat=live.priceIncludesVat;
+  return Object.keys(facts).some(key=>facts[key]!==record[key])?{...record,...facts}:record;
+}
+let renderedFactsSignature='';
+const factsSignature=a=>JSON.stringify(liveFactKeys.map(key=>a?.[key]??null));
 const hasNumber = (v) => typeof v === 'number' && Number.isFinite(v);
 const svg = (name) => name === 'heart' ? '<svg viewBox="0 0 24 24" width="19" height="19" aria-hidden="true"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 0 0 0-7.8Z" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>' : '<span aria-hidden="true">↗</span>';
 const downloadIcon='<svg viewBox="0 0 20 20" width="15" height="15" fill="none" aria-hidden="true"><path d="M10 2v10m-4-4 4 4 4-4M3 13v4h14v-4" stroke="currentColor" stroke-width="1.2"/></svg>';
@@ -144,7 +166,7 @@ function detailPlan(a) {
   const imageWidth=dimensions.width||dimensions[0]||1500,imageHeight=dimensions.height||dimensions[1]||2000;
   const surface=`left:${-view.x/view.width*100}%;top:${-view.y/view.height*100}%;width:${100/view.width}%;height:${100/view.height}%`;
   const markers=validPlanMarkers(layout);
-  return `<section class="detail-plan" data-document-panel="plan" id="detail-document-plan" role="tabpanel" aria-labelledby="detail-document-plan-tab"><div class="detail-plan-stage"><div class="detail-plan-canvas" style="--plan-aspect:${imageWidth*view.width/(imageHeight*view.height)};aspect-ratio:${imageWidth*view.width}/${imageHeight*view.height}"><div class="detail-plan-surface" style="${surface}"><img class="detail-plan-image" src="${esc(url)}" alt="${esc(a.apartmentType||a.id)} típus számozott alaprajza" decoding="async"><div class="detail-plan-markers" aria-label="A típusterv helyiségei">${markers.map(marker=>`<button type="button" class="room-marker" data-plan-room="${marker.number}" style="left:${marker.x*100}%;top:${marker.y*100}%" aria-label="${marker.number}. ${esc(roomLabel(marker.name))}" aria-pressed="false">${marker.number}</button>`).join('')}</div></div></div></div></section>`;
+  return `<section class="detail-plan" data-document-panel="plan" id="detail-document-plan" role="tabpanel" aria-labelledby="detail-document-plan-tab"><div class="detail-plan-stage" data-detail-image-stage="plan" data-image-state="loading" aria-busy="true">${detailImageFeedback('plan')}<div class="detail-plan-canvas" style="--plan-aspect:${imageWidth*view.width/(imageHeight*view.height)};aspect-ratio:${imageWidth*view.width}/${imageHeight*view.height}"><div class="detail-plan-surface" style="${surface}"><img class="detail-plan-image" data-detail-image="plan" data-image-url="${esc(url)}" src="${esc(url)}" alt="${esc(a.apartmentType||a.id)} típus számozott alaprajza" decoding="async"><div class="detail-plan-markers" aria-label="A típusterv helyiségei">${markers.map(marker=>`<button type="button" class="room-marker" data-plan-room="${marker.number}" style="left:${marker.x*100}%;top:${marker.y*100}%" aria-label="${marker.number}. ${esc(roomLabel(marker.name))}" aria-pressed="false">${marker.number}</button>`).join('')}</div></div></div></div></section>`;
 }
 function detailRooms(a) {
   const rooms=Array.isArray(a.roomList)?a.roomList:[],markers=validPlanMarkers(data.roomLayouts?.[a.apartmentType]);
@@ -154,28 +176,53 @@ function detailRooms(a) {
   const ownRooms=`<ul class="unit-room-list">${rooms.map(room=>`<li><span>${esc(roomLabel(room.name))}</span><strong>${area(room.area)}</strong></li>`).join('')||'<li>A helyiséglista még nem érhető el.</li>'}</ul>`;
   return `<section class="detail-room-panel" data-detail-panel="rooms" id="detail-panel-rooms" role="tabpanel" aria-labelledby="detail-tab-rooms" data-room-view="type"><div class="detail-room-tabs" role="tablist" aria-label="Helyiségjegyzék"><button type="button" id="detail-room-type-tab" data-room-view="type" role="tab" aria-selected="true" aria-controls="detail-room-type">Típusterv</button>${!mapped?'<button type="button" id="detail-room-unit-tab" data-room-view="unit" role="tab" aria-selected="false" tabindex="-1" aria-controls="detail-room-unit">Lakásterületek</button>':''}</div><div class="detail-rooms" data-room-panel="type" id="detail-room-type" role="tabpanel" aria-labelledby="detail-room-type-tab"><h3>${roomHeading}</h3><div class="room-page">${markers.length?`<ol class="type-room-list">${markers.map(marker=>{const room=mapped?rooms.find(room=>room.planNumber===marker.number):null;return `<li><button type="button" class="room-legend-button" data-plan-room="${marker.number}" aria-pressed="false"><span class="room-number">${String(marker.number).padStart(2,'0')}</span><span class="room-name">${esc(roomLabel(marker.name))}</span>${room?`<span class="room-area">${area(room.area)}</span>`:''}</button></li>`;}).join('')}</ol>`:ownRooms}</div></div>${!mapped?`<div class="unit-room-section" data-room-panel="unit" id="detail-room-unit" role="tabpanel" aria-labelledby="detail-room-unit-tab" hidden><h3>${roomHeading}</h3><div class="room-page">${ownRooms}</div></div>`:''}</section>`;
 }
+function detailMetrics(a) {
+  return `<dl class="detail-metrics${a.areaGarden>0?' has-garden':''}"><div class="detail-id-metric"><dt>Lakás<wbr>szám</dt><dd><h2 class="detail-apartment-number">${esc(a.id)}</h2></dd></div>${detailMetric('Beltér',a.areaInterior)}${detailMetric('Erkély',a.areaTerrace)}${hasNumber(a.areaGarden)&&a.areaGarden>0?detailMetric('Kert',a.areaGarden):''}</dl>`;
+}
+function detailPrice(a) {
+  return hasNumber(a.price)?`<span class="price-value">${priceNumber.format(a.price/1000000)}</span> <small class="price-unit">M Ft</small>`:`<span class="price-unavailable">${esc(apartmentPrice(a))}</span>`;
+}
+function detailUnitMeta(a) {
+  const caption=String(floorText(a)),match=/^(.*?)\s*emelet$/iu.exec(caption);
+  const floor=match&&match[1].trim()?`<strong>${esc(match[1].trim())}</strong> emelet`:`<strong>${esc(caption)}</strong>`;
+  return `<strong>${esc(a.apartmentType||'')}</strong> típus <span>·</span> <strong>${esc(a.building)}</strong> épület <span>·</span> ${floor} <span>·</span> <strong>${esc(a.orientation||'Nincs adat')}</strong> tájolás`;
+}
+function refreshFacts() {
+  const dialog=$('detail-dialog'),a=dialog?.open&&byId(dialog.dataset.apartment);if(!a)return false;
+  const next=factsSignature(a);if(next===renderedFactsSignature)return false;
+  renderedFactsSignature=next;
+  const metrics=dialog.querySelector('.detail-area-row'),amount=dialog.querySelector('.detail-price p'),status=dialog.querySelector('.detail-status'),meta=dialog.querySelector('.detail-unit-meta');
+  if(metrics)metrics.innerHTML=detailMetrics(a);
+  if(amount)amount.innerHTML=detailPrice(a);
+  if(status)status.innerHTML=`<span class="status-pill status-${esc(a.status)}">${esc(statusText(a))}</span>`;
+  if(meta)meta.innerHTML=detailUnitMeta(a);
+  const summary=typeof a.layoutLabel==='string'&&a.layoutLabel.trim()?a.layoutLabel.trim().replace(/hálószoba/giu,'szoba'):hasNumber(a.rooms)?`${number.format(a.rooms)} szoba`:'';
+  for(const heading of dialog.querySelectorAll('.detail-room-panel h3'))heading.innerHTML=`Helyiségek.${summary?` <span class="detail-layout-label">${esc(summary)}</span>`:''}`;
+  // A refresh must not deliver a PDF snapshot carrying an old price or status.
+  pdfExportJob?.controller.abort();pdfExportJob=null;
+  requestAnimationFrame(fitDetailRooms);
+  return true;
+}
 function detail(id) {
   const a=byId(id);if(!a)return;
   selectedPlanRoom=null;hoverPlanRoom=null;focusedPlanRoom=null;
   const floor=mediaEntries(a).find(item=>item.key==='floorLayout');
-  const floorCaption=String(floorText(a)),floorMatch=/^(.*?)\s*emelet$/iu.exec(floorCaption);
-  const floorMeta=floorMatch&&floorMatch[1].trim()?`<strong>${esc(floorMatch[1].trim())}</strong> emelet`:`<strong>${esc(floorCaption)}</strong>`;
   const monogram=assetUrl('assets/brand/ap-monogram.png'),logo=assetUrl('assets/brand/admiral-park-full-logo-no-location.svg');
-  const dialog=$('detail-dialog');dialog.dataset.apartment=id;detailResize?.disconnect();
+  const dialog=$('detail-dialog');dialog.dataset.apartment=id;renderedFactsSignature=factsSignature(a);detailResize?.disconnect();
   dialog.innerHTML=`<div class="detail-shell" data-panel="plan"><div class="detail-brand-motif" aria-hidden="true"></div>
     <header class="detail-topbar"><div class="detail-top-actions"><button type="button" class="dialog-close" data-close aria-label="Bezárás">×</button></div></header>
     <div class="detail-layout">
       <aside class="detail-sidebar" aria-label="A lakás adatai">
         <div class="detail-core">
           <div class="detail-identity"><div class="detail-brand-group"><span class="detail-logo" role="img" aria-label="Admiral Park"></span></div></div>
-          <div class="detail-area-row"><dl class="detail-metrics${a.areaGarden>0?' has-garden':''}"><div class="detail-id-metric"><dt>Lakás<wbr>szám</dt><dd><h2 class="detail-apartment-number">${esc(a.id)}</h2></dd></div>${detailMetric('Beltér',a.areaInterior)}${detailMetric('Erkély',a.areaTerrace)}${hasNumber(a.areaGarden)&&a.areaGarden>0?detailMetric('Kert',a.areaGarden):''}</dl></div>
+          <div class="detail-area-row">${detailMetrics(a)}</div>
         </div>
         <hr class="detail-divider">
         ${detailRooms(a)}
-        <div class="detail-conversion"><div class="detail-price"><p>${hasNumber(a.price)?`<span class="price-value">${priceNumber.format(a.price/1000000)}</span> <small class="price-unit">M Ft</small>`:`<span class="price-unavailable">${esc(apartmentPrice(a))}</span>`}</p></div><div class="detail-inquiry">${inquiry(a)}</div><div class="detail-downloads detail-footer">${downloadLink(a,true)}<div class="detail-status"><span class="status-pill status-${esc(a.status)}">${esc(statusText(a))}</span></div>${shareControl(a)}</div></div>
+        <div class="detail-conversion"><div class="detail-price"><p>${detailPrice(a)}</p></div><div class="detail-inquiry">${inquiry(a)}</div><div class="detail-downloads detail-footer">${downloadLink(a,true)}<div class="detail-status"><span class="status-pill status-${esc(a.status)}">${esc(statusText(a))}</span></div>${shareControl(a)}</div></div>
       </aside>
       <nav class="detail-panel-nav" role="tablist" aria-label="Rajz és helyiségjegyzék">${[['plan','Rajzok'],['rooms','Helyiségek']].map(([key,label])=>`<button type="button" role="tab" id="detail-tab-${key}" data-detail-tab="${key}" aria-controls="detail-panel-${key}" aria-selected="${key==='plan'}" tabindex="${key==='plan'?0:-1}">${label}</button>`).join('')}</nav>
-      <section class="detail-drawing" data-detail-panel="plan" id="detail-panel-plan" role="tabpanel" aria-labelledby="detail-tab-plan"><div class="detail-drawing-toolbar"><div class="detail-document-tabs" role="tablist" aria-label="Rajz kiválasztása"><button type="button" id="detail-document-plan-tab" role="tab" data-document-view="plan" aria-selected="true" aria-controls="detail-document-plan">Alaprajz</button>${floor?'<button type="button" id="detail-document-floor-tab" role="tab" data-document-view="floor" aria-selected="false" tabindex="-1" aria-controls="detail-document-floor">Szintrajz</button>':''}</div><div class="detail-drawing-save">${saveButton(a,true)}</div><p class="detail-unit-meta"><strong>${esc(a.apartmentType||'')}</strong> típus <span>·</span> <strong>${esc(a.building)}</strong> épület <span>·</span> ${floorMeta} <span>·</span> <strong>${esc(a.orientation||'Nincs adat')}</strong> tájolás</p></div>${detailPlan(a)}${floor?`<section class="detail-floor-plan" data-document-panel="floor" id="detail-document-floor" role="tabpanel" aria-labelledby="detail-document-floor-tab" hidden><p class="detail-section-label">${esc(floorText(a))} · A, B, C épület</p><img class="detail-floor-image" src="${esc(floor.full)}" alt="${esc(floorText(a))} szintrajza" decoding="async"><p class="detail-plan-note">${esc(a.id)} · ${esc(a.building)} épület</p></section>`:''}</section>
+      <section class="detail-drawing" data-detail-panel="plan" id="detail-panel-plan" role="tabpanel" aria-labelledby="detail-tab-plan"><div class="detail-drawing-toolbar"><div class="detail-document-tabs" role="tablist" aria-label="Rajz kiválasztása"><button type="button" id="detail-document-plan-tab" role="tab" data-document-view="plan" aria-selected="true" aria-controls="detail-document-plan">Alaprajz</button>${floor?'<button type="button" id="detail-document-floor-tab" role="tab" data-document-view="floor" aria-selected="false" tabindex="-1" aria-controls="detail-document-floor">Szintrajz</button>':''}</div><div class="detail-drawing-save">${saveButton(a,true)}</div><p class="detail-unit-meta">${detailUnitMeta(a)}</p></div>${detailPlan(a)}${floor?`<section class="detail-floor-plan" data-detail-image-stage="floor" data-image-state="idle" data-document-panel="floor" id="detail-document-floor" role="tabpanel" aria-labelledby="detail-document-floor-tab" hidden><p class="detail-section-label">${esc(floorText(a))} · A, B, C épület</p>${detailImageFeedback('floor')}<img class="detail-floor-image" data-detail-image="floor" data-image-url="${esc(floor.full)}" alt="${esc(floorText(a))} szintrajza" decoding="async"><p class="detail-plan-note">${esc(a.id)} · ${esc(a.building)} épület</p></section>`:''}</section>
     </div><p class="detail-illustration-note">Az alaprajz illusztráció. Bútorozatlan átadás. Bruttó vételár.</p></div>`;
   const shell=dialog.querySelector('.detail-shell');
   if(monogram)shell.style.setProperty('--detail-monogram-image',`url("${monogram.replace(/"/g,'%22')}")`);
@@ -191,10 +238,29 @@ function selectDetailPanel(value,focus=false) {
   if(focus&&getComputedStyle(dialog.querySelector('.detail-panel-nav')).display!=='none')dialog.querySelector(`[data-detail-tab="${value}"]`)?.focus({preventScroll:true});
   requestAnimationFrame(fitDetailRooms);
 }
+function detailImageFeedback(kind) {
+  return `<div class="detail-image-feedback" data-detail-image-feedback="${kind}" role="status" hidden><p>Nem sikerült betölteni a rajzot.</p><button type="button" class="button-secondary" data-detail-image-retry="${kind}">Újrapróbálom</button></div>`;
+}
+function detailImageState(image,state) {
+  const stage=image.closest('[data-detail-image-stage]');if(!stage)return;
+  stage.dataset.imageState=state;stage.setAttribute('aria-busy',String(state==='loading'));
+  const feedback=stage.querySelector('[data-detail-image-feedback]');if(!feedback)return;
+  const failed=state==='error';feedback.hidden=!failed;
+  const button=feedback.querySelector('[data-detail-image-retry]');if(button)button.disabled=!failed;
+}
+function startDetailImage(kind,retry=false) {
+  if(!['plan','floor'].includes(kind))return;
+  const image=$('detail-dialog').querySelector(`img[data-detail-image="${kind}"]`);if(!image||!image.dataset.imageUrl)return;
+  detailImageState(image,'loading');
+  let url=image.dataset.imageUrl;
+  if(retry){const fresh=new URL(url);fresh.searchParams.set('admiral-retry',String(Date.now()));url=fresh.href;image.removeAttribute('src');}
+  image.src=url;
+}
 function selectDetailDocument(value) {
   const dialog=$('detail-dialog');
   dialog.querySelectorAll('[data-document-view]').forEach(button=>{const active=button.dataset.documentView===value;button.setAttribute('aria-selected',String(active));button.tabIndex=active?0:-1;});
   dialog.querySelectorAll('[data-document-panel]').forEach(panel=>{panel.hidden=panel.dataset.documentPanel!==value;});
+  if(value==='floor'&&!dialog.querySelector('img[data-detail-image="floor"]')?.hasAttribute('src'))startDetailImage('floor');
 }
 function selectDetailRoomView(value) {
   const dialog=$('detail-dialog'),panel=dialog.querySelector('.detail-room-panel');if(!panel)return;
@@ -313,8 +379,8 @@ async function downloadDatasheet(id,trigger) {
   const shell=job.fromDialog?dialog.querySelector('.detail-shell'):null,computed=getComputedStyle(shell||dialog);
   const colors={};
   for(const [key,property,fallback] of [['top','--detail-top','#fdfbfb'],['bottom','--detail-bottom','#e4e9ec'],['ink','--detail-ink','#242824'],['muted','--detail-muted','#687074'],['watermarkTop','--detail-watermark-top','#f2f0f1'],['watermarkBottom','--detail-watermark-bottom','#d9dfe2'],['accent','--accent','#a38c69']])colors[key]=computed.getPropertyValue(property).trim()||fallback;
-  const statusProperty={available:'--available',sold:'--sold',under_negotiation:'--negotiating'}[a.status]||'--detail-muted';
-  colors.status=job.fromDialog?getComputedStyle(dialog.querySelector('.status-pill')).color:computed.getPropertyValue(statusProperty).trim()||({available:'#4f7959',sold:'#b4564f',under_negotiation:'#b28a2f'}[a.status]||colors.muted);
+  const statusProperty={available:'--available',sold:'--sold',under_negotiation:'--negotiating',reserved:'--negotiating'}[a.status]||'--detail-muted';
+  colors.status=job.fromDialog?getComputedStyle(dialog.querySelector('.status-pill')).color:computed.getPropertyValue(statusProperty).trim()||({available:'#4f7959',sold:'#b4564f',under_negotiation:'#b28a2f',reserved:'#b28a2f'}[a.status]||colors.muted);
   const layout=data.roomLayouts?.[a.apartmentType],markers=validPlanMarkers(layout),rooms=Array.isArray(a.roomList)?a.roomList:[];
   const mapped=markers.length&&rooms.length===markers.length&&markers.every(marker=>rooms.some(room=>room.planNumber===marker.number));
   const unitRows=rooms.map(room=>({name:roomLabel(room.name),area:area(room.area)}));
@@ -436,6 +502,7 @@ root.addEventListener('click',event=>{
   if(t.hasAttribute('data-share-copy'))copyShareLink(t.dataset.shareCopy);
   if(t.hasAttribute('data-detail-tab'))selectDetailPanel(t.dataset.detailTab);
   if(t.hasAttribute('data-document-view'))selectDetailDocument(t.dataset.documentView);
+  if(t.hasAttribute('data-detail-image-retry'))startDetailImage(t.dataset.detailImageRetry,true);
   if(t.hasAttribute('data-room-view'))selectDetailRoomView(t.dataset.roomView);
   if(t.hasAttribute('data-plan-room'))selectPlanRoom(t.dataset.planRoom,t);
   if(t.hasAttribute('data-inquiry-placeholder')){
@@ -482,8 +549,10 @@ root.addEventListener('keydown',event=>{
 },events);
 root.addEventListener('error',event=>{
   const image=event.target;
+  if(image.matches?.('img[data-detail-image]'))detailImageState(image,'error');
   if(image.matches?.('img[data-thumbnail]')){image.hidden=true;const fallback=image.parentElement.querySelector('.preview-unavailable');if(fallback)fallback.hidden=false;}
 },{...events,capture:true});
+root.addEventListener('load',event=>{if(event.target.matches?.('img[data-detail-image]'))detailImageState(event.target,'ready');},{...events,capture:true});
 for(const dialog of dialogs) {
   dialog.addEventListener('cancel',e=>{e.preventDefault();if(dialog.id==='detail-dialog'&&closeShare())return;closeDialog(dialog);},events);
   dialog.addEventListener('click',e=>{if(e.target===dialog){const r=dialog.getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)closeDialog(dialog);}},events);
@@ -569,6 +638,7 @@ const controller={
   close(){requestedApartmentId=null;pdfExportJob?.controller.abort();pdfExportJob=null;for(const dialog of [...dialogs].reverse())closeDialog(dialog);},
   download(id,trigger){return downloadDatasheet(id,trigger);},
   retry(){return load();},
+  refreshFacts,
   dispose(){lifecycle.abort();detailResize?.disconnect();clearTimeout(toastTimer);for(const d of [...dialogs].reverse()){if(d.open)d.close();modalRegistry.delete(d);}for(const url of downloadUrls)URL.revokeObjectURL(url);downloadUrls.clear();mediaView=null;syncModalState();}
 };
 load();

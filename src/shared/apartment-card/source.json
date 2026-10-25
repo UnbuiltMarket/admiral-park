@@ -2,15 +2,15 @@
   "schemaVersion": "2.0",
   "sourceProject": "admiral-park",
   "description": "Canonical shared detail and media card used by both the orbit homepage and apartment list. Maintain these sources directly; historical snapshots are test fixtures only.",
-  "updated": "2026-10-20",
+  "updated": "2026-10-25",
   "canonicalSources": {
     "card-runtime.js": {
-      "sha256": "e9d96b737fd78f38b788391cc155b2d7d33b20abe9667a74c1555be87e2fe484",
-      "bytes": 51579
+      "sha256": "7f45e47b43bae13d09012ccbc724a19e11b0b1a2e2940366b7737d00a7a1991c",
+      "bytes": 56618
     },
     "card.css": {
-      "sha256": "2dd23df88d6cc8f420fdeb120f49967588936962bb4e946f2033aec115f78424",
-      "bytes": 40847
+      "sha256": "259909971bba3c2139860b05173aa37564001cdc9f1c0bb3d3e5ebd896225462",
+      "bytes": 41638
     },
     "card-shell.html": {
       "sha256": "93638e8f18b7a11da371804032266ac9c76932c21baeea10fa7bfe6068308370",
@@ -21,8 +21,8 @@
       "bytes": 13948
     },
     "card-pdf-actions.js": {
-      "sha256": "f5ec5fa53fe760fe22e2d488a60c7d8fe9cafe454901e908d3c876575aea983b",
-      "bytes": 7545
+      "sha256": "dd179f6e5d4bfbeedf23e6a25eaa99ec591c5817552ba4204a5bbdf822204f43",
+      "bytes": 7589
     }
   },
   "framerWrapper": "src/framer/OrbitApartmentCard.source.tsx",

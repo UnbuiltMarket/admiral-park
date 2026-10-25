@@ -66,6 +66,17 @@ test('a failed JSON request retries once and concurrent retries share the reques
   fixture.controller.dispose();
 });
 
+test('all canonical availability states including reserved initialize the shared card',async()=>{
+  const states=[];
+  const statuses=['available','under_negotiation','reserved','sold','unknown'];
+  const dataset={schemaVersion:'1.0',apartments:statuses.map((status,index)=>({id:'A00'+index,building:'A',status}))};
+  const {controller}=runtimeFixture({dataset,onState:(state,error)=>states.push([state,error])},async()=>{throw new Error('No request needed');});
+  await controller.retry();
+  assert.equal(states.at(-1)[0],'ready');
+  assert.equal(states.some(([state])=>state==='error'),false);
+  controller.dispose();
+});
+
 test('provided malformed data reports an error instead of silently fetching another dataset',async()=>{
   let requests=0;
   const states=[];
