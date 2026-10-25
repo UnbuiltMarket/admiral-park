@@ -24,9 +24,9 @@ const signal = lifecycle.signal;
 const events = {signal};
 const esc = (value) => String(value ?? '').replace(/[&<>"']/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const number = new Intl.NumberFormat('hu-HU', {maximumFractionDigits: 2});
-const priceNumber = new Intl.NumberFormat('hu-HU', {maximumFractionDigits: 2});
+const priceNumber = new Intl.NumberFormat('hu-HU', {maximumFractionDigits: 0});
 const area = (value) => Number.isFinite(value) ? `${number.format(value)} m²` : 'Nincs adat';
-const price = (value) => Number.isFinite(value) ? `${priceNumber.format(value / 1000000)} M Ft` : 'Ár kérésre';
+const price = (value) => Number.isFinite(value) ? `${priceNumber.format(value)} Ft` : 'Ár kérésre';
 const apartmentPrice = (a) => a.price == null && a.status === 'sold' ? 'Nincs megadva' : price(a.price);
 const floorText = (a) => a.floorLabel || (a.floor === 0 ? 'Földszint' : a.floor == null ? 'Nincs adat' : `${a.floor}. emelet`);
 const labels = {available:'Elérhető', under_negotiation:'Tárgyalás alatt', sold:'Elkelt', unknown:'Érdeklődjön'};
@@ -66,7 +66,7 @@ const dialogFocus=new WeakMap(), dialogStack=[], downloadUrls=new Set();
 const modalRegistry=window[Symbol.for('admiral-park:open-dialogs')] ||= new Set();
 const modalScroll=window[Symbol.for('admiral-park:scroll-lock')] ||= {locked:false,value:'',priority:'',watched:new WeakSet()};
 const dialogs=[$('compare-dialog'),$('media-dialog')].filter(Boolean);
-let apartmentFocus=null,currentApartmentId=null;
+let apartmentFocus=null,currentApartmentId=null,rowInquiryOpen=null;
 let storage = true;
 try { const stored = JSON.parse(localStorage.getItem('admiral-park:favorites:v1') || '[]'); if (Array.isArray(stored)) favorites = new Set(stored.filter(x => typeof x === 'string')); } catch { storage = false; }
 
@@ -190,6 +190,43 @@ function previewButton(a,item) {
 function downloadLink(a) {
   return `<span class="download-wrap"><button type="button" class="datasheet-link action-pill" data-download="${esc(a.id)}" aria-label="${esc(a.id)} lakás adatlapjának letöltése PDF formátumban" title="Lakásadatlap letöltése">${downloadIcon}<span>Adatlap</span></button></span>`;
 }
+function safeInquiryUrl(value) {
+  if(typeof value!=='string'||!value.trim())return null;
+  try {const url=new URL(value.trim(),document.baseURI);return ['http:','https:'].includes(url.protocol)?url:null;}catch{return null;}
+}
+function rowInquiry(a) {
+  const url=safeInquiryUrl(config.inquiryUrl);
+  if(url){url.searchParams.set('apartment',a.id);return `<a class="inquiry-link action-pill" href="${esc(url.href)}" target="_blank" rel="noopener noreferrer" aria-label="Érdeklődöm a(z) ${esc(a.id)} lakásról">Érdeklődöm</a>`;}
+  const id=`row-inquiry-${encodeURIComponent(a.id)}`;
+  return `<span class="row-inquiry-wrap"><button type="button" class="inquiry-link action-pill" data-row-inquiry="${esc(a.id)}" aria-label="Érdeklődöm a(z) ${esc(a.id)} lakásról" aria-expanded="false" aria-controls="${esc(id)}">Érdeklődöm</button><span class="row-inquiry-pending" id="${esc(id)}" role="region" aria-label="${esc(a.id)} kapcsolatfelvétel" hidden><button type="button" class="row-inquiry-close" data-inquiry-close aria-label="Kapcsolatfelvételi üzenet bezárása">×</button><strong>${esc(a.id)}</strong><span>A kapcsolatfelvétel hamarosan elérhető.</span><button type="button" class="inquiry-copy" data-copy-inquiry="${esc(a.id)}">Lakásadatok másolása</button></span></span>`;
+}
+function closeRowInquiry(restore=false) {
+  if(!rowInquiryOpen)return;
+  const {trigger,panel}=rowInquiryOpen;rowInquiryOpen=null;panel.hidden=true;trigger.setAttribute('aria-expanded','false');
+  if(restore&&trigger.isConnected)trigger.focus({preventScroll:true});
+}
+function toggleRowInquiry(trigger) {
+  const wasOpen=rowInquiryOpen?.trigger===trigger;closeRowInquiry();if(wasOpen)return;
+  const wrap=trigger.closest('.row-inquiry-wrap'),panel=wrap.querySelector('.row-inquiry-pending');
+  wrap.removeAttribute('data-below');panel.hidden=false;trigger.setAttribute('aria-expanded','true');
+  if(panel.getBoundingClientRect().top<8)wrap.dataset.below='true';
+  rowInquiryOpen={trigger,panel,wrap};
+}
+async function copyInquiry(a) {
+  const link=safeInquiryUrl(config.pageUrl)||new URL(location.href);
+  for(const key of [...filterIds,'sort'])link.searchParams.delete(key);
+  link.searchParams.set('apartment',a.id);
+  const text=`Érdeklődöm az Admiral Park ${a.id} lakása iránt.\n${a.building} épület, ${floorText(a)}\nNettó alapterület: ${area(a.areaInterior)}\nErkély: ${area(a.areaTerrace)}${hasNumber(a.areaGarden)&&a.areaGarden>0?`\nKert: ${area(a.areaGarden)}`:''}\nBruttó ár: ${apartmentPrice(a)}\n${link.href}`;
+  try {await navigator.clipboard.writeText(text);if(!signal.aborted)toast('A vágólapra másoltuk.');}
+  catch {
+    if(signal.aborted)return;
+    const previous=root.activeElement||document.activeElement,helper=document.createElement('textarea');
+    helper.value=text;helper.setAttribute('aria-label','Másolható lakásadatok');helper.style.cssText='position:fixed;top:20px;left:20px;z-index:99999;width:80%;height:80px';
+    root.querySelector('main').append(helper);helper.focus({preventScroll:true});helper.select();
+    let copied=false;try{copied=document.execCommand('copy');}catch{}helper.remove();previous?.focus({preventScroll:true});
+    toast(copied?'A vágólapra másoltuk.':'A böngésző nem engedélyezte a másolást.');
+  }
+}
 function saveButton(a) { const saved=favorites.has(a.id); return `<button type="button" class="save-button ${saved?'is-saved':''}" data-save="${esc(a.id)}" aria-label="${esc(a.id)} ${saved?'eltávolítása a kedvencekből':'mentése a kedvencekhez'}" aria-pressed="${saved}">${svg('heart')}</button>`; }
 function compareToggle(a) { return `<button type="button" class="compare-toggle action-pill" data-compare="${esc(a.id)}" aria-label="${esc(a.id)} összehasonlítása" aria-pressed="${selected.has(a.id)}"><svg viewBox="0 0 20 20" width="14" height="14" fill="none" aria-hidden="true"><path d="${selected.has(a.id)?'m4 10 4 4 8-8':'M10 4v12M4 10h12'}" stroke="currentColor" stroke-width="1.2"/></svg><span>Összevetés</span></button>`; }
 function rowArea(value) {
@@ -199,14 +236,14 @@ function row(a) {
   const media=mediaEntries(a);
   const floorplan=media.find(item=>item.key==='floorplan'),floorLayout=media.find(item=>item.key==='floorLayout');
   return `<tr class="apartment-row" data-unit="${esc(a.id)}">
-    <td class="cell-unit" data-label="Lakás"><div class="unit-summary"><div class="unit-media">${floorplan?previewButton(a,floorplan):''}</div><div class="unit-identification"><div class="unit-id-line"><button type="button" class="unit-id unit-open" data-detail="${esc(a.id)}" aria-label="${esc(a.id)} lakás részleteinek megnyitása" aria-haspopup="dialog">${esc(a.id)}</button>${saveButton(a)}</div><span class="unit-status status-pill status-${esc(a.status)}">${esc(statusText(a))}</span><span class="unit-mobile-meta"><span>${esc(a.building)} épület · ${esc(floorText(a))}</span><span class="unit-room-count">${a.rooms == null ? esc(a.layoutLabel || 'Nincs szobaadat') : `${number.format(a.rooms)} szoba`}${a.apartmentType?` · ${esc(a.apartmentType)} típus`:''}</span></span></div></div></td>
-    <td class="cell-type" data-label="Típus"><span class="unit-type" aria-label="${esc(a.apartmentType||'')} lakástípus">${esc(a.apartmentType||'')}</span><span class="unit-location"><span class="unit-building"><strong>${esc(a.building)}</strong> épület</span><span class="unit-floor">${esc(floorText(a))}</span></span></td>
+    <td class="cell-unit" data-label="Lakás"><div class="unit-summary"><div class="unit-media">${floorplan?previewButton(a,floorplan):''}</div><div class="unit-identification"><div class="unit-id-line"><button type="button" class="unit-id unit-open" data-detail="${esc(a.id)}" aria-label="${esc(a.id)} lakás részleteinek megnyitása" aria-haspopup="dialog">${esc(a.id)}</button>${saveButton(a)}</div><span class="unit-location unit-desktop-location"><span class="unit-building"><strong>${esc(a.building)}</strong> épület</span><span aria-hidden="true">·</span><span class="unit-floor">${esc(floorText(a))}</span></span><span class="unit-status status-pill status-${esc(a.status)}">${esc(statusText(a))}</span><span class="unit-mobile-meta"><span>${esc(a.building)} épület · ${esc(floorText(a))}</span><span class="unit-room-count">${a.rooms == null ? esc(a.layoutLabel || 'Nincs szobaadat') : `${number.format(a.rooms)} szoba`}${a.apartmentType?` · ${esc(a.apartmentType)} típus`:''}</span></span></div></div></td>
+    <td class="cell-type" data-label="Típus"><span class="unit-type" aria-label="${esc(a.apartmentType||'')} lakástípus">${esc(a.apartmentType||'')}</span></td>
     <td class="cell-rooms" data-label="Szobák">${a.rooms == null ? `<span title="${esc(a.layoutLabel || 'Nincs adat')}">${esc(a.layoutLabel || 'Nincs adat')}</span>` : number.format(a.rooms)}</td>
     <td class="cell-area cell-interior" data-label="Beltér"><span class="interior-value">${rowArea(a.areaInterior)}</span></td>
     <td class="cell-outdoor" data-label="Kültér"><div class="outdoor-area cell-balcony"><span class="outdoor-label">Erkély</span><span class="outdoor-value">${rowArea(a.areaTerrace)}</span></div><div class="outdoor-area cell-garden${hasNumber(a.areaGarden)&&a.areaGarden>0?'':' empty-garden'}"><span class="outdoor-label">Kert</span><span class="outdoor-value garden-value">${rowArea(a.areaGarden)}</span></div></td>
     <td class="cell-price" data-label="Bruttó ár"><span class="price-amount">${apartmentPrice(a)}</span><span class="cell-status"><span class="status-pill status-${esc(a.status)}">${esc(statusText(a))}</span></span></td>
     <td class="cell-floor-layout" data-label="Szintrajz">${floorLayout?previewButton(a,floorLayout):''}</td>
-    <td class="cell-actions"><div class="row-actions"><div class="action-pills">${downloadLink(a)}${compareToggle(a)}</div></div></td>
+    <td class="cell-actions"><div class="row-actions"><div class="action-pills">${rowInquiry(a)}${downloadLink(a)}${compareToggle(a)}</div></div></td>
   </tr>`;
 }
 function renderChips() {
@@ -226,6 +263,7 @@ function renderTray() {
   resizeEmbed();
 }
 function render() {
+  closeRowInquiry();
   const list = sorted(apartments.filter(matches));
   const invalidArea = state.minArea!=='' && state.maxArea!=='' && Number(state.minArea)>Number(state.maxArea);
   const invalidPrice = state.minPrice!=='' && state.maxPrice!=='' && Number(state.minPrice)>Number(state.maxPrice);
@@ -371,13 +409,16 @@ function syncSortPlacement() {
 
 root.addEventListener('click',event=>{
   const clickedRow=event.target.closest('.apartment-row[data-unit]');
-  if(clickedRow&&!event.target.closest('button,a,input,label,select,textarea,[role="button"]')) {
+  if(clickedRow&&!event.target.closest('button,a,input,label,select,textarea,[role="button"],.row-inquiry-pending')) {
     const selection=window.getSelection();
     if(selection&&!selection.isCollapsed&&(clickedRow.contains(selection.anchorNode)||clickedRow.contains(selection.focusNode)))return;
     clickedRow.querySelector('[data-detail]')?.focus({preventScroll:true});
     detail(clickedRow.dataset.unit);return;
   }
   const t=event.target.closest('button,a[data-download],[data-close]'); if(!t) return;
+  if(t.hasAttribute('data-row-inquiry'))toggleRowInquiry(t);
+  if(t.hasAttribute('data-inquiry-close'))closeRowInquiry(true);
+  if(t.hasAttribute('data-copy-inquiry')){const a=byId(t.dataset.copyInquiry);if(a)copyInquiry(a);}
   if(t.hasAttribute('data-media'))openMedia(t.dataset.media,t.dataset.mediaKind);
   if(t.hasAttribute('data-media-tab'))showMedia(Number(t.dataset.mediaTab));
   if(t.hasAttribute('data-media-retry')&&mediaView){showMedia(mediaView.index);$('media-dialog').querySelector('.media-stage')?.focus();}
@@ -400,13 +441,15 @@ root.addEventListener('click',event=>{
     const id=t.dataset.compare;
     if(selected.has(id))selected.delete(id);
     else {if(selected.size>=3){toast('Legfeljebb 3 lakás hasonlítható össze.');return;}selected.add(id);}
-    t.setAttribute('aria-pressed',String(selected.has(id)));renderTray();
+    t.setAttribute('aria-pressed',String(selected.has(id)));t.querySelector('svg path')?.setAttribute('d',selected.has(id)?'m4 10 4 4 8-8':'M10 4v12M4 10h12');renderTray();
   }
   if(t.hasAttribute('data-close')) closeDialog(t.closest('dialog'));
   if(t.hasAttribute('data-clear-compare')) {selected.clear();render();}
   if(t.hasAttribute('data-open-compare')) showCompare();
   if(t.hasAttribute('data-from-compare')) {closeDialog($('compare-dialog'));detail(t.dataset.fromCompare);}
 },events);
+document.addEventListener('click',event=>{if(rowInquiryOpen&&!event.composedPath().includes(rowInquiryOpen.wrap))closeRowInquiry();},events);
+document.addEventListener('keydown',event=>{if(event.key==='Escape'&&rowInquiryOpen){event.preventDefault();closeRowInquiry(true);}},events);
 $('filters').addEventListener('submit',e=>e.preventDefault(),events);
 $('filters').addEventListener('input',e=>{const id=e.target.id;if(!filterIds.includes(id))return;if(numericFilters.has(id))updateRange(id);else state[id]=checks.has(id)?e.target.checked:e.target.value;render();},events);
 function moveRangeOnTrack(event) {
@@ -512,6 +555,6 @@ async function load() {
   }
 }
 load();
-const destroy = () => {lifecycle.abort();observer.disconnect();clearTimeout(toastTimer);for(const d of [...dialogs].reverse()){if(d.open)d.close();modalRegistry.delete(d);}for(const url of downloadUrls)URL.revokeObjectURL(url);downloadUrls.clear();mediaView=null;syncModalState();};
+const destroy = () => {closeRowInquiry();lifecycle.abort();observer.disconnect();clearTimeout(toastTimer);for(const d of [...dialogs].reverse()){if(d.open)d.close();modalRegistry.delete(d);}for(const url of downloadUrls)URL.revokeObjectURL(url);downloadUrls.clear();mediaView=null;syncModalState();};
 return {destroy,closeApartment,refreshFavorites,getData:()=>data,getState:()=>({...state})};
 }
