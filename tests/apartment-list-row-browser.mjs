@@ -65,22 +65,29 @@ try{
     check('Building and floor belong to the apartment identity group',await first.locator('.unit-identification .unit-desktop-location').innerText().then(text=>/A épület\s*·\s*Földszint/.test(normalize(text))));
 
     // Capture the two priority widths before interaction and before all checks.
-    for(const width of [1440,320,1366,1920,1024,390]){
+    for(const width of [1440,320,1366,1920,1280,1101,1024,390]){
       await f.page.setViewportSize({width,height:width<500?900:1000});await f.page.waitForTimeout(120);
+      await f.list.locator('img[data-thumbnail]').evaluateAll(images=>Promise.all(images.filter(image=>{const rect=image.getBoundingClientRect();return rect.width>0&&rect.top<innerHeight&&rect.bottom>0;}).map(image=>image.decode().catch(()=>{}))));
       await f.page.screenshot({path:fileURLToPath(new URL(`${mode}-row-${width}.png`,out)),fullPage:false});
       if(width===1440||width===320)console.log(JSON.stringify({screenshot:fileURLToPath(new URL(`${mode}-row-${width}.png`,out))}));
       const m=await f.list.evaluate(host=>{
-        const r=host.shadowRoot||host,rows=[...r.querySelectorAll('.apartment-row')],row=rows[0],rect=e=>e.getBoundingClientRect().toJSON();
+        const r=host.shadowRoot||host,rows=[...r.querySelectorAll('.apartment-row')],row=rows[0],rect=e=>e?.getBoundingClientRect().toJSON();
+        const headings=[...r.querySelectorAll('thead th')].map(e=>({text:e.textContent.trim(),rect:rect(e),display:getComputedStyle(e).display}));
+        const statusIndex=headings.findIndex(e=>e.text==='Elérhetőség'),statusCell=row.children[statusIndex],priceCell=row.querySelector('.price-amount')?.closest('td');
         const pills=[...row.querySelectorAll('.action-pill')].map(e=>({text:e.textContent.trim(),rect:rect(e),bg:getComputedStyle(e).backgroundImage,color:getComputedStyle(e).backgroundColor}));
-        const clipping=rows.flatMap(row=>[...row.querySelectorAll('.price-amount,.unit-id,.action-pill')].filter(e=>e.clientWidth>0&&e.scrollWidth>e.clientWidth+1).map(e=>({id:row.dataset.unit,text:e.textContent,client:e.clientWidth,scroll:e.scrollWidth,rect:rect(e)})));
-        return {width:innerWidth,pageWidth:document.documentElement.scrollWidth,host:rect(host),row:rect(row),rowHeights:rows.map(e=>e.getBoundingClientRect().height),pills,clipping};
+        const clipping=rows.flatMap(row=>[...row.querySelectorAll('.price-amount,.unit-id,.action-pill,.status-pill')].filter(e=>e.clientWidth>0&&e.scrollWidth>e.clientWidth+1).map(e=>({id:row.dataset.unit,text:e.textContent,client:e.clientWidth,scroll:e.scrollWidth,rect:rect(e)})));
+        return {width:innerWidth,pageWidth:document.documentElement.scrollWidth,host:rect(host),row:rect(row),rowHeights:rows.map(e=>e.getBoundingClientRect().height),pills,clipping,headings,priceCell:rect(priceCell),statusCell:rect(statusCell),separateStatus:!!statusCell&&statusCell!==priceCell&&!!statusCell.querySelector('.status-pill'),rowText:row.innerText};
       });
       measurements.push(m);
       check('No horizontal page overflow at '+width,m.pageWidth<=width+1,m);
       check('Full prices and action labels do not clip at '+width,m.clipping.length===0,m.clipping);
       check('Exactly three equal row pills at '+width,m.pills.length===3&&m.pills.every(p=>Math.abs(p.rect.width-m.pills[0].rect.width)<=1&&Math.abs(p.rect.height-m.pills[0].rect.height)<=1),m.pills);
-      check('Inquiry has a gold fill at '+width,m.pills[0].text==='Érdeklődöm'&&(m.pills[0].bg!=='none'||m.pills[0].color!=='rgba(0, 0, 0, 0)'),m.pills[0]);
-      if(width>=1366){
+      check('Pills follow datasheet, comparison, inquiry order at '+width,m.pills.map(p=>p.text).join('|')==='Adatlap|Összevetés|Érdeklődöm',m.pills);
+      check('Inquiry is the final gold pill at '+width,m.pills[2].text==='Érdeklődöm'&&(m.pills[2].bg!=='none'||m.pills[2].color!=='rgba(0, 0, 0, 0)'),m.pills[2]);
+      check('Row does not repeat an Erkély label at '+width,!m.rowText.includes('Erkély'),m.rowText);
+      if(width>=1101){
+        check('Desktop exposes separate Terasz and Elérhetőség headings at '+width,m.headings.length===9&&m.headings.some(h=>h.text==='Terasz'&&h.display!=='none'&&h.rect.height>0)&&m.headings.some(h=>h.text==='Elérhetőség'&&h.display!=='none'&&h.rect.height>0),m.headings);
+        check('Price and availability occupy distinct visible desktop columns at '+width,m.separateStatus&&m.priceCell.width>0&&m.statusCell.width>0&&m.statusCell.left>=m.priceCell.right-1,{price:m.priceCell,status:m.statusCell});
         check('Desktop row height is preserved at '+width,Math.max(...m.rowHeights)<=157,{maxHeight:Math.max(...m.rowHeights)});
         check('Desktop pills stay 112 by 36 at '+width,m.pills.every(p=>Math.abs(p.rect.width-112)<=1&&Math.abs(p.rect.height-36)<=1),m.pills);
       }

@@ -216,7 +216,7 @@ async function copyInquiry(a) {
   const link=safeInquiryUrl(config.pageUrl)||new URL(location.href);
   for(const key of [...filterIds,'sort'])link.searchParams.delete(key);
   link.searchParams.set('apartment',a.id);
-  const text=`Érdeklődöm az Admiral Park ${a.id} lakása iránt.\n${a.building} épület, ${floorText(a)}\nNettó alapterület: ${area(a.areaInterior)}\nErkély: ${area(a.areaTerrace)}${hasNumber(a.areaGarden)&&a.areaGarden>0?`\nKert: ${area(a.areaGarden)}`:''}\nBruttó ár: ${apartmentPrice(a)}\n${link.href}`;
+  const text=`Érdeklődöm az Admiral Park ${a.id} lakása iránt.\n${a.building} épület, ${floorText(a)}\nNettó alapterület: ${area(a.areaInterior)}\nTerasz: ${area(a.areaTerrace)}${hasNumber(a.areaGarden)&&a.areaGarden>0?`\nKert: ${area(a.areaGarden)}`:''}\nBruttó ár: ${apartmentPrice(a)}\n${link.href}`;
   try {await navigator.clipboard.writeText(text);if(!signal.aborted)toast('A vágólapra másoltuk.');}
   catch {
     if(signal.aborted)return;
@@ -240,14 +240,15 @@ function row(a) {
     <td class="cell-type" data-label="Típus"><span class="unit-type" aria-label="${esc(a.apartmentType||'')} lakástípus">${esc(a.apartmentType||'')}</span></td>
     <td class="cell-rooms" data-label="Szobák">${a.rooms == null ? `<span title="${esc(a.layoutLabel || 'Nincs adat')}">${esc(a.layoutLabel || 'Nincs adat')}</span>` : number.format(a.rooms)}</td>
     <td class="cell-area cell-interior" data-label="Beltér"><span class="interior-value">${rowArea(a.areaInterior)}</span></td>
-    <td class="cell-outdoor" data-label="Kültér"><div class="outdoor-area cell-balcony"><span class="outdoor-label">Erkély</span><span class="outdoor-value">${rowArea(a.areaTerrace)}</span></div><div class="outdoor-area cell-garden${hasNumber(a.areaGarden)&&a.areaGarden>0?'':' empty-garden'}"><span class="outdoor-label">Kert</span><span class="outdoor-value garden-value">${rowArea(a.areaGarden)}</span></div></td>
-    <td class="cell-price" data-label="Bruttó ár"><span class="price-amount">${apartmentPrice(a)}</span><span class="cell-status"><span class="status-pill status-${esc(a.status)}">${esc(statusText(a))}</span></span></td>
+    <td class="cell-outdoor" data-label="Terasz"><div class="outdoor-area cell-balcony"><span class="outdoor-label">Terasz</span><span class="outdoor-value">${rowArea(a.areaTerrace)}</span></div><div class="outdoor-area cell-garden${hasNumber(a.areaGarden)&&a.areaGarden>0?'':' empty-garden'}"><span class="outdoor-label">Kert</span><span class="outdoor-value garden-value">${rowArea(a.areaGarden)}</span></div></td>
+    <td class="cell-price" data-label="Bruttó ár"><span class="price-amount">${apartmentPrice(a)}</span></td>
+    <td class="cell-status" data-label="Elérhetőség"><span class="status-pill status-${esc(a.status)}">${esc(statusText(a))}</span></td>
     <td class="cell-floor-layout" data-label="Szintrajz">${floorLayout?previewButton(a,floorLayout):''}</td>
-    <td class="cell-actions"><div class="row-actions"><div class="action-pills">${rowInquiry(a)}${downloadLink(a)}${compareToggle(a)}</div></div></td>
+    <td class="cell-actions"><div class="row-actions"><div class="action-pills">${downloadLink(a)}${compareToggle(a)}${rowInquiry(a)}</div></div></td>
   </tr>`;
 }
 function renderChips() {
-  const titles = {search:'Keresés',building:'Épület',floor:'Emelet',rooms:'Szobák',status:'Státusz',minArea:'Terület ettől',maxArea:'Terület eddig',minPrice:'Ár ettől',maxPrice:'Ár eddig',terrace:'Erkély',garden:'Kert',favoritesOnly:'Kedvencek'};
+  const titles = {search:'Keresés',building:'Épület',floor:'Emelet',rooms:'Szobák',status:'Státusz',minArea:'Terület ettől',maxArea:'Terület eddig',minPrice:'Ár ettől',maxPrice:'Ár eddig',terrace:'Terasz',garden:'Kert',favoritesOnly:'Kedvencek'};
   $('filter-chips').innerHTML = filterIds.filter(id=>state[id]!=='' && state[id]!==false).map(id=>{
     let value=state[id];
     if($(id).tagName==='SELECT') value=$(id).selectedOptions[0]?.textContent||value;
@@ -268,7 +269,7 @@ function render() {
   const invalidArea = state.minArea!=='' && state.maxArea!=='' && Number(state.minArea)>Number(state.maxArea);
   const invalidPrice = state.minPrice!=='' && state.maxPrice!=='' && Number(state.minPrice)>Number(state.maxPrice);
   $('result-count').innerHTML = `<strong>${list.length}</strong> lakás${list.length===apartments.length?'':` <span class="result-total">/ ${apartments.length}</span>`}`;
-  $('results').innerHTML = list.length ? `<table class="apartment-table"><caption class="sr-only">Lakások. A nettó belső terület, az erkély és a kert külön szerepel, az árak bruttó forintárak.</caption><thead><tr><th scope="col" class="heading-unit">Lakás</th><th scope="col" class="heading-type">Típus</th><th scope="col" class="heading-rooms">Szobák</th><th scope="col" class="heading-interior"><button data-sort="area">Beltér ${state.sort.startsWith('area')?(state.sort.endsWith('desc')?'↓':'↑'):'↕'}</button></th><th scope="col" class="heading-outdoor">Kültér</th><th scope="col" class="heading-price"><button data-sort="price">Bruttó ár ${state.sort.startsWith('price')?(state.sort.endsWith('desc')?'↓':'↑'):'↕'}</button></th><th scope="col" class="heading-floor-layout">Szintrajz</th><th scope="col" class="heading-actions"><span class="sr-only">Műveletek</span></th></tr></thead><tbody>${list.map(row).join('')}</tbody></table>` : `<div class="empty-state"><span class="empty-mark" aria-hidden="true">⌕</span><h2>${invalidArea||invalidPrice?'Ellenőrizze a megadott tartományt.':'Most nincs ilyen lakás.'}</h2><p>${invalidArea||invalidPrice?'A kezdőérték legyen kisebb vagy egyenlő a záróértékkel.':'Módosítsa a szűrőket, vagy nézze meg a teljes kínálatot.'}</p><button class="button-primary" data-reset>Szűrők törlése</button></div>`;
+  $('results').innerHTML = list.length ? `<table class="apartment-table"><caption class="sr-only">Lakások. A nettó belső terület, az terasz és a kert külön szerepel, az árak bruttó forintárak.</caption><thead><tr><th scope="col" class="heading-unit">Lakás</th><th scope="col" class="heading-type">Típus</th><th scope="col" class="heading-rooms">Szobák</th><th scope="col" class="heading-interior"><button data-sort="area">Beltér ${state.sort.startsWith('area')?(state.sort.endsWith('desc')?'↓':'↑'):'↕'}</button></th><th scope="col" class="heading-outdoor">Terasz</th><th scope="col" class="heading-price"><button data-sort="price">Bruttó ár ${state.sort.startsWith('price')?(state.sort.endsWith('desc')?'↓':'↑'):'↕'}</button></th><th scope="col" class="heading-status">Elérhetőség</th><th scope="col" class="heading-floor-layout">Szintrajz</th><th scope="col" class="heading-actions"><span class="sr-only">Műveletek</span></th></tr></thead><tbody>${list.map(row).join('')}</tbody></table>` : `<div class="empty-state"><span class="empty-mark" aria-hidden="true">⌕</span><h2>${invalidArea||invalidPrice?'Ellenőrizze a megadott tartományt.':'Most nincs ilyen lakás.'}</h2><p>${invalidArea||invalidPrice?'A kezdőérték legyen kisebb vagy egyenlő a záróértékkel.':'Módosítsa a szűrőket, vagy nézze meg a teljes kínálatot.'}</p><button class="button-primary" data-reset>Szűrők törlése</button></div>`;
   $('minArea').setAttribute('aria-invalid', String(invalidArea)); $('maxArea').setAttribute('aria-invalid', String(invalidArea));
   $('minPrice').setAttribute('aria-invalid', String(invalidPrice)); $('maxPrice').setAttribute('aria-invalid', String(invalidPrice));
   $('reset').hidden=!filterIds.some(id=>state[id]!==''&&state[id]!==false)&&state.sort==='id';
@@ -331,7 +332,7 @@ function refreshFavorites(event = undefined) {
 }
 function showCompare() {
   const chosen=[...selected].map(byId).filter(Boolean); if(chosen.length<2) return;
-  const fields=[['Státusz',a=>esc(statusText(a))],['Épület',a=>esc(a.building)],['Emelet',a=>esc(floorText(a))],['Szobák',a=>esc(a.rooms??a.layoutLabel??'Nincs adat')],['Nettó belső alapterület',a=>area(a.areaInterior)],['Erkély',a=>area(a.areaTerrace)],['Kert',a=>hasNumber(a.areaGarden)&&a.areaGarden>0?area(a.areaGarden):''],['Tájolás',a=>esc(a.orientation||'Nincs adat')],['Bruttó vételár',a=>price(a.price)]];
+  const fields=[['Státusz',a=>esc(statusText(a))],['Épület',a=>esc(a.building)],['Emelet',a=>esc(floorText(a))],['Szobák',a=>esc(a.rooms??a.layoutLabel??'Nincs adat')],['Nettó belső alapterület',a=>area(a.areaInterior)],['Terasz',a=>area(a.areaTerrace)],['Kert',a=>hasNumber(a.areaGarden)&&a.areaGarden>0?area(a.areaGarden):''],['Tájolás',a=>esc(a.orientation||'Nincs adat')],['Bruttó vételár',a=>price(a.price)]];
   $('compare-dialog').innerHTML=`<div class="dialog-inner"><header class="dialog-head"><div><div class="eyebrow">AZ ÖN VÁLASZTÁSA</div><h2>Lakások összehasonlítása</h2></div><button class="dialog-close" data-close aria-label="Bezárás">×</button></header><div class="compare-scroll" tabindex="0" role="region" aria-label="Összehasonlító táblázat"><table class="compare-table"><caption class="sr-only">A kiválasztott lakások adatai</caption><thead><tr><th scope="col">Lakás</th>${chosen.map(a=>`<th scope="col">${esc(a.id)}</th>`).join('')}</tr></thead><tbody>${fields.map(([name,fn])=>`<tr><th scope="row">${name}</th>${chosen.map(a=>`<td>${fn(a)}</td>`).join('')}</tr>`).join('')}<tr><th scope="row">Részletek</th>${chosen.map(a=>`<td><button class="details-button" data-from-compare="${esc(a.id)}">Megnézem ${svg('arrow')}</button></td>`).join('')}</tr></tbody></table></div></div>`;
   openDialog($('compare-dialog'));
 }
@@ -541,7 +542,7 @@ async function load() {
     setupOptions('floor',[...new Set(apartments.map(a=>a.floor).filter(v=>v!=null))].sort((a,b)=>a-b).map(v=>[String(v),v===0?'Földszint':`${v}. emelet`]));
     setupOptions('rooms',[...new Set(apartments.map(a=>a.rooms).filter(v=>v!=null).map(v=>v>=4?'4+':String(v)))].sort().map(v=>[v,`${v==='4+'?v:number.format(Number(v))} szoba`]));
     setupRanges();readUrl();syncControls();
-    $('data-note').textContent='A nettó belső alapterület, az erkély és a kert külön szerepel. Az árak bruttó árak. A helyiségadatok munkaközi tervből származnak; az aktuális árat és elérhetőséget az értékesítő erősíti meg.';
+    $('data-note').textContent='A nettó belső alapterület, az terasz és a kert külön szerepel. Az árak bruttó árak. A helyiségadatok munkaközi tervből származnak; az aktuális árat és elérhetőséget az értékesítő erősíti meg.';
     render();
     const id=config.apartment||(useUrl?new URL(location.href).searchParams.get('apartment'):null);
     if(id&&byId(id))detail(id);

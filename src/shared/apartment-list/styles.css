@@ -123,13 +123,14 @@ input[aria-invalid="true"] { border-color: var(--negotiating); }
 .apartment-table { width: 100%; border-collapse: collapse; table-layout: fixed; text-align: left; font-variant-numeric: tabular-nums; }
 .apartment-table th { height: 42px; padding: 0 10px 14px; border-bottom: 1px solid var(--line); color: var(--muted); font-size: 12px; font-weight: 500; line-height: 1.4; white-space: nowrap; vertical-align: bottom; }
 .apartment-table th:nth-child(1) { width: 26%; }
-.apartment-table th:nth-child(2) { width: 7%; }
+.apartment-table th:nth-child(2) { width: 5%; }
 .apartment-table th:nth-child(3) { width: 5%; }
-.apartment-table th:nth-child(4) { width: 10%; }
-.apartment-table th:nth-child(5) { width: 11%; }
-.apartment-table th:nth-child(6) { width: 18%; }
-.apartment-table th:nth-child(7) { width: 9%; }
-.apartment-table th:nth-child(8) { width: 14%; }
+.apartment-table th:nth-child(4) { width: 9%; }
+.apartment-table th:nth-child(5) { width: 7%; }
+.apartment-table th:nth-child(6) { width: 17%; }
+.apartment-table th:nth-child(7) { width: 12%; }
+.apartment-table th:nth-child(8) { width: 7%; }
+.apartment-table th:nth-child(9) { width: 12%; }
 .apartment-table th:first-child, .apartment-table td:first-child { padding-left: 0; }
 .apartment-table th:last-child, .apartment-table td:last-child { padding-right: 0; }
 .apartment-table th button { padding: 5px 0 0; text-align: left; font: inherit; color: inherit; white-space: nowrap; }
@@ -153,7 +154,7 @@ input[aria-invalid="true"] { border-color: var(--negotiating); }
 .preview-visual img { display: block; min-width: 0; min-height: 0; width: 100%; height: 100%; border: 0; object-fit: contain; background: none; }
 .media-preview:hover .preview-visual { opacity: .75; }
 .preview-unavailable { color: var(--muted); font-size: 11px; text-align: center; }
-.cell-floor-layout .media-preview { margin-inline: auto; }
+.cell-floor-layout .media-preview { max-width: 100%; margin-inline: auto; }
 .cell-rooms, .heading-rooms { text-align: center; }
 .cell-rooms > span { display: block; max-width: 100%; font-size: 12px; line-height: 1.5; white-space: normal; overflow-wrap: anywhere; }
 .interior-value { white-space: nowrap; }
@@ -163,11 +164,12 @@ input[aria-invalid="true"] { border-color: var(--negotiating); }
 .outdoor-area { display: flex; align-items: baseline; flex-wrap: wrap; gap: 3px 8px; line-height: 1.4; }
 .outdoor-area + .outdoor-area { margin-top: 9px; }
 .outdoor-label { min-width: 42px; color: var(--muted); font-size: 12px; }
+.cell-balcony .outdoor-label { display: none; }
 .outdoor-value { font-size: 14px; font-weight: 500; white-space: nowrap; }
 .outdoor-value .area-unit { margin-left: 2px; color: var(--muted); font-size: 11px; font-weight: 400; }
 .cell-price { white-space: nowrap; }
 .price-amount { display: block; font-size: 22px; font-weight: 500; letter-spacing: -.45px; line-height: 1.35; }
-.cell-price .cell-status { display: block; margin-top: 10px; }
+.cell-status .status-pill { max-width: 100%; white-space: normal; }
 .status-pill { display: inline-flex; align-items: center; gap: 7px; color: var(--muted); font-size: 12px; font-weight: 400; line-height: 1.5; white-space: nowrap; }
 .status-pill::before { content: ''; width: 5px; height: 5px; flex-shrink: 0; border-radius: 50%; background: currentColor; }
 .status-available { color: var(--available); }
@@ -294,10 +296,8 @@ input[aria-invalid="true"] { border-color: var(--negotiating); }
   .apartment-table th, .apartment-table td { padding-inline: 8px; }
   .apartment-table th:first-child, .apartment-table td:first-child { padding-left: 0; }
   .apartment-table th:last-child, .apartment-table td:last-child { padding-right: 0; }
-  .apartment-table th:nth-child(1) { width: 27%; }
-  .apartment-table th:nth-child(7) { width: 8%; }
   .unit-summary { gap: 12px; }
-  .unit-media .media-preview { width: 140px; }
+  .unit-media .media-preview { width: 132px; }
   .unit-id { font-size: 24px; }
   .unit-id-line { gap: 4px; }
   .unit-id-line .save-button { width: 28px; padding-inline: 4px; }
@@ -318,10 +318,10 @@ input[aria-invalid="true"] { border-color: var(--negotiating); }
   .apartment-table, .apartment-table tbody { display: block; }
   .apartment-table thead { display: none; }
   .apartment-table tbody { border-top: 1px solid var(--line); }
-  .apartment-table .apartment-row { display: grid; grid-template-columns: minmax(220px, 1.7fr) minmax(70px, .7fr) minmax(48px, .55fr) minmax(90px, .9fr) minmax(112px, 1fr); grid-template-rows: auto auto; column-gap: 16px; row-gap: 14px; padding: 21px 0; margin: 0; border: 0; border-bottom: 1px solid var(--line); }
+  .apartment-table .apartment-row { display: grid; grid-template-columns: minmax(220px, 1.7fr) minmax(70px, .7fr) minmax(48px, .55fr) minmax(90px, .9fr) minmax(112px, 1fr); grid-template-rows: auto auto auto; column-gap: 16px; row-gap: 14px; padding: 21px 0; margin: 0; border: 0; border-bottom: 1px solid var(--line); }
   .apartment-table td { display: flex; flex-direction: column; justify-content: center; align-self: center; align-items: flex-start; min-width: 0; height: auto; min-height: 0; padding: 0; border: 0; gap: 6px; font-size: 16px; line-height: 1.5; text-align: left; }
   .apartment-table td::before { content: attr(data-label); display: block; color: var(--muted); font-size: 12px; font-weight: 400; line-height: 1.4; white-space: normal; }
-  .apartment-table .cell-unit { grid-column: 1; grid-row: 1 / 3; }
+  .apartment-table .cell-unit { grid-column: 1; grid-row: 1 / 4; }
   .apartment-table .cell-unit::before { display: none; }
   .unit-summary { gap: 12px; }
   .unit-media .media-preview { width: 120px; }
@@ -333,22 +333,22 @@ input[aria-invalid="true"] { border-color: var(--negotiating); }
   .unit-location { margin-top: 0; gap: 2px; }
   .apartment-table .cell-rooms { grid-column: 3; grid-row: 1; }
   .apartment-table .cell-interior { grid-column: 4; grid-row: 1; }
-  .apartment-table .cell-outdoor { grid-column: 2 / 4; grid-row: 2; gap: 0; }
-  .apartment-table .cell-outdoor::before { display: none; }
+  .apartment-table .cell-outdoor { grid-column: 5; grid-row: 1; gap: 6px; }
   .outdoor-area { gap: 3px 8px; }
   .outdoor-area + .outdoor-area { margin-top: 7px; }
   .outdoor-label { min-width: 42px; }
-  .apartment-table .cell-price { grid-column: 5; grid-row: 1; gap: 0; }
+  .apartment-table .cell-price { grid-column: 2 / 4; grid-row: 2; gap: 0; }
   .apartment-table .cell-price::before { margin-bottom: 6px; }
   .price-amount { font-size: 20px; }
-  .cell-price .cell-status { margin-top: 7px; }
+  .apartment-table .cell-status { grid-column: 4 / 6; grid-row: 2; }
   .status-pill { font-size: 11px; gap: 6px; }
-  .apartment-table .cell-floor-layout { grid-column: 4; grid-row: 2; gap: 4px; }
+  .apartment-table .cell-floor-layout { grid-column: 2; grid-row: 3; gap: 4px; }
   .cell-floor-layout .media-preview { width: 72px; margin: 0; }
   .cell-floor-layout .preview-visual { height: 54px; }
-  .apartment-table .cell-actions { grid-column: 5; grid-row: 2; align-items: flex-start; gap: 0; }
+  .apartment-table .cell-actions { grid-column: 3 / 6; grid-row: 3; align-items: stretch; gap: 0; }
   .apartment-table .cell-actions::before { display: none; }
-  .row-actions { justify-content: flex-start; }
+  .row-actions { justify-content: flex-end; }
+  .action-pills { flex-direction: row; width: auto; }
 }
 @container apartment-list (max-width: 900px) {
   .filter-inner.page-width { padding-block: 24px 18px; }
@@ -403,11 +403,13 @@ input[aria-invalid="true"] { border-color: var(--negotiating); }
   .cell-interior .area-number { font-size: 21px; }
   .cell-interior .area-unit { font-size: 12px; }
   .apartment-table .cell-outdoor { display: contents; }
+  .apartment-table .cell-outdoor::before { display: none; }
   .outdoor-area { display: flex; flex-direction: column; align-items: flex-start; align-self: start; gap: 6px; grid-row: 2; }
   .cell-balcony { grid-column: 5 / 9; }
   .cell-garden { grid-column: 9 / -1; }
   .cell-outdoor .empty-garden { display: flex; }
   .outdoor-label { min-width: 0; font-size: 12px; font-weight: 400; line-height: 1.4; }
+  .cell-balcony .outdoor-label { display: block; }
   .outdoor-value { font-size: 21px; font-weight: 500; line-height: 1.3; }
   .outdoor-value .area-unit { margin-left: 2px; font-size: 12px; }
   .outdoor-value .value-missing { color: var(--muted); font-size: 12px; font-weight: 400; }
@@ -415,7 +417,7 @@ input[aria-invalid="true"] { border-color: var(--negotiating); }
   .apartment-table .cell-rooms { display: none; }
   .apartment-table .cell-price { grid-column: 1 / 8; grid-row: 3; }
   .price-amount { font-size: 22px; }
-  .apartment-table .cell-price::before, .cell-price .cell-status { display: none; }
+  .apartment-table .cell-price::before, .apartment-table .cell-status { display: none; }
   .status-pill { font-size: 12px; }
   .apartment-table .cell-floor-layout { grid-column: 9 / -1; grid-row: 3; align-items: flex-start; }
   .cell-floor-layout .media-preview { width: 80px; max-width: 100%; }
@@ -426,7 +428,7 @@ input[aria-invalid="true"] { border-color: var(--negotiating); }
   .action-pill { width: 100%; min-width: 0; max-width: none; height: 44px; min-height: 44px; max-height: 44px; padding-inline: 6px; font-size: 12px; gap: 5px; }
   .download-wrap, .row-inquiry-wrap { width: 100%; }
   .download-wrap .action-pill { width: 100%; }
-  .row-inquiry-pending { right: auto; left: 0; }
+  .row-inquiry-pending { right: 0; left: auto; }
   .inquiry-copy { min-height: 44px; }
   .row-inquiry-close { width: 44px; height: 44px; }
 }
