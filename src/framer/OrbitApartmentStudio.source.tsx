@@ -85,9 +85,11 @@ const orbitApartmentStudioStyles = `
 [data-orbit-studio] .orbit-studio-text-button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 36px; padding: 6px 0; border: 0; border-bottom: 1px solid var(--studio-line); border-radius: 0; color: var(--studio-muted); background: none; font-size: 10px; line-height: 1.4; text-decoration: none; }
 [data-orbit-studio] .orbit-studio-text-button:hover { color: var(--studio-ink); border-bottom-color: var(--studio-ink); }
 [data-orbit-studio] .orbit-studio-share-message { color: var(--studio-muted); font-size: 10px; line-height: 1.5; }
+/* Fade the record in place; the logo, preview selector and filters stay steady. */
+[data-orbit-studio] [data-orbitdata-transition] { opacity: 1; transition: opacity .18s ease; }
+[data-orbit-studio] [data-orbitdata-transition][data-orbitdata-visible="false"] { opacity: 0; pointer-events: none; }
 /* Keep the scene geometry stable while checkpoint information fades away. */
-[data-orbit-studio] :is(.orbit-studio-header-end,.orbit-studio-facts,.orbit-studio-details,.orbit-studio-mobile-panel) { opacity: 1; transition: opacity .24s ease; }
-[data-orbit-studio][data-moving="true"] :is(.orbit-studio-header-end,.orbit-studio-facts,.orbit-studio-details,.orbit-studio-mobile-panel) { opacity: 0; pointer-events: none; }
+[data-orbit-studio][data-moving="true"] [data-orbitdata-transition] { opacity: 0; pointer-events: none; }
 
 [data-orbit-studio] .orbit-studio-details { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
 [data-orbit-studio] .orbit-studio-drawing-toolbar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px 18px; margin-bottom: 14px; min-height: 32px; flex-shrink: 0; }
@@ -279,7 +281,7 @@ const orbitApartmentStudioStyles = `
 }
 @media (prefers-reduced-motion: reduce) {
     [data-orbit-studio][data-mobile="true"] .orbit-studio-primary,
-    [data-orbit-studio] :is(.orbit-studio-header-end,.orbit-studio-facts,.orbit-studio-details,.orbit-studio-mobile-panel) { transition: none; }
+    [data-orbit-studio] [data-orbitdata-transition] { transition: none; }
 }
 @container orbit-studio-mobile (max-width: 340px) {
     [data-orbit-studio][data-mobile="true"] .orbit-studio-heading { gap: 5px; }
@@ -291,11 +293,8 @@ const orbitApartmentStudioStyles = `
 
 function OrbitApartmentStudio(props: OrbitApartmentStudioProps): React.JSX.Element {
     const { active, mode, dataset, dataStatus, error, onRetry, apartment: currentApartment, onSelect, assetBase, detailsUrl, inquiryUrl, onViewport, language, onLayout, onOpenDetails, mobile = false, moving = false, filters, filterBounds, filterAreaBounds = null, filterActive, filterCount, onFiltersChange } = props
-    // Retain only the departing visual while it fades; selection and hit testing
-    // remain controlled by the parent and are disabled for checkpoint travel.
-    const lastApartment = React.useRef<OrbitApartmentRecord | null>(currentApartment)
-    if (currentApartment || !moving) lastApartment.current = currentApartment
-    const apartment = currentApartment || (moving ? lastApartment.current : null)
+    const transition = useOrbitDataTransition(currentApartment, currentApartment?.id || null, { moving, enabled: active })
+    const apartment = transition.displayed
     const hu = language !== "en"
     const [view, setView] = React.useState<"floorplan" | "floorLayout">("floorplan")
     const [expanded, setExpanded] = React.useState(false), [zoom, setZoom] = React.useState(1)
@@ -311,6 +310,9 @@ function OrbitApartmentStudio(props: OrbitApartmentStudioProps): React.JSX.Eleme
         { interior: "Interior", terrace: "Terrace", garden: "Garden", floorplan: "Floor plan", floorLayout: "Floor layout", expand: "Enlarge floor plan", preview: "Preview", select: "Preview apartment", gross: "Gross purchase price", details: "Apartment details", inquire: "Enquire", download: "PDF factsheet", share: "Share", close: "Close", roomCount: "rooms", floor: "floor", building: "building", type: "type", orientation: "orientation" }
     const number = new Intl.NumberFormat(hu ? "hu-HU" : "en-GB", { maximumFractionDigits: 2 })
     const plan = active && apartment && dataset ? orbitApartmentPlan(apartment, dataset, assetBase, view, !expanded) : null
+    // Warm the incoming drawing while the outgoing record is fading away.
+    const incomingPlan = active && currentApartment && dataset ? orbitApartmentPlan(currentApartment, dataset, assetBase, currentApartment.id === apartment?.id ? view : "floorplan", true) : null
+    useOrbitPreviewImage(incomingPlan?.url, active)
     const previewImage = useOrbitPreviewImage(plan?.url, active)
     const floorLayout = apartment && dataset ? orbitApartmentPlan(apartment, dataset, assetBase, "floorLayout") : null
     const asset = (path: string) => orbitApartmentAssetUrl(path, assetBase) || ""
@@ -381,42 +383,50 @@ function OrbitApartmentStudio(props: OrbitApartmentStudioProps): React.JSX.Eleme
             <div className="orbit-studio-price">{!mobile && <p className="orbit-studio-label">{apartment?.priceIncludesVat === false ? hu ? "Nettó vételár" : "Net purchase price" : labels.gross}</p>}<p className={`orbit-studio-price-value${!positive(apartment?.price) ? " orbit-studio-price-empty" : ""}`} data-orbit-apartment-price="" data-orbit-field="price">
                 {positive(apartment?.price) ? <>{number.format(apartment!.price! / 1000000)}<small>M Ft</small></> : availability === "sold" ? hu ? "Nincs megadva" : "Not provided" : hu ? "Ár kérésre" : "Price on request"}
             </p></div>
-            {(mobile || !inquiryLink) && onOpenDetails ? <button type="button" className="orbit-studio-primary" data-orbit-apartment-action="" data-orbit-detail-link="" aria-haspopup="dialog" disabled={mobile && moving} onClick={onOpenDetails}><span>{mobile ? hu ? "Adatlap" : "Details" : labels.details}</span>{mobile ? <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6" /></svg> : <span aria-hidden="true">↗</span>}</button> : (mobile ? detailLink : actionLink) && <a className="orbit-studio-primary" href={mobile ? detailLink : actionLink} data-orbit-apartment-action="" {...(!mobile && inquiryLink ? { "data-orbit-inquiry": "" } : { "data-orbit-detail-link": "" })}><span>{mobile ? hu ? "Adatlap" : "Details" : inquiryLink ? labels.inquire : labels.details}</span>{mobile ? <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6" /></svg> : <span aria-hidden="true">↗</span>}</a>}
+            {(mobile || !inquiryLink) && onOpenDetails ? <button type="button" className="orbit-studio-primary" data-orbit-apartment-action="" data-orbit-detail-link="" aria-haspopup="dialog" disabled={!transition.interactive} onClick={() => { if (transition.interactive) onOpenDetails() }}><span>{mobile ? hu ? "Adatlap" : "Details" : labels.details}</span>{mobile ? <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6" /></svg> : <span aria-hidden="true">↗</span>}</button> : (mobile ? detailLink : actionLink) && <a className="orbit-studio-primary" href={mobile ? detailLink : actionLink} data-orbit-apartment-action="" {...(!mobile && inquiryLink ? { "data-orbit-inquiry": "" } : { "data-orbit-detail-link": "" })}><span>{mobile ? hu ? "Adatlap" : "Details" : inquiryLink ? labels.inquire : labels.details}</span>{mobile ? <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6" /></svg> : <span aria-hidden="true">↗</span>}</a>}
         </div>
         <div className="orbit-studio-secondary">
             {download && <a href={download} className="orbit-studio-text-button" target="_blank" rel="noopener noreferrer" download={record?.media?.datasheet?.filename || undefined} data-orbit-apartment-download="" data-orbit-download=""><span aria-hidden="true">↓</span>{labels.download}</a>}
-            {inquiryLink && (onOpenDetails ? <button type="button" className="orbit-studio-text-button" data-orbit-detail-link="" aria-haspopup="dialog" onClick={onOpenDetails}>{labels.details}<span aria-hidden="true">↗</span></button> : detailLink && <a href={detailLink} className="orbit-studio-text-button" data-orbit-detail-link="">{labels.details}<span aria-hidden="true">↗</span></a>)}
+            {inquiryLink && (onOpenDetails ? <button type="button" className="orbit-studio-text-button" data-orbit-detail-link="" aria-haspopup="dialog" disabled={!transition.interactive} onClick={() => { if (transition.interactive) onOpenDetails() }}>{labels.details}<span aria-hidden="true">↗</span></button> : detailLink && <a href={detailLink} className="orbit-studio-text-button" data-orbit-detail-link="">{labels.details}<span aria-hidden="true">↗</span></a>)}
             {apartment && <button type="button" className="orbit-studio-text-button" onClick={() => { void share() }}>{labels.share}<span aria-hidden="true">↗</span></button>}
             <span className="orbit-studio-share-message" role="status">{shareMessage}</span>
         </div>
     </>
     const viewBox = plan?.viewBox || { x: 0, y: 0, width: 1, height: 1 }
     const planStyle: React.CSSProperties = { left: `${-viewBox.x / viewBox.width * 100}%`, top: `${-viewBox.y / viewBox.height * 100}%`, width: `${100 / viewBox.width}%`, height: `${100 / viewBox.height}%` }
-    const aspectStyle = { "--studio-plan-aspect": plan?.aspect || 1 } as React.CSSProperties
+    const previousPlanAspect = React.useRef(plan?.aspect || 1)
+    if (plan?.aspect) previousPlanAspect.current = plan.aspect
+    const aspectStyle = { "--studio-plan-aspect": previousPlanAspect.current } as React.CSSProperties
     const planShown = !!plan && previewImage === plan.url && failedImage !== plan.url
     const note = hu ? "Az alaprajz illusztráció. Bútorozatlan átadás." : "Illustrative floor plan. Homes are delivered unfurnished."
     const tabs = <div className="orbit-studio-tabs" role="tablist" aria-label={hu ? "Rajz kiválasztása" : "Choose drawing"}>
         {(["floorplan", "floorLayout"] as const).filter(kind => kind === "floorplan" || !!floorLayout).map(kind => <button key={kind} type="button" className="orbit-studio-tab" role="tab" aria-selected={view === kind} aria-controls={planPanelId} tabIndex={view === kind ? 0 : -1}
             onClick={() => setView(kind)} onKeyDown={event => { if (event.key === "ArrowRight" || event.key === "ArrowLeft" || event.key === "Home" || event.key === "End") { event.preventDefault(); const next = floorLayout && (event.key === "End" || (event.key !== "Home" && view === "floorplan")) ? "floorLayout" : "floorplan"; setView(next); const list = event.currentTarget.parentElement; requestAnimationFrame(() => list?.querySelector<HTMLButtonElement>(`[data-plan-tab="${next}"]`)?.focus()) } }} data-plan-tab={kind}>{labels[kind]}</button>)}
     </div>
-    const detailsVisibility = { "aria-hidden": !active || moving, ...(!active || moving ? { inert: "" as any } : {}) }
-    const facts = <div className="orbit-studio-facts" data-orbit-ignore="" {...detailsVisibility}>
+    const detailsVisibility = { "aria-hidden": !active || moving || !!apartment && !transition.interactive, ...(!active || moving || !!apartment && !transition.interactive ? { inert: "" as any } : {}) }
+    const recordFade = {
+        "data-orbitdata-transition": "", "data-orbitdata-phase": transition.phase,
+        "data-orbitdata-displayed-id": apartment?.id || "",
+        "data-orbitdata-visible": String(!!apartment && transition.visible),
+    }
+    const panelFade = { ...recordFade, "data-orbitdata-visible": String(!apartment && !moving || transition.visible) }
+    const facts = <div className="orbit-studio-facts" data-orbit-ignore="" {...(!shortLandscape ? recordFade : {})} {...detailsVisibility}>
         <dl className="orbit-studio-areas">
             {([ ["areaInterior", labels.interior, "area"], ["areaTerrace", labels.terrace, "terrace"], ["areaGarden", labels.garden, "garden"] ] as const).map(([key, label, field]) => <div key={key} data-orbit-apartment-metric={key} data-orbit-field={field}><dt>{label}</dt><dd>{positive(apartment?.[key]) && (key === "areaInterior" || apartment![key]! > 0) ? <>{number.format(apartment![key]!)}<small>m²</small></> : "—"}</dd></div>)}
         </dl>
         {meta()}{conversion()}
     </div>
     return <>
-        <section data-orbit-studio="" data-active={active ? "true" : "false"} data-mobile={mobile ? "true" : "false"} data-moving={moving ? "true" : "false"} data-mode={mode} data-status={dataStatus} data-apartment-id={apartment?.id || ""} aria-hidden={!active} {...(!active ? { inert: "" as any } : {})} aria-labelledby={mobile ? undefined : headingId} aria-label={mobile ? hu ? "Lakásválasztó" : "Apartments" : undefined}>
+        <section data-orbit-studio="" data-active={active ? "true" : "false"} data-mobile={mobile ? "true" : "false"} data-moving={moving ? "true" : "false"} data-mode={mode} data-status={dataStatus} data-apartment-id={currentApartment?.id || ""} aria-hidden={!active} {...(!active ? { inert: "" as any } : {})} aria-labelledby={mobile ? undefined : headingId} aria-label={mobile ? hu ? "Lakásválasztó" : "Apartments" : undefined}>
             <style>{fontStyles + orbitApartmentStudioStyles}</style>
             <header className="orbit-studio-header" data-orbit-ignore="">
                 {logo && <img className="orbit-studio-brand" src={logo} alt="Admiral Park" width={184} height={78} draggable={false} />}
-                {!mobile && <div className="orbit-studio-header-end" {...detailsVisibility}>
-                    <div className="orbit-studio-heading"><h2 id={headingId} className="orbit-studio-id">{apartment?.id || (hu ? "Lakásválasztó" : "Apartments")}</h2>
+                {!mobile && <div className="orbit-studio-header-end">
+                    <div className="orbit-studio-heading" {...panelFade} {...detailsVisibility}><h2 id={headingId} className="orbit-studio-id">{apartment?.id || (hu ? "Lakásválasztó" : "Apartments")}</h2>
                         {statusText && <span className="orbit-studio-status" data-status={availability} data-orbit-field="status"><span className="orbit-studio-status-dot" aria-hidden="true" />{statusText}</span>}
                     </div>
-                    {mode === "preview" && dataset && <div className="orbit-studio-preview"><label htmlFor={`${headingId}-select`}>{labels.preview}</label><select id={`${headingId}-select`} data-orbit-apartment-select="" aria-label={labels.select} value={apartment?.id || ""} onChange={event => onSelect(event.target.value)}>
-                        {!apartment && <option value="">—</option>}{dataset.apartments.map(unit => <option key={unit.id} value={unit.id}>{unit.id}</option>)}
+                    {mode === "preview" && dataset && <div className="orbit-studio-preview"><label htmlFor={`${headingId}-select`}>{labels.preview}</label><select id={`${headingId}-select`} data-orbit-apartment-select="" aria-label={labels.select} value={currentApartment?.id || ""} disabled={!active || moving} onChange={event => onSelect(event.target.value)}>
+                        {!currentApartment && <option value="">—</option>}{dataset.apartments.map(unit => <option key={unit.id} value={unit.id}>{unit.id}</option>)}
                     </select></div>}
                 </div>}
                 {!mobile && <div data-orbit-studio-filters=""><OrbitFilterBar active={active && !moving} language={language} filters={filters} bounds={filterBounds} areaBounds={filterAreaBounds} matchCount={filterCount} total={dataset?.apartments.length || 0} onChange={onFiltersChange} /></div>}
@@ -427,13 +437,13 @@ function OrbitApartmentStudio(props: OrbitApartmentStudioProps): React.JSX.Eleme
                     <div className="orbit-studio-image-slot"><div ref={viewportCallback} data-orbit-viewport="" aria-hidden="true" /></div>
                     {!mobile && !shortLandscape && facts}
                 </div>
-                {mobile ? <div className="orbit-studio-mobile-panel" data-orbit-studio-details="" data-orbit-ignore="" style={aspectStyle} {...detailsVisibility}>
+                {mobile ? <div className="orbit-studio-mobile-panel" data-orbit-studio-details="" data-orbit-ignore="" style={aspectStyle} {...panelFade} {...detailsVisibility}>
                     {dataStatus === "error" ? <div className="orbit-studio-empty" role="status"><p>{hu ? "A lakásadatok most nem tölthetők be." : "Apartment information could not be loaded."}</p><button type="button" className="orbit-studio-text-button" onClick={onRetry}>{hu ? "Újrapróbálom" : "Try again"}</button></div> : !apartment ? <div className="orbit-studio-empty" role="status" {...(filterActive && filterCount === 0 ? { "data-orbit-filter-empty": "" } : {})}><p>{dataStatus === "loading" || dataStatus === "idle" ? hu ? "Lakásadatok betöltése…" : "Loading apartment information…" : filterActive && filterCount === 0 ? hu ? "Nincs a szűrésnek megfelelő lakás." : "No apartments match these filters." : hu ? "Válasszon egy lakást az épületen." : "Select an apartment on the building."}</p></div> : <>
                             <div className="orbit-studio-heading"><h2 id={headingId} className="orbit-studio-id">{apartment.id}</h2>
                                 {statusText && <span className="orbit-studio-status" data-status={availability} data-orbit-field="status" title={statusText}><span className="orbit-studio-status-dot" aria-hidden="true" /><span className="orbit-studio-status-text">{availability === "under_negotiation" ? hu ? "Egyeztetés" : "In talks" : statusText}</span></span>}
                             </div>
                         <figure className="orbit-studio-mobile-plan" style={aspectStyle}>
-                            <button type="button" className="orbit-studio-mobile-plan-button" data-orbit-detail-link="" aria-haspopup="dialog" aria-label={hu ? `${apartment.id} adatlap megnyitása` : `Open apartment ${apartment.id} details`} disabled={moving || !onOpenDetails} onClick={onOpenDetails}>
+                            <button type="button" className="orbit-studio-mobile-plan-button" data-orbit-detail-link="" aria-haspopup="dialog" aria-label={hu ? `${apartment.id} adatlap megnyitása` : `Open apartment ${apartment.id} details`} disabled={!transition.interactive || !onOpenDetails} onClick={() => { if (transition.interactive) onOpenDetails?.() }}>
                                 <span className="orbit-studio-plan-stage" style={aspectStyle}>
                                     {planShown ? <span className="orbit-studio-plan-crop" data-orbit-plan-crop=""><img data-orbit-floorplan="" className="orbit-studio-plan-image" src={plan!.url} style={planStyle} alt={`${apartment.id} · ${labels.floorplan}`} decoding="async" draggable={false} onLoad={() => onLayout?.()} onError={() => setFailedImage(plan!.url)} /></span> : <span className="orbit-studio-loading">{hu ? "Az alaprajz még nem érhető el." : "Floor plan unavailable."}</span>}
                                 </span>
@@ -451,7 +461,7 @@ function OrbitApartmentStudio(props: OrbitApartmentStudioProps): React.JSX.Eleme
                             <div className="orbit-studio-mobile-actions">{conversion()}</div>
                         </div>
                     </>}
-                </div> : <div className="orbit-studio-details" data-orbit-studio-details="" data-orbit-ignore="" {...detailsVisibility}>
+                </div> : <div className="orbit-studio-details" data-orbit-studio-details="" data-orbit-ignore="" {...panelFade} {...detailsVisibility}>
                     {dataStatus === "error" ? <div className="orbit-studio-empty" role="status"><p>{hu ? "A lakásadatok most nem tölthetők be." : "Apartment information could not be loaded."}</p>{error && <p>{error}</p>}<button type="button" className="orbit-studio-text-button" onClick={onRetry}>{hu ? "Újrapróbálom" : "Try again"}</button></div> : !apartment ? <div className="orbit-studio-empty" role="status"><p>{dataStatus === "loading" || dataStatus === "idle" ? hu ? "Lakásadatok betöltése…" : "Loading apartment information…" : hu ? "A lakás adatai a kijelölt otthonnál jelennek meg." : "Point to an apartment to see its details."}</p></div> : <>
                         <div className="orbit-studio-drawing-toolbar">{tabs}<button type="button" className="orbit-studio-text-button" aria-label={labels.expand} disabled={!planShown} onClick={() => setExpanded(true)}>{hu ? "Nagyítás" : "Enlarge"}<span aria-hidden="true">↗</span></button></div>
                         {meta(true)}

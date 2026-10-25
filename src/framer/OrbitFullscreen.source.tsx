@@ -248,6 +248,9 @@ const orbitFullscreenStyles = `${orbitDataDividerStyles}
 [data-orbit-fullscreen-details] .orbit-fullscreen-bar { --orbit-fullscreen-plan-size:176px; position:absolute; inset:auto 0 0; display:grid; grid-template-columns:minmax(100px,.9fr) 180px minmax(272px,1.45fr); align-items:start; gap:18px; min-width:0; padding:24px 24px 14px; background:linear-gradient(0deg,rgba(7,16,24,.66) 0%,rgba(7,16,24,.42) 55%,rgba(7,16,24,0) 100%); opacity:1; transition:opacity .24s ease; }
 [data-orbit-fullscreen-details] .orbit-fullscreen-bar[data-moving="true"] { opacity:0; pointer-events:none; }
 [data-orbit-fullscreen-details] .orbit-fullscreen-bar[data-moving="true"] * { pointer-events:none; }
+[data-orbit-fullscreen-details] [data-orbitdata-transition] { opacity:1; transition:opacity .18s ease; }
+[data-orbit-fullscreen-details] [data-orbitdata-transition][data-orbitdata-visible="false"] { opacity:0; pointer-events:none; }
+[data-orbit-fullscreen-details] .orbit-fullscreen-bar[data-moving="true"] [data-orbitdata-transition] { opacity:0; }
 [data-orbit-fullscreen-details] .orbit-fullscreen-left,[data-orbit-fullscreen-details] .orbit-fullscreen-right { min-width:0; text-align:left; }
 [data-orbit-fullscreen-details] .orbit-fullscreen-left { height:var(--orbit-fullscreen-plan-size); display:grid; grid-template-rows:minmax(0,1fr) minmax(0,1fr); row-gap:32px; }
 [data-orbit-fullscreen-details] .orbit-fullscreen-identity { display:flex; align-items:baseline; flex-wrap:wrap; gap:5px 10px; align-self:end; margin:0; }
@@ -287,15 +290,12 @@ const orbitFullscreenStyles = `${orbitDataDividerStyles}
 [data-orbit-fullscreen-details][data-compact="true"] .orbit-fullscreen-id { font-size:21px; }
 [data-orbit-fullscreen-details][data-compact="true"] .orbit-fullscreen-price { font-size:16px; }
 [data-orbit-fullscreen-details][data-compact="true"] .orbit-fullscreen-detail { padding:9px 12px; }
-@media (prefers-reduced-motion:reduce) { [data-orbit-fullscreen-details] .orbit-fullscreen-detail,[data-orbit-fullscreen-details] .orbit-fullscreen-bar { transition:none; } }
+@media (prefers-reduced-motion:reduce) { [data-orbit-fullscreen-details] .orbit-fullscreen-detail,[data-orbit-fullscreen-details] .orbit-fullscreen-bar,[data-orbit-fullscreen-details] [data-orbitdata-transition] { transition:none; } }
 `
 
 function OrbitFullscreenDetails({ apartment: currentApartment, dataset = null, assetBase, language, onOpenDetails, moving, onPrevious, onNext, onClose, checkpoint, count, emptyMessage, filters, filterBounds, filterAreaBounds = null, filterCount, total, onFiltersChange }: OrbitFullscreenDetailsProps) {
-    // Keep the departing card image/data intact for the fade, without keeping
-    // the parent's actual hover or selection alive during camera travel.
-    const lastApartment = React.useRef<OrbitApartmentRecord | null>(currentApartment)
-    if (currentApartment || !moving) lastApartment.current = currentApartment
-    const apartment = currentApartment || (moving ? lastApartment.current : null)
+    const transition = useOrbitDataTransition(currentApartment, currentApartment?.id || null, { moving })
+    const apartment = transition.displayed
     const hu = language !== "en"
     const rootRef = React.useRef<HTMLDivElement>(null)
     const barRef = React.useRef<HTMLDivElement>(null)
@@ -313,6 +313,9 @@ function OrbitFullscreenDetails({ apartment: currentApartment, dataset = null, a
     const known = (value: number | null | undefined) => typeof value === "number" && Number.isFinite(value)
     const area = (value: number | null | undefined) => known(value) ? <>{number.format(value!)}<small>m²</small></> : "—"
     const plan = apartment && dataset ? orbitApartmentPlan(apartment, dataset, assetBase, "floorplan", true) : null
+    const incomingPlan = currentApartment && dataset ? orbitApartmentPlan(currentApartment, dataset, assetBase, "floorplan", true) : null
+    const incomingSource = incomingPlan?.url || (currentApartment && orbitApartmentAssetUrl(currentApartment.media?.floorplan?.thumbnail || currentApartment.media?.floorplan?.full || currentApartment.floorplan, assetBase))
+    useOrbitPreviewImage(incomingSource)
     const floorplanSource = plan?.url || (apartment && orbitApartmentAssetUrl(apartment.media?.floorplan?.thumbnail || apartment.media?.floorplan?.full || apartment.floorplan, assetBase))
     const floorplan = useOrbitPreviewImage(floorplanSource)
     useOrbitDataDividers(barRef, ".orbit-fullscreen-plan-crop,.orbit-fullscreen-plan-stage,.orbit-fullscreen-plan", `${apartment?.id || ""}|${floorplan || ""}|${compact}`)
@@ -323,20 +326,26 @@ function OrbitFullscreenDetails({ apartment: currentApartment, dataset = null, a
     const state = apartment?.status
     const status = state === "available" ? hu ? "Elérhető" : "Available" : state === "sold" ? hu ? "Eladva" : "Sold" : state === "under_negotiation" ? hu ? "Egyeztetés alatt" : "In negotiation" : state === "reserved" ? hu ? "Foglalt" : "Reserved" : apartment?.statusLabel || ""
     const meta = apartment ? [apartment.building && `${apartment.building} ${hu ? "épület" : "building"}`, apartment.floorLabel, known(apartment.rooms) && `${number.format(apartment.rooms!)} ${hu ? "szoba" : "rooms"}`, apartment.orientation].filter(Boolean).join(" · ") : ""
-    return <div ref={rootRef} data-orbit-fullscreen-details="" data-compact={compact ? "true" : "false"} data-apartment-id={apartment?.id || ""}>
+    const recordFade = {
+        "data-orbitdata-transition": "", "data-orbitdata-phase": transition.phase,
+        "data-orbitdata-displayed-id": apartment?.id || "", "data-orbitdata-visible": String(transition.visible),
+        "aria-hidden": !transition.interactive,
+        ...(!transition.interactive ? { inert: "" as any } : {}),
+    }
+    return <div ref={rootRef} data-orbit-fullscreen-details="" data-compact={compact ? "true" : "false"} data-apartment-id={currentApartment?.id || ""}>
         <style>{orbitFullscreenStyles}</style>
         {logo && <span className="orbit-fullscreen-brand" role="img" aria-label="Admiral Park" style={{ "--orbit-fullscreen-logo": `url("${logo.replace(/["\\]/g, "\\$&")}")` } as React.CSSProperties} />}
         <button type="button" data-orbit-ignore="" data-orbit-fullscreen-close="" className="orbit-fullscreen-close" aria-label={hu ? "Teljes képernyő bezárása" : "Close fullscreen"} onClick={onClose}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true"><path d="m5 5 14 14M19 5 5 19" /></svg></button>
         <div className="orbit-fullscreen-nav" data-orbit-ignore=""><button type="button" data-orbit-fullscreen-step="previous" disabled={moving} aria-label={hu ? "Előző nézet" : "Previous view"} onClick={onPrevious}>←</button><button type="button" data-orbit-fullscreen-step="next" disabled={moving} aria-label={hu ? "Következő nézet" : "Next view"} onClick={onNext}>→</button></div>
         <div ref={barRef} className="orbit-fullscreen-bar" data-orbit-ignore="" data-moving={moving ? "true" : "false"} aria-hidden={moving} {...(moving ? { inert: "" as any } : {})} aria-live="polite">
-            <span data-orbitdata-divider="left" data-info-visible={String(!!apartment)} aria-hidden="true" /><span data-orbitdata-divider="right" data-info-visible={String(!!apartment)} aria-hidden="true" />
+            <span data-orbitdata-divider="left" data-info-visible={String(!!apartment && transition.visible)} aria-hidden="true" /><span data-orbitdata-divider="right" data-info-visible={String(!!apartment && transition.visible)} aria-hidden="true" />
             {apartment ? <>
-                <div className="orbit-fullscreen-left"><div className="orbit-fullscreen-identity"><p className="orbit-fullscreen-id" data-orbit-fullscreen-field="number">{apartment.id}</p><p className="orbit-fullscreen-status" data-status={state} data-orbit-fullscreen-field="status" style={{ color: orbitAvailabilityColor(state) }}>{status}</p></div><dl className="orbit-fullscreen-stats"><div data-orbit-fullscreen-field="area"><dt>{hu ? "Lakótér" : "Interior"}</dt><dd>{area(apartment.areaInterior)}</dd></div><div data-orbit-fullscreen-field="terrace"><dt>{hu ? "Terasz" : "Terrace"}</dt><dd>{area(apartment.areaTerrace)}</dd></div><div data-orbit-fullscreen-field="garden"><dt>{hu ? "Kert" : "Garden"}</dt><dd>{area(apartment.areaGarden)}</dd></div></dl></div>
-                <figure className="orbit-fullscreen-plan" data-orbit-fullscreen-field="floorplan" style={planAspect}>{floorplan && <span className="orbit-fullscreen-plan-stage"><span className="orbit-fullscreen-plan-crop" data-orbit-plan-crop=""><img src={floorplan} style={planStyle} alt={`${apartment.id} · ${hu ? "alaprajz" : "floorplan"}`} decoding="async" draggable={false} /></span></span>}</figure>
+                <div className="orbit-fullscreen-left" {...recordFade}><div className="orbit-fullscreen-identity"><p className="orbit-fullscreen-id" data-orbit-fullscreen-field="number">{apartment.id}</p><p className="orbit-fullscreen-status" data-status={state} data-orbit-fullscreen-field="status" style={{ color: orbitAvailabilityColor(state) }}>{status}</p></div><dl className="orbit-fullscreen-stats"><div data-orbit-fullscreen-field="area"><dt>{hu ? "Lakótér" : "Interior"}</dt><dd>{area(apartment.areaInterior)}</dd></div><div data-orbit-fullscreen-field="terrace"><dt>{hu ? "Terasz" : "Terrace"}</dt><dd>{area(apartment.areaTerrace)}</dd></div><div data-orbit-fullscreen-field="garden"><dt>{hu ? "Kert" : "Garden"}</dt><dd>{area(apartment.areaGarden)}</dd></div></dl></div>
+                <figure className="orbit-fullscreen-plan" data-orbit-fullscreen-field="floorplan" style={planAspect} {...recordFade}><span className="orbit-fullscreen-plan-stage">{floorplan && <span className="orbit-fullscreen-plan-crop" data-orbit-plan-crop=""><img src={floorplan} style={planStyle} alt={`${apartment.id} · ${hu ? "alaprajz" : "floorplan"}`} decoding="async" draggable={false} /></span>}</span></figure>
             </> : <><p className="orbit-fullscreen-empty">{emptyMessage || (hu ? "Koppintson egy lakásra a részletekhez." : "Tap an apartment to see its details.")}</p><div className="orbit-fullscreen-plan" aria-hidden="true" /></>}
             <div className="orbit-fullscreen-right">
                 <div className="orbit-fullscreen-filters"><OrbitFilterBar active={!moving} language={language} filters={filters} bounds={filterBounds} areaBounds={filterAreaBounds} matchCount={filterCount} total={total} onChange={onFiltersChange} presentation="overlay" /></div>
-                {apartment && <><div className="orbit-fullscreen-conversion"><p className="orbit-fullscreen-price" data-orbit-fullscreen-field="price">{known(apartment.price) ? apartment.currency === "HUF" ? <>{number.format(apartment.price! / 1000000)}<small>M Ft</small></> : number.format(apartment.price!) + " " + apartment.currency : hu ? "Ár kérésre" : "Price on request"}</p><button type="button" className="orbit-fullscreen-detail" data-orbit-detail-link="" disabled={moving} onClick={onOpenDetails}>{hu ? "Adatlap" : "Apartment details"}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false"><path d="M5 12h14m-6-6 6 6-6 6" /></svg></button></div><p className="orbit-fullscreen-meta" data-orbit-fullscreen-field="meta">{meta}</p></>}
+                {apartment && <><div className="orbit-fullscreen-conversion" {...recordFade}><p className="orbit-fullscreen-price" data-orbit-fullscreen-field="price">{known(apartment.price) ? apartment.currency === "HUF" ? <>{number.format(apartment.price! / 1000000)}<small>M Ft</small></> : number.format(apartment.price!) + " " + apartment.currency : hu ? "Ár kérésre" : "Price on request"}</p><button type="button" className="orbit-fullscreen-detail" data-orbit-detail-link="" disabled={!transition.interactive} onClick={() => { if (transition.interactive) onOpenDetails() }}>{hu ? "Adatlap" : "Apartment details"}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false"><path d="M5 12h14m-6-6 6 6-6 6" /></svg></button></div><p className="orbit-fullscreen-meta" data-orbit-fullscreen-field="meta" {...recordFade}>{meta}</p></>}
             </div>
         </div>
         <span style={{ position: "absolute", width: 1, height: 1, overflow: "hidden", clipPath: "inset(50%)" }} role="status">{checkpoint >= 0 ? `${hu ? "Nézet" : "View"} ${checkpoint + 1} / ${count}` : hu ? "Nézetváltás" : "Moving to next view"}</span>

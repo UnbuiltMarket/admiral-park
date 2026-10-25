@@ -37,6 +37,91 @@ function useOrbitDataDividers(root: React.RefObject<HTMLElement | null>, selecto
         return () => window.removeEventListener("resize", measure)
     }, [root,selector,revision])
 }
+// One mounted record fades through to the latest pointer target. Keeping a
+// single plan avoids decoding two large drawings just to crossfade their UI.
+interface OrbitDataTransition<T> { displayed: T | null; key: string | null; phase: "empty" | "in" | "out" | "visible"; visible: boolean }
+function useOrbitDataTransition<T>(value: T | null, key: string | null, { moving = false, enabled = true }: { moving?: boolean; enabled?: boolean } = {}) {
+    const initial: OrbitDataTransition<T> = { displayed: value, key: value ? key : null, phase: value ? "visible" : "empty", visible: !!value }
+    const [state, setState] = React.useState(initial)
+    const stateRef = React.useRef(state), latest = React.useRef({ value, key, moving, enabled })
+    latest.current = { value, key: value ? key : null, moving, enabled }
+    const alive = React.useRef(false), wasMoving = React.useRef(moving)
+    const timer = React.useRef<number | null>(null), frame = React.useRef<number | null>(null)
+    const [reduced, setReduced] = React.useState(() => typeof window !== "undefined" && !!window.matchMedia?.("(prefers-reduced-motion: reduce)").matches)
+    const cancel = () => { if (timer.current !== null) window.clearTimeout(timer.current); if (frame.current !== null) window.cancelAnimationFrame(frame.current); timer.current = frame.current = null }
+    const commit = (next: OrbitDataTransition<T>) => {
+        if (!alive.current) return
+        const old = stateRef.current
+        if (old.displayed === next.displayed && old.key === next.key && old.phase === next.phase && old.visible === next.visible) return
+        stateRef.current = next; setState(next)
+    }
+    const empty = () => commit({ displayed: null, key: null, phase: "empty", visible: false })
+    const finishIn = () => {
+        timer.current = window.setTimeout(() => { timer.current = null; const current = stateRef.current; if (current.phase === "in") commit({ ...current, phase: "visible", visible: true }) }, 180)
+    }
+    const enter = (next: T, nextKey: string | null, alreadyMounted = false) => {
+        cancel(); commit({ displayed: next, key: nextKey, phase: "in", visible: alreadyMounted })
+        if (alreadyMounted) finishIn()
+        else frame.current = window.requestAnimationFrame(() => {
+            frame.current = window.requestAnimationFrame(() => {
+                frame.current = null
+                if (!alive.current || stateRef.current.phase !== "in") return
+                commit({ ...stateRef.current, visible: true }); finishIn()
+            })
+        })
+    }
+    React.useEffect(() => {
+        alive.current = true
+        const query = window.matchMedia?.("(prefers-reduced-motion: reduce)")
+        const change = () => setReduced(!!query?.matches)
+        change(); query?.addEventListener?.("change", change)
+        return () => { alive.current = false; cancel(); query?.removeEventListener?.("change", change) }
+    }, [])
+    // Deliberately reconcile every committed render: a floorplan URL can become
+    // ready without changing its apartment ID. Active fades never restart for
+    // that update, and a rapid A -> B -> C pass consumes only the latest target.
+    React.useEffect(() => {
+        const target = latest.current, current = stateRef.current
+        if (!target.enabled) { cancel(); wasMoving.current = target.moving; empty(); return }
+        if (target.moving) {
+            cancel(); wasMoving.current = true
+            const retained = current.displayed || target.value
+            commit({ displayed: retained, key: current.displayed ? current.key : target.key, phase: retained ? "visible" : "empty", visible: !!retained })
+            return
+        }
+        if (wasMoving.current || reduced) {
+            cancel(); wasMoving.current = false
+            commit({ displayed: target.value, key: target.key, phase: target.value ? "visible" : "empty", visible: !!target.value })
+            return
+        }
+        if (current.key === target.key) {
+            if (!target.value) { cancel(); empty(); return }
+            if (current.phase === "out") { enter(target.value, target.key, true); return }
+            commit({ ...current, displayed: target.value })
+            // Recover cancelled scheduling when React remounts effects in StrictMode.
+            if (current.phase === "in" && timer.current === null && frame.current === null) enter(target.value, target.key, true)
+            return
+        }
+        if (!current.displayed) { if (target.value) enter(target.value, target.key); return }
+        if (current.phase === "out" && timer.current !== null) return
+        cancel(); commit({ ...current, phase: "out", visible: false })
+        timer.current = window.setTimeout(() => {
+            timer.current = null
+            const next = latest.current
+            if (!next.enabled) { empty(); return }
+            if (next.moving) return
+            if (next.value) enter(next.value, next.key)
+            else empty()
+        }, 180)
+    })
+    // Suppress the departing record on the arrival render itself, before the
+    // passive effect clears retained state and the camera panel starts fading in.
+    const arriving = wasMoving.current && !moving
+    return { displayed: arriving ? value : state.displayed,
+        phase: arriving ? value ? "visible" as const : "empty" as const : state.phase,
+        visible: arriving ? !!value : state.visible,
+        interactive: enabled && !moving && !!value && (arriving || key === state.key && state.phase === "visible") }
+}
 interface OrbitApartmentImage {
     thumbnail?: string
     full: string

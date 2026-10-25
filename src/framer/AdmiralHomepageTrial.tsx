@@ -424,6 +424,91 @@ function useOrbitDataDividers(root: React.RefObject<HTMLElement | null>, selecto
         return () => window.removeEventListener("resize", measure)
     }, [root,selector,revision])
 }
+// One mounted record fades through to the latest pointer target. Keeping a
+// single plan avoids decoding two large drawings just to crossfade their UI.
+interface OrbitDataTransition<T> { displayed: T | null; key: string | null; phase: "empty" | "in" | "out" | "visible"; visible: boolean }
+function useOrbitDataTransition<T>(value: T | null, key: string | null, { moving = false, enabled = true }: { moving?: boolean; enabled?: boolean } = {}) {
+    const initial: OrbitDataTransition<T> = { displayed: value, key: value ? key : null, phase: value ? "visible" : "empty", visible: !!value }
+    const [state, setState] = React.useState(initial)
+    const stateRef = React.useRef(state), latest = React.useRef({ value, key, moving, enabled })
+    latest.current = { value, key: value ? key : null, moving, enabled }
+    const alive = React.useRef(false), wasMoving = React.useRef(moving)
+    const timer = React.useRef<number | null>(null), frame = React.useRef<number | null>(null)
+    const [reduced, setReduced] = React.useState(() => typeof window !== "undefined" && !!window.matchMedia?.("(prefers-reduced-motion: reduce)").matches)
+    const cancel = () => { if (timer.current !== null) window.clearTimeout(timer.current); if (frame.current !== null) window.cancelAnimationFrame(frame.current); timer.current = frame.current = null }
+    const commit = (next: OrbitDataTransition<T>) => {
+        if (!alive.current) return
+        const old = stateRef.current
+        if (old.displayed === next.displayed && old.key === next.key && old.phase === next.phase && old.visible === next.visible) return
+        stateRef.current = next; setState(next)
+    }
+    const empty = () => commit({ displayed: null, key: null, phase: "empty", visible: false })
+    const finishIn = () => {
+        timer.current = window.setTimeout(() => { timer.current = null; const current = stateRef.current; if (current.phase === "in") commit({ ...current, phase: "visible", visible: true }) }, 180)
+    }
+    const enter = (next: T, nextKey: string | null, alreadyMounted = false) => {
+        cancel(); commit({ displayed: next, key: nextKey, phase: "in", visible: alreadyMounted })
+        if (alreadyMounted) finishIn()
+        else frame.current = window.requestAnimationFrame(() => {
+            frame.current = window.requestAnimationFrame(() => {
+                frame.current = null
+                if (!alive.current || stateRef.current.phase !== "in") return
+                commit({ ...stateRef.current, visible: true }); finishIn()
+            })
+        })
+    }
+    React.useEffect(() => {
+        alive.current = true
+        const query = window.matchMedia?.("(prefers-reduced-motion: reduce)")
+        const change = () => setReduced(!!query?.matches)
+        change(); query?.addEventListener?.("change", change)
+        return () => { alive.current = false; cancel(); query?.removeEventListener?.("change", change) }
+    }, [])
+    // Deliberately reconcile every committed render: a floorplan URL can become
+    // ready without changing its apartment ID. Active fades never restart for
+    // that update, and a rapid A -> B -> C pass consumes only the latest target.
+    React.useEffect(() => {
+        const target = latest.current, current = stateRef.current
+        if (!target.enabled) { cancel(); wasMoving.current = target.moving; empty(); return }
+        if (target.moving) {
+            cancel(); wasMoving.current = true
+            const retained = current.displayed || target.value
+            commit({ displayed: retained, key: current.displayed ? current.key : target.key, phase: retained ? "visible" : "empty", visible: !!retained })
+            return
+        }
+        if (wasMoving.current || reduced) {
+            cancel(); wasMoving.current = false
+            commit({ displayed: target.value, key: target.key, phase: target.value ? "visible" : "empty", visible: !!target.value })
+            return
+        }
+        if (current.key === target.key) {
+            if (!target.value) { cancel(); empty(); return }
+            if (current.phase === "out") { enter(target.value, target.key, true); return }
+            commit({ ...current, displayed: target.value })
+            // Recover cancelled scheduling when React remounts effects in StrictMode.
+            if (current.phase === "in" && timer.current === null && frame.current === null) enter(target.value, target.key, true)
+            return
+        }
+        if (!current.displayed) { if (target.value) enter(target.value, target.key); return }
+        if (current.phase === "out" && timer.current !== null) return
+        cancel(); commit({ ...current, phase: "out", visible: false })
+        timer.current = window.setTimeout(() => {
+            timer.current = null
+            const next = latest.current
+            if (!next.enabled) { empty(); return }
+            if (next.moving) return
+            if (next.value) enter(next.value, next.key)
+            else empty()
+        }, 180)
+    })
+    // Suppress the departing record on the arrival render itself, before the
+    // passive effect clears retained state and the camera panel starts fading in.
+    const arriving = wasMoving.current && !moving
+    return { displayed: arriving ? value : state.displayed,
+        phase: arriving ? value ? "visible" as const : "empty" as const : state.phase,
+        visible: arriving ? !!value : state.visible,
+        interactive: enabled && !moving && !!value && (arriving || key === state.key && state.phase === "visible") }
+}
 interface OrbitApartmentImage {
     thumbnail?: string
     full: string
@@ -1223,9 +1308,11 @@ const orbitApartmentStudioStyles = `
 [data-orbit-studio] .orbit-studio-text-button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 36px; padding: 6px 0; border: 0; border-bottom: 1px solid var(--studio-line); border-radius: 0; color: var(--studio-muted); background: none; font-size: 10px; line-height: 1.4; text-decoration: none; }
 [data-orbit-studio] .orbit-studio-text-button:hover { color: var(--studio-ink); border-bottom-color: var(--studio-ink); }
 [data-orbit-studio] .orbit-studio-share-message { color: var(--studio-muted); font-size: 10px; line-height: 1.5; }
+/* Fade the record in place; the logo, preview selector and filters stay steady. */
+[data-orbit-studio] [data-orbitdata-transition] { opacity: 1; transition: opacity .18s ease; }
+[data-orbit-studio] [data-orbitdata-transition][data-orbitdata-visible="false"] { opacity: 0; pointer-events: none; }
 /* Keep the scene geometry stable while checkpoint information fades away. */
-[data-orbit-studio] :is(.orbit-studio-header-end,.orbit-studio-facts,.orbit-studio-details,.orbit-studio-mobile-panel) { opacity: 1; transition: opacity .24s ease; }
-[data-orbit-studio][data-moving="true"] :is(.orbit-studio-header-end,.orbit-studio-facts,.orbit-studio-details,.orbit-studio-mobile-panel) { opacity: 0; pointer-events: none; }
+[data-orbit-studio][data-moving="true"] [data-orbitdata-transition] { opacity: 0; pointer-events: none; }
 
 [data-orbit-studio] .orbit-studio-details { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
 [data-orbit-studio] .orbit-studio-drawing-toolbar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px 18px; margin-bottom: 14px; min-height: 32px; flex-shrink: 0; }
@@ -1417,7 +1504,7 @@ const orbitApartmentStudioStyles = `
 }
 @media (prefers-reduced-motion: reduce) {
     [data-orbit-studio][data-mobile="true"] .orbit-studio-primary,
-    [data-orbit-studio] :is(.orbit-studio-header-end,.orbit-studio-facts,.orbit-studio-details,.orbit-studio-mobile-panel) { transition: none; }
+    [data-orbit-studio] [data-orbitdata-transition] { transition: none; }
 }
 @container orbit-studio-mobile (max-width: 340px) {
     [data-orbit-studio][data-mobile="true"] .orbit-studio-heading { gap: 5px; }
@@ -1429,11 +1516,8 @@ const orbitApartmentStudioStyles = `
 
 function OrbitApartmentStudio(props: OrbitApartmentStudioProps): React.JSX.Element {
     const { active, mode, dataset, dataStatus, error, onRetry, apartment: currentApartment, onSelect, assetBase, detailsUrl, inquiryUrl, onViewport, language, onLayout, onOpenDetails, mobile = false, moving = false, filters, filterBounds, filterAreaBounds = null, filterActive, filterCount, onFiltersChange } = props
-    // Retain only the departing visual while it fades; selection and hit testing
-    // remain controlled by the parent and are disabled for checkpoint travel.
-    const lastApartment = React.useRef<OrbitApartmentRecord | null>(currentApartment)
-    if (currentApartment || !moving) lastApartment.current = currentApartment
-    const apartment = currentApartment || (moving ? lastApartment.current : null)
+    const transition = useOrbitDataTransition(currentApartment, currentApartment?.id || null, { moving, enabled: active })
+    const apartment = transition.displayed
     const hu = language !== "en"
     const [view, setView] = React.useState<"floorplan" | "floorLayout">("floorplan")
     const [expanded, setExpanded] = React.useState(false), [zoom, setZoom] = React.useState(1)
@@ -1449,6 +1533,9 @@ function OrbitApartmentStudio(props: OrbitApartmentStudioProps): React.JSX.Eleme
         { interior: "Interior", terrace: "Terrace", garden: "Garden", floorplan: "Floor plan", floorLayout: "Floor layout", expand: "Enlarge floor plan", preview: "Preview", select: "Preview apartment", gross: "Gross purchase price", details: "Apartment details", inquire: "Enquire", download: "PDF factsheet", share: "Share", close: "Close", roomCount: "rooms", floor: "floor", building: "building", type: "type", orientation: "orientation" }
     const number = new Intl.NumberFormat(hu ? "hu-HU" : "en-GB", { maximumFractionDigits: 2 })
     const plan = active && apartment && dataset ? orbitApartmentPlan(apartment, dataset, assetBase, view, !expanded) : null
+    // Warm the incoming drawing while the outgoing record is fading away.
+    const incomingPlan = active && currentApartment && dataset ? orbitApartmentPlan(currentApartment, dataset, assetBase, currentApartment.id === apartment?.id ? view : "floorplan", true) : null
+    useOrbitPreviewImage(incomingPlan?.url, active)
     const previewImage = useOrbitPreviewImage(plan?.url, active)
     const floorLayout = apartment && dataset ? orbitApartmentPlan(apartment, dataset, assetBase, "floorLayout") : null
     const asset = (path: string) => orbitApartmentAssetUrl(path, assetBase) || ""
@@ -1519,42 +1606,50 @@ function OrbitApartmentStudio(props: OrbitApartmentStudioProps): React.JSX.Eleme
             <div className="orbit-studio-price">{!mobile && <p className="orbit-studio-label">{apartment?.priceIncludesVat === false ? hu ? "Nettó vételár" : "Net purchase price" : labels.gross}</p>}<p className={`orbit-studio-price-value${!positive(apartment?.price) ? " orbit-studio-price-empty" : ""}`} data-orbit-apartment-price="" data-orbit-field="price">
                 {positive(apartment?.price) ? <>{number.format(apartment!.price! / 1000000)}<small>M Ft</small></> : availability === "sold" ? hu ? "Nincs megadva" : "Not provided" : hu ? "Ár kérésre" : "Price on request"}
             </p></div>
-            {(mobile || !inquiryLink) && onOpenDetails ? <button type="button" className="orbit-studio-primary" data-orbit-apartment-action="" data-orbit-detail-link="" aria-haspopup="dialog" disabled={mobile && moving} onClick={onOpenDetails}><span>{mobile ? hu ? "Adatlap" : "Details" : labels.details}</span>{mobile ? <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6" /></svg> : <span aria-hidden="true">↗</span>}</button> : (mobile ? detailLink : actionLink) && <a className="orbit-studio-primary" href={mobile ? detailLink : actionLink} data-orbit-apartment-action="" {...(!mobile && inquiryLink ? { "data-orbit-inquiry": "" } : { "data-orbit-detail-link": "" })}><span>{mobile ? hu ? "Adatlap" : "Details" : inquiryLink ? labels.inquire : labels.details}</span>{mobile ? <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6" /></svg> : <span aria-hidden="true">↗</span>}</a>}
+            {(mobile || !inquiryLink) && onOpenDetails ? <button type="button" className="orbit-studio-primary" data-orbit-apartment-action="" data-orbit-detail-link="" aria-haspopup="dialog" disabled={!transition.interactive} onClick={() => { if (transition.interactive) onOpenDetails() }}><span>{mobile ? hu ? "Adatlap" : "Details" : labels.details}</span>{mobile ? <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6" /></svg> : <span aria-hidden="true">↗</span>}</button> : (mobile ? detailLink : actionLink) && <a className="orbit-studio-primary" href={mobile ? detailLink : actionLink} data-orbit-apartment-action="" {...(!mobile && inquiryLink ? { "data-orbit-inquiry": "" } : { "data-orbit-detail-link": "" })}><span>{mobile ? hu ? "Adatlap" : "Details" : inquiryLink ? labels.inquire : labels.details}</span>{mobile ? <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6" /></svg> : <span aria-hidden="true">↗</span>}</a>}
         </div>
         <div className="orbit-studio-secondary">
             {download && <a href={download} className="orbit-studio-text-button" target="_blank" rel="noopener noreferrer" download={record?.media?.datasheet?.filename || undefined} data-orbit-apartment-download="" data-orbit-download=""><span aria-hidden="true">↓</span>{labels.download}</a>}
-            {inquiryLink && (onOpenDetails ? <button type="button" className="orbit-studio-text-button" data-orbit-detail-link="" aria-haspopup="dialog" onClick={onOpenDetails}>{labels.details}<span aria-hidden="true">↗</span></button> : detailLink && <a href={detailLink} className="orbit-studio-text-button" data-orbit-detail-link="">{labels.details}<span aria-hidden="true">↗</span></a>)}
+            {inquiryLink && (onOpenDetails ? <button type="button" className="orbit-studio-text-button" data-orbit-detail-link="" aria-haspopup="dialog" disabled={!transition.interactive} onClick={() => { if (transition.interactive) onOpenDetails() }}>{labels.details}<span aria-hidden="true">↗</span></button> : detailLink && <a href={detailLink} className="orbit-studio-text-button" data-orbit-detail-link="">{labels.details}<span aria-hidden="true">↗</span></a>)}
             {apartment && <button type="button" className="orbit-studio-text-button" onClick={() => { void share() }}>{labels.share}<span aria-hidden="true">↗</span></button>}
             <span className="orbit-studio-share-message" role="status">{shareMessage}</span>
         </div>
     </>
     const viewBox = plan?.viewBox || { x: 0, y: 0, width: 1, height: 1 }
     const planStyle: React.CSSProperties = { left: `${-viewBox.x / viewBox.width * 100}%`, top: `${-viewBox.y / viewBox.height * 100}%`, width: `${100 / viewBox.width}%`, height: `${100 / viewBox.height}%` }
-    const aspectStyle = { "--studio-plan-aspect": plan?.aspect || 1 } as React.CSSProperties
+    const previousPlanAspect = React.useRef(plan?.aspect || 1)
+    if (plan?.aspect) previousPlanAspect.current = plan.aspect
+    const aspectStyle = { "--studio-plan-aspect": previousPlanAspect.current } as React.CSSProperties
     const planShown = !!plan && previewImage === plan.url && failedImage !== plan.url
     const note = hu ? "Az alaprajz illusztráció. Bútorozatlan átadás." : "Illustrative floor plan. Homes are delivered unfurnished."
     const tabs = <div className="orbit-studio-tabs" role="tablist" aria-label={hu ? "Rajz kiválasztása" : "Choose drawing"}>
         {(["floorplan", "floorLayout"] as const).filter(kind => kind === "floorplan" || !!floorLayout).map(kind => <button key={kind} type="button" className="orbit-studio-tab" role="tab" aria-selected={view === kind} aria-controls={planPanelId} tabIndex={view === kind ? 0 : -1}
             onClick={() => setView(kind)} onKeyDown={event => { if (event.key === "ArrowRight" || event.key === "ArrowLeft" || event.key === "Home" || event.key === "End") { event.preventDefault(); const next = floorLayout && (event.key === "End" || (event.key !== "Home" && view === "floorplan")) ? "floorLayout" : "floorplan"; setView(next); const list = event.currentTarget.parentElement; requestAnimationFrame(() => list?.querySelector<HTMLButtonElement>(`[data-plan-tab="${next}"]`)?.focus()) } }} data-plan-tab={kind}>{labels[kind]}</button>)}
     </div>
-    const detailsVisibility = { "aria-hidden": !active || moving, ...(!active || moving ? { inert: "" as any } : {}) }
-    const facts = <div className="orbit-studio-facts" data-orbit-ignore="" {...detailsVisibility}>
+    const detailsVisibility = { "aria-hidden": !active || moving || !!apartment && !transition.interactive, ...(!active || moving || !!apartment && !transition.interactive ? { inert: "" as any } : {}) }
+    const recordFade = {
+        "data-orbitdata-transition": "", "data-orbitdata-phase": transition.phase,
+        "data-orbitdata-displayed-id": apartment?.id || "",
+        "data-orbitdata-visible": String(!!apartment && transition.visible),
+    }
+    const panelFade = { ...recordFade, "data-orbitdata-visible": String(!apartment && !moving || transition.visible) }
+    const facts = <div className="orbit-studio-facts" data-orbit-ignore="" {...(!shortLandscape ? recordFade : {})} {...detailsVisibility}>
         <dl className="orbit-studio-areas">
             {([ ["areaInterior", labels.interior, "area"], ["areaTerrace", labels.terrace, "terrace"], ["areaGarden", labels.garden, "garden"] ] as const).map(([key, label, field]) => <div key={key} data-orbit-apartment-metric={key} data-orbit-field={field}><dt>{label}</dt><dd>{positive(apartment?.[key]) && (key === "areaInterior" || apartment![key]! > 0) ? <>{number.format(apartment![key]!)}<small>m²</small></> : "—"}</dd></div>)}
         </dl>
         {meta()}{conversion()}
     </div>
     return <>
-        <section data-orbit-studio="" data-active={active ? "true" : "false"} data-mobile={mobile ? "true" : "false"} data-moving={moving ? "true" : "false"} data-mode={mode} data-status={dataStatus} data-apartment-id={apartment?.id || ""} aria-hidden={!active} {...(!active ? { inert: "" as any } : {})} aria-labelledby={mobile ? undefined : headingId} aria-label={mobile ? hu ? "Lakásválasztó" : "Apartments" : undefined}>
+        <section data-orbit-studio="" data-active={active ? "true" : "false"} data-mobile={mobile ? "true" : "false"} data-moving={moving ? "true" : "false"} data-mode={mode} data-status={dataStatus} data-apartment-id={currentApartment?.id || ""} aria-hidden={!active} {...(!active ? { inert: "" as any } : {})} aria-labelledby={mobile ? undefined : headingId} aria-label={mobile ? hu ? "Lakásválasztó" : "Apartments" : undefined}>
             <style>{fontStyles + orbitApartmentStudioStyles}</style>
             <header className="orbit-studio-header" data-orbit-ignore="">
                 {logo && <img className="orbit-studio-brand" src={logo} alt="Admiral Park" width={184} height={78} draggable={false} />}
-                {!mobile && <div className="orbit-studio-header-end" {...detailsVisibility}>
-                    <div className="orbit-studio-heading"><h2 id={headingId} className="orbit-studio-id">{apartment?.id || (hu ? "Lakásválasztó" : "Apartments")}</h2>
+                {!mobile && <div className="orbit-studio-header-end">
+                    <div className="orbit-studio-heading" {...panelFade} {...detailsVisibility}><h2 id={headingId} className="orbit-studio-id">{apartment?.id || (hu ? "Lakásválasztó" : "Apartments")}</h2>
                         {statusText && <span className="orbit-studio-status" data-status={availability} data-orbit-field="status"><span className="orbit-studio-status-dot" aria-hidden="true" />{statusText}</span>}
                     </div>
-                    {mode === "preview" && dataset && <div className="orbit-studio-preview"><label htmlFor={`${headingId}-select`}>{labels.preview}</label><select id={`${headingId}-select`} data-orbit-apartment-select="" aria-label={labels.select} value={apartment?.id || ""} onChange={event => onSelect(event.target.value)}>
-                        {!apartment && <option value="">—</option>}{dataset.apartments.map(unit => <option key={unit.id} value={unit.id}>{unit.id}</option>)}
+                    {mode === "preview" && dataset && <div className="orbit-studio-preview"><label htmlFor={`${headingId}-select`}>{labels.preview}</label><select id={`${headingId}-select`} data-orbit-apartment-select="" aria-label={labels.select} value={currentApartment?.id || ""} disabled={!active || moving} onChange={event => onSelect(event.target.value)}>
+                        {!currentApartment && <option value="">—</option>}{dataset.apartments.map(unit => <option key={unit.id} value={unit.id}>{unit.id}</option>)}
                     </select></div>}
                 </div>}
                 {!mobile && <div data-orbit-studio-filters=""><OrbitFilterBar active={active && !moving} language={language} filters={filters} bounds={filterBounds} areaBounds={filterAreaBounds} matchCount={filterCount} total={dataset?.apartments.length || 0} onChange={onFiltersChange} /></div>}
@@ -1565,13 +1660,13 @@ function OrbitApartmentStudio(props: OrbitApartmentStudioProps): React.JSX.Eleme
                     <div className="orbit-studio-image-slot"><div ref={viewportCallback} data-orbit-viewport="" aria-hidden="true" /></div>
                     {!mobile && !shortLandscape && facts}
                 </div>
-                {mobile ? <div className="orbit-studio-mobile-panel" data-orbit-studio-details="" data-orbit-ignore="" style={aspectStyle} {...detailsVisibility}>
+                {mobile ? <div className="orbit-studio-mobile-panel" data-orbit-studio-details="" data-orbit-ignore="" style={aspectStyle} {...panelFade} {...detailsVisibility}>
                     {dataStatus === "error" ? <div className="orbit-studio-empty" role="status"><p>{hu ? "A lakásadatok most nem tölthetők be." : "Apartment information could not be loaded."}</p><button type="button" className="orbit-studio-text-button" onClick={onRetry}>{hu ? "Újrapróbálom" : "Try again"}</button></div> : !apartment ? <div className="orbit-studio-empty" role="status" {...(filterActive && filterCount === 0 ? { "data-orbit-filter-empty": "" } : {})}><p>{dataStatus === "loading" || dataStatus === "idle" ? hu ? "Lakásadatok betöltése…" : "Loading apartment information…" : filterActive && filterCount === 0 ? hu ? "Nincs a szűrésnek megfelelő lakás." : "No apartments match these filters." : hu ? "Válasszon egy lakást az épületen." : "Select an apartment on the building."}</p></div> : <>
                             <div className="orbit-studio-heading"><h2 id={headingId} className="orbit-studio-id">{apartment.id}</h2>
                                 {statusText && <span className="orbit-studio-status" data-status={availability} data-orbit-field="status" title={statusText}><span className="orbit-studio-status-dot" aria-hidden="true" /><span className="orbit-studio-status-text">{availability === "under_negotiation" ? hu ? "Egyeztetés" : "In talks" : statusText}</span></span>}
                             </div>
                         <figure className="orbit-studio-mobile-plan" style={aspectStyle}>
-                            <button type="button" className="orbit-studio-mobile-plan-button" data-orbit-detail-link="" aria-haspopup="dialog" aria-label={hu ? `${apartment.id} adatlap megnyitása` : `Open apartment ${apartment.id} details`} disabled={moving || !onOpenDetails} onClick={onOpenDetails}>
+                            <button type="button" className="orbit-studio-mobile-plan-button" data-orbit-detail-link="" aria-haspopup="dialog" aria-label={hu ? `${apartment.id} adatlap megnyitása` : `Open apartment ${apartment.id} details`} disabled={!transition.interactive || !onOpenDetails} onClick={() => { if (transition.interactive) onOpenDetails?.() }}>
                                 <span className="orbit-studio-plan-stage" style={aspectStyle}>
                                     {planShown ? <span className="orbit-studio-plan-crop" data-orbit-plan-crop=""><img data-orbit-floorplan="" className="orbit-studio-plan-image" src={plan!.url} style={planStyle} alt={`${apartment.id} · ${labels.floorplan}`} decoding="async" draggable={false} onLoad={() => onLayout?.()} onError={() => setFailedImage(plan!.url)} /></span> : <span className="orbit-studio-loading">{hu ? "Az alaprajz még nem érhető el." : "Floor plan unavailable."}</span>}
                                 </span>
@@ -1589,7 +1684,7 @@ function OrbitApartmentStudio(props: OrbitApartmentStudioProps): React.JSX.Eleme
                             <div className="orbit-studio-mobile-actions">{conversion()}</div>
                         </div>
                     </>}
-                </div> : <div className="orbit-studio-details" data-orbit-studio-details="" data-orbit-ignore="" {...detailsVisibility}>
+                </div> : <div className="orbit-studio-details" data-orbit-studio-details="" data-orbit-ignore="" {...panelFade} {...detailsVisibility}>
                     {dataStatus === "error" ? <div className="orbit-studio-empty" role="status"><p>{hu ? "A lakásadatok most nem tölthetők be." : "Apartment information could not be loaded."}</p>{error && <p>{error}</p>}<button type="button" className="orbit-studio-text-button" onClick={onRetry}>{hu ? "Újrapróbálom" : "Try again"}</button></div> : !apartment ? <div className="orbit-studio-empty" role="status"><p>{dataStatus === "loading" || dataStatus === "idle" ? hu ? "Lakásadatok betöltése…" : "Loading apartment information…" : hu ? "A lakás adatai a kijelölt otthonnál jelennek meg." : "Point to an apartment to see its details."}</p></div> : <>
                         <div className="orbit-studio-drawing-toolbar">{tabs}<button type="button" className="orbit-studio-text-button" aria-label={labels.expand} disabled={!planShown} onClick={() => setExpanded(true)}>{hu ? "Nagyítás" : "Enlarge"}<span aria-hidden="true">↗</span></button></div>
                         {meta(true)}
@@ -1875,6 +1970,9 @@ const orbitFullscreenStyles = `${orbitDataDividerStyles}
 [data-orbit-fullscreen-details] .orbit-fullscreen-bar { --orbit-fullscreen-plan-size:176px; position:absolute; inset:auto 0 0; display:grid; grid-template-columns:minmax(100px,.9fr) 180px minmax(272px,1.45fr); align-items:start; gap:18px; min-width:0; padding:24px 24px 14px; background:linear-gradient(0deg,rgba(7,16,24,.66) 0%,rgba(7,16,24,.42) 55%,rgba(7,16,24,0) 100%); opacity:1; transition:opacity .24s ease; }
 [data-orbit-fullscreen-details] .orbit-fullscreen-bar[data-moving="true"] { opacity:0; pointer-events:none; }
 [data-orbit-fullscreen-details] .orbit-fullscreen-bar[data-moving="true"] * { pointer-events:none; }
+[data-orbit-fullscreen-details] [data-orbitdata-transition] { opacity:1; transition:opacity .18s ease; }
+[data-orbit-fullscreen-details] [data-orbitdata-transition][data-orbitdata-visible="false"] { opacity:0; pointer-events:none; }
+[data-orbit-fullscreen-details] .orbit-fullscreen-bar[data-moving="true"] [data-orbitdata-transition] { opacity:0; }
 [data-orbit-fullscreen-details] .orbit-fullscreen-left,[data-orbit-fullscreen-details] .orbit-fullscreen-right { min-width:0; text-align:left; }
 [data-orbit-fullscreen-details] .orbit-fullscreen-left { height:var(--orbit-fullscreen-plan-size); display:grid; grid-template-rows:minmax(0,1fr) minmax(0,1fr); row-gap:32px; }
 [data-orbit-fullscreen-details] .orbit-fullscreen-identity { display:flex; align-items:baseline; flex-wrap:wrap; gap:5px 10px; align-self:end; margin:0; }
@@ -1914,15 +2012,12 @@ const orbitFullscreenStyles = `${orbitDataDividerStyles}
 [data-orbit-fullscreen-details][data-compact="true"] .orbit-fullscreen-id { font-size:21px; }
 [data-orbit-fullscreen-details][data-compact="true"] .orbit-fullscreen-price { font-size:16px; }
 [data-orbit-fullscreen-details][data-compact="true"] .orbit-fullscreen-detail { padding:9px 12px; }
-@media (prefers-reduced-motion:reduce) { [data-orbit-fullscreen-details] .orbit-fullscreen-detail,[data-orbit-fullscreen-details] .orbit-fullscreen-bar { transition:none; } }
+@media (prefers-reduced-motion:reduce) { [data-orbit-fullscreen-details] .orbit-fullscreen-detail,[data-orbit-fullscreen-details] .orbit-fullscreen-bar,[data-orbit-fullscreen-details] [data-orbitdata-transition] { transition:none; } }
 `
 
 function OrbitFullscreenDetails({ apartment: currentApartment, dataset = null, assetBase, language, onOpenDetails, moving, onPrevious, onNext, onClose, checkpoint, count, emptyMessage, filters, filterBounds, filterAreaBounds = null, filterCount, total, onFiltersChange }: OrbitFullscreenDetailsProps) {
-    // Keep the departing card image/data intact for the fade, without keeping
-    // the parent's actual hover or selection alive during camera travel.
-    const lastApartment = React.useRef<OrbitApartmentRecord | null>(currentApartment)
-    if (currentApartment || !moving) lastApartment.current = currentApartment
-    const apartment = currentApartment || (moving ? lastApartment.current : null)
+    const transition = useOrbitDataTransition(currentApartment, currentApartment?.id || null, { moving })
+    const apartment = transition.displayed
     const hu = language !== "en"
     const rootRef = React.useRef<HTMLDivElement>(null)
     const barRef = React.useRef<HTMLDivElement>(null)
@@ -1940,6 +2035,9 @@ function OrbitFullscreenDetails({ apartment: currentApartment, dataset = null, a
     const known = (value: number | null | undefined) => typeof value === "number" && Number.isFinite(value)
     const area = (value: number | null | undefined) => known(value) ? <>{number.format(value!)}<small>m²</small></> : "—"
     const plan = apartment && dataset ? orbitApartmentPlan(apartment, dataset, assetBase, "floorplan", true) : null
+    const incomingPlan = currentApartment && dataset ? orbitApartmentPlan(currentApartment, dataset, assetBase, "floorplan", true) : null
+    const incomingSource = incomingPlan?.url || (currentApartment && orbitApartmentAssetUrl(currentApartment.media?.floorplan?.thumbnail || currentApartment.media?.floorplan?.full || currentApartment.floorplan, assetBase))
+    useOrbitPreviewImage(incomingSource)
     const floorplanSource = plan?.url || (apartment && orbitApartmentAssetUrl(apartment.media?.floorplan?.thumbnail || apartment.media?.floorplan?.full || apartment.floorplan, assetBase))
     const floorplan = useOrbitPreviewImage(floorplanSource)
     useOrbitDataDividers(barRef, ".orbit-fullscreen-plan-crop,.orbit-fullscreen-plan-stage,.orbit-fullscreen-plan", `${apartment?.id || ""}|${floorplan || ""}|${compact}`)
@@ -1950,20 +2048,26 @@ function OrbitFullscreenDetails({ apartment: currentApartment, dataset = null, a
     const state = apartment?.status
     const status = state === "available" ? hu ? "Elérhető" : "Available" : state === "sold" ? hu ? "Eladva" : "Sold" : state === "under_negotiation" ? hu ? "Egyeztetés alatt" : "In negotiation" : state === "reserved" ? hu ? "Foglalt" : "Reserved" : apartment?.statusLabel || ""
     const meta = apartment ? [apartment.building && `${apartment.building} ${hu ? "épület" : "building"}`, apartment.floorLabel, known(apartment.rooms) && `${number.format(apartment.rooms!)} ${hu ? "szoba" : "rooms"}`, apartment.orientation].filter(Boolean).join(" · ") : ""
-    return <div ref={rootRef} data-orbit-fullscreen-details="" data-compact={compact ? "true" : "false"} data-apartment-id={apartment?.id || ""}>
+    const recordFade = {
+        "data-orbitdata-transition": "", "data-orbitdata-phase": transition.phase,
+        "data-orbitdata-displayed-id": apartment?.id || "", "data-orbitdata-visible": String(transition.visible),
+        "aria-hidden": !transition.interactive,
+        ...(!transition.interactive ? { inert: "" as any } : {}),
+    }
+    return <div ref={rootRef} data-orbit-fullscreen-details="" data-compact={compact ? "true" : "false"} data-apartment-id={currentApartment?.id || ""}>
         <style>{orbitFullscreenStyles}</style>
         {logo && <span className="orbit-fullscreen-brand" role="img" aria-label="Admiral Park" style={{ "--orbit-fullscreen-logo": `url("${logo.replace(/["\\]/g, "\\// @ORBIT_FULLSCREEN_INSERT")}")` } as React.CSSProperties} />}
         <button type="button" data-orbit-ignore="" data-orbit-fullscreen-close="" className="orbit-fullscreen-close" aria-label={hu ? "Teljes képernyő bezárása" : "Close fullscreen"} onClick={onClose}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true"><path d="m5 5 14 14M19 5 5 19" /></svg></button>
         <div className="orbit-fullscreen-nav" data-orbit-ignore=""><button type="button" data-orbit-fullscreen-step="previous" disabled={moving} aria-label={hu ? "Előző nézet" : "Previous view"} onClick={onPrevious}>←</button><button type="button" data-orbit-fullscreen-step="next" disabled={moving} aria-label={hu ? "Következő nézet" : "Next view"} onClick={onNext}>→</button></div>
         <div ref={barRef} className="orbit-fullscreen-bar" data-orbit-ignore="" data-moving={moving ? "true" : "false"} aria-hidden={moving} {...(moving ? { inert: "" as any } : {})} aria-live="polite">
-            <span data-orbitdata-divider="left" data-info-visible={String(!!apartment)} aria-hidden="true" /><span data-orbitdata-divider="right" data-info-visible={String(!!apartment)} aria-hidden="true" />
+            <span data-orbitdata-divider="left" data-info-visible={String(!!apartment && transition.visible)} aria-hidden="true" /><span data-orbitdata-divider="right" data-info-visible={String(!!apartment && transition.visible)} aria-hidden="true" />
             {apartment ? <>
-                <div className="orbit-fullscreen-left"><div className="orbit-fullscreen-identity"><p className="orbit-fullscreen-id" data-orbit-fullscreen-field="number">{apartment.id}</p><p className="orbit-fullscreen-status" data-status={state} data-orbit-fullscreen-field="status" style={{ color: orbitAvailabilityColor(state) }}>{status}</p></div><dl className="orbit-fullscreen-stats"><div data-orbit-fullscreen-field="area"><dt>{hu ? "Lakótér" : "Interior"}</dt><dd>{area(apartment.areaInterior)}</dd></div><div data-orbit-fullscreen-field="terrace"><dt>{hu ? "Terasz" : "Terrace"}</dt><dd>{area(apartment.areaTerrace)}</dd></div><div data-orbit-fullscreen-field="garden"><dt>{hu ? "Kert" : "Garden"}</dt><dd>{area(apartment.areaGarden)}</dd></div></dl></div>
-                <figure className="orbit-fullscreen-plan" data-orbit-fullscreen-field="floorplan" style={planAspect}>{floorplan && <span className="orbit-fullscreen-plan-stage"><span className="orbit-fullscreen-plan-crop" data-orbit-plan-crop=""><img src={floorplan} style={planStyle} alt={`${apartment.id} · ${hu ? "alaprajz" : "floorplan"}`} decoding="async" draggable={false} /></span></span>}</figure>
+                <div className="orbit-fullscreen-left" {...recordFade}><div className="orbit-fullscreen-identity"><p className="orbit-fullscreen-id" data-orbit-fullscreen-field="number">{apartment.id}</p><p className="orbit-fullscreen-status" data-status={state} data-orbit-fullscreen-field="status" style={{ color: orbitAvailabilityColor(state) }}>{status}</p></div><dl className="orbit-fullscreen-stats"><div data-orbit-fullscreen-field="area"><dt>{hu ? "Lakótér" : "Interior"}</dt><dd>{area(apartment.areaInterior)}</dd></div><div data-orbit-fullscreen-field="terrace"><dt>{hu ? "Terasz" : "Terrace"}</dt><dd>{area(apartment.areaTerrace)}</dd></div><div data-orbit-fullscreen-field="garden"><dt>{hu ? "Kert" : "Garden"}</dt><dd>{area(apartment.areaGarden)}</dd></div></dl></div>
+                <figure className="orbit-fullscreen-plan" data-orbit-fullscreen-field="floorplan" style={planAspect} {...recordFade}><span className="orbit-fullscreen-plan-stage">{floorplan && <span className="orbit-fullscreen-plan-crop" data-orbit-plan-crop=""><img src={floorplan} style={planStyle} alt={`${apartment.id} · ${hu ? "alaprajz" : "floorplan"}`} decoding="async" draggable={false} /></span>}</span></figure>
             </> : <><p className="orbit-fullscreen-empty">{emptyMessage || (hu ? "Koppintson egy lakásra a részletekhez." : "Tap an apartment to see its details.")}</p><div className="orbit-fullscreen-plan" aria-hidden="true" /></>}
             <div className="orbit-fullscreen-right">
                 <div className="orbit-fullscreen-filters"><OrbitFilterBar active={!moving} language={language} filters={filters} bounds={filterBounds} areaBounds={filterAreaBounds} matchCount={filterCount} total={total} onChange={onFiltersChange} presentation="overlay" /></div>
-                {apartment && <><div className="orbit-fullscreen-conversion"><p className="orbit-fullscreen-price" data-orbit-fullscreen-field="price">{known(apartment.price) ? apartment.currency === "HUF" ? <>{number.format(apartment.price! / 1000000)}<small>M Ft</small></> : number.format(apartment.price!) + " " + apartment.currency : hu ? "Ár kérésre" : "Price on request"}</p><button type="button" className="orbit-fullscreen-detail" data-orbit-detail-link="" disabled={moving} onClick={onOpenDetails}>{hu ? "Adatlap" : "Apartment details"}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false"><path d="M5 12h14m-6-6 6 6-6 6" /></svg></button></div><p className="orbit-fullscreen-meta" data-orbit-fullscreen-field="meta">{meta}</p></>}
+                {apartment && <><div className="orbit-fullscreen-conversion" {...recordFade}><p className="orbit-fullscreen-price" data-orbit-fullscreen-field="price">{known(apartment.price) ? apartment.currency === "HUF" ? <>{number.format(apartment.price! / 1000000)}<small>M Ft</small></> : number.format(apartment.price!) + " " + apartment.currency : hu ? "Ár kérésre" : "Price on request"}</p><button type="button" className="orbit-fullscreen-detail" data-orbit-detail-link="" disabled={!transition.interactive} onClick={() => { if (transition.interactive) onOpenDetails() }}>{hu ? "Adatlap" : "Apartment details"}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false"><path d="M5 12h14m-6-6 6 6-6 6" /></svg></button></div><p className="orbit-fullscreen-meta" data-orbit-fullscreen-field="meta" {...recordFade}>{meta}</p></>}
             </div>
         </div>
         <span style={{ position: "absolute", width: 1, height: 1, overflow: "hidden", clipPath: "inset(50%)" }} role="status">{checkpoint >= 0 ? `${hu ? "Nézet" : "View"} ${checkpoint + 1} / ${count}` : hu ? "Nézetváltás" : "Moving to next view"}</span>
@@ -2764,7 +2868,7 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
             </div>}
             {!useStudio && !fullscreen.active && detailsMode !== "off" && <ApartmentDetailsStrip apartment={detailsData} language={detailsLanguage} visible={detailsVisible} preview={false}
                 bottom={detailsBottom} inset={detailsInset} onHeightChange={setDetailsHeight} onOpen={jsonDetails ? () => openApartmentDetails() : undefined}
-                filtersVisible={orbitPanelVisible} filters={stripFiltersEnabled ? <div data-orbit-desktop-filters=""><OrbitFilterBar active={orbitPanelVisible} language={detailsLanguage} filters={filterResult.filters} bounds={filterBounds} areaBounds={filterAreaBounds} matchCount={filterResult.matchingIds.length} total={apartmentData.dataset?.apartments.length || 0} onChange={setApartmentFilters} presentation="overlay" /></div> : undefined} />}
+                moving={orbitVisible && orbitMoving} filtersVisible={orbitPanelVisible} filters={stripFiltersEnabled ? <div data-orbit-desktop-filters=""><OrbitFilterBar active={orbitPanelVisible} language={detailsLanguage} filters={filterResult.filters} bounds={filterBounds} areaBounds={filterAreaBounds} matchCount={filterResult.matchingIds.length} total={apartmentData.dataset?.apartments.length || 0} onChange={setApartmentFilters} presentation="overlay" /></div> : undefined} />}
             {!staticRenderer && <AdmiralApartmentDetailCard openId={detailApartmentId} dataUrl={detailDataUrl} assetBase={apartmentAssetBase} inquiryUrl={inquiryUrl} pageUrl={detailPageUrl}
                 onOpenChange={reportDetailOpen} onClosed={closeApartmentDetails} />}
             {!staticRenderer && !useStudio && jsonDetails && orbitVisible && apartmentData.status === "error" && <div data-orbit-ignore="" role="status" style={{ position: "absolute", left: "4%", bottom: 24, zIndex: 4 }}>
@@ -3199,6 +3303,8 @@ const apartmentDetailsStyles = `${orbitDataDividerStyles}
     [data-apartment-details] .admiral-details-number .admiral-details-value { font-size: 24px; }
     [data-apartment-details] .admiral-details-plan-image, [data-apartment-details] .admiral-details-plan-empty { width: 120px; height: 112px; }
 }
+[data-apartment-details] .admiral-details-grid [data-orbitdata-transition] { opacity:1; transition:opacity 180ms ease; }
+[data-apartment-details] .admiral-details-grid [data-orbitdata-transition][data-orbitdata-visible="false"] { opacity:0; pointer-events:none; }
 /* The plan and its selection controls form the primary center composition. */
 [data-apartment-details] .admiral-details-grid { grid-template-columns: minmax(0,1fr) 240px minmax(0,1fr); max-width: 1200px; margin-inline: auto; gap: 28px; padding-top: 12px; align-items: start; }
 [data-apartment-details] .admiral-details-summary { grid-column: 1; grid-row: 1; min-width: 0; width: 100%; height: 210px; max-width: 360px; justify-self: end; display: grid; grid-template-rows: minmax(0,1fr) minmax(0,1fr); gap: 32px; transition: opacity 240ms ease; }
@@ -3242,11 +3348,11 @@ const apartmentDetailsStyles = `${orbitDataDividerStyles}
 }
 @media (prefers-reduced-motion: reduce) {
     [data-apartment-details] :is(.admiral-details-summary,.admiral-details-plan) { transition: none; }
-    [data-apartment-details], [data-apartment-details] .admiral-details-grid { transform: none; transition: none; }
+    [data-apartment-details], [data-apartment-details] .admiral-details-grid, [data-apartment-details] .admiral-details-grid [data-orbitdata-transition] { transform: none; transition: none; }
 }
 `
 
-function ApartmentDetailsStrip({ apartment, language, visible, preview, bottom, inset, onHeightChange, onOpen, filters, filtersVisible = false }: {
+function ApartmentDetailsStrip({ apartment, language, visible, preview, bottom, inset, onHeightChange, onOpen, filters, filtersVisible = false, moving = false }: {
     apartment: ApartmentDetailsData | null
     language: ApartmentDetailsLanguage
     visible: boolean
@@ -3257,12 +3363,16 @@ function ApartmentDetailsStrip({ apartment, language, visible, preview, bottom, 
     onOpen?: () => void
     filters?: React.ReactNode
     filtersVisible?: boolean
+    moving?: boolean
 }): React.JSX.Element {
-    const last = React.useRef<{ apartment: ApartmentDetailsData; preview: boolean } | null>(apartment ? { apartment, preview } : null)
-    if (apartment) last.current = { apartment, preview }
-    const displayed = apartment ? { apartment, preview } : last.current
-    const data: ApartmentDetailsData = displayed?.apartment ?? { number: "—", area: null, terrace: null, garden: null, rooms: null, availability: "" }
-    const sample = displayed?.preview ?? preview
+    const transition = useOrbitDataTransition(apartment, apartment?.id || apartment?.number || null, { moving })
+    const data: ApartmentDetailsData = transition.displayed ?? { number: "—", area: null, terrace: null, garden: null, rooms: null, availability: "" }
+    const sample = preview
+    const infoVisible = !!transition.displayed && transition.visible && visible
+    const interactive = transition.interactive && visible
+    const recordFade = { "data-orbitdata-transition": "", "data-orbitdata-phase": transition.phase,
+        "data-orbitdata-displayed-id": transition.displayed?.id || transition.displayed?.number || "", "data-orbitdata-visible": String(infoVisible),
+        "aria-hidden": !interactive, ...(!interactive ? { inert: "" as any } : {}) }
     const shown = visible && apartment !== null
     const shellShown = shown || !!filters && filtersVisible
     const hu = language !== "en"
@@ -3309,7 +3419,7 @@ function ApartmentDetailsStrip({ apartment, language, visible, preview, bottom, 
         <style>{apartmentDetailsStyles}</style>
         <span data-orbitdata-divider="left" data-info-visible={String(shown)} aria-hidden="true" /><span data-orbitdata-divider="right" data-info-visible={String(shown)} aria-hidden="true" />
         <div className="admiral-details-grid">
-          <div className="admiral-details-summary" data-info-visible={String(shown)} aria-hidden={!shown} {...(!shown ? { inert: "" as any } : {})}>
+          <div className="admiral-details-summary" data-info-visible={String(infoVisible)} {...recordFade}>
            <div className="admiral-details-identity">
             <div className="admiral-details-field admiral-details-number" data-apartment-field="number">
                 <div className="admiral-details-label">{labels.number}{sample && <span className="admiral-details-sample">{sampleLabel}</span>}</div>
@@ -3320,9 +3430,9 @@ function ApartmentDetailsStrip({ apartment, language, visible, preview, bottom, 
            <div className="admiral-details-facts"><div className="admiral-details-metrics">{metric("area")}{metric("terrace")}{metric("garden")}</div>
            <div className="admiral-details-secondary">{metric("rooms", false)}</div></div>
           </div>
-            <div className="admiral-details-field admiral-details-plan" data-apartment-field="floorplan" data-info-visible={String(shown)} aria-hidden={!shown} {...(!shown ? { inert: "" as any } : {})}>
+            <div className="admiral-details-field admiral-details-plan" data-apartment-field="floorplan" data-info-visible={String(infoVisible)} {...recordFade}>
                 <div className="admiral-details-label">{labels.floorplan}</div>
-                {onOpen ? <button type="button" data-apartment-open="" data-orbit-ignore="" aria-label={hu ? `${data.number} lakás részletei` : `Apartment ${data.number} details`} aria-haspopup="dialog" tabIndex={shown ? 0 : -1} disabled={!shown} onClick={onOpen}>
+                {onOpen ? <button type="button" data-apartment-open="" data-orbit-ignore="" aria-label={hu ? `${data.number} lakás részletei` : `Apartment ${data.number} details`} aria-haspopup="dialog" tabIndex={interactive ? 0 : -1} disabled={!interactive} onClick={() => { if (interactive) onOpen?.() }}>
                     {floorplan ? <img className="admiral-details-plan-image" src={floorplan} alt={hu ? `${data.number} lakás alaprajza` : `Floor plan of apartment ${data.number}`} loading="lazy" decoding="async" draggable={false} onError={() => setFailedFloorplan(floorplan)} /> : <span className="admiral-details-plan-empty">{hu ? "Részletek ↗" : "Details ↗"}</span>}
                     {floorplan && <span className="admiral-details-plan-caption">{hu ? "Adatlap ↗" : "Details ↗"}</span>}
                 </button> : floorplan ? <img className="admiral-details-plan-image" src={floorplan} alt={hu ? `${data.number} lakás alaprajza` : `Floor plan of apartment ${data.number}`} loading="lazy" decoding="async" draggable={false} onError={() => setFailedFloorplan(floorplan)} /> : sample ?

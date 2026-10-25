@@ -213,6 +213,8 @@ const apartmentDetailsStyles = `${orbitDataDividerStyles}
     [data-apartment-details] .admiral-details-number .admiral-details-value { font-size: 24px; }
     [data-apartment-details] .admiral-details-plan-image, [data-apartment-details] .admiral-details-plan-empty { width: 120px; height: 112px; }
 }
+[data-apartment-details] .admiral-details-grid [data-orbitdata-transition] { opacity:1; transition:opacity 180ms ease; }
+[data-apartment-details] .admiral-details-grid [data-orbitdata-transition][data-orbitdata-visible="false"] { opacity:0; pointer-events:none; }
 /* The plan and its selection controls form the primary center composition. */
 [data-apartment-details] .admiral-details-grid { grid-template-columns: minmax(0,1fr) 240px minmax(0,1fr); max-width: 1200px; margin-inline: auto; gap: 28px; padding-top: 12px; align-items: start; }
 [data-apartment-details] .admiral-details-summary { grid-column: 1; grid-row: 1; min-width: 0; width: 100%; height: 210px; max-width: 360px; justify-self: end; display: grid; grid-template-rows: minmax(0,1fr) minmax(0,1fr); gap: 32px; transition: opacity 240ms ease; }
@@ -256,11 +258,11 @@ const apartmentDetailsStyles = `${orbitDataDividerStyles}
 }
 @media (prefers-reduced-motion: reduce) {
     [data-apartment-details] :is(.admiral-details-summary,.admiral-details-plan) { transition: none; }
-    [data-apartment-details], [data-apartment-details] .admiral-details-grid { transform: none; transition: none; }
+    [data-apartment-details], [data-apartment-details] .admiral-details-grid, [data-apartment-details] .admiral-details-grid [data-orbitdata-transition] { transform: none; transition: none; }
 }
 `
 
-function ApartmentDetailsStrip({ apartment, language, visible, preview, bottom, inset, onHeightChange, onOpen, filters, filtersVisible = false }: {
+function ApartmentDetailsStrip({ apartment, language, visible, preview, bottom, inset, onHeightChange, onOpen, filters, filtersVisible = false, moving = false }: {
     apartment: ApartmentDetailsData | null
     language: ApartmentDetailsLanguage
     visible: boolean
@@ -271,12 +273,16 @@ function ApartmentDetailsStrip({ apartment, language, visible, preview, bottom, 
     onOpen?: () => void
     filters?: React.ReactNode
     filtersVisible?: boolean
+    moving?: boolean
 }): React.JSX.Element {
-    const last = React.useRef<{ apartment: ApartmentDetailsData; preview: boolean } | null>(apartment ? { apartment, preview } : null)
-    if (apartment) last.current = { apartment, preview }
-    const displayed = apartment ? { apartment, preview } : last.current
-    const data: ApartmentDetailsData = displayed?.apartment ?? { number: "—", area: null, terrace: null, garden: null, rooms: null, availability: "" }
-    const sample = displayed?.preview ?? preview
+    const transition = useOrbitDataTransition(apartment, apartment?.id || apartment?.number || null, { moving })
+    const data: ApartmentDetailsData = transition.displayed ?? { number: "—", area: null, terrace: null, garden: null, rooms: null, availability: "" }
+    const sample = preview
+    const infoVisible = !!transition.displayed && transition.visible && visible
+    const interactive = transition.interactive && visible
+    const recordFade = { "data-orbitdata-transition": "", "data-orbitdata-phase": transition.phase,
+        "data-orbitdata-displayed-id": transition.displayed?.id || transition.displayed?.number || "", "data-orbitdata-visible": String(infoVisible),
+        "aria-hidden": !interactive, ...(!interactive ? { inert: "" as any } : {}) }
     const shown = visible && apartment !== null
     const shellShown = shown || !!filters && filtersVisible
     const hu = language !== "en"
@@ -323,7 +329,7 @@ function ApartmentDetailsStrip({ apartment, language, visible, preview, bottom, 
         <style>{apartmentDetailsStyles}</style>
         <span data-orbitdata-divider="left" data-info-visible={String(shown)} aria-hidden="true" /><span data-orbitdata-divider="right" data-info-visible={String(shown)} aria-hidden="true" />
         <div className="admiral-details-grid">
-          <div className="admiral-details-summary" data-info-visible={String(shown)} aria-hidden={!shown} {...(!shown ? { inert: "" as any } : {})}>
+          <div className="admiral-details-summary" data-info-visible={String(infoVisible)} {...recordFade}>
            <div className="admiral-details-identity">
             <div className="admiral-details-field admiral-details-number" data-apartment-field="number">
                 <div className="admiral-details-label">{labels.number}{sample && <span className="admiral-details-sample">{sampleLabel}</span>}</div>
@@ -334,9 +340,9 @@ function ApartmentDetailsStrip({ apartment, language, visible, preview, bottom, 
            <div className="admiral-details-facts"><div className="admiral-details-metrics">{metric("area")}{metric("terrace")}{metric("garden")}</div>
            <div className="admiral-details-secondary">{metric("rooms", false)}</div></div>
           </div>
-            <div className="admiral-details-field admiral-details-plan" data-apartment-field="floorplan" data-info-visible={String(shown)} aria-hidden={!shown} {...(!shown ? { inert: "" as any } : {})}>
+            <div className="admiral-details-field admiral-details-plan" data-apartment-field="floorplan" data-info-visible={String(infoVisible)} {...recordFade}>
                 <div className="admiral-details-label">{labels.floorplan}</div>
-                {onOpen ? <button type="button" data-apartment-open="" data-orbit-ignore="" aria-label={hu ? `${data.number} lakás részletei` : `Apartment ${data.number} details`} aria-haspopup="dialog" tabIndex={shown ? 0 : -1} disabled={!shown} onClick={onOpen}>
+                {onOpen ? <button type="button" data-apartment-open="" data-orbit-ignore="" aria-label={hu ? `${data.number} lakás részletei` : `Apartment ${data.number} details`} aria-haspopup="dialog" tabIndex={interactive ? 0 : -1} disabled={!interactive} onClick={() => { if (interactive) onOpen?.() }}>
                     {floorplan ? <img className="admiral-details-plan-image" src={floorplan} alt={hu ? `${data.number} lakás alaprajza` : `Floor plan of apartment ${data.number}`} loading="lazy" decoding="async" draggable={false} onError={() => setFailedFloorplan(floorplan)} /> : <span className="admiral-details-plan-empty">{hu ? "Részletek ↗" : "Details ↗"}</span>}
                     {floorplan && <span className="admiral-details-plan-caption">{hu ? "Adatlap ↗" : "Details ↗"}</span>}
                 </button> : floorplan ? <img className="admiral-details-plan-image" src={floorplan} alt={hu ? `${data.number} lakás alaprajza` : `Floor plan of apartment ${data.number}`} loading="lazy" decoding="async" draggable={false} onError={() => setFailedFloorplan(floorplan)} /> : sample ?
