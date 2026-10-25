@@ -498,6 +498,50 @@ function assertCompactCheckpointTrace(samples,message,{filters=true,brand=false}
 }
 
 try{
+ for(const layout of ['classic','studio'])await pass('audit orbitdata '+layout+' pointer travel remains clickable and clears on exit',async()=>{
+  const f=await fixture({cleanFixture:true,context:{viewport:{width:1440,height:900}},props:{...maskProps,orbitLayout:layout}}),{page}=f;
+  try{
+   await waitOrbit(page);await waitMask(page);const probe=realMaskViews[0].probe;
+   const selector=layout==='classic'?'[data-apartment-open]':'[data-orbit-detail-link]';
+   await hoverRealMask(page,probe);await page.waitForTimeout(650);
+   const action=page.locator(selector).first(),box=await action.boundingBox();assert.ok(box);
+   await page.mouse.move(box.x+box.width/2,box.y+box.height/2,{steps:30});await page.waitForTimeout(400);
+   assert.equal(await action.isEnabled(),true,'the displayed action survives pointer approach');
+   assert.equal(await page.locator('[data-admiral-homepage]').getAttribute('data-orbit-mask-hovered'),'','the façade hover itself clears on the control');
+   const reachedId=await action.evaluate(element=>element.closest('[data-orbitdata-displayed-id]')?.dataset.orbitdataDisplayedId);assert.ok(reachedId);
+   await page.mouse.click(box.x+box.width/2,box.y+box.height/2);await waitApartmentCard(page,reachedId);
+   await page.locator('#detail-dialog [data-close]').click();await page.locator('#detail-dialog[open]').waitFor({state:'hidden'});
+   await hoverRealMask(page,probe);await page.waitForTimeout(650);await action.focus();await page.mouse.move(5,5);await page.waitForTimeout(400);
+   assert.equal(await action.isEnabled(),true,'keyboard focus keeps its action available when the pointer leaves');
+   if(layout==='studio'){
+    const secondary=page.locator('.orbit-studio-facts .orbit-studio-secondary a,.orbit-studio-facts .orbit-studio-secondary button').first();
+    await secondary.focus();await secondary.press('Tab');await page.waitForTimeout(100);assert.equal(await action.isEnabled(),true,'Tab within orbitdata preserves the active apartment');await action.focus();
+   }
+   await action.press('Enter');await waitApartmentCard(page,probe.id);
+   await page.locator('#detail-dialog [data-close]').click();await page.locator('#detail-dialog[open]').waitFor({state:'hidden'});
+   await hoverRealMask(page,probe);await page.waitForTimeout(400);await page.mouse.move(5,5);await page.waitForTimeout(400);
+   if(layout==='classic')assert.equal(await page.locator('[data-apartment-details]').getAttribute('data-details-visible'),'false');
+   else assert.equal(await page.locator('[data-orbit-studio]').getAttribute('data-apartment-id'),'');
+   const point=await projectMaskPoint(page,probe);await page.mouse.click(point.x,point.y);await waitApartmentCard(page,probe.id);
+  }finally{await f.close();}
+ });
+ await pass('audit orbitdata stalled fetch times out and the visible retry loads fresh data',async()=>{
+  const f=await fixture({cleanFixture:true,context:{viewport:{width:1440,height:900}},props:{...studioProps,orbitLayout:'studio'}}),{page}=f;
+  try{
+   await waitOrbit(page);
+   await page.evaluate(()=>{
+    window.auditStallCalls=0;const nativeFetch=window.fetch.bind(window),nativeTimer=window.setTimeout.bind(window);
+    window.auditStallRecovered=false;window.setTimeout=(callback,delay,...args)=>nativeTimer(callback,delay===15000?100:delay,...args);
+    window.fetch=(url,...args)=>String(url).includes('audit-stalled')?(window.auditStallCalls++,window.auditStallRecovered?nativeFetch('http://homepage.test/apartments.json',...args):new Promise(()=>{})):nativeFetch(url,...args);
+    window.props={...window.props,apartmentDataUrl:'http://homepage.test/audit-stalled.json'};window.renderTrial();
+   });
+   await page.waitForFunction(()=>document.querySelector('[data-orbit-studio]')?.dataset.status==='error');
+   assert.equal(await page.evaluate(()=>window.auditStallCalls),1);
+   await page.evaluate(()=>{window.auditStallRecovered=true;});await page.getByRole('button',{name:'Újrapróbálom',exact:true}).click();
+   await page.waitForFunction(()=>document.querySelector('[data-orbit-studio]')?.dataset.status==='ready');
+   assert.equal(await page.evaluate(()=>window.auditStallCalls),2,'retry starts a new request after a stalled download');
+  }finally{await f.close();}
+ });
  for(const layout of ['classic','studio'])await pass('orbitdata fade desktop '+layout+' retains outgoing facts and drawing, swaps smoothly and clears on leave',async()=>{
   const f=await fixture({cleanFixture:true,useDefaultOrbitLayout:layout==='classic',context:{viewport:{width:1440,height:900}},props:{...maskProps,orbitLayout:layout}}),{page}=f,scope=layout==='classic'?'[data-apartment-details]':'[data-orbit-studio]';
   try{

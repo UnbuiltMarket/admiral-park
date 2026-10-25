@@ -50,7 +50,7 @@ function assetUrl(value) {
 }
 const montserratFolder=assetUrl('assets/fonts/montserrat/');
 ensureOrbitApartmentCardFont(montserratFolder).then(()=>{if(!signal.aborted)requestAnimationFrame(fitDetailRooms);});
-let apartments=[],data,favorites=new Set(),toastTimer,mediaView=null,mediaSequence=0;
+let apartments=[],data,favorites=new Set(),toastTimer,activeToast=null,mediaView=null,mediaSequence=0;
 let requestedApartmentId=typeof config.apartment==='string'?config.apartment:null, cardOpen=false;
 const dialogFocus=new WeakMap(), dialogStack=[], downloadUrls=new Set();
 const modalRegistry=window[Symbol.for('admiral-park:open-dialogs')] ||= new Set();
@@ -60,9 +60,14 @@ let detailResize=null,selectedPlanRoom=null,hoverPlanRoom=null,focusedPlanRoom=n
 let storage = true;
 try { const stored = JSON.parse(localStorage.getItem('admiral-park:favorites:v1') || '[]'); if (Array.isArray(stored)) favorites = new Set(stored.filter(x => typeof x === 'string')); } catch { storage = false; }
 function toast(message) {
-  $('toast').textContent = message;
-  $('toast').classList.add('visible');
-  clearTimeout(toastTimer); toastTimer = setTimeout(() => $('toast').classList.remove('visible'), 4200);
+  // A native modal's top layer makes sibling live regions inert, regardless of
+  // their z-index. Keep feedback in the open card, and row-export feedback outside.
+  activeToast?.classList.remove('visible');
+  const dialog=$('detail-dialog');
+  activeToast=dialog.open?dialog.querySelector('.detail-feedback')||$('toast'):$('toast');
+  activeToast.textContent=message;activeToast.classList.add('visible');
+  const target=activeToast;
+  clearTimeout(toastTimer);toastTimer=setTimeout(()=>target.classList.remove('visible'),4200);
 }
 const byId = (id) => apartments.find(a => a.id === id);
 const hasNumber = (v) => typeof v === 'number' && Number.isFinite(v);
@@ -135,6 +140,21 @@ function detailMetric(label,value) {
 function validPlanMarkers(layout) {
   return Array.isArray(layout?.markers)?layout.markers.filter(marker=>Number.isSafeInteger(marker.number)&&marker.number>0&&hasNumber(marker.x)&&marker.x>=0&&marker.x<=1&&hasNumber(marker.y)&&marker.y>=0&&marker.y<=1&&typeof marker.name==='string'):[];
 }
+function inlineMediaFeedback() {
+  return '<div class="inline-media-feedback" role="status" aria-live="polite">Rajz betöltése…</div>';
+}
+function setInlineMediaState(image,state) {
+  const panel=image.closest('[data-document-panel]');if(!panel)return;
+  panel.dataset.imageState=state;panel.setAttribute('aria-busy',String(state==='loading'));
+  const feedback=panel.querySelector('.inline-media-feedback');if(!feedback)return;
+  feedback.hidden=state==='ready';
+  feedback.innerHTML=state==='error'?'<span>A rajz most nem tölthető be.</span><button type="button" class="button-secondary" data-inline-media-retry>Újrapróbálom</button>':state==='loading'?'Rajz betöltése…':'';
+}
+function initializeInlineMedia(dialog) {
+  dialog.querySelectorAll('img[data-inline-media]').forEach(image=>{
+    if(image.complete)setInlineMediaState(image,image.naturalWidth?'ready':'error');
+  });
+}
 function detailPlan(a) {
   const layout=data.roomLayouts?.[a.apartmentType],source=a.media?.floorplan;
   const url=assetUrl(source?.original||(layout?`assets/floorplans/types/${encodeURIComponent(a.apartmentType)}/original.png`:source?.full||a.floorplan));
@@ -144,7 +164,7 @@ function detailPlan(a) {
   const imageWidth=dimensions.width||dimensions[0]||1500,imageHeight=dimensions.height||dimensions[1]||2000;
   const surface=`left:${-view.x/view.width*100}%;top:${-view.y/view.height*100}%;width:${100/view.width}%;height:${100/view.height}%`;
   const markers=validPlanMarkers(layout);
-  return `<section class="detail-plan" data-document-panel="plan" id="detail-document-plan" role="tabpanel" aria-labelledby="detail-document-plan-tab"><div class="detail-plan-stage"><div class="detail-plan-canvas" style="--plan-aspect:${imageWidth*view.width/(imageHeight*view.height)};aspect-ratio:${imageWidth*view.width}/${imageHeight*view.height}"><div class="detail-plan-surface" style="${surface}"><img class="detail-plan-image" src="${esc(url)}" alt="${esc(a.apartmentType||a.id)} típus számozott alaprajza" decoding="async"><div class="detail-plan-markers" aria-label="A típusterv helyiségei">${markers.map(marker=>`<button type="button" class="room-marker" data-plan-room="${marker.number}" style="left:${marker.x*100}%;top:${marker.y*100}%" aria-label="${marker.number}. ${esc(roomLabel(marker.name))}" aria-pressed="false">${marker.number}</button>`).join('')}</div></div></div></div></section>`;
+  return `<section class="detail-plan" data-document-panel="plan" data-image-state="loading" aria-busy="true" id="detail-document-plan" role="tabpanel" aria-labelledby="detail-document-plan-tab"><div class="detail-plan-stage"><div class="detail-plan-canvas" style="--plan-aspect:${imageWidth*view.width/(imageHeight*view.height)};aspect-ratio:${imageWidth*view.width}/${imageHeight*view.height}"><div class="detail-plan-surface" style="${surface}"><img class="detail-plan-image" data-inline-media src="${esc(url)}" alt="${esc(a.apartmentType||a.id)} típus számozott alaprajza" decoding="async"><div class="detail-plan-markers" aria-label="A típusterv helyiségei">${markers.map(marker=>`<button type="button" class="room-marker" data-plan-room="${marker.number}" style="left:${marker.x*100}%;top:${marker.y*100}%" aria-label="${marker.number}. ${esc(roomLabel(marker.name))}" aria-pressed="false">${marker.number}</button>`).join('')}</div></div></div></div>${inlineMediaFeedback()}</section>`;
 }
 function detailRooms(a) {
   const rooms=Array.isArray(a.roomList)?a.roomList:[],markers=validPlanMarkers(data.roomLayouts?.[a.apartmentType]);
@@ -175,12 +195,12 @@ function detail(id) {
         <div class="detail-conversion"><div class="detail-price"><p>${hasNumber(a.price)?`<span class="price-value">${priceNumber.format(a.price/1000000)}</span> <small class="price-unit">M Ft</small>`:`<span class="price-unavailable">${esc(apartmentPrice(a))}</span>`}</p></div><div class="detail-inquiry">${inquiry(a)}</div><div class="detail-downloads detail-footer">${downloadLink(a,true)}<div class="detail-status"><span class="status-pill status-${esc(a.status)}">${esc(statusText(a))}</span></div>${shareControl(a)}</div></div>
       </aside>
       <nav class="detail-panel-nav" role="tablist" aria-label="Rajz és helyiségjegyzék">${[['plan','Rajzok'],['rooms','Helyiségek']].map(([key,label])=>`<button type="button" role="tab" id="detail-tab-${key}" data-detail-tab="${key}" aria-controls="detail-panel-${key}" aria-selected="${key==='plan'}" tabindex="${key==='plan'?0:-1}">${label}</button>`).join('')}</nav>
-      <section class="detail-drawing" data-detail-panel="plan" id="detail-panel-plan" role="tabpanel" aria-labelledby="detail-tab-plan"><div class="detail-drawing-toolbar"><div class="detail-document-tabs" role="tablist" aria-label="Rajz kiválasztása"><button type="button" id="detail-document-plan-tab" role="tab" data-document-view="plan" aria-selected="true" aria-controls="detail-document-plan">Alaprajz</button>${floor?'<button type="button" id="detail-document-floor-tab" role="tab" data-document-view="floor" aria-selected="false" tabindex="-1" aria-controls="detail-document-floor">Szintrajz</button>':''}</div><div class="detail-drawing-save">${saveButton(a,true)}</div><p class="detail-unit-meta"><strong>${esc(a.apartmentType||'')}</strong> típus <span>·</span> <strong>${esc(a.building)}</strong> épület <span>·</span> ${floorMeta} <span>·</span> <strong>${esc(a.orientation||'Nincs adat')}</strong> tájolás</p></div>${detailPlan(a)}${floor?`<section class="detail-floor-plan" data-document-panel="floor" id="detail-document-floor" role="tabpanel" aria-labelledby="detail-document-floor-tab" hidden><p class="detail-section-label">${esc(floorText(a))} · A, B, C épület</p><img class="detail-floor-image" src="${esc(floor.full)}" alt="${esc(floorText(a))} szintrajza" decoding="async"><p class="detail-plan-note">${esc(a.id)} · ${esc(a.building)} épület</p></section>`:''}</section>
-    </div><p class="detail-illustration-note">Az alaprajz illusztráció. Bútorozatlan átadás. Bruttó vételár.</p></div>`;
+      <section class="detail-drawing" data-detail-panel="plan" id="detail-panel-plan" role="tabpanel" aria-labelledby="detail-tab-plan"><div class="detail-drawing-toolbar"><div class="detail-document-tabs" role="tablist" aria-label="Rajz kiválasztása"><button type="button" id="detail-document-plan-tab" role="tab" data-document-view="plan" aria-selected="true" aria-controls="detail-document-plan">Alaprajz</button>${floor?'<button type="button" id="detail-document-floor-tab" role="tab" data-document-view="floor" aria-selected="false" tabindex="-1" aria-controls="detail-document-floor">Szintrajz</button>':''}</div><div class="detail-drawing-save">${saveButton(a,true)}</div><p class="detail-unit-meta"><strong>${esc(a.apartmentType||'')}</strong> típus <span>·</span> <strong>${esc(a.building)}</strong> épület <span>·</span> ${floorMeta} <span>·</span> <strong>${esc(a.orientation||'Nincs adat')}</strong> tájolás</p></div>${detailPlan(a)}${floor?`<section class="detail-floor-plan" data-document-panel="floor" data-image-state="loading" aria-busy="true" id="detail-document-floor" role="tabpanel" aria-labelledby="detail-document-floor-tab" hidden><p class="detail-section-label">${esc(floorText(a))} · A, B, C épület</p><img class="detail-floor-image" data-inline-media src="${esc(floor.full)}" alt="${esc(floorText(a))} szintrajza" decoding="async">${inlineMediaFeedback()}<p class="detail-plan-note">${esc(a.id)} · ${esc(a.building)} épület</p></section>`:''}</section>
+    </div><p class="detail-illustration-note">Az alaprajz illusztráció. Bútorozatlan átadás. Bruttó vételár.</p><div class="toast detail-feedback" role="status" aria-live="polite"></div></div>`;
   const shell=dialog.querySelector('.detail-shell');
   if(monogram)shell.style.setProperty('--detail-monogram-image',`url("${monogram.replace(/"/g,'%22')}")`);
   if(logo)shell.style.setProperty('--detail-logo-image',`url("${logo.replace(/"/g,'%22')}")`);
-  openDialog(dialog);dialog.scrollTop=0;
+  openDialog(dialog);dialog.scrollTop=0;initializeInlineMedia(dialog);
   detailResize=new ResizeObserver(()=>requestAnimationFrame(fitDetailRooms));detailResize.observe(dialog.querySelector('.detail-room-panel'));
   requestAnimationFrame(fitDetailRooms);
 }
@@ -209,6 +229,9 @@ function fitDetailRooms() {
   panel?.style.setProperty('--room-slack','0px');
   const frame=panel?.querySelector(`[data-room-panel="${view}"] .room-page`);if(!frame?.clientHeight)return;
   const list=frame.querySelector('ol,ul');if(!list)return;
+  const rows=[...list.children];rows.forEach(row=>row.hidden=false);
+  let navigation=frame.parentElement.querySelector('.room-pagination');
+  if(navigation)navigation.hidden=true;
   const maxColumns=Math.max(1,Math.min(4,Math.floor(frame.clientWidth/125)));
   for(let columns=1;columns<=maxColumns;columns++){
     list.style.setProperty('--room-columns',String(columns));list.dataset.columns=String(columns);
@@ -216,11 +239,32 @@ function fitDetailRooms() {
       list.style.setProperty('--room-padding',`${padding}px`);list.style.setProperty('--room-circle',`${padding>=2?18:16}px`);
       // Use the actual fractional height; rounded clientHeight could clip the last row.
       if(list.getBoundingClientRect().height<=Math.floor(frame.getBoundingClientRect().height)-1){
+        frame.dataset.page='0';frame.dataset.pageSize=String(rows.length);
         panel.style.setProperty('--room-slack',`${Math.max(0,frame.getBoundingClientRect().height-list.getBoundingClientRect().height-1)}px`);
         return;
       }
     }
   }
+  // Very short landscape screens cannot fit every row without making the
+  // text unreadable. Paginate only after the existing compact layout is full.
+  if(!navigation){
+    navigation=document.createElement('nav');navigation.className='room-pagination';navigation.setAttribute('aria-label','További helyiségek');
+    navigation.innerHTML='<button type="button" data-room-page="-1" aria-label="Előző helyiségek">←</button><span role="status" aria-live="polite"></span><button type="button" data-room-page="1" aria-label="Következő helyiségek">→</button>';
+    frame.after(navigation);
+  }
+  navigation.hidden=false;
+  let pageSize=1;
+  for(let count=1;count<=rows.length;count++){
+    rows.forEach((row,index)=>row.hidden=index>=count);
+    if(list.getBoundingClientRect().height>Math.floor(frame.getBoundingClientRect().height)-1)break;
+    pageSize=count;
+  }
+  const pages=Math.ceil(rows.length/pageSize),page=Math.max(0,Math.min(Number(frame.dataset.page)||0,pages-1));
+  frame.dataset.page=String(page);frame.dataset.pageSize=String(pageSize);
+  rows.forEach((row,index)=>row.hidden=index<page*pageSize||index>=(page+1)*pageSize);
+  navigation.querySelector('[data-room-page="-1"]').disabled=page===0;
+  navigation.querySelector('[data-room-page="1"]').disabled=page===pages-1;
+  navigation.querySelector('span').textContent=`${page+1} / ${pages}`;
 }
 function paintPlanRoom(value) {
   const dialog=$('detail-dialog'),number=value==null?null:String(value);
@@ -228,6 +272,8 @@ function paintPlanRoom(value) {
 }
 function selectPlanRoom(value,origin) {
   selectedPlanRoom=String(value);selectDetailRoomView('type');paintPlanRoom(selectedPlanRoom);
+  const frame=$('detail-dialog').querySelector('[data-room-panel="type"] .room-page'),rows=frame?.querySelectorAll('li'),row=origin?.classList.contains('room-marker')?[...rows||[]].findIndex(item=>item.querySelector(`[data-plan-room="${selectedPlanRoom}"]`)): -1;
+  if(frame&&row>=0&&Number(frame.dataset.pageSize)>0){frame.dataset.page=String(Math.floor(row/Number(frame.dataset.pageSize)));}
   if(origin?.classList.contains('room-marker'))selectDetailPanel('rooms',true);else {selectDetailDocument('plan');selectDetailPanel('plan',true);}
 }
 function openMedia(id,kind) {
@@ -284,6 +330,14 @@ function zoomMedia(action) {
   updateMediaTransform();
 }
 async function downloadDatasheet(id,trigger) {
+  function waitForExportData(promise,exportSignal) {
+    return new Promise((resolve,reject)=>{
+      const abort=()=>{const error=new Error('PDF export cancelled');error.name='AbortError';reject(error);};
+      if(exportSignal.aborted){abort();return;}
+      exportSignal.addEventListener('abort',abort,{once:true});
+      Promise.resolve(promise).then(value=>{exportSignal.removeEventListener('abort',abort);resolve(value);},error=>{exportSignal.removeEventListener('abort',abort);reject(error);});
+    });
+  }
   if(signal.aborted)return {id,status:'cancelled'};
   const dialog=$('detail-dialog');
   const markBusy=job=>{
@@ -305,7 +359,7 @@ async function downloadDatasheet(id,trigger) {
   toast('A lakás adatlapja készül…');
   job.promise=(async()=>{
   try{
-  if(!data)await load();
+  if(!data)await waitForExportData(load(),controller.signal);
   if(stale())return {id,status:'cancelled'};
   const a=byId(id);if(!a)throw new Error('A kiválasztott lakás nem található.');
   // A list-row download never initializes or opens the detail layout. Its theme
@@ -315,6 +369,7 @@ async function downloadDatasheet(id,trigger) {
   for(const [key,property,fallback] of [['top','--detail-top','#fdfbfb'],['bottom','--detail-bottom','#e4e9ec'],['ink','--detail-ink','#242824'],['muted','--detail-muted','#687074'],['watermarkTop','--detail-watermark-top','#f2f0f1'],['watermarkBottom','--detail-watermark-bottom','#d9dfe2'],['accent','--accent','#a38c69']])colors[key]=computed.getPropertyValue(property).trim()||fallback;
   const statusProperty={available:'--available',sold:'--sold',under_negotiation:'--negotiating'}[a.status]||'--detail-muted';
   colors.status=job.fromDialog?getComputedStyle(dialog.querySelector('.status-pill')).color:computed.getPropertyValue(statusProperty).trim()||({available:'#4f7959',sold:'#b4564f',under_negotiation:'#b28a2f'}[a.status]||colors.muted);
+  if(!job.fromDialog&&a.status==='under_negotiation')colors.status=`color-mix(in srgb, ${colors.status} 60%, ${colors.ink})`;
   const layout=data.roomLayouts?.[a.apartmentType],markers=validPlanMarkers(layout),rooms=Array.isArray(a.roomList)?a.roomList:[];
   const mapped=markers.length&&rooms.length===markers.length&&markers.every(marker=>rooms.some(room=>room.planNumber===marker.number));
   const unitRows=rooms.map(room=>({name:roomLabel(room.name),area:area(room.area)}));
@@ -437,6 +492,14 @@ root.addEventListener('click',event=>{
   if(t.hasAttribute('data-detail-tab'))selectDetailPanel(t.dataset.detailTab);
   if(t.hasAttribute('data-document-view'))selectDetailDocument(t.dataset.documentView);
   if(t.hasAttribute('data-room-view'))selectDetailRoomView(t.dataset.roomView);
+  if(t.hasAttribute('data-room-page')){
+    const panel=t.closest('[data-room-panel]'),frame=panel?.querySelector('.room-page');
+    if(frame){frame.dataset.page=String((Number(frame.dataset.page)||0)+Number(t.dataset.roomPage));fitDetailRooms();if(t.disabled)panel.querySelector('.room-pagination button:not(:disabled)')?.focus({preventScroll:true});}
+  }
+  if(t.hasAttribute('data-inline-media-retry')){
+    const panel=t.closest('[data-document-panel]'),image=panel?.querySelector('img[data-inline-media]');
+    if(image){const src=image.getAttribute('src');setInlineMediaState(image,'loading');image.removeAttribute('src');image.setAttribute('src',src);$('detail-dialog').querySelector(`[data-document-view="${panel.dataset.documentPanel}"]`)?.focus({preventScroll:true});}
+  }
   if(t.hasAttribute('data-plan-room'))selectPlanRoom(t.dataset.planRoom,t);
   if(t.hasAttribute('data-inquiry-placeholder')){
     const dialog=$('detail-dialog'),note=dialog.querySelector('.inquiry-pending');
@@ -482,8 +545,10 @@ root.addEventListener('keydown',event=>{
 },events);
 root.addEventListener('error',event=>{
   const image=event.target;
+  if(image.matches?.('img[data-inline-media]'))setInlineMediaState(image,'error');
   if(image.matches?.('img[data-thumbnail]')){image.hidden=true;const fallback=image.parentElement.querySelector('.preview-unavailable');if(fallback)fallback.hidden=false;}
 },{...events,capture:true});
+root.addEventListener('load',event=>{if(event.target.matches?.('img[data-inline-media]'))setInlineMediaState(event.target,'ready');},{...events,capture:true});
 for(const dialog of dialogs) {
   dialog.addEventListener('cancel',e=>{e.preventDefault();if(dialog.id==='detail-dialog'&&closeShare())return;closeDialog(dialog);},events);
   dialog.addEventListener('click',e=>{if(e.target===dialog){const r=dialog.getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)closeDialog(dialog);}},events);

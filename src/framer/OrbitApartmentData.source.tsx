@@ -323,7 +323,12 @@ function useOrbitPreviewImage(url: string | null | undefined, enabled = true): s
     return requested && (ready === requested || orbitPreviewImageReady.has(requested)) ? requested : null
 }
 
-const orbitApartmentRequests = new Map<string, Promise<OrbitApartmentDataset>>()
+// The cache shares work between instances, but a stalled network or response-body
+// read must not strand every consumer. Retry owns a fresh entry; old completion
+// can neither evict nor overwrite that entry.
+const ORBIT_APARTMENT_REQUEST_TIMEOUT = 15000
+interface OrbitApartmentRequest { promise: Promise<OrbitApartmentDataset>; cancel: () => void; pending: boolean }
+const orbitApartmentRequests = new Map<string, OrbitApartmentRequest>()
 function orbitApartmentRequestUrl(value: string): string | null {
     if (!value.trim()) return null
     try {
@@ -333,16 +338,33 @@ function orbitApartmentRequestUrl(value: string): string | null {
 }
 function requestOrbitApartmentDataset(url: string): Promise<OrbitApartmentDataset> {
     const previous = orbitApartmentRequests.get(url)
-    if (previous) return previous
-    const request = fetch(url, { mode: "cors", credentials: "omit", headers: { Accept: "application/json" } }).then(response => {
+    if (previous) return previous.promise
+    const controller = new AbortController()
+    let timer: ReturnType<typeof setTimeout>, cancel!: () => void
+    const cancellation = new Promise<never>((_, reject) => {
+        cancel = () => { controller.abort(); reject(new Error("Apartment data request was cancelled. Please retry.")) }
+        timer = setTimeout(() => {
+            controller.abort()
+            reject(new Error("Apartment data request timed out. Please retry."))
+        }, ORBIT_APARTMENT_REQUEST_TIMEOUT)
+    })
+    const download = fetch(url, { mode: "cors", credentials: "omit", headers: { Accept: "application/json" }, signal: controller.signal }).then(response => {
         if (!response.ok) throw new Error(`Apartment data could not be loaded (${response.status}).`)
         return response.json()
-    }).then(parseOrbitApartmentDataset).catch(error => {
-        if (orbitApartmentRequests.get(url) === request) orbitApartmentRequests.delete(url)
+    }).then(parseOrbitApartmentDataset)
+    const entry: OrbitApartmentRequest = { promise: null as unknown as Promise<OrbitApartmentDataset>, cancel, pending: true }
+    entry.promise = Promise.race([download, cancellation]).catch(error => {
+        if (orbitApartmentRequests.get(url) === entry) orbitApartmentRequests.delete(url)
         throw error
-    })
-    orbitApartmentRequests.set(url, request)
-    return request
+    }).finally(() => { entry.pending = false; clearTimeout(timer) })
+    orbitApartmentRequests.set(url, entry)
+    return entry.promise
+}
+function invalidateOrbitApartmentDataset(url: string): void {
+    const entry = orbitApartmentRequests.get(url)
+    if (!entry) return
+    orbitApartmentRequests.delete(url)
+    if (entry.pending) entry.cancel()
 }
 function useOrbitApartments(url: string, enabled: boolean): { dataset: OrbitApartmentDataset | null; status: "idle" | "loading" | "ready" | "error"; error: string; retry: () => void } {
     const [attempt, setAttempt] = React.useState(0)
@@ -358,8 +380,23 @@ function useOrbitApartments(url: string, enabled: boolean): { dataset: OrbitApar
         })
         return () => { active = false }
     }, [resolved, url, enabled, attempt])
-    const retry = React.useCallback(() => { setAttempt(value => value + 1) }, [])
+    const retry = React.useCallback(() => { if (resolved) invalidateOrbitApartmentDataset(resolved); setAttempt(value => value + 1) }, [resolved])
     if (!enabled) return { dataset: state.url === resolved ? state.dataset : null, status: "idle", error: "", retry }
     if (state.url !== (resolved || url.trim())) return { dataset: null, status: "loading", error: "", retry }
     return { dataset: state.dataset, status: state.status, error: state.error, retry }
+}
+
+// A narrow corridor lets the mouse reach the displayed controls without making
+// unrelated empty façade space retain the last apartment. Coordinates are screen
+// coordinates, so this also respects a scaled Framer preview.
+function orbitDataPointerInBridge(origin: { x: number; y: number }, point: { x: number; y: number }, bounds: { left: number; right: number; top: number; bottom: number }): boolean {
+    const padding = 10
+    if (point.x >= bounds.left - padding && point.x <= bounds.right + padding && point.y >= bounds.top - padding && point.y <= bounds.bottom + padding) return true
+    const corners = [{ x: bounds.left - padding, y: bounds.top - padding }, { x: bounds.right + padding, y: bounds.top - padding }, { x: bounds.right + padding, y: bounds.bottom + padding }, { x: bounds.left - padding, y: bounds.bottom + padding }]
+    const cross = (a: { x: number; y: number }, b: { x: number; y: number }, c: { x: number; y: number }) => (b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x)
+    return corners.some((a, index) => {
+        const b = corners[(index + 1) % corners.length]
+        const signs = [cross(origin, a, point), cross(a, b, point), cross(b, origin, point)]
+        return Math.abs(cross(origin, a, b)) > .01 && (signs.every(value => value >= -1) || signs.every(value => value <= 1))
+    })
 }

@@ -1,0 +1,94 @@
+import assert from 'node:assert/strict';
+import {readFile,mkdir,writeFile} from 'node:fs/promises';
+import {createRequire} from 'node:module';
+import path from 'node:path';
+import {fileURLToPath} from 'node:url';
+
+const require=createRequire(import.meta.url),{chromium}=require(process.env.PLAYWRIGHT_MODULE_PATH||'playwright');
+const root=new URL('../',import.meta.url),out=new URL('tmp/card-audit-fixes/',root);
+const mediaRoot=process.env.APARTMENT_MEDIA_ROOT||fileURLToPath(new URL('assets/apartment-list/',root));
+const [runtime,styles,shell,data]=await Promise.all(['src/shared/apartment-card/card-runtime.js','src/shared/apartment-card/card.css','src/shared/apartment-card/card-shell.html','data/apartment-details.json'].map(file=>readFile(new URL(file,root),'utf8')));
+const browser=await chromium.launch({headless:true,channel:process.env.PLAYWRIGHT_CHANNEL||'chrome'});
+const checks=[],errors=[];await mkdir(out,{recursive:true});
+const check=(message,value)=>{assert.ok(value,message);checks.push(message);};
+try {
+  const page=await browser.newPage({viewport:{width:1440,height:900}});
+  let failedAsset='';
+  page.on('pageerror',error=>errors.push(error.message));
+  await page.route('http://card-regression.test/**',async route=>{
+    const u=new URL(route.request().url());
+    if(u.pathname.startsWith('/assets/')){
+      if(failedAsset&&u.pathname.includes(failedAsset))return route.fulfill({status:404});
+      const file=path.join(mediaRoot,decodeURIComponent(u.pathname.slice(8)));
+      try{return route.fulfill({body:await readFile(file),contentType:({'.png':'image/png','.svg':'image/svg+xml','.webp':'image/webp','.woff2':'font/woff2'})[path.extname(file)]||'application/octet-stream'});}
+      catch{return route.fulfill({status:404});}
+    }
+    return route.fulfill({contentType:'text/html',body:'<!doctype html><meta name="viewport" content="width=device-width,initial-scale=1"><button id="opener">Open</button><div id="card"></div>'});
+  });
+  await page.goto('http://card-regression.test/');await page.addScriptTag({content:runtime});
+  await page.evaluate(({runtimeStyles,shell,data})=>{
+    const root=document.querySelector('#card').attachShadow({mode:'open'});root.innerHTML='<style>'+runtimeStyles+'</style>'+shell;
+    window.ctrl=mountOrbitApartmentCardRuntime(root,{dataset:JSON.parse(data),pageUrl:'http://card-regression.test/lista'});window.card=root;
+    window.createAdmiralApartmentPdf=async()=>{throw new Error('Injected PDF failure');};
+  },{runtimeStyles:styles,shell,data});
+  const card=page.locator('#card');
+  await page.waitForTimeout(150);
+  for(const viewport of [{width:1440,height:900},{width:390,height:844},{width:320,height:568},{width:844,height:390},{width:667,height:375},{width:568,height:320}]){
+    await page.setViewportSize(viewport);
+    for(const id of ['A001','C303']){
+      await page.evaluate(id=>ctrl.open(id),id);await page.waitForTimeout(80);
+      await card.locator('[data-detail-tab="rooms"]').evaluate(button=>button.click());await page.waitForTimeout(60);
+      for(const view of ['type','unit']){
+        const tab=card.locator(`button[data-room-view="${view}"]`);if(!await tab.count())continue;
+        await tab.click();await page.waitForTimeout(40);
+        const seen=new Set();let pages=0;
+        do {
+          const state=await page.evaluate(view=>{
+            const panel=card.querySelector(`[data-room-panel="${view}"]`),frame=panel.querySelector('.room-page'),dialog=card.querySelector('#detail-dialog'),close=dialog.querySelector('[data-close]');
+            const list=frame.querySelector('ol,ul'),rows=[...list.children],rect=frame.getBoundingClientRect(),bounds=dialog.getBoundingClientRect(),closeBounds=close.getBoundingClientRect();
+            return {rows:rows.filter(row=>!row.hidden).map(row=>{const b=row.getBoundingClientRect();return {index:rows.indexOf(row),top:b.top,bottom:b.bottom,left:b.left,right:b.right};}),count:rows.length,frame:rect.toJSON(),bounds:bounds.toJSON(),close:closeBounds.toJSON(),scroll:dialog.scrollHeight,client:dialog.clientHeight,more:!!panel.querySelector('.room-pagination:not([hidden]) [data-room-page="1"]:not(:disabled)')};
+          },view);
+          check(`${id} ${view} ${viewport.width}×${viewport.height} room frame has space`,state.frame.height>10);
+          check(`${id} ${view} ${viewport.width}×${viewport.height} all shown rooms fit`,state.rows.length>0&&state.rows.every(row=>row.top>=state.frame.top-.6&&row.bottom<=state.frame.bottom+.6&&row.left>=state.frame.left-.6&&row.right<=state.frame.right+.6));
+          check(`${id} ${view} ${viewport.width}×${viewport.height} popup stays inside screen`,state.bounds.left>0&&state.bounds.top>0&&state.bounds.right<viewport.width&&state.bounds.bottom<viewport.height&&state.close.top>=state.bounds.top&&state.close.bottom<=state.bounds.bottom);
+          check(`${id} ${view} ${viewport.width}×${viewport.height} popup needs no scrolling`,state.scroll<=state.client+1);
+          for(const row of state.rows)seen.add(row.index);
+          if(!state.more){check(`${id} ${view} ${viewport.width}×${viewport.height} every room is reachable`,seen.size===state.count);break;}
+          await card.locator(`[data-room-panel="${view}"] [data-room-page="1"]`).click();await page.waitForTimeout(20);
+        }while(++pages<30);
+        check(`${id} ${view} pagination terminates`,pages<30);
+      }
+      await page.screenshot({path:fileURLToPath(new URL(`${id}-${viewport.width}x${viewport.height}.png`,out))});
+      await page.evaluate(()=>ctrl.close());
+    }
+  }
+  await page.setViewportSize({width:1440,height:900});failedAsset='/floorplans/types/B/original.png';
+  await page.evaluate(()=>ctrl.open('A001'));
+  await card.locator('.detail-plan-image').evaluate(image=>image.src+='?audit-error=1');
+  await card.locator('#detail-document-plan[data-image-state="error"]').waitFor();
+  check('Failed plan has visible retry feedback',await card.locator('#detail-document-plan [data-inline-media-retry]').isVisible());
+  check('Failed plan hides all numeric markers',!await card.locator('.room-marker').first().isVisible());
+  failedAsset='';await card.locator('#detail-document-plan [data-inline-media-retry]').click();
+  await card.locator('#detail-document-plan[data-image-state="ready"]').waitFor();
+  check('Plan retry loads the image and restores room numbers',await card.locator('.room-marker').first().isVisible());
+  const floorPath=await card.locator('.detail-floor-image').getAttribute('src');
+  failedAsset=new URL(floorPath).pathname;
+  await card.locator('.detail-floor-image').evaluate(image=>image.src+='?audit-error=1');
+  await card.locator('[data-document-view="floor"]').click();
+  await card.locator('#detail-document-floor[data-image-state="error"]').waitFor();
+  check('Failed floor layout has visible retry feedback',await card.locator('#detail-document-floor [data-inline-media-retry]').isVisible());
+  failedAsset='';await card.locator('#detail-document-floor [data-inline-media-retry]').click();
+  await card.locator('#detail-document-floor[data-image-state="ready"]').waitFor();
+  check('Floor layout retry succeeds',await card.locator('.detail-floor-image').evaluate(image=>image.naturalWidth>0));
+  await card.locator('[data-download]').click();
+  await page.waitForFunction(()=>card.querySelector('.detail-feedback')?.textContent.includes('Nem sikerült'));
+  check('Open-card PDF error is inside the native modal',await card.locator('#detail-dialog .detail-feedback.visible').isVisible());
+  check('External feedback is hidden while card is open',!await card.locator('#toast').evaluate(element=>element.classList.contains('visible')));
+  await page.screenshot({path:fileURLToPath(new URL('pdf-error-in-modal.png',out))});
+  await page.evaluate(()=>ctrl.close());
+  await page.evaluate(()=>ctrl.download('A001'));
+  check('Closed-card row export still uses external feedback',await card.locator('#toast.visible').isVisible());
+  check('No uncaught browser errors',errors.length===0);
+  await writeFile(new URL('results.json',out),JSON.stringify({checks,errors},null,2));
+  console.log(`${checks.length} shared-card audit browser checks passed`);
+} finally {await browser.close();}

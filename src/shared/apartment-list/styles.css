@@ -173,7 +173,8 @@ input[aria-invalid="true"] { border-color: var(--negotiating); }
 .status-pill { display: inline-flex; align-items: center; gap: 7px; color: var(--muted); font-size: 12px; font-weight: 400; line-height: 1.5; white-space: nowrap; }
 .status-pill::before { content: ''; width: 5px; height: 5px; flex-shrink: 0; border-radius: 50%; background: currentColor; }
 .status-available { color: var(--available); }
-.status-under_negotiation { color: var(--negotiating); }
+.status-under_negotiation { color: color-mix(in srgb, var(--negotiating) 72%, var(--ink)); }
+.status-under_negotiation::before { background: var(--negotiating); }
 .status-sold { color: var(--sold); }
 .status-unknown { color: var(--muted); }
 .cell-actions { text-align: right; }
@@ -407,7 +408,6 @@ input[aria-invalid="true"] { border-color: var(--negotiating); }
   .outdoor-area { display: flex; flex-direction: column; align-items: flex-start; align-self: start; gap: 6px; grid-row: 2; }
   .cell-balcony { grid-column: 5 / 9; }
   .cell-garden { grid-column: 9 / -1; }
-  .cell-outdoor .empty-garden { display: flex; }
   .outdoor-label { min-width: 0; font-size: 12px; font-weight: 400; line-height: 1.4; }
   .cell-balcony .outdoor-label { display: block; }
   .outdoor-value { font-size: 21px; font-weight: 500; line-height: 1.3; }

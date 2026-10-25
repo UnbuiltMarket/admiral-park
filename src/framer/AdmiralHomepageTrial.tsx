@@ -710,7 +710,12 @@ function useOrbitPreviewImage(url: string | null | undefined, enabled = true): s
     return requested && (ready === requested || orbitPreviewImageReady.has(requested)) ? requested : null
 }
 
-const orbitApartmentRequests = new Map<string, Promise<OrbitApartmentDataset>>()
+// The cache shares work between instances, but a stalled network or response-body
+// read must not strand every consumer. Retry owns a fresh entry; old completion
+// can neither evict nor overwrite that entry.
+const ORBIT_APARTMENT_REQUEST_TIMEOUT = 15000
+interface OrbitApartmentRequest { promise: Promise<OrbitApartmentDataset>; cancel: () => void; pending: boolean }
+const orbitApartmentRequests = new Map<string, OrbitApartmentRequest>()
 function orbitApartmentRequestUrl(value: string): string | null {
     if (!value.trim()) return null
     try {
@@ -720,16 +725,33 @@ function orbitApartmentRequestUrl(value: string): string | null {
 }
 function requestOrbitApartmentDataset(url: string): Promise<OrbitApartmentDataset> {
     const previous = orbitApartmentRequests.get(url)
-    if (previous) return previous
-    const request = fetch(url, { mode: "cors", credentials: "omit", headers: { Accept: "application/json" } }).then(response => {
+    if (previous) return previous.promise
+    const controller = new AbortController()
+    let timer: ReturnType<typeof setTimeout>, cancel!: () => void
+    const cancellation = new Promise<never>((_, reject) => {
+        cancel = () => { controller.abort(); reject(new Error("Apartment data request was cancelled. Please retry.")) }
+        timer = setTimeout(() => {
+            controller.abort()
+            reject(new Error("Apartment data request timed out. Please retry."))
+        }, ORBIT_APARTMENT_REQUEST_TIMEOUT)
+    })
+    const download = fetch(url, { mode: "cors", credentials: "omit", headers: { Accept: "application/json" }, signal: controller.signal }).then(response => {
         if (!response.ok) throw new Error(`Apartment data could not be loaded (${response.status}).`)
         return response.json()
-    }).then(parseOrbitApartmentDataset).catch(error => {
-        if (orbitApartmentRequests.get(url) === request) orbitApartmentRequests.delete(url)
+    }).then(parseOrbitApartmentDataset)
+    const entry: OrbitApartmentRequest = { promise: null as unknown as Promise<OrbitApartmentDataset>, cancel, pending: true }
+    entry.promise = Promise.race([download, cancellation]).catch(error => {
+        if (orbitApartmentRequests.get(url) === entry) orbitApartmentRequests.delete(url)
         throw error
-    })
-    orbitApartmentRequests.set(url, request)
-    return request
+    }).finally(() => { entry.pending = false; clearTimeout(timer) })
+    orbitApartmentRequests.set(url, entry)
+    return entry.promise
+}
+function invalidateOrbitApartmentDataset(url: string): void {
+    const entry = orbitApartmentRequests.get(url)
+    if (!entry) return
+    orbitApartmentRequests.delete(url)
+    if (entry.pending) entry.cancel()
 }
 function useOrbitApartments(url: string, enabled: boolean): { dataset: OrbitApartmentDataset | null; status: "idle" | "loading" | "ready" | "error"; error: string; retry: () => void } {
     const [attempt, setAttempt] = React.useState(0)
@@ -745,10 +767,25 @@ function useOrbitApartments(url: string, enabled: boolean): { dataset: OrbitApar
         })
         return () => { active = false }
     }, [resolved, url, enabled, attempt])
-    const retry = React.useCallback(() => { setAttempt(value => value + 1) }, [])
+    const retry = React.useCallback(() => { if (resolved) invalidateOrbitApartmentDataset(resolved); setAttempt(value => value + 1) }, [resolved])
     if (!enabled) return { dataset: state.url === resolved ? state.dataset : null, status: "idle", error: "", retry }
     if (state.url !== (resolved || url.trim())) return { dataset: null, status: "loading", error: "", retry }
     return { dataset: state.dataset, status: state.status, error: state.error, retry }
+}
+
+// A narrow corridor lets the mouse reach the displayed controls without making
+// unrelated empty façade space retain the last apartment. Coordinates are screen
+// coordinates, so this also respects a scaled Framer preview.
+function orbitDataPointerInBridge(origin: { x: number; y: number }, point: { x: number; y: number }, bounds: { left: number; right: number; top: number; bottom: number }): boolean {
+    const padding = 10
+    if (point.x >= bounds.left - padding && point.x <= bounds.right + padding && point.y >= bounds.top - padding && point.y <= bounds.bottom + padding) return true
+    const corners = [{ x: bounds.left - padding, y: bounds.top - padding }, { x: bounds.right + padding, y: bounds.top - padding }, { x: bounds.right + padding, y: bounds.bottom + padding }, { x: bounds.left - padding, y: bounds.bottom + padding }]
+    const cross = (a: { x: number; y: number }, b: { x: number; y: number }, c: { x: number; y: number }) => (b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x)
+    return corners.some((a, index) => {
+        const b = corners[(index + 1) % corners.length]
+        const signs = [cross(origin, a, point), cross(a, b, point), cross(b, origin, point)]
+        return Math.abs(cross(origin, a, b)) > .01 && (signs.every(value => value >= -1) || signs.every(value => value <= 1))
+    })
 }
 
 type OrbitFilterStatus = "available" | "under_negotiation" | "sold";
@@ -2056,7 +2093,7 @@ function OrbitFullscreenDetails({ apartment: currentApartment, dataset = null, a
     }
     return <div ref={rootRef} data-orbit-fullscreen-details="" data-compact={compact ? "true" : "false"} data-apartment-id={currentApartment?.id || ""}>
         <style>{orbitFullscreenStyles}</style>
-        {logo && <span className="orbit-fullscreen-brand" role="img" aria-label="Admiral Park" style={{ "--orbit-fullscreen-logo": `url("${logo.replace(/["\\]/g, "\\// @ORBIT_FULLSCREEN_INSERT")}")` } as React.CSSProperties} />}
+        {logo && <span className="orbit-fullscreen-brand" role="img" aria-label="Admiral Park" style={{ "--orbit-fullscreen-logo": `url("${logo.replace(/["\\]/g, "\\$&")}")` } as React.CSSProperties} />}
         <button type="button" data-orbit-ignore="" data-orbit-fullscreen-close="" className="orbit-fullscreen-close" aria-label={hu ? "Teljes képernyő bezárása" : "Close fullscreen"} onClick={onClose}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true"><path d="m5 5 14 14M19 5 5 19" /></svg></button>
         <div className="orbit-fullscreen-nav" data-orbit-ignore=""><button type="button" data-orbit-fullscreen-step="previous" disabled={moving} aria-label={hu ? "Előző nézet" : "Previous view"} onClick={onPrevious}>←</button><button type="button" data-orbit-fullscreen-step="next" disabled={moving} aria-label={hu ? "Következő nézet" : "Next view"} onClick={onNext}>→</button></div>
         <div ref={barRef} className="orbit-fullscreen-bar" data-orbit-ignore="" data-moving={moving ? "true" : "false"} aria-hidden={moving} {...(moving ? { inert: "" as any } : {})} aria-live="polite">
@@ -2729,6 +2766,39 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
     React.useEffect(() => {
         const root = rootRef.current
         if (!root || !jsonDetails) return
+        let pointer: { x: number; y: number; target: EventTarget | null } | null = null
+        let facadeOrigin: { x: number; y: number } | null = null
+        let bridgeClearTimer: ReturnType<typeof setTimeout> | null = null
+        const dataSelector = "[data-apartment-field='floorplan'],[data-orbit-studio-details],.orbit-studio-facts"
+        const cancelBridgeClear = () => { if (bridgeClearTimer !== null) clearTimeout(bridgeClearTimer); bridgeClearTimer = null }
+        const pointerInsideData = () => !!pointer && Array.from(root!.querySelectorAll<HTMLElement>(dataSelector)).some(panel => {
+            const bounds = panel.getBoundingClientRect()
+            return bounds.width > 0 && bounds.height > 0 && pointer!.x >= bounds.left && pointer!.x <= bounds.right && pointer!.y >= bounds.top && pointer!.y <= bounds.bottom
+        })
+        const trackPointer = (event: PointerEvent) => {
+            if (event.pointerType === "touch") return
+            // The picker reports only ID changes. Keep the last successful
+            // pointer sample too, rather than bridging from the first pixel at
+            // which this apartment was entered.
+            if (pointer && root!.dataset.orbitMaskHovered) facadeOrigin = { x: pointer.x, y: pointer.y }
+            pointer = { x: event.clientX, y: event.clientY, target: event.target }
+        }
+        const dataHasFocus = () => {
+            const active = document.activeElement
+            return active instanceof Element && root!.contains(active) && !!active.closest(dataSelector)
+        }
+        const pointerCanReachData = () => {
+            if (!pointer || !facadeOrigin || !(pointer.target instanceof Element) || !root!.contains(pointer.target)) return false
+            // Navigation and filters are separate interactions, never bridges.
+            const control = pointer.target.closest("a,button,input,select,textarea,[role='button']")
+            if (control && !control.closest(dataSelector)) return false
+            return Array.from(root!.querySelectorAll<HTMLElement>(dataSelector)).some(panel => {
+                const bounds = panel.getBoundingClientRect()
+                // Record transitions briefly make the panel inert while its
+                // drawing swaps. Its parked bounds still define the approach.
+                return bounds.width > 0 && bounds.height > 0 && orbitDataPointerInBridge(facadeOrigin!, pointer!, bounds)
+            })
+        }
         function selectFromMask(event: Event) {
             if (root!.dataset.homepageStage !== "orbit" || root!.dataset.orbitState !== "checkpoint") return
             const detail = (event as CustomEvent<unknown>).detail
@@ -2736,15 +2806,44 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
             const value = typeof detail === "string" ? detail : values?.id ?? values?.apartmentId ?? values?.number
             if (detail === null || detail === "" || values && (values.id === null || values.apartmentId === null || values.number === null)) {
                 setInteractionApartmentId(null)
-                if (!mobilePresentationRef.current) setSelectedApartmentId(null)
+                cancelBridgeClear()
+                if (!mobilePresentationRef.current && !dataHasFocus()) {
+                    if (!pointerCanReachData()) { facadeOrigin = null; setSelectedApartmentId(null) }
+                    // The corridor is an approach, not a parked selection.
+                    // Stopping in empty space clears it; continuing the pointer
+                    // journey refreshes this brief grace period on each frame.
+                    else if (!pointerInsideData()) bridgeClearTimer = setTimeout(() => {
+                        bridgeClearTimer = null
+                        if (!pointerInsideData() && !dataHasFocus()) { facadeOrigin = null; setSelectedApartmentId(null) }
+                    }, 120)
+                }
                 return
             }
             if (typeof value === "string" && filterMatches.has(value) && apartmentData.dataset?.apartments.some(item => item.id === value)) {
+                cancelBridgeClear()
+                if (pointer) facadeOrigin = { x: pointer.x, y: pointer.y }
                 setApartmentInteracted(true); setInteractionApartmentId(value); setSelectedApartmentId(value)
             }
         }
+        const leave = () => { cancelBridgeClear(); pointer = null; facadeOrigin = null }
+        const blurData = (event: FocusEvent) => {
+            // During focusout, activeElement can briefly be BODY. Use the next
+            // target so Tab between orbitdata controls never disables them.
+            const next = event.relatedTarget
+            const keepsDataFocus = next instanceof Element && root!.contains(next) && !!next.closest(dataSelector)
+            if (!mobilePresentationRef.current && !keepsDataFocus && !pointerCanReachData()) setSelectedApartmentId(null)
+        }
+        window.addEventListener("pointermove", trackPointer, { passive: true, capture: true })
+        root.addEventListener("pointerleave", leave)
+        root.addEventListener("focusout", blurData)
         root.addEventListener("admiral:apartment-hover", selectFromMask)
-        return () => root.removeEventListener("admiral:apartment-hover", selectFromMask)
+        return () => {
+            cancelBridgeClear()
+            window.removeEventListener("pointermove", trackPointer, true)
+            root.removeEventListener("pointerleave", leave)
+            root.removeEventListener("focusout", blurData)
+            root.removeEventListener("admiral:apartment-hover", selectFromMask)
+        }
     }, [jsonDetails, apartmentData.dataset, filterMatches])
 
     React.useEffect(() => {
@@ -2781,7 +2880,10 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
         clearApartmentDetails()
         // Mouse orbitdata follows the facade. A phone tap remains selected so
         // its explicit Adatlap action is still reachable after lifting a finger.
-        const leave = () => { if (!mobilePresentation) clearApartmentDetails() }
+        const leave = () => {
+            const focusedData = document.activeElement instanceof Element && root.contains(document.activeElement) && !!document.activeElement.closest("[data-apartment-field='floorplan'],[data-orbit-studio-details],.orbit-studio-facts")
+            if (!mobilePresentation && !focusedData) clearApartmentDetails()
+        }
         root.addEventListener("pointerleave", leave)
         return () => root.removeEventListener("pointerleave", leave)
     }, [detailsMode, staticRenderer, clearApartmentDetails, mobilePresentation])

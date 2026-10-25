@@ -97,7 +97,7 @@ try{
       check('List fits viewport '+viewport.width,geometry.pageWidth<=viewport.width+1);
       if(viewport.width===1440)check('Desktop type heading and row align',Math.abs(geometry.heads[1].x-geometry.rows[1].x)<=1&&Math.abs(geometry.heads[1].width-geometry.rows[1].width)<=1);
       check('Type label is available '+viewport.width,geometry.typeLabel==='Típus');
-      if(viewport.width<1300)check('Type keeps clear of the floorplan '+viewport.width,geometry.type.x>=geometry.plan.right-1);
+      if(viewport.width<1300&&geometry.type.width>0)check('Type keeps clear of the floorplan '+viewport.width,geometry.type.x>=geometry.plan.right-1);
       await f.page.screenshot({path:fileURLToPath(new URL(`${preview?'preview':'framer'}-list-${viewport.width}.png`,out)),fullPage:false});
     }
     await f.page.setViewportSize({width:390,height:844});await f.list.locator('#mobile-filters').click();await search.fill('a001');check('Mobile search remains operable inside the expanded filter header',await f.list.locator('[data-unit]').count()===1);

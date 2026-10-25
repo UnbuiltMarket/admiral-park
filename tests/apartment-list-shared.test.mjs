@@ -44,13 +44,27 @@ test('favourite messages update the list when browser storage is unavailable',as
  const visit=node=>{if(ts.isFunctionDeclaration(node)&&node.name?.text==='refreshFavorites')refresh=node.getText(parsed);else ts.forEachChild(node,visit);};
  visit(parsed);assert.ok(refresh);
  const context=vm.createContext({localStorage:{getItem:()=>{throw Error('Storage denied');}}});
- vm.runInContext(`let favorites=new Set(),data={apartments:[{id:'A001'},{id:'A002'}]},renders=0;const byId=id=>data.apartments.find(a=>a.id===id);const render=()=>renders++;${refresh};globalThis.run=refreshFavorites;globalThis.state=()=>({ids:[...favorites],renders});`,context);
+ vm.runInContext(`let favorites=new Set(),apartmentsReady=true,data={apartments:[{id:'A001'},{id:'A002'}]},renders=0;const byId=id=>data.apartments.find(a=>a.id===id);const render=()=>renders++;${refresh};globalThis.run=refreshFavorites;globalThis.state=()=>({ids:[...favorites],renders});`,context);
  context.run({detail:{ids:['A001','missing',1]}});
  assert.equal(JSON.stringify(context.state()),JSON.stringify({ids:['A001'],renders:1}));
  context.run({detail:{ids:['A001']}});
  assert.equal(context.state().renders,1,'Unchanged favourites preserve the focused list control.');
  context.run({detail:{ids:[]}});
  assert.equal(JSON.stringify(context.state()),JSON.stringify({ids:[],renders:2}));
+});
+
+test('incoming favourites remain intact until apartment records are available',async()=>{
+ const runtime=await read('src/shared/apartment-list/app.js');
+ const parsed=ts.createSourceFile('list.js',runtime,ts.ScriptTarget.ES2020,true,ts.ScriptKind.JS);
+ let refresh;
+ const visit=node=>{if(ts.isFunctionDeclaration(node)&&node.name?.text==='refreshFavorites')refresh=node.getText(parsed);else ts.forEachChild(node,visit);};
+ visit(parsed);
+ const context=vm.createContext({localStorage:{getItem:()=>JSON.stringify(['A001'])}});
+ vm.runInContext(`let favorites=new Set(),apartmentsReady=false,renders=0;const byId=()=>undefined;const render=()=>renders++;${refresh};globalThis.run=refreshFavorites;globalThis.state=()=>({ids:[...favorites],renders});`,context);
+ context.run({detail:{ids:['A001',1]}});
+ assert.equal(JSON.stringify(context.state()),JSON.stringify({ids:['A001'],renders:0}));
+ context.run();
+ assert.equal(JSON.stringify(context.state()),JSON.stringify({ids:['A001'],renders:0}));
 });
 
 test('the runtime preserves list filtering, comparison, media viewing, and shared favourite storage',async()=>{

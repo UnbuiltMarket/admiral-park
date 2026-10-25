@@ -5,6 +5,14 @@ function downloadLink(a,large=false) {
 }
 
 async function downloadDatasheet(id,trigger) {
+  function waitForExportData(promise,exportSignal) {
+    return new Promise((resolve,reject)=>{
+      const abort=()=>{const error=new Error('PDF export cancelled');error.name='AbortError';reject(error);};
+      if(exportSignal.aborted){abort();return;}
+      exportSignal.addEventListener('abort',abort,{once:true});
+      Promise.resolve(promise).then(value=>{exportSignal.removeEventListener('abort',abort);resolve(value);},error=>{exportSignal.removeEventListener('abort',abort);reject(error);});
+    });
+  }
   if(signal.aborted)return {id,status:'cancelled'};
   const dialog=$('detail-dialog');
   const markBusy=job=>{
@@ -26,7 +34,7 @@ async function downloadDatasheet(id,trigger) {
   toast('A lakás adatlapja készül…');
   job.promise=(async()=>{
   try{
-  if(!data)await load();
+  if(!data)await waitForExportData(load(),controller.signal);
   if(stale())return {id,status:'cancelled'};
   const a=byId(id);if(!a)throw new Error('A kiválasztott lakás nem található.');
   // A list-row download never initializes or opens the detail layout. Its theme
@@ -36,6 +44,7 @@ async function downloadDatasheet(id,trigger) {
   for(const [key,property,fallback] of [['top','--detail-top','#fdfbfb'],['bottom','--detail-bottom','#e4e9ec'],['ink','--detail-ink','#242824'],['muted','--detail-muted','#687074'],['watermarkTop','--detail-watermark-top','#f2f0f1'],['watermarkBottom','--detail-watermark-bottom','#d9dfe2'],['accent','--accent','#a38c69']])colors[key]=computed.getPropertyValue(property).trim()||fallback;
   const statusProperty={available:'--available',sold:'--sold',under_negotiation:'--negotiating'}[a.status]||'--detail-muted';
   colors.status=job.fromDialog?getComputedStyle(dialog.querySelector('.status-pill')).color:computed.getPropertyValue(statusProperty).trim()||({available:'#4f7959',sold:'#b4564f',under_negotiation:'#b28a2f'}[a.status]||colors.muted);
+  if(!job.fromDialog&&a.status==='under_negotiation')colors.status=`color-mix(in srgb, ${colors.status} 60%, ${colors.ink})`;
   const layout=data.roomLayouts?.[a.apartmentType],markers=validPlanMarkers(layout),rooms=Array.isArray(a.roomList)?a.roomList:[];
   const mapped=markers.length&&rooms.length===markers.length&&markers.every(marker=>rooms.some(room=>room.planNumber===marker.number));
   const unitRows=rooms.map(room=>({name:roomLabel(room.name),area:area(room.area)}));

@@ -7,7 +7,7 @@ import {ts} from '../scripts/tooling.mjs';
 const dataset=JSON.parse(await readFile(new URL('../data/apartments.json',import.meta.url),'utf8'));
 const source=await readFile(new URL('../src/framer/OrbitApartmentData.source.tsx',import.meta.url),'utf8');
 const script=ts.transpileModule(source+'\nglobalThis.adapter={parseOrbitApartmentDataset,requestOrbitApartmentDataset,orbitApartmentPlan,orbitApartmentAssetUrl,useOrbitPreviewImage};',{compilerOptions:{target:ts.ScriptTarget.ES2020,module:ts.ModuleKind.CommonJS,jsx:ts.JsxEmit.React}}).outputText;
-function adapter(fetch=()=>Promise.reject(new Error('Unexpected fetch')),extra={}){const context={URL,fetch,console,...extra};vm.runInNewContext(script,context);return context.adapter;}
+function adapter(fetch=()=>Promise.reject(new Error('Unexpected fetch')),extra={}){const context={URL,fetch,console,AbortController,setTimeout,clearTimeout,...extra};vm.runInNewContext(script,context);return context.adapter;}
 
 test('orbit JSON retains all 69 canonical units, honest nulls and floorplan crop metadata without room lists',()=>{
  const api=adapter(),parsed=api.parseOrbitApartmentDataset(dataset);

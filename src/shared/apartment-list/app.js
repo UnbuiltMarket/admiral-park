@@ -61,7 +61,7 @@ const rangeGroups = [
 const rangeBounds = new Map();
 const defaults = Object.fromEntries(filterIds.map(k => [k, checks.has(k) ? false : '']));
 let state = {...defaults, sort:'id'};
-let apartments = [], data, selected = new Set(), favorites = new Set(), toastTimer, mediaView=null, mediaSequence=0, rangeDrag=null;
+let apartments = [], data, apartmentsReady = false, selected = new Set(), favorites = new Set(), toastTimer, mediaView=null, mediaSequence=0, rangeDrag=null;
 const dialogFocus=new WeakMap(), dialogStack=[], downloadUrls=new Set();
 const modalRegistry=window[Symbol.for('admiral-park:open-dialogs')] ||= new Set();
 const modalScroll=window[Symbol.for('admiral-park:scroll-lock')] ||= {locked:false,value:'',priority:'',watched:new WeakSet()};
@@ -264,17 +264,27 @@ function renderTray() {
   resizeEmbed();
 }
 function render() {
+  // Keep keyboard navigation on the same control, or its nearest remaining row.
+  const active=root.activeElement||document.activeElement;
+  const focusAttribute=['data-sort','data-save','data-detail','data-compare','data-download'].find(name=>active?.hasAttribute?.(name));
+  const focus=focusAttribute&&$('results').contains(active)?{attribute:focusAttribute,value:active.getAttribute(focusAttribute),row:[...$('results').querySelectorAll('[data-unit]')].indexOf(active.closest('[data-unit]'))}:null;
   closeRowInquiry();
   const list = sorted(apartments.filter(matches));
   const invalidArea = state.minArea!=='' && state.maxArea!=='' && Number(state.minArea)>Number(state.maxArea);
   const invalidPrice = state.minPrice!=='' && state.maxPrice!=='' && Number(state.minPrice)>Number(state.maxPrice);
   $('result-count').innerHTML = `<strong>${list.length}</strong> lakás${list.length===apartments.length?'':` <span class="result-total">/ ${apartments.length}</span>`}`;
-  $('results').innerHTML = list.length ? `<table class="apartment-table"><caption class="sr-only">Lakások. A nettó belső terület, az terasz és a kert külön szerepel, az árak bruttó forintárak.</caption><thead><tr><th scope="col" class="heading-unit">Lakás</th><th scope="col" class="heading-type">Típus</th><th scope="col" class="heading-rooms">Szobák</th><th scope="col" class="heading-interior"><button data-sort="area">Beltér ${state.sort.startsWith('area')?(state.sort.endsWith('desc')?'↓':'↑'):'↕'}</button></th><th scope="col" class="heading-outdoor">Terasz</th><th scope="col" class="heading-price"><button data-sort="price">Bruttó ár ${state.sort.startsWith('price')?(state.sort.endsWith('desc')?'↓':'↑'):'↕'}</button></th><th scope="col" class="heading-status">Elérhetőség</th><th scope="col" class="heading-floor-layout">Szintrajz</th><th scope="col" class="heading-actions"><span class="sr-only">Műveletek</span></th></tr></thead><tbody>${list.map(row).join('')}</tbody></table>` : `<div class="empty-state"><span class="empty-mark" aria-hidden="true">⌕</span><h2>${invalidArea||invalidPrice?'Ellenőrizze a megadott tartományt.':'Most nincs ilyen lakás.'}</h2><p>${invalidArea||invalidPrice?'A kezdőérték legyen kisebb vagy egyenlő a záróértékkel.':'Módosítsa a szűrőket, vagy nézze meg a teljes kínálatot.'}</p><button class="button-primary" data-reset>Szűrők törlése</button></div>`;
+  $('results').innerHTML = list.length ? `<table class="apartment-table"><caption class="sr-only">Lakások. A nettó belső terület, a terasz és a kert külön szerepel, az árak bruttó forintárak.</caption><thead><tr><th scope="col" class="heading-unit">Lakás</th><th scope="col" class="heading-type">Típus</th><th scope="col" class="heading-rooms">Szobák</th><th scope="col" class="heading-interior"><button data-sort="area">Beltér ${state.sort.startsWith('area')?(state.sort.endsWith('desc')?'↓':'↑'):'↕'}</button></th><th scope="col" class="heading-outdoor">Terasz</th><th scope="col" class="heading-price"><button data-sort="price">Bruttó ár ${state.sort.startsWith('price')?(state.sort.endsWith('desc')?'↓':'↑'):'↕'}</button></th><th scope="col" class="heading-status">Elérhetőség</th><th scope="col" class="heading-floor-layout">Szintrajz</th><th scope="col" class="heading-actions"><span class="sr-only">Műveletek</span></th></tr></thead><tbody>${list.map(row).join('')}</tbody></table>` : `<div class="empty-state"><span class="empty-mark" aria-hidden="true">⌕</span><h2>${invalidArea||invalidPrice?'Ellenőrizze a megadott tartományt.':'Most nincs ilyen lakás.'}</h2><p>${invalidArea||invalidPrice?'A kezdőérték legyen kisebb vagy egyenlő a záróértékkel.':'Módosítsa a szűrőket, vagy nézze meg a teljes kínálatot.'}</p><button class="button-primary" data-reset>Szűrők törlése</button></div>`;
   $('minArea').setAttribute('aria-invalid', String(invalidArea)); $('maxArea').setAttribute('aria-invalid', String(invalidArea));
   $('minPrice').setAttribute('aria-invalid', String(invalidPrice)); $('maxPrice').setAttribute('aria-invalid', String(invalidPrice));
   $('reset').hidden=!filterIds.some(id=>state[id]!==''&&state[id]!==false)&&state.sort==='id';
   renderChips(); renderTray(); writeUrl(); resizeEmbed();
   $('results').setAttribute('aria-busy','false');
+  if(focus){
+    const rows=[...$('results').querySelectorAll('[data-unit]')];
+    const same=$('results').querySelector(`[${focus.attribute}="${CSS.escape(focus.value)}"]`);
+    const neighbor=focus.row>=0?rows[Math.min(focus.row,rows.length-1)]?.querySelector(`[${focus.attribute}]`):null;
+    (same||neighbor||$('favoritesOnly'))?.focus({preventScroll:true});
+  }
 }
 function reset() { state={...defaults,sort:'id'}; syncControls(); render(); }
 function syncModalState() {
@@ -327,8 +337,8 @@ function refreshFavorites(event = undefined) {
   const previous=[...favorites].sort().join(',');
   let ids=event?.detail?.ids;
   if(!Array.isArray(ids)){try {ids=JSON.parse(localStorage.getItem('admiral-park:favorites:v1')||'[]');}catch{}}
-  if(Array.isArray(ids))favorites=new Set(ids.filter(id=>typeof id==='string'&&byId(id)));
-  if(data&&previous!==[...favorites].sort().join(','))render();
+  if(Array.isArray(ids))favorites=new Set(ids.filter(id=>typeof id==='string'&&(!apartmentsReady||byId(id))));
+  if(apartmentsReady&&previous!==[...favorites].sort().join(','))render();
 }
 function showCompare() {
   const chosen=[...selected].map(byId).filter(Boolean); if(chosen.length<2) return;
@@ -433,7 +443,6 @@ root.addEventListener('click',event=>{
     const id=t.dataset.save; if(favorites.has(id)) favorites.delete(id); else favorites.add(id);
     try{localStorage.setItem('admiral-park:favorites:v1',JSON.stringify([...favorites]));}catch{storage=false;}
     render();
-    $('results').querySelector(`[data-save="${CSS.escape(id)}"]`)?.focus();
     window.dispatchEvent(new CustomEvent('admiral:apartment-favorites',{detail:{ids:[...favorites]}}));
     toast(favorites.has(id)?`A(z) ${id} lakást elmentettük${storage?'':'. A mentés csak ezen az oldalon marad meg'}.`:`A(z) ${id} lakást eltávolítottuk a kedvencekből.`);
   }
@@ -536,13 +545,16 @@ async function load() {
     const ids=new Set();
     for(const a of data.apartments){if(typeof a.id!=='string'||!a.id||ids.has(a.id)||!Object.hasOwn(labels,a.status)||typeof a.building!=='string')throw new Error('Hibás vagy ismétlődő lakásadat');ids.add(a.id);for(const field of ['floor','rooms','areaInterior','areaTerrace','areaGarden','price']){if(a[field]!=null&&(!hasNumber(a[field])||a[field]<0))throw new Error('Hibás számadat');}}
     apartments=data.apartments;
+    apartmentsReady=true;
     config.onDataLoaded?.(data);
+    // Another tab/component may have saved favourites while this request loaded.
+    try {const stored=localStorage.getItem('admiral-park:favorites:v1');if(stored!==null){const latest=JSON.parse(stored);if(Array.isArray(latest))favorites=new Set(latest.filter(id=>typeof id==='string'));}}catch{}
     favorites=new Set([...favorites].filter(id=>ids.has(id)));
     setupOptions('building',[...new Set(apartments.map(a=>a.building))].sort().map(v=>[v,`${v} épület`]));
     setupOptions('floor',[...new Set(apartments.map(a=>a.floor).filter(v=>v!=null))].sort((a,b)=>a-b).map(v=>[String(v),v===0?'Földszint':`${v}. emelet`]));
     setupOptions('rooms',[...new Set(apartments.map(a=>a.rooms).filter(v=>v!=null).map(v=>v>=4?'4+':String(v)))].sort().map(v=>[v,`${v==='4+'?v:number.format(Number(v))} szoba`]));
     setupRanges();readUrl();syncControls();
-    $('data-note').textContent='A nettó belső alapterület, az terasz és a kert külön szerepel. Az árak bruttó árak. A helyiségadatok munkaközi tervből származnak; az aktuális árat és elérhetőséget az értékesítő erősíti meg.';
+    $('data-note').textContent='A nettó belső alapterület, a terasz és a kert külön szerepel. Az árak bruttó árak. A helyiségadatok munkaközi tervből származnak; az aktuális árat és elérhetőséget az értékesítő erősíti meg.';
     render();
     const id=config.apartment||(useUrl?new URL(location.href).searchParams.get('apartment'):null);
     if(id&&byId(id))detail(id);

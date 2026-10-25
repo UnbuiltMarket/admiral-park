@@ -796,6 +796,39 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
     React.useEffect(() => {
         const root = rootRef.current
         if (!root || !jsonDetails) return
+        let pointer: { x: number; y: number; target: EventTarget | null } | null = null
+        let facadeOrigin: { x: number; y: number } | null = null
+        let bridgeClearTimer: ReturnType<typeof setTimeout> | null = null
+        const dataSelector = "[data-apartment-field='floorplan'],[data-orbit-studio-details],.orbit-studio-facts"
+        const cancelBridgeClear = () => { if (bridgeClearTimer !== null) clearTimeout(bridgeClearTimer); bridgeClearTimer = null }
+        const pointerInsideData = () => !!pointer && Array.from(root!.querySelectorAll<HTMLElement>(dataSelector)).some(panel => {
+            const bounds = panel.getBoundingClientRect()
+            return bounds.width > 0 && bounds.height > 0 && pointer!.x >= bounds.left && pointer!.x <= bounds.right && pointer!.y >= bounds.top && pointer!.y <= bounds.bottom
+        })
+        const trackPointer = (event: PointerEvent) => {
+            if (event.pointerType === "touch") return
+            // The picker reports only ID changes. Keep the last successful
+            // pointer sample too, rather than bridging from the first pixel at
+            // which this apartment was entered.
+            if (pointer && root!.dataset.orbitMaskHovered) facadeOrigin = { x: pointer.x, y: pointer.y }
+            pointer = { x: event.clientX, y: event.clientY, target: event.target }
+        }
+        const dataHasFocus = () => {
+            const active = document.activeElement
+            return active instanceof Element && root!.contains(active) && !!active.closest(dataSelector)
+        }
+        const pointerCanReachData = () => {
+            if (!pointer || !facadeOrigin || !(pointer.target instanceof Element) || !root!.contains(pointer.target)) return false
+            // Navigation and filters are separate interactions, never bridges.
+            const control = pointer.target.closest("a,button,input,select,textarea,[role='button']")
+            if (control && !control.closest(dataSelector)) return false
+            return Array.from(root!.querySelectorAll<HTMLElement>(dataSelector)).some(panel => {
+                const bounds = panel.getBoundingClientRect()
+                // Record transitions briefly make the panel inert while its
+                // drawing swaps. Its parked bounds still define the approach.
+                return bounds.width > 0 && bounds.height > 0 && orbitDataPointerInBridge(facadeOrigin!, pointer!, bounds)
+            })
+        }
         function selectFromMask(event: Event) {
             if (root!.dataset.homepageStage !== "orbit" || root!.dataset.orbitState !== "checkpoint") return
             const detail = (event as CustomEvent<unknown>).detail
@@ -803,15 +836,44 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
             const value = typeof detail === "string" ? detail : values?.id ?? values?.apartmentId ?? values?.number
             if (detail === null || detail === "" || values && (values.id === null || values.apartmentId === null || values.number === null)) {
                 setInteractionApartmentId(null)
-                if (!mobilePresentationRef.current) setSelectedApartmentId(null)
+                cancelBridgeClear()
+                if (!mobilePresentationRef.current && !dataHasFocus()) {
+                    if (!pointerCanReachData()) { facadeOrigin = null; setSelectedApartmentId(null) }
+                    // The corridor is an approach, not a parked selection.
+                    // Stopping in empty space clears it; continuing the pointer
+                    // journey refreshes this brief grace period on each frame.
+                    else if (!pointerInsideData()) bridgeClearTimer = setTimeout(() => {
+                        bridgeClearTimer = null
+                        if (!pointerInsideData() && !dataHasFocus()) { facadeOrigin = null; setSelectedApartmentId(null) }
+                    }, 120)
+                }
                 return
             }
             if (typeof value === "string" && filterMatches.has(value) && apartmentData.dataset?.apartments.some(item => item.id === value)) {
+                cancelBridgeClear()
+                if (pointer) facadeOrigin = { x: pointer.x, y: pointer.y }
                 setApartmentInteracted(true); setInteractionApartmentId(value); setSelectedApartmentId(value)
             }
         }
+        const leave = () => { cancelBridgeClear(); pointer = null; facadeOrigin = null }
+        const blurData = (event: FocusEvent) => {
+            // During focusout, activeElement can briefly be BODY. Use the next
+            // target so Tab between orbitdata controls never disables them.
+            const next = event.relatedTarget
+            const keepsDataFocus = next instanceof Element && root!.contains(next) && !!next.closest(dataSelector)
+            if (!mobilePresentationRef.current && !keepsDataFocus && !pointerCanReachData()) setSelectedApartmentId(null)
+        }
+        window.addEventListener("pointermove", trackPointer, { passive: true, capture: true })
+        root.addEventListener("pointerleave", leave)
+        root.addEventListener("focusout", blurData)
         root.addEventListener("admiral:apartment-hover", selectFromMask)
-        return () => root.removeEventListener("admiral:apartment-hover", selectFromMask)
+        return () => {
+            cancelBridgeClear()
+            window.removeEventListener("pointermove", trackPointer, true)
+            root.removeEventListener("pointerleave", leave)
+            root.removeEventListener("focusout", blurData)
+            root.removeEventListener("admiral:apartment-hover", selectFromMask)
+        }
     }, [jsonDetails, apartmentData.dataset, filterMatches])
 
     React.useEffect(() => {
@@ -848,7 +910,10 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
         clearApartmentDetails()
         // Mouse orbitdata follows the facade. A phone tap remains selected so
         // its explicit Adatlap action is still reachable after lifting a finger.
-        const leave = () => { if (!mobilePresentation) clearApartmentDetails() }
+        const leave = () => {
+            const focusedData = document.activeElement instanceof Element && root.contains(document.activeElement) && !!document.activeElement.closest("[data-apartment-field='floorplan'],[data-orbit-studio-details],.orbit-studio-facts")
+            if (!mobilePresentation && !focusedData) clearApartmentDetails()
+        }
         root.addEventListener("pointerleave", leave)
         return () => root.removeEventListener("pointerleave", leave)
     }, [detailsMode, staticRenderer, clearApartmentDetails, mobilePresentation])

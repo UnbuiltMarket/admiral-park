@@ -29,7 +29,7 @@ export async function buildRemote(){
  const posters={opening:host+assetPath+'raw%20sequence00.avif?v='+assetsHash,arrival:host+assetPath+'raw%20sequence64.avif?v='+assetsHash,
   openingFallback:base+'/raw%20sequence00.avif?v='+assetsHash,arrivalFallback:base+'/raw%20sequence64.avif?v='+assetsHash};
  const template=await readFile(new URL('src/framer/AdmiralHeroLoader.source.tsx',root),'utf8');
- const loader=template.replace('__FALLBACK_RELEASE__',JSON.stringify(manifest)).replace('__FALLBACK_POSTERS__',JSON.stringify(posters)).replace('// @PROPS_INSERT',props).replace('// @CONTROLS_INSERT',controls);
+ const loader=template.replace('__FALLBACK_RELEASE__',JSON.stringify(manifest)).replace('__FALLBACK_POSTERS__',JSON.stringify(posters)).replace('// @PROPS_INSERT',() => props).replace('// @CONTROLS_INSERT',() => controls);
  compileTS(loader,'AdmiralHeroLoader.tsx');
  await writeFile(new URL('src/framer/AdmiralHeroLoader.tsx',root),'// Permanent Framer bridge. Paste the entire file once; future compatible runtimes load from GitHub Pages.\n'+loader);
  console.log(`Built remote hero ${version} (${Buffer.byteLength(bundle)} bytes) and permanent Framer loader.`);
