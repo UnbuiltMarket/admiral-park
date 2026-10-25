@@ -499,6 +499,48 @@ function assertCompactCheckpointTrace(samples,message,{filters=true,brand=false}
 }
 
 try{
+ for(const viewport of [{width:1440,height:900},{width:1920,height:1080}])await pass('Studio variant desktop default keeps the orbit beside its large floorplan '+viewport.width,async()=>{
+  const f=await fixture({cleanFixture:true,useDefaultOrbitLayout:true,context:{viewport},props:{...maskProps,snapDuration:.8}}),{page}=f;
+  try{
+   await waitStudio(page);await waitMask(page);const geometry=await studioGeometry(page),camera=await orbitData(page),pinned=await pagePosition(page);
+   assert.equal(await page.evaluate(()=>Object.hasOwn(window.props,'orbitLayout')),false,'The component default chooses the Studio workspace without a fixture layout override');
+   assertStudioViewport(geometry);assert.ok(Math.abs(geometry.studio.height-viewport.height*.9)<2,'The workspace occupies ninety percent of the desktop viewport');
+   assert.ok(geometry.image.width<viewport.width*.75&&geometry.image.height<viewport.height*.75,'The orbit is a contained desktop image rather than a fullscreen background');
+   assert.ok(Math.abs(geometry.image.width/geometry.image.height-1920/1010)<.01,'The complete orbit keeps its source aspect ratio');
+   assert.ok(geometry.plan.x>=geometry.viewport.right-2,'The floorplan has a separate right-hand column');assert.ok(geometry.plan.height>=350&&geometry.plan.width>=300,'The apartment floorplan has a readable desktop size: '+JSON.stringify(geometry.plan));
+   const facts=await page.locator('.orbit-studio-scene > .orbit-studio-facts').boundingBox();assert.ok(facts.y>=geometry.viewport.bottom-2,'Apartment facts remain directly under the orbit');assert.equal(await page.locator('[data-orbit-fullscreen-open]:visible').count(),0,'Desktop Studio does not add the phone fullscreen opener');
+   assert.equal(await page.locator('[data-orbit-filters]:visible').count(),1,'The complete current filter set remains available');
+   await page.waitForFunction(()=>Number(document.querySelector('[data-admiral-orbit]').dataset.orbitDownloaded)===120);assert.equal(new Set(f.orbitRequests).size,120,'The current full compressed orbit download is preserved');
+   await componentScreenshot(page,'studio-variant-default-'+viewport.width+'.png');
+   const probe=statusControlProbes.available;await hoverRealMask(page,probe);await waitStudio(page,probe.id);await assertActualMaskColour(page,probe,statusHighlightRGB.available,'Desktop Studio actual mask hover');const hoveredGeometry=await studioGeometry(page);for(const key of ['x','y','width','height'])assert.ok(Math.abs(hoveredGeometry.image[key]-geometry.image[key])<2,'Hovering another apartment keeps the desktop orbit '+key+' stable');
+   await componentScreenshot(page,'studio-variant-hover-'+viewport.width+'.png');const point=await projectMaskPoint(page,probe);await page.mouse.click(point.x,point.y);await waitApartmentCard(page,probe.id);await closeApartmentCard(page);await page.waitForTimeout(250);const clearedImage=await page.locator('[data-admiral-homepage]').evaluate(root=>Object.fromEntries(['x','y','width','height'].map(key=>[key,Number(root.dataset['image'+key[0].toUpperCase()+key.slice(1)])])));for(const key of ['x','y','width','height'])assert.ok(Math.abs(clearedImage[key]-geometry.image[key])<2,'Clearing hover after the card keeps the desktop orbit '+key+' stable');assertSameCamera(camera,await orbitData(page),'Studio shared-card open and close');
+   await freshWheel(page,100);await waitFrame(page,15);await assertPageHeld(page,pinned,'Studio checkpoint scroll');assert.equal(Number((await orbitData(page)).orbitCheckpoint),1,'The same scroll advances exactly one checkpoint');
+   assert.equal(f.errors.length,0,'The new layout produces no browser errors');
+  }finally{await f.close();}
+ });
+ await pass('Studio variant SEQ02 shrinks the fullscreen flight smoothly into the desktop orbit',async()=>{
+  const viewport={width:1440,height:900},f=await fixture({cleanFixture:true,useDefaultOrbitLayout:true,gateDecodeIndices:[0],context:{viewport},props:{...maskProps,startView:'opening',showControls:true,duration:.6,connectionDuration:1.6,maxSpeed:1}}),{page}=f;
+  try{
+   await installFramingCapture(page);assertFullFraming(await readFraming(page),'Studio opening');await page.waitForFunction(()=>Number(document.querySelector('[data-admiral-orbit]').dataset.orbitDownloaded)===120);assert.equal(await page.evaluate(()=>window.bitmapRecords.filter(record=>Number.isFinite(record.index)).length),0,'The new layout retains compressed-only orbit prefetch before the connector');
+   await coveredClick(page,'Skip approach');await waitStage(page,'building');assertFullFraming(await readFraming(page),'Studio SEQ01 final still');await page.evaluate(()=>window.framingSamples=[]);await coveredClick(page,'Explore building');await waitStage(page,'handoff');
+   const samples=await page.evaluate(()=>window.framingSamples.filter(sample=>sample.stage==='connection'&&sample.sequence==='SEQ_02'&&sample.paintedSequence==='SEQ_02'&&sample.canvasWidth>1));assertMonotonicFraming(samples,true);
+   assert.ok(samples.some(sample=>sample.progress>.1&&sample.progress<.9&&sample.width<sample.rootWidth-20&&sample.width>900),'The actual painted image shrinks through intermediate desktop widths');
+   const endpoint=await readFraming(page);assert.ok(endpoint.width<viewport.width*.75,'The connecting endpoint is contained before the orbit decoder is released');assert.ok(endpoint.pixels.some((value,index)=>index%4!==3&&value>45),'The waiting handoff keeps the actual painted connector instead of flashing black');
+   await page.evaluate(()=>window.releaseDecodeGates());await waitStudio(page);const geometry=await studioGeometry(page);assertStudioViewport(geometry);await writeFile(new URL('studio-variant-handoff-geometry.json',out),JSON.stringify({endpoint,geometry,samples:samples.slice(-4)},null,2));for(const key of ['x','y','width','height'])assert.ok(Math.abs(geometry.image[key]-endpoint[key])<2,'SEQ02 and orbit agree exactly at handoff '+key+': '+JSON.stringify({endpoint,geometry:geometry.image}));await componentScreenshot(page,'studio-variant-connector-endpoint.png');
+   await writeFile(new URL('studio-variant-shrink-trace.json',out),JSON.stringify(samples,null,2));
+   await coveredClick(page,'Overview');await waitStage(page,'opening');assertFullFraming(await readFraming(page),'Studio Overview restores the fullscreen opening');
+   await coveredClick(page,'Skip approach');await waitStage(page,'building');await coveredClick(page,'Explore building');await waitConnectionFrame(page,10,40);await freshWheel(page,-120);await waitStage(page,'building');assertFullFraming(await readFraming(page),'Reverse connector restores the fullscreen building still');
+   assert.equal(f.errors.length,0,'Studio flight and reverse produce no browser errors');
+  }finally{await f.close();}
+ });
+ await pass('Studio variant phone retains the current full-width orbit and compact apartment data',async()=>{
+  const viewport={width:390,height:844},f=await fixture({cleanFixture:true,useDefaultOrbitLayout:true,context:{viewport,isMobile:true,hasTouch:true,deviceScaleFactor:2},props:maskProps}),{page}=f;
+  try{
+   await waitStudio(page);await waitMask(page);const geometry=await studioGeometry(page);assertStudioViewport(geometry);assertNaturalWidthMobileOrbit(geometry,'Studio variant phone');assertCompactStudioFit(await compactStudioGeometry(page),viewport,'Studio variant phone');
+   await tapRealMask(page,statusControlProbes.available);await waitStudio(page,statusControlProbes.available.id);const camera=await orbitData(page);await page.locator('.orbit-studio-primary[data-orbit-detail-link]:visible').tap();await waitApartmentCard(page,statusControlProbes.available.id);await closeApartmentCard(page);await waitStudio(page,statusControlProbes.available.id);assertSameCamera(camera,await orbitData(page),'Studio phone shared card');
+   await componentScreenshot(page,'studio-variant-phone.png');assert.equal(f.errors.length,0);
+  }finally{await f.close();}
+ });
  for(const layout of ['classic','studio'])await pass('audit orbitdata '+layout+' pointer travel remains clickable and clears on exit',async()=>{
   const f=await fixture({cleanFixture:true,context:{viewport:{width:1440,height:900}},props:{...maskProps,orbitLayout:layout}}),{page}=f;
   try{
@@ -1042,12 +1084,6 @@ try{
   }finally{await f.close();}
   const pending=await fixture({cleanFixture:true,useDefaultOrbitLayout:true,delayDetails:500,props:studioProps});
   try{await waitOrbit(pending.page);await clickApartment(pending.page,'A001');await pending.page.locator(cardSelector+'[data-state=loading]').waitFor();await pending.page.getByRole('button',{name:'Close apartment details',exact:true}).click();await pending.page.waitForTimeout(700);assert.equal(await pending.page.locator('#detail-dialog[open]').count(),0,'A cancelled pending request cannot reopen the dialog');await waitOrbit(pending.page);await clickApartment(pending.page,'A001');await waitApartmentCard(pending.page);assert.equal(pending.detailRequests.length,1,'A successful cancelled download can be reused on a later deliberate open');await closeApartmentCard(pending.page);}finally{await pending.close();}
- });
- await pass('default orbit layout preserves fullscreen desktop and enables the light studio only on phones',async()=>{
-  const desktop=await fixture({cleanFixture:true,useDefaultOrbitLayout:true,context:{viewport:{width:1440,height:900}},props:studioProps}),{page}=desktop;
-  try{await waitOrbit(page);await installFramingCapture(page);assertFullFraming(await readFraming(page),'Default desktop orbit');assert.equal(await page.locator('[data-orbit-studio][data-active="true"]').count(),0,'Desktop keeps the fullscreen orbit with no active studio panel');await page.waitForFunction(()=>document.querySelector('[data-apartment-field=number]')?.textContent.includes('A001'));assert.match(await apartmentField(page,'area'),/68[,.]67/,'Default fullscreen details use the real JSON apartment area');await sendApartment(page,{id:'A101'});await page.waitForFunction(()=>document.querySelector('[data-apartment-field=number]')?.textContent.includes('A101'));assert.match(await apartmentField(page,'area'),/47[,.]48/);await page.setViewportSize({width:390,height:844});await page.waitForTimeout(280);await waitStudio(page,'A101');assertStudioViewport(await studioGeometry(page));await page.setViewportSize({width:1440,height:900});await page.waitForTimeout(280);await waitFrame(page,0);assertFullFraming(await readFraming(page),'Desktop resize restores fullscreen orbit');assert.equal(await page.locator('[data-orbit-studio][data-active="true"]').count(),0);}finally{await desktop.close();}
-  const phone=await fixture({cleanFixture:true,useDefaultOrbitLayout:true,context:{viewport:{width:390,height:844},isMobile:true,hasTouch:true,deviceScaleFactor:2},props:studioProps});
-  try{await waitStudio(phone.page);assertStudioViewport(await studioGeometry(phone.page));}finally{await phone.close();}
  });
  await pass('default mobile studio keeps the phone layout and retains the camera and selected apartment through rotation',async()=>{
   const f=await fixture({cleanFixture:true,useDefaultOrbitLayout:true,context:{viewport:{width:390,height:844},isMobile:true,hasTouch:true,deviceScaleFactor:2},props:studioProps}),{page}=f;

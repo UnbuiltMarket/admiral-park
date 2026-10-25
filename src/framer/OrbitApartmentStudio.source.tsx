@@ -85,6 +85,11 @@ const orbitApartmentStudioStyles = `
 [data-orbit-studio] .orbit-studio-text-button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 36px; padding: 6px 0; border: 0; border-bottom: 1px solid var(--studio-line); border-radius: 0; color: var(--studio-muted); background: none; font-size: 10px; line-height: 1.4; text-decoration: none; }
 [data-orbit-studio] .orbit-studio-text-button:hover { color: var(--studio-ink); border-bottom-color: var(--studio-ink); }
 [data-orbit-studio] .orbit-studio-share-message { color: var(--studio-muted); font-size: 10px; line-height: 1.5; }
+/* Reserve the desktop facts footprint before data/hover becomes available.
+   The SEQ_02 endpoint and later mask coordinates must use the parked geometry. */
+[data-orbit-studio][data-mobile="false"] .orbit-studio-meta { min-height: 17.6px; }
+[data-orbit-studio][data-mobile="false"] .orbit-studio-price-value { min-height: calc(clamp(24px,2.6vw,38px) * 1.1); }
+[data-orbit-studio][data-mobile="false"] .orbit-studio-secondary { min-height: 36px; }
 /* Fade the record in place; the logo, preview selector and filters stay steady. */
 [data-orbit-studio] [data-orbitdata-transition] { opacity: 1; transition: opacity .18s ease; }
 [data-orbit-studio] [data-orbitdata-transition][data-orbitdata-visible="false"] { opacity: 0; pointer-events: none; }

@@ -1389,6 +1389,11 @@ const orbitApartmentStudioStyles = `
 [data-orbit-studio] .orbit-studio-text-button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 36px; padding: 6px 0; border: 0; border-bottom: 1px solid var(--studio-line); border-radius: 0; color: var(--studio-muted); background: none; font-size: 10px; line-height: 1.4; text-decoration: none; }
 [data-orbit-studio] .orbit-studio-text-button:hover { color: var(--studio-ink); border-bottom-color: var(--studio-ink); }
 [data-orbit-studio] .orbit-studio-share-message { color: var(--studio-muted); font-size: 10px; line-height: 1.5; }
+/* Reserve the desktop facts footprint before data/hover becomes available.
+   The SEQ_02 endpoint and later mask coordinates must use the parked geometry. */
+[data-orbit-studio][data-mobile="false"] .orbit-studio-meta { min-height: 17.6px; }
+[data-orbit-studio][data-mobile="false"] .orbit-studio-price-value { min-height: calc(clamp(24px,2.6vw,38px) * 1.1); }
+[data-orbit-studio][data-mobile="false"] .orbit-studio-secondary { min-height: 36px; }
 /* Fade the record in place; the logo, preview selector and filters stay steady. */
 [data-orbit-studio] [data-orbitdata-transition] { opacity: 1; transition: opacity .18s ease; }
 [data-orbit-studio] [data-orbitdata-transition][data-orbitdata-visible="false"] { opacity: 0; pointer-events: none; }
@@ -2162,7 +2167,7 @@ function OrbitFullscreenDetails({ apartment: currentApartment, dataset = null, a
  * @framerIntrinsicWidth 1440
  * @framerIntrinsicHeight 900
  */
-export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): React.JSX.Element {
+export default function AdmiralHomepageStudio(props: AdmiralHomepageTrialProps): React.JSX.Element {
     const {
         useGitHubAssets = true, heroBaseUrl = "", connectionBaseUrl = "", orbitBaseUrl = "", startView = "opening", editorView = "opening", editorOrbitView = "entry", orbitStartFrame = 45,
         maskPicking = true, maskBaseUrl = "", maskHighlightColor = "#f8d68b", maskHighlightOpacity = 27,
@@ -2176,7 +2181,7 @@ export default function AdmiralHomepageTrial(props: AdmiralHomepageTrialProps): 
         showControls = true, showViewpoints = true, showDiagnostics = false,
         openingOut = 20, buildingIn = 68, buildingFull = 88, ctaIn = 86, rise = 20,
         detailsMode = "preview", detailsLanguage = "hu", detailsBottom = 32, detailsInset = 48, apartmentPreview,
-        orbitLayout = "mobile", apartmentDataUrl = "https://raw.githubusercontent.com/UnbuiltMarket/admiral-park/main/data/apartments.json",
+        orbitLayout = "studio", apartmentDataUrl = "https://raw.githubusercontent.com/UnbuiltMarket/admiral-park/main/data/apartments.json",
         apartmentAssetBase = HOMEPAGE_ASSETS + "/apartment-list/", previewApartmentId = "A001", detailPageUrl = "/lista", inquiryUrl = "", orbitBackground = "#fdfbfb",
         detailDataUrl = "https://raw.githubusercontent.com/UnbuiltMarket/admiral-park/main/data/apartment-details.json",
         background = "#101820", alt = "Explore Admiral Park, Balatonfüred", style,
@@ -3129,8 +3134,8 @@ export function ArrivalCTA(Component: ComponentType<any>): ComponentType { retur
 export function BalatonfuredContent(Component: ComponentType<any>): ComponentType { return createHomepageOverlay(Component, "opening") }
 export function AranyhidContent(Component: ComponentType<any>): ComponentType { return createHomepageOverlay(Component, "building") }
 
-AdmiralHomepageTrial.displayName = "Admiral Homepage Trial"
-addPropertyControls(AdmiralHomepageTrial, {
+AdmiralHomepageStudio.displayName = "Admiral Homepage Studio"
+addPropertyControls(AdmiralHomepageStudio, {
     useGitHubAssets: { type: ControlType.Boolean, title: "GitHub assets", defaultValue: true },
     heroBaseUrl: { type: ControlType.String, title: "SEQ_01 folder", defaultValue: "", hidden: p => p.useGitHubAssets !== false },
     connectionBaseUrl: { type: ControlType.String, title: "SEQ_02 folder", defaultValue: "", hidden: p => p.useGitHubAssets !== false },
@@ -3217,7 +3222,7 @@ addPropertyControls(AdmiralHomepageTrial, {
     showControls: { type: ControlType.Boolean, title: "Trial controls", defaultValue: true },
     showViewpoints: { type: ControlType.Boolean, title: "View buttons", defaultValue: true },
     showDiagnostics: { type: ControlType.Boolean, title: "Diagnostics", defaultValue: false },
-    orbitLayout: { type: ControlType.Enum, title: "Orbit layout", options: ["mobile", "studio", "classic"], optionTitles: ["Fullscreen desktop", "Apartment studio", "Classic"], defaultValue: "mobile", description: "Fullscreen desktop keeps the orbit fullscreen with a white detail strip; phones use the light apartment workspace. Apartment studio enables the experiment on desktop too. Keep the component at 100vh." },
+    orbitLayout: { type: ControlType.Enum, title: "Orbit layout", options: ["mobile", "studio", "classic"], optionTitles: ["Fullscreen desktop", "Apartment studio", "Classic"], defaultValue: "studio", description: "Apartment studio pairs the smaller desktop orbit with a large floorplan. SEQ_02 shrinks into that slot. Phones keep the current workspace. Keep the component at 100vh." },
     orbitBackground: { type: ControlType.Color, title: "Orbit background", defaultValue: "#fdfbfb", hidden: p => p.orbitLayout === "classic" },
     apartmentDataUrl: { type: ControlType.String, title: "Apartment JSON", defaultValue: "https://raw.githubusercontent.com/UnbuiltMarket/admiral-park/main/data/apartments.json", hidden: p => p.detailsMode === "off", description: "Apartment facts and media paths. All 69 records are small; only the selected plan is loaded." },
     apartmentAssetBase: { type: ControlType.String, title: "Media base", defaultValue: HOMEPAGE_ASSETS + "/apartment-list/", hidden: p => p.detailsMode === "off" },
