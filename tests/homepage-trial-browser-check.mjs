@@ -328,6 +328,9 @@ function assertStudioViewport(geometry){
  assert.equal(geometry.bodyOverflow,0,'The studio has no horizontal page overflow');
 }
 async function assertDesktopStudioHierarchy(page,message){
+ if(await page.locator('[data-orbit-studio]').getAttribute('data-layout')==='builder'){
+  await assertBuilderTextFits(page,message);return;
+ }
  const geometry=await page.locator('.orbit-studio-details').evaluate(panel=>{
   const box=element=>{const rect=element.getBoundingClientRect();return {x:rect.x,y:rect.y,width:rect.width,height:rect.height,right:rect.right,bottom:rect.bottom};};
   const parts=['.orbit-studio-heading','.orbit-studio-facts','.orbit-studio-apartment-footer'].map(selector=>box(panel.querySelector(selector)));
@@ -344,6 +347,37 @@ async function assertDesktopStudioHierarchy(page,message){
  assert.ok(geometry.price.right<=geometry.action.x+1||geometry.action.right<=geometry.price.x+1||geometry.price.bottom<=geometry.action.y+1||geometry.action.bottom<=geometry.price.y+1,message+' keeps the price and primary action separated');
  for(const fragment of geometry.priceFragments)assert.ok(fragment.x>=geometry.price.x-1&&fragment.right<=geometry.price.right+1,message+' keeps the complete price readable inside its allocated space');
  assert.ok(geometry.enlarge.width>=40&&geometry.enlarge.height>=30&&geometry.enlarge.x>=0&&geometry.enlarge.y>=0&&geometry.enlarge.right<=geometry.viewport.width+1&&geometry.enlarge.bottom<=geometry.viewport.height+1,message+' keeps floorplan enlargement reachable');
+}
+const builderDataParts=['apartmentNumber','availability','areaInterior','areaTerrace','areaGarden','price','detailsButton','secondaryLinks','metadata'];
+const builderParts=['orbit','floorplan','logo','filters',...builderDataParts];
+let approvedBuilderLayoutPromise;
+const approvedBuilderLayout=()=>approvedBuilderLayoutPromise||=readFile(new URL('docs/studio-layout-2026-10-26.json',root),'utf8').then(JSON.parse);
+async function readBuilderFrames(page){return page.locator('[data-orbit-studio]').evaluate(studio=>{
+ const root=studio.closest('[data-admiral-homepage]'),physical=root.getBoundingClientRect(),scaleX=physical.width/root.clientWidth,scaleY=physical.height/root.clientHeight;
+ const box=element=>{const r=element.getBoundingClientRect();return {x:(r.x-physical.x)/scaleX,y:(r.y-physical.y)/scaleY,width:r.width/scaleX,height:r.height/scaleY,right:(r.right-physical.x)/scaleX,bottom:(r.bottom-physical.y)/scaleY};};
+ const fontSelectors={apartmentNumber:'.orbit-studio-id',availability:'.orbit-studio-status',areaInterior:'dd',areaTerrace:'dd',areaGarden:'dd',price:'.orbit-studio-price-value',detailsButton:'.orbit-studio-primary',secondaryLinks:'.orbit-studio-text-button',metadata:'.orbit-studio-meta'};
+ const parts={};for(const element of studio.querySelectorAll('[data-orbit-layout-part]')){
+  const id=element.dataset.orbitLayoutPart,selector=fontSelectors[id],fontNode=selector?(element.matches(selector)?element:element.querySelector(selector)):null;
+  const range=document.createRange();range.selectNodeContents(element);
+  const fragments=[...range.getClientRects()].filter(r=>r.width>0&&r.height>0).map(r=>({x:(r.x-physical.x)/scaleX,y:(r.y-physical.y)/scaleY,right:(r.right-physical.x)/scaleX,bottom:(r.bottom-physical.y)/scaleY}));
+  parts[id]={...box(element),fontSize:fontNode?parseFloat(getComputedStyle(fontNode).fontSize):null,fragments,text:element.textContent};
+ }
+ return {parts,width:root.clientWidth,height:root.clientHeight,physical:{x:physical.x,y:physical.y,width:physical.width,height:physical.height},scaleX,scaleY,overflow:document.documentElement.scrollWidth-innerWidth};
+});}
+function assertBuilderTextGeometry(geometry,message){
+ for(const id of builderDataParts){const part=geometry.parts[id];assert.ok(part&&part.width>0&&part.height>0,message+' has independently placed '+id);
+  for(const text of part.fragments)assert.ok(text.x>=part.x-2&&text.right<=part.right+2&&text.y>=part.y-2&&text.bottom<=part.bottom+2,message+' '+id+' keeps text inside its requested frame: '+JSON.stringify({part,text}));
+ }
+}
+async function assertBuilderTextFits(page,message){assertBuilderTextGeometry(await readBuilderFrames(page),message);}
+async function assertBuilderReference(page,mode,message){
+ const approved=await approvedBuilderLayout(),expected=approved.layouts[mode],actual=await readBuilderFrames(page);
+ assert.equal(actual.width,expected.referenceViewport.width,message+' uses the requested logical width');assert.equal(actual.height,expected.referenceViewport.height,message+' uses the requested logical height');
+ for(const id of builderParts){const part=actual.parts[id],target=expected.elements[id];assert.ok(part&&target,message+' exposes requested '+id);
+  for(const key of ['x','y','width','height'])assert.ok(Math.abs(part[key]-target[key])<2,message+' '+id+' '+key+' matches the builder: '+JSON.stringify({actual:part[key],expected:target[key]}));
+  if(builderDataParts.includes(id))assert.ok(Math.abs(part.fontSize-target.fontSize)<.15,message+' '+id+' font size matches the builder: '+JSON.stringify({actual:part.fontSize,expected:target.fontSize}));
+ }
+ assert.equal(actual.overflow,0,message+' has no horizontal overflow');assertBuilderTextGeometry(actual,message);return actual;
 }
 function assertNaturalWidthMobileOrbit(geometry,message){
  const expectedHeight=geometry.root.width*1010/1920;
@@ -517,29 +551,23 @@ function assertCompactCheckpointTrace(samples,message,{filters=true,brand=false}
 }
 
 try{
- for(const viewport of [{width:1440,height:900},{width:1920,height:1080}])await pass('Studio variant desktop default keeps the orbit beside its large floorplan '+viewport.width,async()=>{
+ for(const viewport of [{width:1440,height:900},{width:1920,height:1080}])await pass('Studio variant builder layout matches independent frames and fonts '+viewport.width,async()=>{
   const f=await fixture({cleanFixture:true,useDefaultOrbitLayout:true,context:{viewport},props:{...maskProps,snapDuration:.8}}),{page}=f;
   try{
    await waitStudio(page);await waitMask(page);const geometry=await studioGeometry(page),camera=await orbitData(page),pinned=await pagePosition(page);
    assert.equal(await page.evaluate(()=>Object.hasOwn(window.props,'orbitLayout')),false,'The component default chooses the Studio workspace without a fixture layout override');
-   await componentScreenshot(page,'studio-horizontal-initial-'+viewport.width+'.png');await writeFile(new URL('studio-horizontal-geometry-'+viewport.width+'.json',out),JSON.stringify({viewport,geometry},null,2));
-   assertStudioViewport(geometry);assert.ok(Math.abs(geometry.studio.height-viewport.height*.9)<2,'The workspace occupies ninety percent of the desktop viewport');
-   const released=viewport.width===1440?{plan:{width:340.21875,height:384.8125},image:{width:895.875,height:471.265625}}:{plan:{width:483.44,height:546.80},image:{width:1209.92,height:636.47}};
-   assert.ok(geometry.plan.width>=released.plan.width*1.08&&geometry.plan.height>=released.plan.height*1.08,'The floorplan grows in both dimensions from the preceding wider-panel release: '+JSON.stringify({released:released.plan,current:geometry.plan}));
-   assert.ok(Math.abs(geometry.plan.width/geometry.plan.height-released.plan.width/released.plan.height)<.02,'The larger floorplan retains its natural cropped drawing aspect ratio');
-   assert.ok(geometry.image.width<released.image.width&&geometry.image.height<released.image.height,'The orbit gives space back to the readable apartment floorplan');
-   assert.ok(geometry.image.width>=viewport.width*.4&&geometry.image.width<viewport.width*.86&&geometry.image.height<viewport.height*.9,'The orbit remains a usable contained view beside the apartment panel');
-   assert.ok(Math.abs(geometry.image.width/geometry.image.height-1920/1010)<.01,'The complete orbit keeps its source aspect ratio');
-   assert.ok(geometry.plan.x>=geometry.viewport.right-2,'The floorplan has a separate right-hand column');assert.ok(geometry.plan.height>=415&&geometry.plan.width>=365,'The apartment floorplan has a substantially larger desktop reading size: '+JSON.stringify(geometry.plan));
-   assert.equal(await page.locator('.orbit-studio-scene > .orbit-studio-facts').count(),0,'Apartment facts no longer steal vertical space from the enlarged orbit');
-   const facts=await page.locator('.orbit-studio-details .orbit-studio-facts').boundingBox(),heading=await page.locator('.orbit-studio-details .orbit-studio-heading').boundingBox(),action=await page.locator('.orbit-studio-details .orbit-studio-primary:visible').boundingBox();
-   assert.ok(facts&&heading&&action,'Identity, essential areas, price and action share the apartment side panel');assert.ok(heading.x>=geometry.viewport.right-2&&facts.x>=geometry.viewport.right-2&&action.x>=geometry.viewport.right-2,'The apartment hierarchy is grouped consistently beside the orbit');assert.ok(heading.y+heading.height<=facts.y+2,'Identity remains above the key apartment facts');assert.ok(heading.x>=geometry.plan.right-2&&facts.x>=geometry.plan.right-2&&action.x>=geometry.plan.right-2,'Apartment data occupies a separate horizontal column beside the floorplan');
-   const filters=await page.locator('[data-orbit-studio-filters] [data-orbit-filter-row]').boundingBox(),brand=await page.locator('.orbit-studio-brand').boundingBox();assert.ok(filters&&brand&&Math.abs((filters.y+filters.height/2)-(brand.y+brand.height/2))<15,'A compact single-row filter bar aligns with the desktop logo');assert.equal(await page.locator('[data-orbit-fullscreen-open]:visible').count(),0,'Desktop Studio does not add the phone fullscreen opener');
+   const mode=viewport.width===1440?'desktop':'wide';
+   const requestedFrames=await assertBuilderReference(page,mode,'Applied builder '+mode);
+   assertStudioViewport(geometry);
+   assert.ok(Math.abs(geometry.image.width/geometry.image.height-1920/1010)<.01,'The requested orbit stays proportional');
+   assert.ok(geometry.plan.x>=geometry.viewport.right-2,'The requested floorplan remains beside the orbit');
+   assert.equal(await page.locator('[data-orbit-fullscreen-open]:visible').count(),0,'Desktop Studio does not add a phone fullscreen opener');
+   await componentScreenshot(page,'studio-builder-initial-'+viewport.width+'.png');await writeFile(new URL('studio-builder-geometry-'+viewport.width+'.json',out),JSON.stringify({viewport,geometry,requestedFrames},null,2));
    assert.equal(await page.locator('[data-orbit-filters]:visible').count(),1,'The complete current filter set remains available');
    await page.waitForFunction(()=>Number(document.querySelector('[data-admiral-orbit]').dataset.orbitDownloaded)===120);assert.equal(new Set(f.orbitRequests).size,120,'The current full compressed orbit download is preserved');
    await componentScreenshot(page,'studio-variant-default-'+viewport.width+'.png');
    const probe=statusControlProbes.available;await hoverRealMask(page,probe);await waitStudio(page,probe.id);await assertActualMaskColour(page,probe,statusHighlightRGB.available,'Desktop Studio actual mask hover');await assertDesktopStudioHierarchy(page,'Large desktop '+viewport.width);for(const status of ['under_negotiation','sold']){await hoverRealMask(page,statusControlProbes[status]);await waitStudio(page,statusControlProbes[status].id);await assertDesktopStudioHierarchy(page,'Large desktop '+viewport.width+' '+status);}await hoverRealMask(page,probe);await waitStudio(page,probe.id);const hoveredGeometry=await studioGeometry(page);for(const key of ['x','y','width','height'])assert.ok(Math.abs(hoveredGeometry.image[key]-geometry.image[key])<2,'Hovering another apartment keeps the desktop orbit '+key+' stable');
-   await componentScreenshot(page,'studio-horizontal-hover-'+viewport.width+'.png');const point=await projectMaskPoint(page,probe);await page.mouse.click(point.x,point.y);await waitApartmentCard(page,probe.id);await closeApartmentCard(page);await page.waitForTimeout(250);const clearedImage=await page.locator('[data-admiral-homepage]').evaluate(root=>Object.fromEntries(['x','y','width','height'].map(key=>[key,Number(root.dataset['image'+key[0].toUpperCase()+key.slice(1)])])));for(const key of ['x','y','width','height'])assert.ok(Math.abs(clearedImage[key]-geometry.image[key])<2,'Clearing hover after the card keeps the desktop orbit '+key+' stable');assertSameCamera(camera,await orbitData(page),'Studio shared-card open and close');
+   await componentScreenshot(page,'studio-builder-hover-'+viewport.width+'.png');const point=await projectMaskPoint(page,probe);await page.mouse.click(point.x,point.y);await waitApartmentCard(page,probe.id);await closeApartmentCard(page);await page.waitForTimeout(250);const clearedImage=await page.locator('[data-admiral-homepage]').evaluate(root=>Object.fromEntries(['x','y','width','height'].map(key=>[key,Number(root.dataset['image'+key[0].toUpperCase()+key.slice(1)])])));for(const key of ['x','y','width','height'])assert.ok(Math.abs(clearedImage[key]-geometry.image[key])<2,'Clearing hover after the card keeps the desktop orbit '+key+' stable');assertSameCamera(camera,await orbitData(page),'Studio shared-card open and close');
    const records=JSON.parse(await readFile(new URL('data/apartments.json',root),'utf8')).apartments,filterGeometry=await primaryFilterGeometry(page);assert.equal(filterGeometry.buttons.length,5,'The compact header retains all five primary filters');assert.ok(filterGeometry.buttons.every(button=>Math.abs(button.y-filterGeometry.buttons[0].y)<2),'All five primary filters use one desktop row');
    for(const status of ['available','under_negotiation','sold']){await activateOrbitControl(page,'[data-orbit-filter-status="'+status+'"]',false);const state=await waitOrbitFilters(page,{statuses:[status],priceMin:null,priceMax:null});assert.deepEqual(state.matchedIds,expectedOrbitMatches(records,state.criteria),'Enlarged Studio '+status+' filter follows the apartment JSON');await assertActualMaskColour(page,statusControlProbes[status],statusHighlightRGB[status],'Enlarged Studio '+status+' mask highlight');await activateOrbitControl(page,'[data-orbit-filter-status="'+status+'"]',false);await waitOrbitFilters(page,{statuses:[],priceMin:null,priceMax:null});}
    await activateOrbitControl(page,'[data-orbit-price-toggle]',false);await page.locator('[data-orbit-price-popover]:visible').waitFor();const popup=await page.locator('[data-orbit-price-popover]:visible').boundingBox();assert.ok(popup.y>=0&&popup.x>=0&&popup.x+popup.width<=viewport.width+1,'The compact desktop slider popup remains fully visible');await setOrbitRangeKeyboard(page,'price','min',220000000);await setOrbitRangeKeyboard(page,'price','max',330000000);await activateOrbitControl(page,'[data-orbit-area-toggle]',false);await setOrbitRangeKeyboard(page,'area','min',60);await setOrbitRangeKeyboard(page,'area','max',80);const criteria={statuses:[],priceMin:220000000,priceMax:330000000,areaMin:60,areaMax:80},filtered=await waitOrbitFilters(page,criteria);assert.deepEqual(filtered.matchedIds,expectedOrbitMatches(records,criteria),'The larger Studio retains combined price and area filtering');await page.keyboard.press('Escape');await activateOrbitControl(page,'[data-orbit-filter-reset]',false);await waitOrbitFilters(page,{statuses:[],priceMin:null,priceMax:null});const resetImage=await page.locator('[data-admiral-homepage]').evaluate(root=>Object.fromEntries(['x','y','width','height'].map(key=>[key,Number(root.dataset['image'+key[0].toUpperCase()+key.slice(1)])])));for(const key of ['x','y','width','height'])assert.ok(Math.abs(resetImage[key]-geometry.image[key])<2,'Filter editing preserves the larger desktop camera '+key);
@@ -553,11 +581,50 @@ try{
    await waitStudio(page);await waitMask(page);const geometry=await studioGeometry(page);assertStudioViewport(geometry);
    assert.ok(Math.abs(geometry.image.width/geometry.image.height-1920/1010)<.01,'Compact desktop retains the entire camera frame without distortion');
    assert.ok(geometry.viewport.x>=0&&geometry.viewport.right<=viewport.width+1&&geometry.viewport.y>=0&&geometry.viewport.bottom<=viewport.height+1,'The large orbit fits the visible desktop screen');
+   if(await page.locator('[data-orbit-studio]').getAttribute('data-layout')==='builder'){
+    const frames=await readBuilderFrames(page);
+    for(const id of builderParts){const part=frames.parts[id];assert.ok(part&&part.x>=-1&&part.y>=-1&&part.right<=frames.width+1&&part.bottom<=frames.height+1,'Responsive builder '+id+' stays inside its logical viewport');}
+    assertBuilderTextGeometry(frames,'Responsive builder '+viewport.width+'x'+viewport.height);
+   }else{
    assert.ok(geometry.details.x>=geometry.viewport.right-2&&geometry.details.right<=viewport.width+1&&geometry.details.bottom<=viewport.height+1,'The apartment panel stays beside the orbit and inside the viewport');
    const hierarchy=await page.locator('.orbit-studio-details').evaluate(panel=>{const bounds=node=>{const b=node.getBoundingClientRect();return {x:b.x,y:b.y,width:b.width,height:b.height,right:b.right,bottom:b.bottom};},heading=panel.querySelector('.orbit-studio-heading'),facts=panel.querySelector('.orbit-studio-facts'),button=panel.querySelector('.orbit-studio-primary');return {panel:bounds(panel),heading:bounds(heading),facts:bounds(facts),button:bounds(button),scrollWidth:panel.scrollWidth,clientWidth:panel.clientWidth};});
    assert.ok(hierarchy.heading.y>=hierarchy.panel.y-1&&hierarchy.button.bottom<=hierarchy.panel.bottom+1,'The apartment identity and primary action remain immediately usable on shorter desktops');assert.ok(hierarchy.scrollWidth<=hierarchy.clientWidth+1,'Apartment data has no horizontal overflow');
+   }
    const probe=statusControlProbes.available;await hoverRealMask(page,probe);await waitStudio(page,probe.id);await assertDesktopStudioHierarchy(page,'Compact desktop '+viewport.width+'x'+viewport.height);const hovered=await studioGeometry(page);for(const key of ['x','y','width','height'])assert.ok(Math.abs(hovered.image[key]-geometry.image[key])<2,'Changing the apartment keeps the compact desktop camera '+key+' stable');
    await componentScreenshot(page,'studio-variant-compact-'+viewport.width+'x'+viewport.height+'.png');assert.equal(f.errors.length,0);
+  }finally{await f.close();}
+ });
+ for(const variant of [{name:'intermediate',viewport:{width:1600,height:1000}},{name:'Framer scaled',viewport:{width:1800,height:1200},stageWidth:1440,stageHeight:900,stageScale:.75}])await pass('Studio variant builder responsive frames and source aspect '+variant.name,async()=>{
+  const f=await fixture({cleanFixture:true,useDefaultOrbitLayout:true,context:{viewport:variant.viewport},stageWidth:variant.stageWidth,stageHeight:variant.stageHeight,stageScale:variant.stageScale,props:maskProps}),{page}=f;
+  try{
+   await waitStudio(page);await waitMask(page);const before=await orbitData(page),geometry=await studioGeometry(page),frames=await readBuilderFrames(page);assertStudioViewport(geometry);
+   for(const id of builderParts){const part=frames.parts[id];assert.ok(part&&part.x>=-1&&part.y>=-1&&part.right<=frames.width+1&&part.bottom<=frames.height+1,variant.name+' '+id+' fits the logical component viewport');}
+   if(variant.stageScale)await assertBuilderReference(page,'desktop','Framer-scaled builder');
+   else assertBuilderTextGeometry(frames,'Intermediate builder');
+   assert.ok(Math.abs(geometry.image.width/geometry.image.height-1920/1010)<.01,'The rendered orbit keeps its natural aspect under '+variant.name);
+   await hoverRealMask(page,statusControlProbes.available);await waitStudio(page,statusControlProbes.available.id);await assertActualMaskColour(page,statusControlProbes.available,statusHighlightRGB.available,variant.name+' actual mask');
+   const action=page.locator('[data-orbit-detail-link]:visible').first(),box=await action.boundingBox();await page.mouse.move(box.x+box.width/2,box.y+box.height/2,{steps:24});await page.waitForTimeout(300);const reachedId=await action.evaluate(element=>element.closest('[data-orbitdata-displayed-id]')?.dataset.orbitdataDisplayedId);assert.ok(reachedId,'Pointer arrival retains the last apartment displayed by the data action');await action.click();await waitApartmentCard(page,reachedId);await closeApartmentCard(page);assertSameCamera(before,await orbitData(page),variant.name+' shared card');
+   await componentScreenshot(page,'studio-builder-'+variant.name.replaceAll(' ','-')+'.png');assert.equal(f.errors.length,0);
+  }finally{await f.close();}
+ });
+ await pass('Studio variant builder ultrawide orbit fits above the approved data fields',async()=>{
+  const viewport={width:2560,height:1080},f=await fixture({cleanFixture:true,useDefaultOrbitLayout:true,context:{viewport},props:maskProps}),{page}=f;
+  try{
+   await waitStudio(page);await waitMask(page);const frames=await readBuilderFrames(page),geometry=await studioGeometry(page),camera=await orbitData(page);assertStudioViewport(geometry);assertBuilderTextGeometry(frames,'Ultrawide builder');
+   for(const id of builderParts){const part=frames.parts[id];assert.ok(part&&part.x>=-1&&part.y>=-1&&part.right<=frames.width+1&&part.bottom<=frames.height+1,'Ultrawide '+id+' remains inside the component');}
+   const firstDataTop=Math.min(...['apartmentNumber','availability','areaInterior','areaTerrace','areaGarden','price'].map(id=>frames.parts[id].y));assert.ok(geometry.image.y+geometry.image.height<=firstDataTop+2,'The orbit height cap leaves the approved data row unobscured');assert.ok(Math.abs(geometry.image.width/geometry.image.height-1920/1010)<.01,'Ultrawide orbit preserves source aspect');
+   await hoverRealMask(page,statusControlProbes.available);await waitStudio(page,statusControlProbes.available.id);await assertActualMaskColour(page,statusControlProbes.available,statusHighlightRGB.available,'Ultrawide mask picking');
+   const action=page.locator('[data-orbit-detail-link]:visible').first(),box=await action.boundingBox();await page.mouse.move(box.x+box.width/2,box.y+box.height/2,{steps:24});await page.waitForTimeout(400);const reachedId=await action.evaluate(element=>element.closest('[data-orbitdata-displayed-id]')?.dataset.orbitdataDisplayedId);assert.ok(reachedId);await action.click();await waitApartmentCard(page,reachedId);await closeApartmentCard(page);assertSameCamera(camera,await orbitData(page),'Ultrawide shared card');
+   await writeFile(new URL('studio-builder-ultrawide.json',out),JSON.stringify({frames,geometry,firstDataTop},null,2));await componentScreenshot(page,'studio-builder-ultrawide.png');assert.equal(f.errors.length,0);
+  }finally{await f.close();}
+ });
+ await pass('Studio variant builder updates the painted orbit on a height-only resize',async()=>{
+  const f=await fixture({cleanFixture:true,useDefaultOrbitLayout:true,context:{viewport:{width:1440,height:900}},props:{...studioProps,maskPicking:false}}),{page}=f;
+  try{
+   await waitStudio(page);await page.mouse.move(0,0);const initial=await studioGeometry(page);assertStudioViewport(initial);
+   await page.setViewportSize({width:1440,height:1000});await page.waitForFunction(()=>document.querySelector('[data-admiral-homepage]')?.clientHeight===1000);await page.waitForTimeout(250);await waitStudio(page);const taller=await studioGeometry(page);assertStudioViewport(taller);
+   assert.ok(Math.abs(taller.image.y-initial.image.y)>10,'A height-only resize updates the actual painted image position');assert.equal(taller.root.width,initial.root.width,'The test retains the same logical width');await componentScreenshot(page,'studio-builder-height-resize.png');
+   await page.setViewportSize({width:1440,height:900});await page.waitForFunction(()=>document.querySelector('[data-admiral-homepage]')?.clientHeight===900);await page.waitForTimeout(250);await waitStudio(page);assertStudioViewport(await studioGeometry(page));await assertBuilderReference(page,'desktop','Height-only round trip');assert.equal(f.errors.length,0);
   }finally{await f.close();}
  });
  await pass('Studio variant SEQ02 shrinks the fullscreen flight smoothly into the desktop orbit',async()=>{
@@ -1137,12 +1204,12 @@ try{
    await componentScreenshot(page,'default-mobile-studio-phone-390.png');
   }finally{await f.close();}
  });
- await pass('studio desktop uses a light 90vh composition with a readable cropped plan and an unoccluded orbit',async()=>{
+ await pass('studio desktop uses a light responsive composition with a readable cropped plan and an unoccluded orbit',async()=>{
   for(const viewport of [{width:1440,height:900},{width:1200,height:800}]){
    const f=await fixture({cleanFixture:true,context:{viewport},props:studioProps}),{page}=f;
    try{
     await waitStudio(page);const geometry=await studioGeometry(page);assertStudioViewport(geometry);
-    assert.match(geometry.background,/rgb\(253, 251, 251\)/,'The orbit studio has a light paper background');assert.ok(Math.abs(geometry.studio.height-geometry.root.height*.9)<2,'The light studio occupies 90% of the stable outer viewport');
+    assert.match(geometry.background,/rgb\(253, 251, 251\)/,'The orbit studio has a light paper background');const builder=await page.locator('[data-orbit-studio]').getAttribute('data-layout')==='builder';assert.ok(Math.abs(geometry.studio.height-geometry.root.height*(builder?1:.9))<2,'Builder layouts use the full reference coordinate plane; compact layouts retain their ninety-percent workspace');
     assert.ok(geometry.plan.height>=(viewport.width>=1440?270:220),'The selected floorplan remains readable in the compact apartment column: '+JSON.stringify({viewport,plan:geometry.plan}));assert.ok(geometry.plan.width>=(viewport.width>=1440?200:195),'The selected floorplan retains useful width beside the enlarged orbit');
     assert.ok(geometry.planNaturalWidth>=200,'The existing compact overview drawing has useful source resolution');assert.match(geometry.planSource,/floorplans\/types\/B\/thumb\.webp/);
     assert.equal(await page.locator('[data-orbit-apartment-select] option').count(),69,'All real JSON apartments are available in the temporary preview selector');

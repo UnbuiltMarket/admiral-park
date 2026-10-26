@@ -807,7 +807,7 @@ export default function AdmiralHomepageStudio(props: AdmiralHomepageTrialProps):
         const dataSelector = "[data-apartment-field='floorplan'],[data-orbit-studio-details],.orbit-studio-facts"
         // Studio's facts wrapper spans otherwise empty façade space. Only its
         // actual controls and drawing pane are pointer destinations.
-        const pointerDataSelector = "[data-apartment-open],[data-orbit-detail-link],[data-orbit-apartment-action],.orbit-studio-secondary,[data-orbit-studio-details]"
+        const pointerDataSelector = "[data-apartment-open],[data-orbit-detail-link],[data-orbit-apartment-action],.orbit-studio-secondary,[data-orbit-studio-details],[data-orbit-layout-data]"
         const cancelBridgeClear = () => { if (bridgeClearTimer !== null) clearTimeout(bridgeClearTimer); bridgeClearTimer = null }
         const pointerInsideData = () => !!pointer && Array.from(root!.querySelectorAll<HTMLElement>(pointerDataSelector)).some(panel => {
             const bounds = panel.getBoundingClientRect()
@@ -1203,7 +1203,7 @@ addPropertyControls(AdmiralHomepageStudio, {
     showControls: { type: ControlType.Boolean, title: "Trial controls", defaultValue: true },
     showViewpoints: { type: ControlType.Boolean, title: "View buttons", defaultValue: true },
     showDiagnostics: { type: ControlType.Boolean, title: "Diagnostics", defaultValue: false },
-    orbitLayout: { type: ControlType.Enum, title: "Orbit layout", options: ["mobile", "studio", "classic"], optionTitles: ["Fullscreen desktop", "Apartment studio", "Classic"], defaultValue: "studio", description: "Apartment studio places the desktop orbit, large floorplan and apartment details side by side. SEQ_02 shrinks into the orbit slot. Phones keep the current workspace. Keep the component at 100vh." },
+    orbitLayout: { type: ControlType.Enum, title: "Orbit layout", options: ["mobile", "studio", "classic"], optionTitles: ["Fullscreen desktop", "Apartment studio", "Classic"], defaultValue: "studio", description: "Apartment studio uses your saved desktop builder layout, with individual data beneath the orbit and the large plan on the right. SEQ_02 shrinks into its measured slot. Phones keep the current workspace. Keep the component at 100vh." },
     orbitBackground: { type: ControlType.Color, title: "Orbit background", defaultValue: "#fdfbfb", hidden: p => p.orbitLayout === "classic" },
     apartmentDataUrl: { type: ControlType.String, title: "Apartment JSON", defaultValue: "https://raw.githubusercontent.com/UnbuiltMarket/admiral-park/main/data/apartments.json", hidden: p => p.detailsMode === "off", description: "Apartment facts and media paths. All 69 records are small; only the selected plan is loaded." },
     apartmentAssetBase: { type: ControlType.String, title: "Media base", defaultValue: HOMEPAGE_ASSETS + "/apartment-list/", hidden: p => p.detailsMode === "off" },

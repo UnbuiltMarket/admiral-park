@@ -34,7 +34,10 @@ export async function buildHomepage() {
  const apartmentData = await readFile(new URL('src/framer/OrbitApartmentData.source.tsx',root),'utf8');
  const apartmentFilterLogic = await readFile(new URL('src/core/orbit-apartment-filters.ts',root),'utf8');
  const apartmentFilterBar = await readFile(new URL('src/framer/OrbitApartmentFilters.source.tsx',root),'utf8');
- const apartmentStudio = await readFile(new URL('src/framer/OrbitApartmentStudio.source.tsx',root),'utf8');
+ const studioLayout = JSON.parse(await readFile(new URL('docs/studio-layout-2026-10-26.json',root),'utf8'));
+ if(studioLayout.schema!=='admiral-studio-layout/v2'||!studioLayout.layouts?.desktop||!studioLayout.layouts?.wide)throw new Error('The approved Studio builder layout is missing or invalid.');
+ const apartmentStudio = 'const studioBuilderLayouts: Record<"desktop" | "wide", StudioBuilderReference> = '+JSON.stringify({desktop:studioLayout.layouts.desktop,wide:studioLayout.layouts.wide})+'\n'
+  +await readFile(new URL('src/framer/OrbitApartmentStudio.source.tsx',root),'utf8');
  const orbitFullscreen = await readFile(new URL('src/framer/OrbitFullscreen.source.tsx',root),'utf8');
  const source = '// Generated Framer homepage. Requires AdmiralApartmentDetailCard.tsx in the same Framer project.\n'+template
   .replace('__HERO_NAMES__',JSON.stringify(heroNames)).replace('__CONNECTION_NAMES__',JSON.stringify(connectionNames)).replace('__ORBIT_NAMES__',JSON.stringify(orbitNames))

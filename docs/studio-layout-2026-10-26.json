@@ -1,0 +1,52 @@
+{
+  "schema": "admiral-studio-layout/v2",
+  "baseComponentCommit": "6bd2c7f39c08152f9c88835f9ea5a6772b6709b5",
+  "selectedViewport": "desktop",
+  "editedViewports": ["desktop", "wide"],
+  "sampleApartment": "B302",
+  "layouts": {
+    "desktop": {
+      "edited": true,
+      "referenceViewport": {"width": 1440, "height": 900},
+      "elements": {
+        "orbit": {"x": 88, "y": 272, "width": 726, "height": 381.91},
+        "floorplan": {"x": 936, "y": 112, "width": 392, "height": 650},
+        "logo": {"x": 376, "y": 88, "width": 176, "height": 104},
+        "filters": {"x": 88, "y": 216, "width": 728, "height": 40},
+        "apartmentNumber": {"x": 88, "y": 672, "width": 144, "height": 56, "binding": "apartment.id", "fontSize": 36.7, "textStyle": {"align": "left"}},
+        "availability": {"x": 88, "y": 720, "width": 104, "height": 40, "binding": "apartment.status", "fontSize": 8.56, "textStyle": {"align": "left"}},
+        "areaInterior": {"x": 240, "y": 672, "width": 104, "height": 64, "binding": "apartment.areaInterior", "fontSize": 23.47, "textStyle": {"align": "left"}},
+        "areaTerrace": {"x": 344, "y": 672, "width": 104, "height": 64, "binding": "apartment.areaTerrace", "fontSize": 23.47, "textStyle": {"align": "left"}},
+        "areaGarden": {"x": 448, "y": 672, "width": 104, "height": 72, "binding": "apartment.areaGarden", "fontSize": 19.07, "textStyle": {"align": "left"}},
+        "price": {"x": 584, "y": 672, "width": 208, "height": 40, "binding": "apartment.price", "fontSize": 16.55, "textStyle": {"align": "left"}},
+        "detailsButton": {"x": 584, "y": 728, "width": 208, "height": 32, "binding": "openSharedDetailCard", "fontSize": 8.8, "textStyle": {"align": "left"}},
+        "secondaryLinks": {"x": 8, "y": 16, "width": 230, "height": 24, "binding": "apartment.pdfAndShare", "fontSize": 9, "textStyle": {"align": "left"}},
+        "metadata": {"x": 584, "y": 760, "width": 208, "height": 32, "binding": "apartment.secondaryFacts", "fontSize": 8, "textStyle": {"align": "left"}}
+      },
+      "orbitdataMode": "individual",
+      "orbitAspectLocked": true
+    },
+    "wide": {
+      "edited": true,
+      "referenceViewport": {"width": 1920, "height": 1080},
+      "elements": {
+        "orbit": {"x": 144, "y": 272, "width": 882.06, "height": 464},
+        "floorplan": {"x": 1136, "y": 80, "width": 656, "height": 904},
+        "logo": {"x": 424, "y": 80, "width": 272, "height": 96},
+        "filters": {"x": 144, "y": 208, "width": 880, "height": 48},
+        "apartmentNumber": {"x": 144, "y": 760, "width": 140, "height": 54, "binding": "apartment.id", "fontSize": 34, "textStyle": {"align": "left"}},
+        "availability": {"x": 144, "y": 820, "width": 145, "height": 24, "binding": "apartment.status", "fontSize": 10, "textStyle": {"align": "left"}},
+        "areaInterior": {"x": 320, "y": 768, "width": 110, "height": 72, "binding": "apartment.areaInterior", "fontSize": 22, "textStyle": {"align": "left"}},
+        "areaTerrace": {"x": 450, "y": 768, "width": 110, "height": 72, "binding": "apartment.areaTerrace", "fontSize": 22, "textStyle": {"align": "left"}},
+        "areaGarden": {"x": 580, "y": 768, "width": 110, "height": 72, "binding": "apartment.areaGarden", "fontSize": 22, "textStyle": {"align": "left"}},
+        "price": {"x": 730, "y": 760, "width": 310, "height": 60, "binding": "apartment.price", "fontSize": 30, "textStyle": {"align": "left"}},
+        "detailsButton": {"x": 730, "y": 834, "width": 310, "height": 44, "binding": "openSharedDetailCard", "fontSize": 11, "textStyle": {"align": "left"}},
+        "secondaryLinks": {"x": 144, "y": 896, "width": 240, "height": 28, "binding": "apartment.pdfAndShare", "fontSize": 9, "textStyle": {"align": "left"}},
+        "metadata": {"x": 440, "y": 896, "width": 600, "height": 40, "binding": "apartment.secondaryFacts", "fontSize": 10, "textStyle": {"align": "left"}}
+      },
+      "orbitdataMode": "individual",
+      "orbitAspectLocked": true
+    },
+    "mobile": {"edited": false, "referenceViewport": {"width": 390, "height": 844}}
+  }
+}

@@ -1,3 +1,38 @@
+interface StudioBuilderFrame { x: number; y: number; width: number; height: number; binding?: string; fontSize?: number; textStyle?: { align?: string } }
+interface StudioBuilderReference { referenceViewport: { width: number; height: number }; elements: Record<string, StudioBuilderFrame>; edited?: boolean; orbitdataMode?: string; orbitAspectLocked?: boolean }
+
+// Frame percentages blend between the two approved artboards. The orbit height
+// follows its source ratio; the actual plan always contains its own JSON aspect.
+function studioBuilderFrames(width: number, height: number): Record<string, StudioBuilderFrame> {
+    const a = studioBuilderLayouts.desktop, b = studioBuilderLayouts.wide
+    const amount = Math.max(0, Math.min(1, (width - a.referenceViewport.width) / (b.referenceViewport.width - a.referenceViewport.width)))
+    const blend = (left: number, right: number) => left + (right - left) * amount
+    const fontScale = Math.min(width / blend(a.referenceViewport.width, b.referenceViewport.width), height / blend(a.referenceViewport.height, b.referenceViewport.height))
+    return Object.fromEntries(Object.keys(a.elements).map(key => {
+        // These two user-authored link anchors belong to different regions. A
+        // breakpoint keeps the link box from travelling across the facade.
+        const source = key === "secondaryLinks" ? width < 1680 ? a : b : null
+        const left = source?.elements[key] || a.elements[key], right = source?.elements[key] || b.elements[key]
+        const refLeft = source?.referenceViewport || a.referenceViewport, refRight = source?.referenceViewport || b.referenceViewport
+        const frame: StudioBuilderFrame = {
+            x: blend(left.x / refLeft.width, right.x / refRight.width) * width,
+            y: blend(left.y / refLeft.height, right.y / refRight.height) * height,
+            width: blend(left.width / refLeft.width, right.width / refRight.width) * width,
+            height: blend(left.height / refLeft.height, right.height / refRight.height) * height,
+            ...(left.fontSize !== undefined && right.fontSize !== undefined ? { fontSize: blend(left.fontSize, right.fontSize) * fontScale } : {}),
+            textStyle: left.textStyle,
+        }
+        if (key === "orbit") {
+            // Very wide or short monitors must not grow the camera through the
+            // data beneath it. Fit both approved frame constraints, retaining
+            // the left anchor and the natural camera ratio.
+            frame.width = Math.min(frame.width, frame.height * 1920 / 1010)
+            frame.height = frame.width * 1010 / 1920
+        }
+        return [key, frame]
+    }))
+}
+
 interface OrbitApartmentStudioProps {
     active: boolean
     mode: "preview" | "hover" | "off"
@@ -371,11 +406,38 @@ const orbitApartmentStudioStyles = `
     [data-orbit-studio][data-mobile="true"] .orbit-studio-status { font-size: 8.5px; gap: 3px; }
     [data-orbit-studio][data-mobile="true"] .orbit-studio-status-dot { width: 5px; height: 5px; }
 }
+/* Approved builder positions use the logical Framer component as their plane.
+   Empty grouping wrappers have no hit box; real parts retain fades and focus. */
+[data-orbit-studio][data-mobile="false"][data-layout="builder"] { inset: 0; height: 100%; padding: 0; gap: 0; display: block; }
+[data-orbit-studio][data-mobile="false"][data-layout="builder"] :is(.orbit-studio-header,.orbit-studio-body,.orbit-studio-scene,.orbit-studio-image-slot,.orbit-studio-details,.orbit-studio-summary,.orbit-studio-heading,.orbit-studio-facts,.orbit-studio-areas,.orbit-studio-apartment-footer,.orbit-studio-bottom,.orbit-studio-plan-workspace,.orbit-studio-plan-section) { display: contents; position: static; margin: 0; padding: 0; border: 0; }
+[data-orbit-studio][data-mobile="false"][data-layout="builder"] [data-orbit-layout-part] { position: absolute; left: var(--layout-x); top: var(--layout-y); width: var(--layout-width); height: var(--layout-height); max-width: none; max-height: none; min-width: 0; min-height: 0; margin: 0; box-sizing: border-box; pointer-events: auto; }
+[data-orbit-studio][data-mobile="false"][data-layout="builder"] .orbit-studio-brand { object-fit: contain; }
+[data-orbit-studio][data-mobile="false"][data-layout="builder"] .orbit-studio-header-end { position: absolute; right: 16px; bottom: 16px; z-index: 5; }
+[data-orbit-studio][data-mobile="false"][data-layout="builder"] [data-orbit-studio-filters] { display: flex; align-items: center; z-index: 6; }
+[data-orbit-studio][data-mobile="false"][data-layout="builder"] .orbit-studio-id { display: flex; align-items: center; justify-content: var(--layout-align); font-size: var(--layout-font); line-height: 1; }
+[data-orbit-studio][data-mobile="false"][data-layout="builder"] .orbit-studio-status { display: flex; align-items: center; justify-content: var(--layout-align); font-size: var(--layout-font); line-height: 1.2; }
+[data-orbit-studio][data-mobile="false"][data-layout="builder"] [data-orbit-apartment-metric] { display: flex; flex-direction: column; align-items: var(--layout-align); justify-content: center; gap: 5px; }
+[data-orbit-studio][data-mobile="false"][data-layout="builder"] .orbit-studio-areas dt { margin: 0; font-size: max(9px,calc(var(--layout-font) * .45)); line-height: 1.2; }
+[data-orbit-studio][data-mobile="false"][data-layout="builder"] .orbit-studio-areas dd { margin: 0; font-size: var(--layout-font); line-height: 1; }
+[data-orbit-studio][data-mobile="false"][data-layout="builder"] .orbit-studio-areas small { margin-top: 5px; font-size: max(8px,calc(var(--layout-font) * .4)); line-height: 1; }
+[data-orbit-studio][data-mobile="false"][data-layout="builder"] .orbit-studio-price { display: flex; flex-direction: column; align-items: var(--layout-align); justify-content: center; gap: 5px; }
+[data-orbit-studio][data-mobile="false"][data-layout="builder"] .orbit-studio-label { margin: 0; font-size: max(9px,calc(var(--layout-font) * .3)); line-height: 1.2; }
+[data-orbit-studio][data-mobile="false"][data-layout="builder"] .orbit-studio-price-value { margin: 0; min-height: 0; font-size: var(--layout-font); line-height: 1; }
+[data-orbit-studio][data-mobile="false"][data-layout="builder"] .orbit-studio-price-value small { font-size: max(8px,calc(var(--layout-font) * .4)); }
+[data-orbit-studio][data-mobile="false"][data-layout="builder"] .orbit-studio-primary { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 0; padding: 10px 12px; font-size: var(--layout-font); line-height: 1.2; }
+[data-orbit-studio][data-mobile="false"][data-layout="builder"] .orbit-studio-secondary { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 12px; min-height: 0; font-size: var(--layout-font); }
+[data-orbit-studio][data-mobile="false"][data-layout="builder"] .orbit-studio-secondary .orbit-studio-text-button { min-height: 0; padding: 0; font-size: inherit; line-height: 1.4; }
+[data-orbit-studio][data-mobile="false"][data-layout="builder"] .orbit-studio-meta { display: flex; align-items: baseline; align-content: center; justify-content: var(--layout-align); flex-wrap: wrap; gap: 2px 10px; min-height: 0; font-size: var(--layout-font); line-height: 1.6; }
+[data-orbit-studio][data-mobile="false"][data-layout="builder"] .orbit-studio-drawing-toolbar { position: absolute; left: var(--layout-x); top: calc(var(--layout-y) + var(--layout-height) + 8px); width: var(--layout-width); height: 30px; min-height: 0; margin: 0; }
+[data-orbit-studio][data-mobile="false"][data-layout="builder"] .orbit-studio-plan-note { position: absolute; left: var(--layout-x); top: calc(var(--layout-y) + var(--layout-height) + 48px); width: var(--layout-width); margin: 0; }
 `
 
 function OrbitApartmentStudio(props: OrbitApartmentStudioProps): React.JSX.Element {
     const { active, mode, dataset, dataStatus, error, onRetry, apartment: currentApartment, onSelect, assetBase, detailsUrl, inquiryUrl, onViewport, language, onLayout, onOpenDetails, mobile = false, moving = false, filters, filterBounds, filterAreaBounds = null, filterActive, filterCount, onFiltersChange } = props
     const transition = useOrbitDataTransition(currentApartment, currentApartment?.id || null, { moving, enabled: active })
+    const boardRef = React.useRef<HTMLElement>(null)
+    const [builderBounds, setBuilderBounds] = React.useState<{ width: number; height: number } | null>(null)
+    const builderFrames = React.useMemo(() => builderBounds ? studioBuilderFrames(builderBounds.width, builderBounds.height) : null, [builderBounds])
     const apartment = transition.displayed
     const hu = language !== "en"
     const [view, setView] = React.useState<"floorplan" | "floorLayout">("floorplan")
@@ -403,6 +465,17 @@ function OrbitApartmentStudio(props: OrbitApartmentStudioProps): React.JSX.Eleme
     const cssUrl = (url: string) => url.replace(/["\\\n\r]/g, character => encodeURIComponent(character))
     const fontStyles = `@font-face{font-family:Montserrat;src:url("${cssUrl(fontLatin)}") format("woff2");font-style:normal;font-weight:100 900;font-display:swap;unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}@font-face{font-family:Montserrat;src:url("${cssUrl(fontExtended)}") format("woff2");font-style:normal;font-weight:100 900;font-display:swap;unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C4,U+2113,U+2C60-2C7F,U+A720-A7FF}`
     React.useEffect(() => { mounted.current = true; return () => { mounted.current = false; shareGeneration.current++ } }, [])
+    React.useEffect(() => {
+        const host = boardRef.current?.closest<HTMLElement>("[data-admiral-homepage]")
+        if (!host || mobile) { setBuilderBounds(null); return }
+        const update = () => {
+            const width = host.clientWidth, height = host.clientHeight
+            setBuilderBounds(previous => width >= 1180 && height > 720 ? previous?.width === width && previous.height === height ? previous : { width, height } : null)
+        }
+        const observer = new ResizeObserver(update)
+        observer.observe(host); update()
+        return () => observer.disconnect()
+    }, [mobile])
     React.useEffect(() => { setView("floorplan"); setFailedImage(""); setExpanded(false); setShareMessage(""); shareGeneration.current++ }, [apartment?.id])
     React.useEffect(() => { if (mobile) setView("floorplan") }, [mobile])
     React.useEffect(() => { setZoom(1); setPan({ x: 0, y: 0 }); setFailedImage("") }, [view, expanded])
@@ -413,7 +486,7 @@ function OrbitApartmentStudio(props: OrbitApartmentStudioProps): React.JSX.Eleme
         if (expanded && active && !element.open) element.showModal()
         if ((!expanded || !active) && element.open) element.close()
     }, [expanded, active])
-    React.useEffect(() => { onLayout?.() }, [active, apartment?.id, dataStatus, view, mobile, onLayout])
+    React.useEffect(() => { onLayout?.() }, [active, apartment?.id, dataStatus, view, mobile, builderBounds, onLayout])
     const positive = (value: unknown): value is number => typeof value === "number" && Number.isFinite(value) && value >= 0
     const linkFor = (source: string) => {
         if (!source || !apartment) return ""
@@ -446,7 +519,7 @@ function OrbitApartmentStudio(props: OrbitApartmentStudioProps): React.JSX.Eleme
             if ((reason as { name?: string })?.name !== "AbortError" && mounted.current && generation === shareGeneration.current) setShareMessage(hu ? "A megosztás most nem érhető el." : "Sharing is currently unavailable.")
         }
     }
-    const meta = (mobile = false) => <p className={`orbit-studio-meta${mobile ? " orbit-studio-mobile-meta" : ""}`}>
+    const meta = (mobileMeta = false) => <p className={`orbit-studio-meta${mobileMeta ? " orbit-studio-mobile-meta" : ""}`} {...(!mobileMeta ? builderPart("metadata") : {})}>
         {apartment?.apartmentType && <span><strong>{apartment.apartmentType}</strong> {labels.type}</span>}
         {apartment?.building && <span><strong>{apartment.building}</strong> {labels.building}</span>}
         {floor && <span data-orbit-field="floor"><strong>{floor}</strong></span>}
@@ -455,12 +528,12 @@ function OrbitApartmentStudio(props: OrbitApartmentStudioProps): React.JSX.Eleme
     </p>
     const conversion = () => <>
         <div className="orbit-studio-bottom">
-            <div className="orbit-studio-price">{!mobile && <p className="orbit-studio-label">{apartment?.priceIncludesVat === false ? hu ? "Nettó vételár" : "Net purchase price" : labels.gross}</p>}<p className={`orbit-studio-price-value${!positive(apartment?.price) ? " orbit-studio-price-empty" : ""}`} data-orbit-apartment-price="" data-orbit-field="price">
+            <div className="orbit-studio-price" {...builderPart("price")}>{!mobile && <p className="orbit-studio-label">{apartment?.priceIncludesVat === false ? hu ? "Nettó vételár" : "Net purchase price" : labels.gross}</p>}<p className={`orbit-studio-price-value${!positive(apartment?.price) ? " orbit-studio-price-empty" : ""}`} data-orbit-apartment-price="" data-orbit-field="price">
                 {positive(apartment?.price) ? <>{number.format(apartment!.price! / 1000000)}<small>M Ft</small></> : availability === "sold" ? hu ? "Nincs megadva" : "Not provided" : hu ? "Ár kérésre" : "Price on request"}
             </p></div>
-            {(mobile || !inquiryLink) && onOpenDetails ? <button type="button" className="orbit-studio-primary" data-orbit-apartment-action="" data-orbit-detail-link="" aria-haspopup="dialog" disabled={!transition.interactive} onClick={() => { if (transition.interactive) onOpenDetails() }}><span>{mobile ? hu ? "Adatlap" : "Details" : labels.details}</span>{mobile ? <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6" /></svg> : <span aria-hidden="true">↗</span>}</button> : (mobile ? detailLink : actionLink) && <a className="orbit-studio-primary" href={mobile ? detailLink : actionLink} data-orbit-apartment-action="" {...(!mobile && inquiryLink ? { "data-orbit-inquiry": "" } : { "data-orbit-detail-link": "" })}><span>{mobile ? hu ? "Adatlap" : "Details" : inquiryLink ? labels.inquire : labels.details}</span>{mobile ? <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6" /></svg> : <span aria-hidden="true">↗</span>}</a>}
+            {(mobile || !inquiryLink) && onOpenDetails ? <button type="button" className="orbit-studio-primary" {...builderPart("detailsButton")} data-orbit-apartment-action="" data-orbit-detail-link="" aria-haspopup="dialog" disabled={!transition.interactive} onClick={() => { if (transition.interactive) onOpenDetails() }}><span>{mobile ? hu ? "Adatlap" : "Details" : labels.details}</span>{mobile ? <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6" /></svg> : <span aria-hidden="true">↗</span>}</button> : (mobile ? detailLink : actionLink) && <a className="orbit-studio-primary" {...builderPart("detailsButton")} href={mobile ? detailLink : actionLink} data-orbit-apartment-action="" {...(!mobile && inquiryLink ? { "data-orbit-inquiry": "" } : { "data-orbit-detail-link": "" })}><span>{mobile ? hu ? "Adatlap" : "Details" : inquiryLink ? labels.inquire : labels.details}</span>{mobile ? <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6" /></svg> : <span aria-hidden="true">↗</span>}</a>}
         </div>
-        <div className="orbit-studio-secondary">
+        <div className="orbit-studio-secondary" {...builderPart("secondaryLinks")}>
             {download && <a href={download} className="orbit-studio-text-button" target="_blank" rel="noopener noreferrer" download={record?.media?.datasheet?.filename || undefined} data-orbit-apartment-download="" data-orbit-download=""><span aria-hidden="true">↓</span>{labels.download}</a>}
             {inquiryLink && (onOpenDetails ? <button type="button" className="orbit-studio-text-button" data-orbit-detail-link="" aria-haspopup="dialog" disabled={!transition.interactive} onClick={() => { if (transition.interactive) onOpenDetails() }}>{labels.details}<span aria-hidden="true">↗</span></button> : detailLink && <a href={detailLink} className="orbit-studio-text-button" data-orbit-detail-link="">{labels.details}<span aria-hidden="true">↗</span></a>)}
             {apartment && <button type="button" className="orbit-studio-text-button" onClick={() => { void share() }}>{labels.share}<span aria-hidden="true">↗</span></button>}
@@ -485,27 +558,39 @@ function OrbitApartmentStudio(props: OrbitApartmentStudioProps): React.JSX.Eleme
         "data-orbitdata-visible": String(!!apartment && transition.visible),
     }
     const panelFade = { ...recordFade, "data-orbitdata-visible": String(!apartment && !moving || transition.visible) }
+    function builderStyle(key: string): React.CSSProperties | undefined {
+        const frame = builderFrames?.[key]
+        return frame ? { "--layout-x": `${frame.x}px`, "--layout-y": `${frame.y}px`, "--layout-width": `${frame.width}px`, "--layout-height": `${frame.height}px`,
+            ...(frame.fontSize !== undefined ? { "--layout-font": `${frame.fontSize}px` } : {}),
+            "--layout-align": frame.textStyle?.align === "center" ? "center" : frame.textStyle?.align === "right" ? "flex-end" : "flex-start" } as React.CSSProperties : undefined
+    }
+    function builderPart(key: string) {
+        if (mobile) return {}
+        return { "data-orbit-layout-part": key, ...(key !== "orbit" && key !== "logo" && key !== "filters" ? { "data-orbit-layout-data": "" } : {}),
+            ...(builderFrames ? { style: builderStyle(key), ...(!["orbit", "logo", "filters", "floorplan"].includes(key) ? recordFade : {}) } : {}) }
+    }
+    const planPart = builderPart("floorplan")
     const facts = <div className="orbit-studio-facts" data-orbit-ignore="" {...recordFade} {...detailsVisibility}>
         <dl className="orbit-studio-areas">
-            {([ ["areaInterior", labels.interior, "area"], ["areaTerrace", labels.terrace, "terrace"], ["areaGarden", labels.garden, "garden"] ] as const).map(([key, label, field]) => <div key={key} data-orbit-apartment-metric={key} data-orbit-field={field}><dt>{label}</dt><dd>{positive(apartment?.[key]) && (key === "areaInterior" || apartment![key]! > 0) ? <>{number.format(apartment![key]!)}<small>m²</small></> : "—"}</dd></div>)}
+            {([ ["areaInterior", labels.interior, "area"], ["areaTerrace", labels.terrace, "terrace"], ["areaGarden", labels.garden, "garden"] ] as const).map(([key, label, field]) => <div key={key} {...builderPart(key)} data-orbit-apartment-metric={key} data-orbit-field={field}><dt>{label}</dt><dd>{positive(apartment?.[key]) && (key === "areaInterior" || apartment![key]! > 0) ? <>{number.format(apartment![key]!)}<small>m²</small></> : "—"}</dd></div>)}
         </dl>
     </div>
     return <>
-        <section data-orbit-studio="" data-active={active ? "true" : "false"} data-mobile={mobile ? "true" : "false"} data-moving={moving ? "true" : "false"} data-mode={mode} data-status={dataStatus} data-apartment-id={currentApartment?.id || ""} aria-hidden={!active} {...(!active ? { inert: "" as any } : {})} aria-labelledby={mobile ? undefined : headingId} aria-label={mobile ? hu ? "Lakásválasztó" : "Apartments" : undefined}>
+        <section ref={boardRef} data-orbit-studio="" data-layout={builderFrames ? "builder" : "standard"} data-active={active ? "true" : "false"} data-mobile={mobile ? "true" : "false"} data-moving={moving ? "true" : "false"} data-mode={mode} data-status={dataStatus} data-apartment-id={currentApartment?.id || ""} aria-hidden={!active} {...(!active ? { inert: "" as any } : {})} aria-labelledby={mobile ? undefined : headingId} aria-label={mobile ? hu ? "Lakásválasztó" : "Apartments" : undefined}>
             <style>{fontStyles + orbitApartmentStudioStyles}</style>
             <header className="orbit-studio-header" data-orbit-ignore="">
-                {logo && <img className="orbit-studio-brand" src={logo} alt="Admiral Park" width={184} height={78} draggable={false} />}
+                {logo && <img className="orbit-studio-brand" {...builderPart("logo")} src={logo} alt="Admiral Park" width={184} height={78} draggable={false} />}
                 {!mobile && <div className="orbit-studio-header-end">
                     {mode === "preview" && dataset && <div className="orbit-studio-preview"><label htmlFor={`${headingId}-select`}>{labels.preview}</label><select id={`${headingId}-select`} data-orbit-apartment-select="" aria-label={labels.select} value={currentApartment?.id || ""} disabled={!active || moving} onChange={event => onSelect(event.target.value)}>
                         {!currentApartment && <option value="">—</option>}{dataset.apartments.map(unit => <option key={unit.id} value={unit.id}>{unit.id}</option>)}
                     </select></div>}
                 </div>}
-                {!mobile && <div data-orbit-studio-filters=""><OrbitFilterBar active={active && !moving} language={language} filters={filters} bounds={filterBounds} areaBounds={filterAreaBounds} matchCount={filterCount} total={dataset?.apartments.length || 0} onChange={onFiltersChange} /></div>}
+                {!mobile && <div data-orbit-studio-filters="" {...builderPart("filters")}><OrbitFilterBar active={active && !moving} language={language} filters={filters} bounds={filterBounds} areaBounds={filterAreaBounds} matchCount={filterCount} total={dataset?.apartments.length || 0} onChange={onFiltersChange} /></div>}
             </header>
             {mobile && <OrbitFilterBar active={active && !moving} language={language} filters={filters} bounds={filterBounds} areaBounds={filterAreaBounds} matchCount={filterCount} total={dataset?.apartments.length || 0} onChange={onFiltersChange} />}
             <div className="orbit-studio-body">
                 <div className="orbit-studio-scene">
-                    <div className="orbit-studio-image-slot"><div ref={viewportCallback} data-orbit-viewport="" aria-hidden="true" /></div>
+                    <div className="orbit-studio-image-slot"><div ref={viewportCallback} data-orbit-viewport="" {...builderPart("orbit")} aria-hidden="true" /></div>
                 </div>
                 {mobile ? <div className="orbit-studio-mobile-panel" data-orbit-studio-details="" data-orbit-ignore="" style={aspectStyle} {...panelFade} {...detailsVisibility}>
                     {dataStatus === "error" ? <div className="orbit-studio-empty" role="status"><p>{hu ? "A lakásadatok most nem tölthetők be." : "Apartment information could not be loaded."}</p><button type="button" className="orbit-studio-text-button" onClick={onRetry}>{hu ? "Újrapróbálom" : "Try again"}</button></div> : !apartment ? <div className="orbit-studio-empty" role="status" {...(filterActive && filterCount === 0 ? { "data-orbit-filter-empty": "" } : {})}><p>{dataStatus === "loading" || dataStatus === "idle" ? hu ? "Lakásadatok betöltése…" : "Loading apartment information…" : filterActive && filterCount === 0 ? hu ? "Nincs a szűrésnek megfelelő lakás." : "No apartments match these filters." : hu ? "Válasszon egy lakást az épületen." : "Select an apartment on the building."}</p></div> : <>
@@ -532,18 +617,18 @@ function OrbitApartmentStudio(props: OrbitApartmentStudioProps): React.JSX.Eleme
                         </div>
                     </>}
                 </div> : <div className="orbit-studio-details" data-orbit-studio-details="" data-orbit-ignore="" {...panelFade} {...detailsVisibility}>
-                    <div className="orbit-studio-plan-workspace">
-                        <div className="orbit-studio-drawing-toolbar">{tabs}<button type="button" className="orbit-studio-text-button" aria-label={labels.expand} disabled={!planShown} onClick={() => setExpanded(true)}>{hu ? "Nagyítás" : "Enlarge"}<span aria-hidden="true">↗</span></button></div>
+                    <div className="orbit-studio-plan-workspace" style={builderStyle("floorplan")}>
+                        <div className="orbit-studio-drawing-toolbar" {...(builderFrames ? { ...panelFade, "data-orbit-layout-data": "" } : {})}>{tabs}<button type="button" className="orbit-studio-text-button" aria-label={labels.expand} disabled={!planShown} onClick={() => setExpanded(true)}>{hu ? "Nagyítás" : "Enlarge"}<span aria-hidden="true">↗</span></button></div>
                         <section className="orbit-studio-plan-section" id={planPanelId} role="tabpanel" aria-label={labels[view]}>
-                            <div className="orbit-studio-plan-stage" style={aspectStyle}>
+                            <div className="orbit-studio-plan-stage" {...planPart} {...(builderFrames ? panelFade : {})} style={{ ...aspectStyle, ...builderStyle("floorplan") }}>
                                 {dataStatus === "error" ? <div className="orbit-studio-empty" role="status"><p>{hu ? "A lakásadatok most nem tölthetők be." : "Apartment information could not be loaded."}</p>{error && <p>{error}</p>}<button type="button" className="orbit-studio-text-button" onClick={onRetry}>{hu ? "Újrapróbálom" : "Try again"}</button></div> : !apartment ? <div className="orbit-studio-empty" role="status"><p>{dataStatus === "loading" || dataStatus === "idle" ? hu ? "Lakásadatok betöltése…" : "Loading apartment information…" : hu ? "Válasszon egy lakást az épületen." : "Select an apartment on the building."}</p></div> : planShown ? <div className="orbit-studio-plan-crop" data-orbit-plan-crop=""><img data-orbit-floorplan="" className="orbit-studio-plan-image" src={plan!.url} style={planStyle} alt={`${apartment.id} · ${labels[view]}`} decoding="async" draggable={false} onLoad={() => onLayout?.()} onError={() => setFailedImage(plan!.url)} /></div> : <p className="orbit-studio-empty">{hu ? "A rajz még nem érhető el." : "This drawing is not available yet."}</p>}
                             </div>
-                            <p className="orbit-studio-plan-note">{note}</p>
+                            <p className="orbit-studio-plan-note" {...(builderFrames ? panelFade : {})}>{note}</p>
                         </section>
                     </div>
                     <div className="orbit-studio-summary">
-                        <div className="orbit-studio-heading" {...recordFade}><h2 id={headingId} className="orbit-studio-id">{apartment?.id || "—"}</h2>
-                            {statusText && <span className="orbit-studio-status" data-status={availability} data-orbit-field="status"><span className="orbit-studio-status-dot" aria-hidden="true" />{statusText}</span>}
+                        <div className="orbit-studio-heading" {...recordFade}><h2 id={headingId} className="orbit-studio-id" {...builderPart("apartmentNumber")}>{apartment?.id || "—"}</h2>
+                            {statusText && <span className="orbit-studio-status" {...builderPart("availability")} data-status={availability} data-orbit-field="status"><span className="orbit-studio-status-dot" aria-hidden="true" />{statusText}</span>}
                         </div>
                         {facts}
                         <div className="orbit-studio-apartment-footer" {...recordFade}>{conversion()}{meta()}</div>
