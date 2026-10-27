@@ -14,7 +14,7 @@ const HOMEPAGE_CONNECTION_VERSION = "__CONNECTION_VERSION__"
 const HOMEPAGE_ORBIT_VERSION = "__ORBIT_VERSION__"
 const HOMEPAGE_ASSETS = "https://raw.githubusercontent.com/UnbuiltMarket/admiral-park/main/assets"
 type HomepageStage = "opening" | "approach" | "building" | "connection" | "handoff" | "orbit"
-interface HomepageTiming { openingOut: number; buildingIn: number; buildingFull: number; ctaIn: number; rise: number }
+interface HomepageTiming { openingOut: number; openingZoom: number; buildingIn: number; buildingFull: number; ctaIn: number; rise: number }
 interface HomepageMobileLayout { enabled: boolean; storyTop: number; storyMaxHeight: number; storyLeft?: number; storyWidth?: number }
 interface HomepageChannel { snapshot: SequenceSnapshot; timing: HomepageTiming; enabled: boolean; stage: HomepageStage; orbit: OrbitSnapshot; story: OrbitStorySettings; static: boolean; mobile: HomepageMobileLayout | null }
 const homepageChannels = new Map<HTMLElement, HomepageChannel>()
@@ -34,7 +34,7 @@ interface AdmiralHomepageTrialProps {
     storyView1?: OrbitStoryViewMotion; storyView2?: OrbitStoryViewMotion; storyView3?: OrbitStoryViewMotion; storyView4?: OrbitStoryViewMotion
     storyView5?: OrbitStoryViewMotion; storyView6?: OrbitStoryViewMotion; storyView7?: OrbitStoryViewMotion; storyView8?: OrbitStoryViewMotion
     focalX?: number; focalY?: number; darken?: number; showControls?: boolean; showViewpoints?: boolean; showDiagnostics?: boolean
-    openingOut?: number; buildingIn?: number; buildingFull?: number; ctaIn?: number; rise?: number
+    openingOut?: number; openingZoom?: number; buildingIn?: number; buildingFull?: number; ctaIn?: number; rise?: number
     detailsMode?: "preview" | "hover" | "off"; detailsLanguage?: ApartmentDetailsLanguage
     detailsBottom?: number; detailsInset?: number; apartmentPreview?: ApartmentDetailsPreview
     orbitLayout?: "mobile" | "studio" | "classic"; apartmentDataUrl?: string; apartmentAssetBase?: string; previewApartmentId?: string
@@ -160,7 +160,7 @@ export default function AdmiralHomepageStudio(props: AdmiralHomepageTrialProps):
         storyView1, storyView2, storyView3, storyView4, storyView5, storyView6, storyView7, storyView8,
         focalX = 50, focalY = 50, darken = 0,
         showControls = true, showViewpoints = true, showDiagnostics = false,
-        openingOut = 20, buildingIn = 68, buildingFull = 88, ctaIn = 86, rise = 20,
+        openingOut = 20, openingZoom = 16, buildingIn = 68, buildingFull = 88, ctaIn = 86, rise = 20,
         detailsMode = "preview", detailsLanguage = "hu", detailsBottom = 32, detailsInset = 48, apartmentPreview,
         orbitLayout = "studio", apartmentDataUrl = "https://raw.githubusercontent.com/UnbuiltMarket/admiral-park/main/data/apartments.json",
         apartmentAssetBase = HOMEPAGE_ASSETS + "/apartment-list/", previewApartmentId = "A001", detailPageUrl = "/lista", inquiryUrl = "", orbitBackground = "#fdfbfb",
@@ -346,8 +346,8 @@ export default function AdmiralHomepageStudio(props: AdmiralHomepageTrialProps):
     }, [filterResult, filterMatches, interactionApartmentId, stage, orbitInfo.state, orbitInfo.checkpoint, staticRenderer])
     const setStudioViewport = React.useCallback((element: HTMLDivElement | null) => { studioViewportRef.current = element; queueMicrotask(() => refreshPresentation.current()) }, [])
     const refreshStudioLayout = React.useCallback(() => { refreshPresentation.current() }, [])
-    const timing = React.useRef<HomepageTiming>({ openingOut, buildingIn, buildingFull, ctaIn, rise })
-    timing.current = { openingOut, buildingIn, buildingFull, ctaIn, rise }
+    const timing = React.useRef<HomepageTiming>({ openingOut, openingZoom, buildingIn, buildingFull, ctaIn, rise })
+    timing.current = { openingOut, openingZoom, buildingIn, buildingFull, ctaIn, rise }
     const storySettings = React.useMemo<OrbitStorySettings>(() => ({
         enabled: orbitStories && checkpointCount === 8, enterDuration: storyIn, exitDuration: storyOut, delay: storyDelay,
         views: [storyView1, storyView2, storyView3, storyView4, storyView5, storyView6, storyView7, storyView8].map((view, index) => ({ ...DEFAULT_ORBIT_STORY_VIEWS[index], ...view })),
@@ -907,7 +907,7 @@ export default function AdmiralHomepageStudio(props: AdmiralHomepageTrialProps):
     React.useEffect(() => {
         const root = rootRef.current, channel = root && homepageChannels.get(root)
         if (channel) { channel.timing = timing.current; notifyHomepage() }
-    }, [openingOut, buildingIn, buildingFull, ctaIn, rise])
+    }, [openingOut, openingZoom, buildingIn, buildingFull, ctaIn, rise])
     React.useEffect(() => {
         const root = rootRef.current, channel = root && homepageChannels.get(root)
         if (channel) { channel.story = story.current; notifyHomepage() }
@@ -1033,18 +1033,71 @@ function createHomepageOverlay(Component: React.ComponentType<any>, kind: "openi
         React.useEffect(() => {
             const element = elementRef.current
             if (!element?.style) return
-            const original = { opacity: element.style.opacity, translate: element.style.translate, pointerEvents: element.style.pointerEvents, visibility: element.style.visibility, hidden: element.getAttribute("aria-hidden"), inert: element.inert }
+            const original = { opacity: element.style.opacity, translate: element.style.translate, scale: element.style.scale, pointerEvents: element.style.pointerEvents, visibility: element.style.visibility, hidden: element.getAttribute("aria-hidden"), inert: element.inert }
             let selected: HTMLElement | null = null
             let previousStage: HomepageStage | undefined, lastTiming: HomepageTiming | null = null
             let fadeFrame = 0, disposed = false
             let departure: { from: number; started: number; timing: HomepageTiming } | null = null
             const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)")
+            const cssComponents = (value: string) => {
+                const parts: string[] = []; let start = 0, depth = 0
+                for (let index = 0; index <= value.length; index++) {
+                    if (value[index] === "(") depth++
+                    else if (value[index] === ")") depth--
+                    if (index === value.length || (!depth && /\s/.test(value[index]))) {
+                        if (index > start) parts.push(value.slice(start, index))
+                        start = index + 1
+                    }
+                }
+                return parts
+            }
+            const scaleValue = (value: string | undefined) => value ? parseFloat(value) / (value.endsWith("%") ? 100 : 1) : 1
+            let baseTranslate = ["0px", "0px"], scaleX = 1, scaleY = 1
+            let anchor = { x: 0, y: 0 }, measureOpening = true
+            function refreshOpening() { measureOpening = true; if (!disposed) update() }
+            const openingObserver = kind === "opening" ? new ResizeObserver(refreshOpening) : null
+            openingObserver?.observe(element)
+            if (kind === "opening") window.addEventListener("resize", refreshOpening)
+            function measureOpeningAnchor() {
+                if (!measureOpening) return
+                measureOpening = false
+                // Re-read the authored pose only on a size change, never from a
+                // scaled bounding box. Restore the animated pose before returning.
+                const animated = { scale: element!.style.scale, translate: element!.style.translate }
+                element!.style.scale = original.scale; element!.style.translate = original.translate
+                const css = getComputedStyle(element!)
+                baseTranslate = css.translate === "none" ? ["0px", "0px"] : cssComponents(css.translate)
+                const baseScale = css.scale === "none" ? ["1"] : cssComponents(css.scale)
+                scaleX = scaleValue(baseScale[0]); scaleY = scaleValue(baseScale[1] || baseScale[0])
+                const origin = css.transformOrigin.split(/\s+/).map(parseFloat)
+                const matrix = new DOMMatrixReadOnly(css.transform === "none" ? undefined : css.transform)
+                const center = new DOMPoint(element!.offsetWidth / 2 - origin[0], element!.offsetHeight / 2 - origin[1]).matrixTransform(matrix)
+                let x = center.x * scaleX, y = center.y * scaleY
+                // Individual scale precedes Framer's positioning transform. Compensate
+                // its translated center so centered native groups zoom in place.
+                const rotation = css.rotate.split(/\s+/), angle = rotation[rotation.length - 1] || "0"
+                if (rotation.length === 1 || rotation[0] === "z") {
+                    const radians = parseFloat(angle) * (angle.endsWith("rad") ? 1 : angle.endsWith("turn") ? Math.PI * 2 : Math.PI / 180)
+                    if (Number.isFinite(radians)) { const cosine = Math.cos(radians), sine = Math.sin(radians); [x, y] = [x * cosine - y * sine, x * sine + y * cosine] }
+                }
+                anchor = { x, y }
+                element!.style.scale = animated.scale; element!.style.translate = animated.translate
+            }
             function stopFade() {
                 if (fadeFrame) cancelAnimationFrame(fadeFrame)
                 fadeFrame = 0; departure = null
             }
-            function paint(opacity: number, t: HomepageTiming, interactive: boolean) {
-                element!.style.opacity = String(opacity); element!.style.translate = `0px ${kind === "opening" ? -(1 - opacity) * t.rise * .6 : (1 - opacity) * t.rise}px`
+            function paint(opacity: number, t: HomepageTiming, interactive: boolean, openingPhase = 0, zoomEnabled = false) {
+                element!.style.opacity = String(opacity)
+                if (kind === "opening") {
+                    if (zoomEnabled && openingPhase > 0 && openingPhase < 1) {
+                        measureOpeningAnchor()
+                        const maximum = Number.isFinite(t.openingZoom) ? Math.max(2, Math.min(40, t.openingZoom)) : 16
+                        const zoom = Math.pow(maximum, openingPhase)
+                        element!.style.scale = `${scaleX * zoom} ${scaleY * zoom}`
+                        element!.style.translate = `calc(${baseTranslate[0]} + ${(1 - zoom) * anchor.x}px) calc(${baseTranslate[1] || "0px"} + ${(1 - zoom) * anchor.y}px) ${baseTranslate[2] || "0px"}`
+                    } else { element!.style.scale = original.scale; element!.style.translate = original.translate }
+                } else element!.style.translate = `0px ${(1 - opacity) * t.rise}px`
                 element!.style.visibility = opacity < .001 ? "hidden" : original.visibility
                 element!.style.pointerEvents = interactive ? original.pointerEvents : "none"; element!.inert = interactive ? original.inert : true
                 if (opacity < .01) element!.setAttribute("aria-hidden", "true")
@@ -1064,7 +1117,11 @@ function createHomepageOverlay(Component: React.ComponentType<any>, kind: "openi
                 let parent = element!.parentElement
                 while (parent) {
                     const candidates = [...homepageChannels.keys()].filter(root => parent!.contains(root) && root.getBoundingClientRect().width > 0)
-                    if (candidates.length) { selected = candidates[0]; return homepageChannels.get(selected) }
+                    if (candidates.length) {
+                        if (selected) openingObserver?.unobserve(selected)
+                        selected = candidates[0]; measureOpening = true; openingObserver?.observe(selected)
+                        return homepageChannels.get(selected)
+                    }
                     parent = parent.parentElement
                 }
             }
@@ -1091,14 +1148,20 @@ function createHomepageOverlay(Component: React.ComponentType<any>, kind: "openi
                 }
                 if (departure) return
                 const ramp = (from: number, to: number) => sequenceEase(sequenceClamp((progress * 100 - from) / Math.max(1, to - from)))
-                const opacity = !channel.enabled ? 0 : kind === "opening" ? 1 - ramp(0, t.openingOut) : kind === "building" ? ramp(t.buildingIn, t.buildingFull) : ramp(t.ctaIn, 100)
-                const interactive = channel.enabled && opacity >= .98 && (kind !== "cta" || channel.snapshot.state === "arrival" || channel.snapshot.state === "reduced")
-                paint(opacity, t, interactive)
+                const openingPhase = ramp(0, t.openingOut)
+                const zoomEnabled = kind === "opening" && !channel.static && !reducedMotion.matches
+                // Keep the opening legible through most of its zoom. Only the final
+                // sliver dissolves so a central letter cannot linger over the image.
+                const openingOpacity = zoomEnabled ? 1 - sequenceEase(sequenceClamp((openingPhase - .85) / .15)) : channel.static ? 1 - openingPhase : progress === 0 ? 1 : 0
+                const opacity = !channel.enabled ? 0 : kind === "opening" ? openingOpacity : kind === "building" ? ramp(t.buildingIn, t.buildingFull) : ramp(t.ctaIn, 100)
+                const interactive = channel.enabled && opacity >= .98 && (kind !== "opening" || openingPhase === 0) && (kind !== "cta" || channel.snapshot.state === "arrival" || channel.snapshot.state === "reduced")
+                paint(opacity, t, interactive, openingPhase, zoomEnabled)
             }
             homepageSubscribers.add(update); reducedMotion.addEventListener("change", update); update()
             return () => {
                 disposed = true; stopFade(); reducedMotion.removeEventListener("change", update)
-                homepageSubscribers.delete(update); element.style.opacity = original.opacity; element.style.translate = original.translate
+                openingObserver?.disconnect(); if (kind === "opening") window.removeEventListener("resize", refreshOpening)
+                homepageSubscribers.delete(update); element.style.opacity = original.opacity; element.style.translate = original.translate; element.style.scale = original.scale
                 element.style.pointerEvents = original.pointerEvents; element.style.visibility = original.visibility; element.inert = original.inert
                 if (original.hidden === null) element.removeAttribute("aria-hidden"); else element.setAttribute("aria-hidden", original.hidden)
                 delete element.dataset.heroOverlay
@@ -1192,7 +1255,8 @@ addPropertyControls(AdmiralHomepageStudio, {
         exitTo: { type: ControlType.Enum, title: "Exit to", options: ["left", "right", "top", "bottom", "none"], optionTitles: ["Left", "Right", "Top", "Bottom", "Fade only"], defaultValue: "bottom" },
         distance: { type: ControlType.Number, title: "Distance", defaultValue: 24, min: 0, max: 100, step: 2, unit: "px" },
     } },
-    openingOut: { type: ControlType.Number, title: "Opening out", defaultValue: 20, min: 1, max: 50, unit: "%" },
+    openingOut: { type: ControlType.Number, title: "Opening out", defaultValue: 20, min: 1, max: 50, unit: "%", description: "How much of SEQ_01 the opening zoom occupies. Higher values make the departure last longer." },
+    openingZoom: { type: ControlType.Number, title: "Opening zoom", defaultValue: 16, min: 2, max: 40, step: 1, description: "Final magnification of the native OpeningContent / BalatonfuredContent group before it leaves the view." },
     buildingIn: { type: ControlType.Number, title: "Building in", defaultValue: 68, min: 20, max: 95, unit: "%" },
     buildingFull: { type: ControlType.Number, title: "Building full", defaultValue: 88, min: 40, max: 100, unit: "%" },
     ctaIn: { type: ControlType.Number, title: "CTA in", defaultValue: 86, min: 40, max: 99, unit: "%" },

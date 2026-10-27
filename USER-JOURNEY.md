@@ -59,7 +59,9 @@ A custom **Orbit start frame** such as 42 remains an exact parked image, but has
 
 ## What appears during each segment
 
-The Balatonfüred composition belongs to the opening panorama and fades during SEQ_01 according to the existing opening controls. The Aranyhíd sétány composition arrives toward the end of SEQ_01 and is fully readable on its final still. The visitor can read it before a fresh downward gesture starts SEQ_02.
+The Balatonfüred composition belongs to the opening panorama. As SEQ_01 begins, its native parent grows around its visual center until the text and logo extend beyond the screen edges. It stays opaque through most of this accelerating zoom, with a short dissolve during the final 15% of the departure to clear any central lettering. **Opening out** sets the departure's share of SEQ_01; increase it for a longer zoom. **Opening zoom** sets its final magnification (default **16×**). Apply **BalatonfuredContent** or **OpeningContent** once to the parent containing all opening text and logos. Keep the native navbar outside that parent. The opening group stops accepting input as soon as departure starts. Returning to the opening restores its authored size and position. Static canvas previews retain their normal size; reduced-motion visitors get an immediate visibility change without enlargement.
+
+The Aranyhíd sétány composition arrives toward the end of SEQ_01 and is fully readable on its final still. The visitor can read it before a fresh downward gesture starts SEQ_02.
 
 SEQ_02 accumulates small wheel/trackpad updates within a fresh gesture until **Trigger distance** is reached. A 160 ms quiet gap separates gestures, and a gesture that began during SEQ_01 or its first 200 ms of arrival remains unarmed until the next quiet gap. This lets gentle trackpad and mouse input start SEQ_02 while preventing leftover SEQ_01 momentum from chaining into it. Horizontal jitter does not cancel vertical intent; real controls and scrollable text retain their own input. Wheel updates still count when later events in the same browser gesture are noncancelable.
 
