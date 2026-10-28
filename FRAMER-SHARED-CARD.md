@@ -16,6 +16,8 @@ If the canvas reports “Unable to resolve missing Admiral apartment detail card
 
 The component code stays inside the Framer project. No GitHub component loader is involved. Code edits remain available to Framer's editor immediately. Publish the Framer project normally after reviewing the result.
 
+The list uses the orbitdata's light liquid-glass material: a full-width ambient header, a centered 900px filter rail, reflective utility pills and floating comparison surfaces. Rows stay aligned and backgroundless floorplans remain clear. Tints follow the existing colour controls; navbar spacing, data and actions are unchanged. Blur is limited to shared surfaces, with opaque and reduced-transparency fallbacks. Replace only the list file for this styling update. The project-local import annotation handles Framer's single-file checker's lack of sibling-file resolution; it does not replace the required shared card.
+
 ## Apartment PDF download
 
 The `Adatlap` buttons in both a list row and the detail popup create a one-page landscape PDF of the selected apartment's detail card. It uses the same branding, colours, cropped drawing, plan markers, room data, price and status. It no longer downloads the generic apartment-type datasheet. Files are named `Admiral-Park-A001-adatlap.pdf`, using the selected ID.
