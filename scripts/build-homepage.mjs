@@ -34,7 +34,9 @@ export async function buildHomepage() {
  const orbitStories = await readFile(new URL('src/framer/OrbitStoryOverlays.source.tsx',root),'utf8');
  const apartmentData = await readFile(new URL('src/framer/OrbitApartmentData.source.tsx',root),'utf8');
  const apartmentFilterLogic = await readFile(new URL('src/core/orbit-apartment-filters.ts',root),'utf8');
- const apartmentFilterBar = await readFile(new URL('src/framer/OrbitApartmentFilters.source.tsx',root),'utf8');
+ const orbitFilterPills = await readFile(new URL('src/shared/ui/orbit-filter-pills.css',root),'utf8');
+ const apartmentFilterBar = (await readFile(new URL('src/framer/OrbitApartmentFilters.source.tsx',root),'utf8'))
+  .replace('/* @ORBIT_FILTER_PILLS_INSERT */', () => orbitFilterPills.trimEnd());
  const apartmentStudio = (await readFile(new URL('src/framer/OrbitApartmentStudio.source.tsx',root),'utf8'))
   .replace('const orbitFrostedButtonStyles = "" // @FROSTED_BUTTON_STYLES_INSERT', () => 'const orbitFrostedButtonStyles = ' + JSON.stringify(FROSTED_BUTTON_CSS.replaceAll('.admiral-frosted-button', "[data-orbit-studio][data-mobile] .orbit-studio-primary.admiral-frosted-button[data-orbit-inquiry]")));
  const orbitFullscreen = await readFile(new URL('src/framer/OrbitFullscreen.source.tsx',root),'utf8');

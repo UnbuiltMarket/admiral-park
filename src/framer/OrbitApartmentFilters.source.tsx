@@ -91,6 +91,7 @@ const orbitApartmentFilterStyles = `
 @container orbit-filters (max-width: 260px) { [data-orbit-filters] .orbit-filter-statuses { gap: 2px; } [data-orbit-filters] [data-orbit-filter-status], [data-orbit-filters][data-presentation="overlay"] [data-orbit-filter-status] { font-size: 10px; padding: 0 3px; gap: 3px; letter-spacing: -.3px; } [data-orbit-filters] [data-orbit-filter-count] { min-width: 29px; padding: 0; font-size: 9px; } [data-orbit-filters] [data-orbit-range-toggle] { padding: 0 4px; font-size: 10px; } }
 @media (hover:hover) { [data-orbit-filters] button:not(:disabled):hover { background: #edf1e9; } [data-orbit-filters] [aria-pressed="true"]:hover { background: #dce6da; } }
 @media (prefers-reduced-motion:reduce) { [data-orbit-filters], [data-orbit-filters] *, [data-orbit-filters] *::before, [data-orbit-filters] *::after { animation: none !important; transition: none !important; } }
+/* @ORBIT_FILTER_PILLS_INSERT */
 `
 
 function orbitPricePointerValue(clientX: number, rect: { left: number; width: number }, logicalWidth: number, minimum: number, maximum: number, step: number) {

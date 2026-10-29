@@ -1081,6 +1081,75 @@ const orbitApartmentFilterStyles = `
 @container orbit-filters (max-width: 260px) { [data-orbit-filters] .orbit-filter-statuses { gap: 2px; } [data-orbit-filters] [data-orbit-filter-status], [data-orbit-filters][data-presentation="overlay"] [data-orbit-filter-status] { font-size: 10px; padding: 0 3px; gap: 3px; letter-spacing: -.3px; } [data-orbit-filters] [data-orbit-filter-count] { min-width: 29px; padding: 0; font-size: 9px; } [data-orbit-filters] [data-orbit-range-toggle] { padding: 0 4px; font-size: 10px; } }
 @media (hover:hover) { [data-orbit-filters] button:not(:disabled):hover { background: #edf1e9; } [data-orbit-filters] [aria-pressed="true"]:hover { background: #dce6da; } }
 @media (prefers-reduced-motion:reduce) { [data-orbit-filters], [data-orbit-filters] *, [data-orbit-filters] *::before, [data-orbit-filters] *::after { animation: none !important; transition: none !important; } }
+/* Match the list's pill material without adding a blur layer per control.
+   The orbit rails retain their existing backdrop and layout geometry. */
+[data-orbit-filters][data-orbit-ignore][data-presentation][data-active] {
+    --ofp-paper: #fcfcfa;
+    --ofp-ink: #242a27;
+    --ofp-accent: #a38c69;
+    --ofp-fill: color-mix(in srgb, var(--ofp-paper) 72%, transparent);
+    --ofp-rim: color-mix(in srgb, var(--ofp-ink) 17%, transparent);
+    --ofp-hover-rim: color-mix(in srgb, var(--ofp-accent) 55%, var(--ofp-paper));
+    --ofp-selected: color-mix(in srgb, var(--ofp-accent) 18%, var(--ofp-paper));
+    --ofp-selected-rim: color-mix(in srgb, var(--ofp-accent) 65%, var(--ofp-paper));
+    --ofp-highlight: rgb(255 255 255 / 90%);
+    --ofp-shade: color-mix(in srgb, var(--ofp-ink) 6%, transparent);
+    --ofp-shadow: color-mix(in srgb, var(--ofp-ink) 5%, transparent);
+    --ofp-sheen: radial-gradient(130% 100% at 0% 0%, rgb(255 255 255 / 30%), transparent 48%), radial-gradient(110% 130% at 100% 100%, rgb(255 255 255 / 18%), transparent 52%), linear-gradient(150deg, rgb(255 255 255 / 18%), rgb(255 255 255 / 2%) 46%, rgb(255 255 255 / 12%));
+}
+[data-orbit-filters][data-presentation="overlay"][data-active] {
+    --ofp-ink: #fff;
+    --ofp-fill: rgb(255 255 255 / 10%);
+    --ofp-rim: rgb(255 255 255 / 30%);
+    --ofp-hover-rim: rgb(255 255 255 / 65%);
+    --ofp-selected: rgb(163 140 105 / 38%);
+    --ofp-selected-rim: rgb(255 255 255 / 78%);
+    --ofp-highlight: rgb(255 255 255 / 55%);
+    --ofp-shade: rgb(0 0 0 / 12%);
+    --ofp-shadow: rgb(4 16 25 / 12%);
+}
+[data-orbit-filters][data-orbit-ignore][data-presentation][data-active] :is([data-orbit-filter-status], [data-orbit-range-toggle], [data-orbit-filter-reset]) {
+    border: 1px solid var(--ofp-rim);
+    border-radius: 999px;
+    color: var(--ofp-ink);
+    background: var(--ofp-sheen), var(--ofp-fill);
+    box-shadow: inset 0 1px 1px var(--ofp-highlight), inset 0 -1px 0 var(--ofp-shade), 0 2px 7px var(--ofp-shadow);
+    font-weight: 500;
+    transition: background .18s, border-color .18s, box-shadow .18s;
+}
+[data-orbit-filters][data-orbit-ignore][data-presentation][data-active] :is([data-orbit-filter-status], [data-orbit-range-toggle]):is([aria-pressed="true"], [data-filtered="true"], [aria-expanded="true"]) {
+    color: var(--ofp-ink);
+    border-color: var(--ofp-selected-rim);
+    background: var(--ofp-sheen), var(--ofp-selected);
+    box-shadow: inset 0 1px 1px var(--ofp-highlight), inset 0 0 0 1px color-mix(in srgb, var(--ofp-accent) 16%, transparent), 0 2px 7px var(--ofp-shadow);
+}
+@media (hover: hover) {
+    [data-orbit-filters][data-orbit-ignore][data-presentation][data-active] :is([data-orbit-filter-status], [data-orbit-range-toggle], [data-orbit-filter-reset]):not(:disabled):hover {
+        color: var(--ofp-ink);
+        border-color: var(--ofp-hover-rim);
+        background: var(--ofp-sheen), var(--ofp-fill);
+        box-shadow: inset 0 1px 1px var(--ofp-highlight), 0 3px 10px var(--ofp-shadow);
+    }
+    [data-orbit-filters][data-orbit-ignore][data-presentation][data-active] :is([data-orbit-filter-status], [data-orbit-range-toggle]):is([aria-pressed="true"], [data-filtered="true"], [aria-expanded="true"]):not(:disabled):hover {
+        border-color: var(--ofp-selected-rim);
+        background: var(--ofp-sheen), var(--ofp-selected);
+        box-shadow: inset 0 1px 1px var(--ofp-highlight), inset 0 0 0 1px color-mix(in srgb, var(--ofp-accent) 25%, transparent), 0 3px 10px var(--ofp-shadow);
+    }
+}
+[data-orbit-filters][data-orbit-ignore][data-presentation][data-active] button:focus-visible { outline: 2px solid var(--ofp-accent); outline-offset: 3px; }
+[data-orbit-filters][data-presentation="overlay"][data-active] button:focus-visible { outline-color: #fff; }
+@media (prefers-reduced-motion: reduce) {
+    [data-orbit-filters][data-orbit-ignore][data-presentation][data-active] button { transition: none; }
+}
+@media (prefers-reduced-transparency: reduce) {
+    [data-orbit-filters][data-orbit-ignore][data-presentation][data-active] { --ofp-fill: var(--ofp-paper); }
+    [data-orbit-filters][data-presentation="overlay"][data-active] { --ofp-fill: #243742; --ofp-selected: #655d4e; }
+}
+@media (forced-colors: active) {
+    [data-orbit-filters][data-orbit-ignore][data-presentation][data-active] :is([data-orbit-filter-status], [data-orbit-range-toggle], [data-orbit-filter-reset]) { border-color: ButtonText; color: ButtonText; background: ButtonFace; box-shadow: none; }
+    [data-orbit-filters][data-orbit-ignore][data-presentation][data-active] :is([data-orbit-filter-status], [data-orbit-range-toggle]):is([aria-pressed="true"], [data-filtered="true"], [aria-expanded="true"]) { outline: 2px solid Highlight; outline-offset: -3px; }
+    [data-orbit-filters][data-orbit-ignore][data-presentation][data-active] button:focus-visible { outline: 2px solid Highlight; outline-offset: 3px; }
+}
 `
 
 function orbitPricePointerValue(clientX: number, rect: { left: number; width: number }, logicalWidth: number, minimum: number, maximum: number, step: number) {
