@@ -2,10 +2,10 @@ import * as React from "react"
 import type { ComponentType } from "react"
 
 // Framer updates its current-page marker during client-side navigation.
-// Preserve current-page weight in both desktop navbar variants.
+// Preserve current-page weight in desktop and liquid-glass mobile variants.
 const currentPageStyle = `
-:is([data-framer-name="DESKTOP_W"], [data-framer-name="DESKTOP_LG"]) a[data-framer-page-link-current="true"] .framer-text,
-:is([data-framer-name="DESKTOP_W"], [data-framer-name="DESKTOP_LG"]) a[aria-current="page"] .framer-text {
+:is([data-framer-name="DESKTOP_W"], [data-framer-name="DESKTOP_LG"], [data-framer-name="MOBILE_LG"], [data-framer-name="MOBILE_LG_OPEN"]) a[data-framer-page-link-current="true"] .framer-text,
+:is([data-framer-name="DESKTOP_W"], [data-framer-name="DESKTOP_LG"], [data-framer-name="MOBILE_LG"], [data-framer-name="MOBILE_LG_OPEN"]) a[aria-current="page"] .framer-text {
     font-weight: 800 !important;
 }
 `
