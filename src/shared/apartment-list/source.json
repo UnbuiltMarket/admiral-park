@@ -9,12 +9,12 @@
       "bytes": 46792
     },
     "styles.css": {
-      "sha256": "f959ff247bfa6e800dad28f84342408d0241c9d86db41eb030cfb9b768dbd820",
-      "bytes": 51668
+      "sha256": "bcfa289bc815d985c9175951be2cf3705827852a780ebe071a9a47a33f59a1d8",
+      "bytes": 53380
     },
     "shell.html": {
-      "sha256": "f249d7cff974255cd81b4195fca2886d9b993f7a969173351121a444f1483d45",
-      "bytes": 5433
+      "sha256": "c276bcf200d993d3aa9241b9d139c1ef8faafb02db90c0285b349408fe769b1b",
+      "bytes": 6158
     },
     "../ui/frosted-button.js": {
       "sha256": "2461efcce3579cf83bcf5d6852aec3d5a5a5c5db9a48d1fb22e2a9f6dd1ad117",
