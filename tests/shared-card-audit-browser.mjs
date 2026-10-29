@@ -50,12 +50,14 @@ try {
           const state=await page.evaluate(view=>{
             const panel=card.querySelector('.detail-rooms'),frame=panel.querySelector('.room-page'),dialog=card.querySelector('#detail-dialog'),close=dialog.querySelector('[data-close]');
             const list=frame.querySelector('ol,ul'),rows=[...list.children],rect=frame.getBoundingClientRect(),bounds=dialog.getBoundingClientRect(),closeBounds=close.getBoundingClientRect();
-            return {rows:rows.filter(row=>!row.hidden).map(row=>{const b=row.getBoundingClientRect();return {index:rows.indexOf(row),top:b.top,bottom:b.bottom,left:b.left,right:b.right};}),count:rows.length,frame:rect.toJSON(),bounds:bounds.toJSON(),close:closeBounds.toJSON(),scroll:dialog.scrollHeight,client:dialog.clientHeight,more:!!panel.querySelector('.room-pagination:not([hidden]) [data-room-page="1"]:not(:disabled)')};
+            return {rows:rows.filter(row=>!row.hidden).map(row=>{const b=row.getBoundingClientRect(),name=row.querySelector('.room-name'),area=row.querySelector('.room-area'),range=document.createRange();if(name)range.selectNodeContents(name);return {index:rows.indexOf(row),top:b.top,bottom:b.bottom,left:b.left,right:b.right,nameRight:name?range.getBoundingClientRect().right:null,areaLeft:area?.getBoundingClientRect().left};}),count:rows.length,frame:rect.toJSON(),bounds:bounds.toJSON(),close:closeBounds.toJSON(),price:dialog.querySelector('.detail-price').getBoundingClientRect().toJSON(),scroll:dialog.scrollHeight,client:dialog.clientHeight,more:!!panel.querySelector('.room-pagination:not([hidden]) [data-room-page="1"]:not(:disabled)')};
           },view);
           check(`${id} ${view} ${viewport.width}×${viewport.height} room frame has space`,state.frame.height>10);
           check(`${id} ${view} ${viewport.width}×${viewport.height} all shown rooms fit`,state.rows.length>0&&state.rows.every(row=>row.top>=state.frame.top-.6&&row.bottom<=state.frame.bottom+.6&&row.left>=state.frame.left-.6&&row.right<=state.frame.right+.6));
+          check(`${id} room names stay clear of their areas`,state.rows.every(row=>row.nameRight===null||row.areaLeft===undefined||row.nameRight<=row.areaLeft+.6));
           check(`${id} ${view} ${viewport.width}×${viewport.height} popup stays inside screen`,state.bounds.left>0&&state.bounds.top>0&&state.bounds.right<viewport.width&&state.bounds.bottom<viewport.height&&state.close.top>=state.bounds.top&&state.close.bottom<=state.bounds.bottom);
           check(`${id} ${view} ${viewport.width}×${viewport.height} popup needs no scrolling`,state.scroll<=state.client+1);
+          if(viewport.width<=600&&viewport.height>450)check(`${id} room list stays above the price`,state.frame.bottom<=state.price.top+1);
           for(const row of state.rows)seen.add(row.index);
           if(!state.more){check(`${id} ${view} ${viewport.width}×${viewport.height} every room is reachable`,seen.size===state.count);break;}
           await card.locator('.detail-rooms [data-room-page="1"]').click();await page.waitForTimeout(20);
@@ -66,6 +68,14 @@ try {
       if(viewport.width===1440&&id==='A001'){
         await card.locator('.room-legend-button[data-plan-room="1"]').hover();
         check('Unified desktop room list highlights the corresponding floorplan number',await card.locator('.room-marker[data-plan-room="1"]').evaluate(node=>node.classList.contains('is-active')));
+      }
+      if(viewport.width===390&&id==='A001'){
+        await card.locator('#detail-tab-plan').focus();await page.keyboard.press('ArrowDown');
+        check('Vertical side tabs use ArrowDown for Szintrajz',await card.locator('#detail-tab-floor').getAttribute('aria-selected')==='true');
+        await page.keyboard.press('ArrowDown');
+        check('Vertical side tabs reach Helyiséglista',await card.locator('#detail-tab-rooms').getAttribute('aria-selected')==='true');
+        await page.keyboard.press('Home');
+        check('Home returns to Alaprajz',await card.locator('#detail-tab-plan').getAttribute('aria-selected')==='true');
       }
       await page.evaluate(()=>ctrl.close());
     }
@@ -82,6 +92,7 @@ try {
   const floorPath=await card.locator('.detail-floor-image').getAttribute('data-image-url');
   failedAsset=new URL(floorPath).pathname;
   await card.locator('[data-document-view="floor"]').click();
+  await card.locator('.detail-floor-image').evaluate(image=>image.src+='?audit-error=1');
   await card.locator('#detail-document-floor[data-image-state="error"]').waitFor();
   check('Failed floor layout has visible retry feedback',await card.locator('[data-detail-image-retry="floor"]').isVisible());
   failedAsset='';await card.locator('[data-detail-image-retry="floor"]').click();

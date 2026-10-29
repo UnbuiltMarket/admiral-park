@@ -604,3 +604,50 @@ input[aria-invalid="true"] { border-color: var(--negotiating); }
   #detail-dialog .detail-price .price-value { font-size: 22px; }
   #detail-dialog .detail-drawing-toolbar .detail-unit-meta { gap: 7px; }
 }
+
+/* Mobile side rail: drawing controls and apartment metadata are separate
+   vertical groups, leaving the former tab row available to the drawing. */
+@media (max-width: 1100px), (max-height: 600px) {
+  #detail-dialog .detail-layout { --detail-side-width: 58px; --detail-side-gap: 8px; grid-template-columns: minmax(0, 1fr) var(--detail-side-width); grid-template-rows: auto 1px minmax(0, 1fr) auto; gap: 8px var(--detail-side-gap); }
+  #detail-dialog .detail-core { grid-column: 1 / -1; grid-row: 1; }
+  #detail-dialog .detail-area-row { border-top: 1px solid var(--card-glass-rule); padding-top: 7px; }
+  #detail-dialog .detail-divider { grid-column: 1 / -1; grid-row: 2; }
+  #detail-dialog .detail-panel-nav, #detail-dialog .detail-shell[data-panel="rooms"] .detail-panel-nav { grid-column: 2; grid-row: 3; z-index: 5; align-self: start; display: flex; flex-direction: column; align-items: stretch; justify-content: flex-start; gap: 4px; width: 100%; min-width: 0; margin: 0; padding: 0 0 8px; border: 0; border-bottom: 1px solid var(--card-glass-rule); }
+  #detail-dialog .detail-panel-nav button { width: 100%; min-width: 0; min-height: 30px; margin: 0; padding: 4px 2px; border: 1px solid color-mix(in srgb, var(--detail-ink) 10%, transparent); background: color-mix(in srgb, var(--detail-top) 24%, transparent); font-size: 9px; line-height: 1.15; text-align: center; }
+  #detail-dialog .detail-layout > .detail-drawing, #detail-dialog .detail-shell[data-panel="plan"] .detail-drawing { grid-column: 1 / -1; grid-row: 3; grid-template-columns: minmax(0, 1fr) var(--detail-side-width); gap: 0 var(--detail-side-gap); }
+  #detail-dialog .detail-drawing-toolbar .detail-unit-meta { grid-column: 2; grid-row: 1; justify-content: flex-start; padding-top: 112px; gap: 8px; }
+  #detail-dialog .detail-layout .detail-room-panel { grid-column: 1; grid-row: 3; width: auto; }
+  #detail-dialog .detail-rooms .room-page { --room-column-width: 110px; }
+  #detail-dialog .detail-rooms .room-name { overflow-wrap: anywhere; }
+  #detail-dialog .detail-shell[data-panel="rooms"] .detail-drawing { display: contents; }
+  #detail-dialog .detail-shell[data-panel="rooms"] .detail-drawing > :is([data-document-panel], .empty-plan) { display: none !important; }
+  #detail-dialog .detail-shell[data-panel="rooms"] .detail-unit-meta { grid-column: 2; grid-row: 3; }
+  #detail-dialog .detail-conversion { grid-column: 1 / -1; grid-row: 4; }
+}
+@media (max-width: 600px) {
+  #detail-dialog .detail-layout { --detail-side-width: 40px; --detail-side-gap: 5px; row-gap: 5px; }
+  #detail-dialog .detail-panel-nav button { font-size: 9px; padding-inline: 1px; }
+  #detail-dialog .detail-drawing-toolbar .detail-unit-meta { font-size: 8px; gap: 6px; }
+}
+@media (max-width: 600px) and (max-height: 700px) {
+  #detail-dialog .detail-layout { grid-template-rows: auto 1px minmax(0, 1fr) auto; row-gap: 3px; }
+}
+@media (max-width: 360px) {
+  #detail-dialog .detail-rooms .room-legend-button { grid-template-columns: 14px minmax(0, 1fr) auto; gap: 2px; }
+  #detail-dialog .detail-rooms .room-name { font-size: 10px; }
+  #detail-dialog .detail-rooms .room-area { font-size: 8.5px; }
+}
+@media (max-height: 600px) and (min-width: 601px), (max-height: 450px) and (min-width: 450px) {
+  #detail-dialog .detail-layout { --detail-side-width: 40px; --detail-side-gap: 5px; grid-template-columns: var(--detail-landscape-rail) minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); gap: 0 12px; }
+  #detail-dialog .detail-sidebar { grid-column: 1; grid-row: 1; }
+  #detail-dialog .detail-core { grid-column: 1; grid-row: 1; }
+  #detail-dialog .detail-divider { grid-column: 1; grid-row: 2; }
+  #detail-dialog .detail-conversion { grid-column: 1; grid-row: 4; }
+  #detail-dialog .detail-layout > .detail-drawing, #detail-dialog .detail-shell[data-panel="plan"] .detail-drawing { grid-column: 2; grid-row: 1; }
+  #detail-dialog .detail-panel-nav, #detail-dialog .detail-shell[data-panel="rooms"] .detail-panel-nav { position: absolute; top: 42px; right: 0; width: var(--detail-side-width); grid-area: auto; gap: 3px; }
+  #detail-dialog .detail-panel-nav button { min-height: 28px; padding: 3px 1px; font-size: 8.5px; }
+  #detail-dialog .detail-drawing-toolbar .detail-unit-meta { padding-top: 146px; gap: 4px; font-size: 8px; }
+  #detail-dialog .detail-unit-meta .detail-meta-item strong { font-size: 10px; }
+  #detail-dialog .detail-layout .detail-room-panel { grid-area: auto; left: calc(12px + var(--detail-landscape-rail) + 12px); right: calc(12px + var(--detail-side-width) + var(--detail-side-gap)); top: 12px; bottom: 26px; }
+  #detail-dialog .detail-shell[data-panel="rooms"] .detail-unit-meta { grid-column: 2; grid-row: 1; justify-self: end; width: var(--detail-side-width); }
+}

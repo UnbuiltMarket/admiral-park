@@ -349,8 +349,8 @@ function detail(id) {
         ${detailRooms(a)}
         <div class="detail-conversion"><div class="detail-price"><p>${detailPrice(a)}</p></div><div class="detail-inquiry">${inquiry(a)}</div><div class="detail-downloads detail-footer">${downloadLink(a,true)}<div class="detail-status"><span class="status-pill status-${esc(a.status)}">${esc(statusText(a))}</span></div>${shareControl(a)}</div></div>
       </aside>
-      <nav class="detail-panel-nav" role="tablist" aria-label="Alaprajz és helyiséglista"><button type="button" role="tab" id="detail-tab-plan" data-detail-tab="plan" data-top-document-view="plan" aria-controls="detail-panel-plan" aria-selected="true" tabindex="0">Alaprajz</button>${floor?'<button type="button" role="tab" id="detail-tab-floor" data-detail-tab="plan" data-top-document-view="floor" aria-controls="detail-panel-plan" aria-selected="false" tabindex="-1">Szintrajz</button>':''}<button type="button" role="tab" id="detail-tab-rooms" data-detail-tab="rooms" aria-controls="detail-panel-rooms" aria-selected="false" tabindex="-1">Helyiséglista</button></nav>
-      <section class="detail-drawing" data-detail-panel="plan" id="detail-panel-plan" role="tabpanel" aria-labelledby="detail-tab-plan"><div class="detail-drawing-toolbar"><div class="detail-document-tabs" role="tablist" aria-label="Rajz kiválasztása"><button type="button" id="detail-document-plan-tab" role="tab" data-document-view="plan" aria-selected="true" aria-controls="detail-document-plan">Alaprajz</button>${floor?'<button type="button" id="detail-document-floor-tab" role="tab" data-document-view="floor" aria-selected="false" tabindex="-1" aria-controls="detail-document-floor">Szintrajz</button>':''}</div><div class="detail-drawing-save">${saveButton(a,true)}</div><p class="detail-unit-meta">${detailUnitMeta(a)}</p></div>${detailPlan(a)}${floor?`<section class="detail-floor-plan" data-detail-image-stage="floor" data-image-state="idle" data-document-panel="floor" id="detail-document-floor" role="tabpanel" aria-labelledby="detail-document-floor-tab" hidden><p class="detail-section-label">${esc(floorText(a))} · A, B, C épület</p>${detailImageFeedback('floor')}<img class="detail-floor-image" data-detail-image="floor" data-image-url="${esc(floor.full)}" alt="${esc(floorText(a))} szintrajza" decoding="async"><p class="detail-plan-note">${esc(a.id)} · ${esc(a.building)} épület</p></section>`:''}</section>
+      <nav class="detail-panel-nav" role="tablist" aria-orientation="vertical" aria-label="Alaprajz és helyiséglista"><button type="button" role="tab" id="detail-tab-plan" data-detail-tab="plan" data-top-document-view="plan" aria-controls="detail-document-plan" aria-selected="true" tabindex="0">Alaprajz</button>${floor?'<button type="button" role="tab" id="detail-tab-floor" data-detail-tab="plan" data-top-document-view="floor" aria-controls="detail-document-floor" aria-selected="false" tabindex="-1">Szintrajz</button>':''}<button type="button" role="tab" id="detail-tab-rooms" data-detail-tab="rooms" aria-controls="detail-panel-rooms" aria-selected="false" tabindex="-1">Helyiség<wbr>lista</button></nav>
+      <section class="detail-drawing" data-detail-panel="plan" id="detail-panel-plan"><div class="detail-drawing-toolbar"><div class="detail-document-tabs" role="tablist" aria-label="Rajz kiválasztása"><button type="button" id="detail-document-plan-tab" role="tab" data-document-view="plan" aria-selected="true" aria-controls="detail-document-plan">Alaprajz</button>${floor?'<button type="button" id="detail-document-floor-tab" role="tab" data-document-view="floor" aria-selected="false" tabindex="-1" aria-controls="detail-document-floor">Szintrajz</button>':''}</div><div class="detail-drawing-save">${saveButton(a,true)}</div><p class="detail-unit-meta">${detailUnitMeta(a)}</p></div>${detailPlan(a)}${floor?`<section class="detail-floor-plan" data-detail-image-stage="floor" data-image-state="idle" data-document-panel="floor" id="detail-document-floor" role="tabpanel" aria-labelledby="detail-document-floor-tab" hidden><p class="detail-section-label">${esc(floorText(a))} · A, B, C épület</p>${detailImageFeedback('floor')}<img class="detail-floor-image" data-detail-image="floor" data-image-url="${esc(floor.full)}" alt="${esc(floorText(a))} szintrajza" decoding="async"><p class="detail-plan-note">${esc(a.id)} · ${esc(a.building)} épület</p></section>`:''}</section>
     </div><p class="detail-illustration-note">Az alaprajz illusztráció. Bútorozatlan átadás. Bruttó vételár.</p><div class="toast detail-feedback" role="status" aria-live="polite"></div></div>`;
   const shell=dialog.querySelector('.detail-shell');
   if(monogram)shell.style.setProperty('--detail-monogram-image',`url("${monogram.replace(/"/g,'%22')}")`);
@@ -388,7 +388,6 @@ function startDetailImage(kind,retry=false) {
 function selectDetailDocument(value) {
   const dialog=$('detail-dialog');
   dialog.dataset.documentView=value;
-  dialog.querySelector('#detail-panel-plan')?.setAttribute('aria-labelledby',value==='floor'?'detail-tab-floor':'detail-tab-plan');
   dialog.querySelectorAll('[data-document-view]').forEach(button=>{const active=button.dataset.documentView===value;button.setAttribute('aria-selected',String(active));button.tabIndex=active?0:-1;});
   dialog.querySelectorAll('[data-top-document-view]').forEach(button=>{const active=dialog.querySelector('.detail-shell')?.dataset.panel==='plan'&&button.dataset.topDocumentView===value;button.setAttribute('aria-selected',String(active));button.tabIndex=active?0:-1;});
   dialog.querySelectorAll('[data-document-panel]').forEach(panel=>{panel.hidden=panel.dataset.documentPanel!==value;});
@@ -403,7 +402,8 @@ function fitDetailRooms() {
   const rows=[...list.children];rows.forEach(row=>row.hidden=false);
   let navigation=frame.parentElement.querySelector('.room-pagination');
   if(navigation)navigation.hidden=true;
-  const maxColumns=Math.max(1,Math.min(4,Math.floor(frame.clientWidth/125)));
+  const columnWidth=parseFloat(getComputedStyle(frame).getPropertyValue('--room-column-width'))||125;
+  const maxColumns=Math.max(1,Math.min(4,Math.floor(frame.clientWidth/Math.max(100,columnWidth))));
   for(let columns=1;columns<=maxColumns;columns++){
     list.style.setProperty('--room-columns',String(columns));list.dataset.columns=String(columns);
     for(const padding of [4,2,1,0]){
@@ -713,8 +713,11 @@ window.addEventListener('admiral:apartment-favorites',syncFavorites,events);
 root.addEventListener('keydown',event=>{
   if(event.key==='Escape'&&closeShare()){event.preventDefault();event.stopPropagation();return;}
   const tab=event.target.closest('[role=tab][data-detail-tab],[role=tab][data-document-view]');
-  if(!tab||!['ArrowLeft','ArrowRight','Home','End'].includes(event.key))return;
-  const tabs=[...tab.closest('[role=tablist]').querySelectorAll('[role=tab]')],current=tabs.indexOf(tab),index=event.key==='Home'?0:event.key==='End'?tabs.length-1:(current+(event.key==='ArrowRight'?1:-1)+tabs.length)%tabs.length;
+  if(!tab)return;
+  const group=tab.closest('[role=tablist]'),vertical=group.getAttribute('aria-orientation')==='vertical';
+  const previous=vertical?'ArrowUp':'ArrowLeft',next=vertical?'ArrowDown':'ArrowRight';
+  if(![previous,next,'Home','End'].includes(event.key))return;
+  const tabs=[...group.querySelectorAll('[role=tab]')],current=tabs.indexOf(tab),index=event.key==='Home'?0:event.key==='End'?tabs.length-1:(current+(event.key===next?1:-1)+tabs.length)%tabs.length;
   event.preventDefault();tabs[index].click();tabs[index].focus({preventScroll:true});
 },events);
 root.addEventListener('error',event=>{
