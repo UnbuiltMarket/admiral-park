@@ -1,3 +1,4 @@
+import {FROSTED_BUTTON_CSS} from '../src/shared/ui/frosted-button.js';
 import assert from 'node:assert/strict';
 import {readFile,mkdir,writeFile} from 'node:fs/promises';
 import {createRequire} from 'node:module';
@@ -6,8 +7,10 @@ import path from 'node:path';
 const root=new URL('../',import.meta.url),out=new URL('tmp/priority-card-check/',root),read=name=>readFile(new URL(name,root),'utf8');
 const require=createRequire(import.meta.url),{chromium}=require(process.env.PLAYWRIGHT_MODULE_PATH||'playwright');
 const data=JSON.parse(await read('data/apartment-details.json'));
-const runtime=await read('src/shared/apartment-card/card-runtime.js'),css=await read('src/shared/apartment-card/card.css'),shell=await read('src/shared/apartment-card/card-shell.html');
-const listRuntime=(await read('src/shared/ui/frosted-button.js')).replace(/^export /gm,'')+'\n'+(await read('src/shared/apartment-list/app.js')).replace('export function mountApartmentList','function mountApartmentList');
+const buttonRuntime=(await read('src/shared/ui/frosted-button.js')).replace(/^export /gm,'');
+const runtime=buttonRuntime+'\n'+await read('src/shared/apartment-card/card-runtime.js'),css=await read('src/shared/apartment-card/card.css')+'\n'+FROSTED_BUTTON_CSS.replaceAll('.admiral-frosted-button', '#detail-dialog .inquiry-button.admiral-frosted-button'),shell=await read('src/shared/apartment-card/card-shell.html');
+// This fixture loads the card first, so its shared button module is already in scope.
+const listRuntime=(await read('src/shared/apartment-list/app.js')).replace('export function mountApartmentList','function mountApartmentList');
 await mkdir(out,{recursive:true});
 const browser=await chromium.launch({headless:true,channel:process.env.PLAYWRIGHT_CHANNEL||'chrome'}),results=[];
 try{
@@ -72,7 +75,7 @@ try{
  await page.evaluate(({css,shell,data})=>{
   const shadow=document.querySelector('#list').attachShadow({mode:'open'});shadow.innerHTML='<style>'+css+'</style>'+shell;
   window.list=mountApartmentList(shadow,{dataUrl:'http://priority-card.test/apartments.json',assetBaseUrl:'http://priority-card.test/assets/',onDataLoaded:d=>window.loadedList=d});
- },{css:await read('src/shared/apartment-list/styles.css'),shell:await read('src/shared/apartment-list/shell.html')});
+ },{css:await read('src/shared/apartment-list/styles.css')+'\n'+FROSTED_BUTTON_CSS,shell:await read('src/shared/apartment-list/shell.html')});
  await page.waitForFunction(()=>window.loadedList);
  const list=page.locator('#list');await list.locator('[data-sort="area"]').focus();await page.keyboard.press('Enter');
  assert.equal(await page.evaluate(()=>document.querySelector('#list').shadowRoot.activeElement?.dataset.sort),'area');
@@ -80,9 +83,9 @@ try{
  // Exercise the actual list validator with a reserved record too.
  await page.evaluate(()=>{window.list.destroy();window.loadedList=null;});
  await page.route('http://priority-card.test/reserved.json',route=>route.fulfill({contentType:'application/json',json:reserved}));
- await page.evaluate(({css,shell})=>{const shadow=document.querySelector('#list').shadowRoot;shadow.innerHTML='<style>'+css+'</style>'+shell;window.list=mountApartmentList(shadow,{dataUrl:'http://priority-card.test/reserved.json',assetBaseUrl:'http://priority-card.test/assets/',onDataLoaded:d=>window.loadedList=d});},{css:await read('src/shared/apartment-list/styles.css'),shell:await read('src/shared/apartment-list/shell.html')});
+ await page.evaluate(({css,shell})=>{const shadow=document.querySelector('#list').shadowRoot;shadow.innerHTML='<style>'+css+'</style>'+shell;window.list=mountApartmentList(shadow,{dataUrl:'http://priority-card.test/reserved.json',assetBaseUrl:'http://priority-card.test/assets/',onDataLoaded:d=>window.loadedList=d});},{css:await read('src/shared/apartment-list/styles.css')+'\n'+FROSTED_BUTTON_CSS,shell:await read('src/shared/apartment-list/shell.html')});
  await page.waitForFunction(()=>window.loadedList);
- assert.equal(await list.locator('[data-unit]').count(),69);assert.equal(await list.locator('[data-unit="A001"] .status-reserved').count(),2);
+ assert.equal(await list.locator('[data-unit]').count(),69);assert.equal(await list.locator('[data-unit="A001"] .unit-identification .status-reserved').count(),1);
  results.push('A reserved record no longer rejects the 69-apartment list');
  assert.deepEqual(errors,[]);
  await writeFile(new URL('result.json',out),JSON.stringify({results,requests,errors},null,2));

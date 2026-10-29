@@ -26,6 +26,7 @@ test('shared card actually removes list/filter/compare code and hidden list DOM'
   assert.doesNotMatch(runtime,/\$\('(?:filters|sort|results|compare-dialog|compare-tray)'\)/);
 });
 
+const buttonRuntime=(await readFile(new URL('../src/shared/ui/frosted-button.js',import.meta.url),'utf8')).replace(/^export /gm,'');
 function runtimeFixture(config,fetcher){
   const listeners=new Map(),elements=new Map();
   const classList={toggle(){},add(){},remove(){}};
@@ -35,7 +36,7 @@ function runtimeFixture(config,fetcher){
   const window={addEventListener(name,fn){listeners.set(name,fn);},dispatchEvent(){},FontFace:null};
   const context={window,document,location:{href:'https://admiral.test/'},AbortController,URL,Intl,Map,Set,WeakMap,WeakSet,Object,Promise,Number,String,Array,JSON,Symbol,requestAnimationFrame(){return 1;},setTimeout,clearTimeout,localStorage:{getItem(){return null;}},fetch:fetcher};
   const root={host:{},querySelector(selector){return elements.get(selector.slice(1))||null;},addEventListener(){}};
-  vm.runInNewContext(runtime+'\nthis.mount=mountOrbitApartmentCardRuntime;',context);
+  vm.runInNewContext(buttonRuntime+'\n'+runtime+'\nthis.mount=mountOrbitApartmentCardRuntime;',context);
   return {controller:context.mount(root,config),context,listeners};
 }
 

@@ -4,13 +4,14 @@ import vm from 'node:vm';
 import {readFile} from 'node:fs/promises';
 
 const runtime=await readFile(new URL('../src/shared/apartment-card/card-runtime.js',import.meta.url),'utf8');
+const buttonRuntime=(await readFile(new URL('../src/shared/ui/frosted-button.js',import.meta.url),'utf8')).replace(/^export /gm,'');
 const apartments=[
   {id:'A001',building:'A',apartmentType:'B',floor:0,rooms:2,areaInterior:51.2,areaTerrace:8,areaGarden:12,price:75000000,status:'available',roomList:[{name:'Nappali',area:30,planNumber:1}],media:{floorplan:{original:'assets/plan.png'}}},
   {id:'C303',building:'C',apartmentType:'D',floor:3,rooms:3,areaInterior:82,areaTerrace:23,areaGarden:0,price:125000000,status:'sold',roomList:[{name:'Szoba',area:20,planNumber:1}],media:{floorplan:{original:'assets/plan-d.png'}}},
 ];
 const dataset={schemaVersion:'1.0',apartments,roomLayouts:{B:{markers:[{number:1,name:'Nappali',x:.5,y:.5}]}}};
 
-function fixture({exporter=async()=>new Blob(['pdf'],{type:'application/pdf'}),fetcher}={}){
+function fixture({exporter=async()=>new Blob(['pdf'],{type:'application/pdf'}),fetcher,inquiryUrl='',theme={}}={}){
   const elements=new Map(),downloads=[],snapshots=[],urls=[],revoked=[],listeners=new Map();
   let fetches=0,layoutWrites=0;
   const classList={toggle(){},add(){},remove(){}};
@@ -29,12 +30,12 @@ function fixture({exporter=async()=>new Blob(['pdf'],{type:'application/pdf'}),f
   }
   const context={window,document,location:{href:'https://admiral.test/?building=B&search=old'},AbortController,URL:DownloadURL,Blob,Intl,Map,Set,WeakMap,WeakSet,Object,Promise,Number,String,Array,JSON,Symbol,
     requestAnimationFrame(){return 1;},setTimeout,clearTimeout,localStorage:{getItem(){return null;}},
-    getComputedStyle(element){assert.equal(element,elements.get('detail-dialog'));return {getPropertyValue(property){return {'--detail-ink':'#123456','--sold':'#ab1122'}[property]||'';}};},
+    getComputedStyle(element){assert.equal(element,elements.get('detail-dialog'));return {getPropertyValue(property){return {'--detail-ink':'#123456','--sold':'#ab1122',...theme}[property]||'';}};},
     fetch:async(...args)=>{fetches++;if(fetcher)return fetcher(...args);throw new Error('Unexpected JSON request');},
     createAdmiralApartmentPdf:async(snapshot,options)=>{snapshots.push(snapshot);return exporter(snapshot,options);}};
   const root={host:{},querySelector(selector){return elements.get(selector.slice(1))||null;},addEventListener(){}};
-  vm.runInNewContext(runtime+'\nthis.mount=mountOrbitApartmentCardRuntime;',context);
-  const controller=context.mount(root,{dataset:fetcher?undefined:dataset,dataUrl:'https://admiral.test/apartments.json',assetBaseUrl:'https://assets.admiral.test/',pageUrl:'https://admiral.test/?search=old'});
+  vm.runInNewContext(buttonRuntime+'\n'+runtime+'\nthis.mount=mountOrbitApartmentCardRuntime;',context);
+  const controller=context.mount(root,{dataset:fetcher?undefined:dataset,dataUrl:'https://admiral.test/apartments.json',assetBaseUrl:'https://assets.admiral.test/',pageUrl:'https://admiral.test/?search=old',inquiryUrl});
   const trigger=()=>{
     const attrs=new Map(),label={textContent:'Adatlap'};
     return {label,attrs,querySelector(){return label;},setAttribute(k,v){attrs.set(k,v);},getAttribute(k){return attrs.get(k)??null;},removeAttribute(k){attrs.delete(k);}};
@@ -107,4 +108,23 @@ test('closing or disposing aborts an unfinished row export and never creates a d
     assert.equal(f.urls.length,0);assert.equal(f.downloads.length,0);assert.equal(button.getAttribute('aria-busy'),null);
     f.controller.dispose();
   }
+});
+
+test('configured enquiry PDF captures the shared tint and ink while fallback keeps its apartment-view action',async()=>{
+  const configured=fixture({inquiryUrl:'https://admiral.test/contact?campaign=kept',theme:{'--frosted-button-tint':'#648c97','--frosted-button-text':'#102f37'}});
+  try {
+    assert.equal((await configured.controller.download('A001',configured.trigger())).status,'downloaded');
+    const snapshot=configured.snapshots[0];
+    assert.equal(snapshot.actionIsInquiry,true);assert.equal(snapshot.actionLabel,'Érdeklődöm');
+    assert.equal(snapshot.actionUrl,'https://admiral.test/contact?campaign=kept&apartment=A001');
+    assert.equal(snapshot.colors.frostedTint,'#648c97');assert.equal(snapshot.colors.frostedText,'#102f37');
+  } finally {configured.controller.dispose();}
+  const fallback=fixture();
+  try {
+    assert.equal((await fallback.controller.download('A001',fallback.trigger())).status,'downloaded');
+    const snapshot=fallback.snapshots[0];
+    assert.equal(snapshot.actionIsInquiry,false);assert.equal(snapshot.actionLabel,'Lakás megtekintése');
+    assert.equal(snapshot.actionUrl,'https://admiral.test/?apartment=A001');
+    assert.equal(snapshot.colors.frostedTint,'#7395a0');assert.equal(snapshot.colors.frostedText,'#183b43');
+  } finally {fallback.controller.dispose();}
 });

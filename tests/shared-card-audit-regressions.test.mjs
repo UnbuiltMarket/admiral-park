@@ -4,6 +4,7 @@ import vm from 'node:vm';
 import {readFile} from 'node:fs/promises';
 
 const runtime=await readFile(new URL('../src/shared/apartment-card/card-runtime.js',import.meta.url),'utf8');
+const buttonRuntime=(await readFile(new URL('../src/shared/ui/frosted-button.js',import.meta.url),'utf8')).replace(/^export /gm,'');
 function pendingDataFixture(){
   const elements=new Map(),timers=new Map(),classList={toggle(){},add(){},remove(){}},style={getPropertyValue(){return '';},getPropertyPriority(){return '';},setProperty(){},removeProperty(){}};
   for(const id of ['detail-dialog','media-dialog','toast'])elements.set(id,{id,open:false,isConnected:true,dataset:{},classList,style,addEventListener(){},querySelector(){return null;},querySelectorAll(){return [];}});
@@ -18,7 +19,7 @@ function pendingDataFixture(){
     fetch(){fetches++;return new Promise(resolve=>{resolveData=resolve;});},
     createAdmiralApartmentPdf:async()=>{exportCalls++;return new Blob(['pdf']);}};
   const root={querySelector(selector){return elements.get(selector.slice(1))||null;},addEventListener(){}};
-  vm.runInNewContext(runtime+'\nthis.mount=mountOrbitApartmentCardRuntime;',context);
+  vm.runInNewContext(buttonRuntime+'\n'+runtime+'\nthis.mount=mountOrbitApartmentCardRuntime;',context);
   const controller=context.mount(root,{dataUrl:'https://card.test/apartments.json'}),attrs=new Map(),label={textContent:'Adatlap'};
   const button={querySelector(){return label;},setAttribute(k,v){attrs.set(k,v);},getAttribute(k){return attrs.get(k)??null;},removeAttribute(k){attrs.delete(k);}};
   return {controller,button,label,elements,timers,release(){resolveData({ok:true,json:async()=>({schemaVersion:'1.0',apartments:[{id:'A001',building:'A',status:'available'}]})});},get fetches(){return fetches;},get exportCalls(){return exportCalls;}};

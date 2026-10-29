@@ -2,6 +2,7 @@ import { readFile, readdir, writeFile } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 import { inlineCore, compileTS } from './tooling.mjs';
 import { validateOrbitMaskAssets } from './orbit-mask-assets.mjs';
+import {FROSTED_BUTTON_CSS} from '../src/shared/ui/frosted-button.js';
 const root = new URL('../', import.meta.url);
 export async function buildHomepage() {
  const masks = await validateOrbitMaskAssets(root);
@@ -34,7 +35,8 @@ export async function buildHomepage() {
  const apartmentData = await readFile(new URL('src/framer/OrbitApartmentData.source.tsx',root),'utf8');
  const apartmentFilterLogic = await readFile(new URL('src/core/orbit-apartment-filters.ts',root),'utf8');
  const apartmentFilterBar = await readFile(new URL('src/framer/OrbitApartmentFilters.source.tsx',root),'utf8');
- const apartmentStudio = await readFile(new URL('src/framer/OrbitApartmentStudio.source.tsx',root),'utf8');
+ const apartmentStudio = (await readFile(new URL('src/framer/OrbitApartmentStudio.source.tsx',root),'utf8'))
+  .replace('const orbitFrostedButtonStyles = "" // @FROSTED_BUTTON_STYLES_INSERT', () => 'const orbitFrostedButtonStyles = ' + JSON.stringify(FROSTED_BUTTON_CSS.replaceAll('.admiral-frosted-button', "[data-orbit-studio][data-mobile] .orbit-studio-primary.admiral-frosted-button[data-orbit-inquiry]")));
  const orbitFullscreen = await readFile(new URL('src/framer/OrbitFullscreen.source.tsx',root),'utf8');
  const source = '// Generated Framer homepage. Requires AdmiralApartmentDetailCard.tsx in the same Framer project.\n'+template
   .replace('__HERO_NAMES__',JSON.stringify(heroNames)).replace('__CONNECTION_NAMES__',JSON.stringify(connectionNames)).replace('__ORBIT_NAMES__',JSON.stringify(orbitNames))

@@ -53,7 +53,7 @@ async function createAdmiralApartmentPdf(snapshot,options) {
     pdf.setSubject(snapshot.id+' - egyedi lakásadatlap');pdf.setCreator('Admiral Park apartment detail card');pdf.setCreationDate(snapshot.date);
     const swatch=canvas(1,1),sc=swatch.getContext('2d');
     function color(value,fallback){sc.clearRect(0,0,1,1);sc.fillStyle=fallback;sc.fillStyle=value||fallback;sc.fillRect(0,0,1,1);return [...sc.getImageData(0,0,1,1).data].slice(0,3).map(v=>v/255);}
-    const colors={top:color(snapshot.colors.top,'#fdfbfb'),bottom:color(snapshot.colors.bottom,'#e4e9ec'),ink:color(snapshot.colors.ink,'#242824'),muted:color(snapshot.colors.muted,'#687074'),watermarkTop:color(snapshot.colors.watermarkTop,'#f2f0f1'),watermarkBottom:color(snapshot.colors.watermarkBottom,'#d9dfe2'),accent:color(snapshot.colors.accent,'#a38c69'),status:color(snapshot.colors.status,'#4f7959')};
+    const colors={top:color(snapshot.colors.top,'#fdfbfb'),bottom:color(snapshot.colors.bottom,'#e4e9ec'),ink:color(snapshot.colors.ink,'#242824'),muted:color(snapshot.colors.muted,'#687074'),watermarkTop:color(snapshot.colors.watermarkTop,'#f2f0f1'),watermarkBottom:color(snapshot.colors.watermarkBottom,'#d9dfe2'),accent:color(snapshot.colors.accent,'#a38c69'),frostedTint:color(snapshot.colors.frostedTint,FROSTED_BUTTON_DEFAULTS.tint),frostedText:color(snapshot.colors.frostedText,FROSTED_BUTTON_DEFAULTS.text),status:color(snapshot.colors.status,'#4f7959')};
     const rgb=value=>lib.rgb(...value);
     const css=value=>'rgb('+value.map(v=>Math.round(v*255)).join(',')+')';
     const mix=(a,b,t)=>a.map((v,i)=>v+(b[i]-v)*t);
@@ -140,14 +140,33 @@ async function createAdmiralApartmentPdf(snapshot,options) {
       maxY=Math.max(maxY,y);
     }
     if(maxY>515)throw new Error('The room list is too long for the export layout');
-    // Match the card's price panel and gold action, with a useful PDF link.
+    // Keep the PDF action geometry and semantic link. Enquiries use the shared
+    // pearl tint; the apartment-view fallback retains its existing accent fill.
     page.drawRectangle({x:rx,y:H-575,width:rw,height:64,color:ink,opacity:.035});
     centered(snapshot.price,rx+rw/2,531,fit(snapshot.price,rw-30,28),regular);
-    const actionTop=586,actionHeight=43;
-    page.drawRectangle({x:rx+21,y:H-actionTop-actionHeight,width:rw-42,height:actionHeight,color:rgb(colors.accent)});
-    page.drawCircle({x:rx+21,y:H-actionTop-actionHeight/2,size:21.5,color:rgb(colors.accent)});
-    page.drawCircle({x:rx+rw-21,y:H-actionTop-actionHeight/2,size:21.5,color:rgb(colors.accent)});
-    centered(snapshot.actionLabel,rx+rw/2,actionTop+10,17,semibold);
+    const actionTop=586,actionHeight=43,inquiryAction=!!snapshot.actionIsInquiry&&snapshot.actionLabel==='Érdeklődöm';
+    if(inquiryAction){
+      const fill=rgb(mix(colors.frostedTint,[1,1,1],.78)),edge=rgb(mix(colors.frostedTint,[1,1,1],.58)),left=rx,rightEdge=rx+rw,top=H-actionTop,bottom=top-actionHeight,radius=actionHeight/2;
+      page.drawRectangle({x:left+radius,y:bottom,width:rw-2*radius,height:actionHeight,color:fill});
+      page.drawCircle({x:left+radius,y:bottom+radius,size:radius,color:fill});
+      page.drawCircle({x:rightEdge-radius,y:bottom+radius,size:radius,color:fill});
+      // Draw the perimeter separately so the pill has no internal segment seams.
+      page.drawLine({start:{x:left+radius,y:top},end:{x:rightEdge-radius,y:top},thickness:.8,color:edge});
+      page.drawLine({start:{x:left+radius,y:bottom},end:{x:rightEdge-radius,y:bottom},thickness:.8,color:edge});
+      for(const [cx,from,to] of [[left+radius,90,270],[rightEdge-radius,-90,90]]){
+        const steps=24;for(let step=0;step<steps;step++){
+          const a=(from+(to-from)*step/steps)*Math.PI/180,b=(from+(to-from)*(step+1)/steps)*Math.PI/180;
+          page.drawLine({start:{x:cx+radius*Math.cos(a),y:bottom+radius+radius*Math.sin(a)},end:{x:cx+radius*Math.cos(b),y:bottom+radius+radius*Math.sin(b)},thickness:.8,color:edge});
+        }
+      }
+      page.drawLine({start:{x:left+radius,y:top-.9},end:{x:rightEdge-radius,y:top-.9},thickness:.7,color:lib.rgb(1,1,1),opacity:.85});
+      centered(snapshot.actionLabel,rx+rw/2,actionTop+10,17,semibold,rgb(colors.frostedText));
+    }else{
+      page.drawRectangle({x:rx+21,y:H-actionTop-actionHeight,width:rw-42,height:actionHeight,color:rgb(colors.accent)});
+      page.drawCircle({x:rx+21,y:H-actionTop-actionHeight/2,size:21.5,color:rgb(colors.accent)});
+      page.drawCircle({x:rx+rw-21,y:H-actionTop-actionHeight/2,size:21.5,color:rgb(colors.accent)});
+      centered(snapshot.actionLabel,rx+rw/2,actionTop+10,17,semibold);
+    }
     const actionLink=pdf.context.register(pdf.context.obj({Type:'Annot',Subtype:'Link',Rect:[rx,H-actionTop-actionHeight,rx+rw,H-actionTop],Border:[0,0,0],A:{Type:'Action',S:'URI',URI:lib.PDFString.of(snapshot.actionUrl)}}));
     page.node.addAnnot(actionLink);
     page.drawCircle({x:rx+8,y:H-653,size:2.2,color:rgb(colors.status)});text(snapshot.status,rx+18,646,11,regular,rgb(colors.status));

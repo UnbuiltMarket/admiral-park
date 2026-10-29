@@ -17,8 +17,8 @@
       "bytes": 5433
     },
     "../ui/frosted-button.js": {
-      "sha256": "8f9ed3a55ba756bb2129557d7c5654d563c9d17218361017f33d47c1d75a6b9e",
-      "bytes": 5903
+      "sha256": "2461efcce3579cf83bcf5d6852aec3d5a5a5c5db9a48d1fb22e2a9f6dd1ad117",
+      "bytes": 6361
     }
   },
   "detailRenderer": "src/shared/apartment-card/card-runtime.js",

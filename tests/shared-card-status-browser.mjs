@@ -1,3 +1,4 @@
+import {FROSTED_BUTTON_CSS} from '../src/shared/ui/frosted-button.js';
 import assert from 'node:assert/strict';
 import {readFile,mkdir,writeFile} from 'node:fs/promises';
 import {createRequire} from 'node:module';
@@ -5,7 +6,9 @@ import {fileURLToPath} from 'node:url';
 import path from 'node:path';
 
 const root=new URL('../',import.meta.url),read=file=>readFile(new URL(file,root),'utf8');
-const [runtime,styles,shell,json]=await Promise.all(['src/shared/apartment-card/card-runtime.js','src/shared/apartment-card/card.css','src/shared/apartment-card/card-shell.html','data/apartment-details.json'].map(read));
+const [cardRuntime,cardStyles,shell,json]=await Promise.all(['src/shared/apartment-card/card-runtime.js','src/shared/apartment-card/card.css','src/shared/apartment-card/card-shell.html','data/apartment-details.json'].map(read));
+const buttonRuntime=(await readFile(new URL('../src/shared/ui/frosted-button.js',import.meta.url),'utf8')).replace(/^export /gm,'');
+const runtime=buttonRuntime+'\n'+cardRuntime,styles=cardStyles+'\n'+FROSTED_BUTTON_CSS.replaceAll('.admiral-frosted-button', '#detail-dialog .inquiry-button.admiral-frosted-button');
 const dataset=JSON.parse(json),a=dataset.apartments.find(a=>a.id==='A001');a.status='under_negotiation';a.statusLabel='Tárgyalás alatt';
 const out=new URL('tmp/card-status-contrast/',root);await mkdir(out,{recursive:true});
 const require=createRequire(import.meta.url),{chromium}=require(process.env.PLAYWRIGHT_MODULE_PATH||'playwright');
@@ -20,7 +23,7 @@ try {
  });
  await page.goto('http://card-status.test/');await page.addScriptTag({content:runtime});
  await page.evaluate(({styles,shell,dataset})=>{const root=document.querySelector('#card').attachShadow({mode:'open'});root.innerHTML='<style id="card-styles">'+styles+'</style>'+shell;window.card=root;window.ctrl=mountOrbitApartmentCardRuntime(root,{dataset});window.ctrl.open('A001');},{styles,shell,dataset});
- await page.locator('#card').locator('#detail-document-plan[data-image-state="ready"]').waitFor();
+ await page.locator('#card').locator('#detail-document-plan [data-detail-image-stage="plan"][data-image-state="ready"]').waitFor();
  await page.evaluate(()=>Promise.all([...card.querySelectorAll('img')].map(image=>image.decode().catch(()=>{}))));
  await page.evaluate(()=>document.fonts.ready);
  for(const viewport of [{width:1440,height:900},{width:390,height:844}]) {

@@ -1,3 +1,4 @@
+import {FROSTED_BUTTON_CSS} from '../src/shared/ui/frosted-button.js';
 import assert from 'node:assert/strict';
 import {readFile,mkdir,writeFile} from 'node:fs/promises';
 import {createRequire} from 'node:module';
@@ -7,7 +8,9 @@ import {fileURLToPath} from 'node:url';
 const require=createRequire(import.meta.url),{chromium}=require(process.env.PLAYWRIGHT_MODULE_PATH||'playwright');
 const root=new URL('../',import.meta.url),out=new URL('tmp/card-audit-fixes/',root);
 const mediaRoot=process.env.APARTMENT_MEDIA_ROOT||fileURLToPath(new URL('assets/apartment-list/',root));
-const [runtime,styles,shell,data]=await Promise.all(['src/shared/apartment-card/card-runtime.js','src/shared/apartment-card/card.css','src/shared/apartment-card/card-shell.html','data/apartment-details.json'].map(file=>readFile(new URL(file,root),'utf8')));
+const [cardRuntime,cardStyles,shell,data]=await Promise.all(['src/shared/apartment-card/card-runtime.js','src/shared/apartment-card/card.css','src/shared/apartment-card/card-shell.html','data/apartment-details.json'].map(file=>readFile(new URL(file,root),'utf8')));
+const buttonRuntime=(await readFile(new URL('../src/shared/ui/frosted-button.js',import.meta.url),'utf8')).replace(/^export /gm,'');
+const runtime=buttonRuntime+'\n'+cardRuntime,styles=cardStyles+'\n'+FROSTED_BUTTON_CSS.replaceAll('.admiral-frosted-button', '#detail-dialog .inquiry-button.admiral-frosted-button');
 const browser=await chromium.launch({headless:true,channel:process.env.PLAYWRIGHT_CHANNEL||'chrome'});
 const checks=[],errors=[];await mkdir(out,{recursive:true});
 const check=(message,value)=>{assert.ok(value,message);checks.push(message);};

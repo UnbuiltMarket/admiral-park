@@ -24,6 +24,9 @@ interface OrbitApartmentStudioProps {
     onFiltersChange: (filters: OrbitApartmentFilters) => void
 }
 
+// The homepage builder injects the canonical shared button CSS here.
+const orbitFrostedButtonStyles = "" // @FROSTED_BUTTON_STYLES_INSERT
+
 const orbitApartmentStudioStyles = `
 [data-orbit-studio] {
     --studio-ink: #242824; --studio-muted: #687074; --studio-line: rgba(72,81,85,.2);
@@ -383,7 +386,7 @@ function OrbitApartmentStudio(props: OrbitApartmentStudioProps): React.JSX.Eleme
             <div className="orbit-studio-price">{!mobile && <p className="orbit-studio-label">{apartment?.priceIncludesVat === false ? hu ? "Nettó vételár" : "Net purchase price" : labels.gross}</p>}<p className={`orbit-studio-price-value${!positive(apartment?.price) ? " orbit-studio-price-empty" : ""}`} data-orbit-apartment-price="" data-orbit-field="price">
                 {positive(apartment?.price) ? <>{number.format(apartment!.price! / 1000000)}<small>M Ft</small></> : availability === "sold" ? hu ? "Nincs megadva" : "Not provided" : hu ? "Ár kérésre" : "Price on request"}
             </p></div>
-            {(mobile || !inquiryLink) && onOpenDetails ? <button type="button" className="orbit-studio-primary" data-orbit-apartment-action="" data-orbit-detail-link="" aria-haspopup="dialog" disabled={!transition.interactive} onClick={() => { if (transition.interactive) onOpenDetails() }}><span>{mobile ? hu ? "Adatlap" : "Details" : labels.details}</span>{mobile ? <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6" /></svg> : <span aria-hidden="true">↗</span>}</button> : (mobile ? detailLink : actionLink) && <a className="orbit-studio-primary" href={mobile ? detailLink : actionLink} data-orbit-apartment-action="" {...(!mobile && inquiryLink ? { "data-orbit-inquiry": "" } : { "data-orbit-detail-link": "" })}><span>{mobile ? hu ? "Adatlap" : "Details" : inquiryLink ? labels.inquire : labels.details}</span>{mobile ? <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6" /></svg> : <span aria-hidden="true">↗</span>}</a>}
+            {(mobile || !inquiryLink) && onOpenDetails ? <button type="button" className="orbit-studio-primary" data-orbit-apartment-action="" data-orbit-detail-link="" aria-haspopup="dialog" disabled={!transition.interactive} onClick={() => { if (transition.interactive) onOpenDetails() }}><span>{mobile ? hu ? "Adatlap" : "Details" : labels.details}</span>{mobile ? <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6" /></svg> : <span aria-hidden="true">↗</span>}</button> : (mobile ? detailLink : actionLink) && <a className={`orbit-studio-primary${!mobile && inquiryLink ? " admiral-frosted-button" : ""}`} href={mobile ? detailLink : actionLink} data-orbit-apartment-action="" {...(!mobile && inquiryLink ? { "data-orbit-inquiry": "" } : { "data-orbit-detail-link": "" })}><span>{mobile ? hu ? "Adatlap" : "Details" : inquiryLink ? labels.inquire : labels.details}</span>{mobile ? <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6" /></svg> : !inquiryLink && <span aria-hidden="true">↗</span>}</a>}
         </div>
         <div className="orbit-studio-secondary">
             {download && <a href={download} className="orbit-studio-text-button" target="_blank" rel="noopener noreferrer" download={record?.media?.datasheet?.filename || undefined} data-orbit-apartment-download="" data-orbit-download=""><span aria-hidden="true">↓</span>{labels.download}</a>}
@@ -418,7 +421,7 @@ function OrbitApartmentStudio(props: OrbitApartmentStudioProps): React.JSX.Eleme
     </div>
     return <>
         <section data-orbit-studio="" data-active={active ? "true" : "false"} data-mobile={mobile ? "true" : "false"} data-moving={moving ? "true" : "false"} data-mode={mode} data-status={dataStatus} data-apartment-id={currentApartment?.id || ""} aria-hidden={!active} {...(!active ? { inert: "" as any } : {})} aria-labelledby={mobile ? undefined : headingId} aria-label={mobile ? hu ? "Lakásválasztó" : "Apartments" : undefined}>
-            <style>{fontStyles + orbitApartmentStudioStyles}</style>
+            <style>{fontStyles + orbitApartmentStudioStyles + orbitFrostedButtonStyles}</style>
             <header className="orbit-studio-header" data-orbit-ignore="">
                 {logo && <img className="orbit-studio-brand" src={logo} alt="Admiral Park" width={184} height={78} draggable={false} />}
                 {!mobile && <div className="orbit-studio-header-end">

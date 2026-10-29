@@ -1,4 +1,5 @@
 // One shared source for imperative apartment actions and the standalone Framer button.
+export const FROSTED_BUTTON_DEFAULTS = Object.freeze({tint: "#7395a0", text: "#183b43", fontSize: 14, letterSpacing: "-.015em"});
 export const FROSTED_BUTTON_CSS = `
 :where(.admiral-frosted-button) { min-height: 44px; padding: 10px 22px; font-size: 14px; }
 .admiral-frosted-button {
@@ -9,16 +10,18 @@ export const FROSTED_BUTTON_CSS = `
   justify-content: center;
   gap: 8px;
   border: 1px solid #bdcfd3;
-  border-color: color-mix(in srgb, var(--frosted-button-tint, #7395a0) 42%, white);
+  border-color: color-mix(in srgb, var(--frosted-button-tint, ${FROSTED_BUTTON_DEFAULTS.tint}) 42%, white);
   border-radius: 999px;
   background: linear-gradient(145deg, rgb(255 255 255 / 80%), rgb(255 255 255 / 14%) 55%, rgb(255 255 255 / 42%)), #dce6e8;
-  background: linear-gradient(145deg, rgb(255 255 255 / 80%), rgb(255 255 255 / 14%) 55%, rgb(255 255 255 / 42%)), color-mix(in srgb, var(--frosted-button-tint, #7395a0) 25%, rgb(255 255 255 / 68%));
-  color: var(--frosted-button-text, #183b43);
+  background: linear-gradient(145deg, rgb(255 255 255 / 80%), rgb(255 255 255 / 14%) 55%, rgb(255 255 255 / 42%)), color-mix(in srgb, var(--frosted-button-tint, ${FROSTED_BUTTON_DEFAULTS.tint}) 25%, rgb(255 255 255 / 68%));
+  color: var(--frosted-button-text, ${FROSTED_BUTTON_DEFAULTS.text});
   -webkit-backdrop-filter: blur(18px) saturate(115%);
   backdrop-filter: blur(18px) saturate(115%);
   box-shadow: inset 0 1px 1px rgb(255 255 255 / 95%), inset 0 -1px 0 rgb(24 59 67 / 9%), 0 3px 9px rgb(24 59 67 / 9%);
   font-family: 'Montserrat', Arial, sans-serif;
+  font-size: ${FROSTED_BUTTON_DEFAULTS.fontSize}px;
   font-weight: 600;
+  letter-spacing: ${FROSTED_BUTTON_DEFAULTS.letterSpacing};
   line-height: 1.3;
   text-align: center;
   text-decoration: none;
@@ -29,22 +32,22 @@ export const FROSTED_BUTTON_CSS = `
   transition: background .18s ease, border-color .18s ease, box-shadow .18s ease, transform .18s ease;
 }
 .admiral-frosted-button:focus-visible {
-  outline: 2px solid var(--frosted-button-text, #183b43);
+  outline: 2px solid var(--frosted-button-text, ${FROSTED_BUTTON_DEFAULTS.text});
   outline-offset: 4px;
-  border-color: var(--frosted-button-tint, #7395a0);
+  border-color: var(--frosted-button-tint, ${FROSTED_BUTTON_DEFAULTS.tint});
   box-shadow: inset 0 1px 1px white, 0 0 0 3px rgb(255 255 255 / 75%), 0 4px 12px rgb(24 59 67 / 15%);
 }
 @media (hover: hover) {
   .admiral-frosted-button:not(:disabled):not([aria-disabled="true"]):hover {
-    border-color: color-mix(in srgb, var(--frosted-button-tint, #7395a0) 70%, white);
-    background: linear-gradient(145deg, rgb(255 255 255 / 90%), rgb(255 255 255 / 28%) 55%, rgb(255 255 255 / 58%)), color-mix(in srgb, var(--frosted-button-tint, #7395a0) 33%, rgb(255 255 255 / 75%));
+    border-color: color-mix(in srgb, var(--frosted-button-tint, ${FROSTED_BUTTON_DEFAULTS.tint}) 70%, white);
+    background: linear-gradient(145deg, rgb(255 255 255 / 90%), rgb(255 255 255 / 28%) 55%, rgb(255 255 255 / 58%)), color-mix(in srgb, var(--frosted-button-tint, ${FROSTED_BUTTON_DEFAULTS.tint}) 33%, rgb(255 255 255 / 75%));
     box-shadow: inset 0 1px 1px white, inset 0 -1px 0 rgb(24 59 67 / 10%), 0 5px 14px rgb(24 59 67 / 14%);
   }
 }
 .admiral-frosted-button:not(:disabled):not([aria-disabled="true"]):active { transform: translateY(1px); box-shadow: inset 0 1px 3px rgb(24 59 67 / 14%), 0 1px 3px rgb(24 59 67 / 7%); }
 .admiral-frosted-button:disabled, .admiral-frosted-button[aria-disabled="true"] { opacity: .48; cursor: not-allowed; pointer-events: none; }
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
-  .admiral-frosted-button { background: linear-gradient(145deg, rgb(255 255 255 / 60%), transparent 65%), #dce6e8; background: linear-gradient(145deg, rgb(255 255 255 / 60%), transparent 65%), color-mix(in srgb, var(--frosted-button-tint, #7395a0) 22%, white); }
+  .admiral-frosted-button { background: linear-gradient(145deg, rgb(255 255 255 / 60%), transparent 65%), #dce6e8; background: linear-gradient(145deg, rgb(255 255 255 / 60%), transparent 65%), color-mix(in srgb, var(--frosted-button-tint, ${FROSTED_BUTTON_DEFAULTS.tint}) 22%, white); }
 }
 @media (prefers-reduced-motion: reduce) {
   .admiral-frosted-button { transition: none; }
@@ -53,7 +56,7 @@ export const FROSTED_BUTTON_CSS = `
 @media (prefers-reduced-transparency: reduce) {
   .admiral-frosted-button, .admiral-frosted-button:not(:disabled):not([aria-disabled="true"]):hover {
     background: #dce6e8;
-    background: color-mix(in srgb, var(--frosted-button-tint, #7395a0) 20%, white);
+    background: color-mix(in srgb, var(--frosted-button-tint, ${FROSTED_BUTTON_DEFAULTS.tint}) 20%, white);
     -webkit-backdrop-filter: none; backdrop-filter: none;
   }
 }

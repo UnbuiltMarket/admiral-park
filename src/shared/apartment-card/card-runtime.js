@@ -145,9 +145,10 @@ function finishDialogClose(dialog) {
 function closeDialog(dialog) { if(dialog?.open){dialog.close();finishDialogClose(dialog);} }
 function inquiry(a) {
   const inquiryUrl=safeUrl(config.inquiryUrl);
-  if(inquiryUrl) { const u=new URL(inquiryUrl); u.searchParams.set('apartment',a.id); return `<a class="inquiry-button" href="${esc(u.href)}" target="_blank" rel="noopener"><span>Érdeklődöm</span></a>`; }
-  return `<button type="button" class="inquiry-button" data-inquiry-placeholder aria-expanded="false" aria-controls="inquiry-pending"><span>Érdeklődöm</span></button><div class="inquiry-pending" id="inquiry-pending" role="status" hidden><p>A kapcsolatfelvétel hamarosan elérhető.</p><button type="button" class="inquiry-copy" data-copy-inquiry="${esc(a.id)}">Lakásadatok másolása</button></div>`;
+  if(inquiryUrl) { const u=new URL(inquiryUrl); u.searchParams.set('apartment',a.id); return renderFrostedButton({label:'Érdeklődöm',href:u.href,className:'inquiry-button',attributes:{target:'_blank',rel:'noopener noreferrer'}}); }
+  return renderFrostedButton({label:'Érdeklődöm',className:'inquiry-button',attributes:{'data-inquiry-placeholder':'','aria-expanded':'false','aria-controls':'inquiry-pending'}})+`<div class="inquiry-pending" id="inquiry-pending" role="status" hidden><p>A kapcsolatfelvétel hamarosan elérhető.</p><button type="button" class="inquiry-copy" data-copy-inquiry="${esc(a.id)}">Lakásadatok másolása</button></div>`;
 }
+
 function positionInquiryNotice() {
   const dialog=$('detail-dialog'),note=dialog?.querySelector('.inquiry-pending');
   if(!dialog?.open||!note||note.hidden)return;
@@ -423,7 +424,7 @@ async function downloadDatasheet(id,trigger) {
   // is inherited by the closed native dialog, just as it is by an open card.
   const shell=job.fromDialog?dialog.querySelector('.detail-shell'):null,computed=getComputedStyle(shell||dialog);
   const colors={};
-  for(const [key,property,fallback] of [['top','--detail-top','#fdfbfb'],['bottom','--detail-bottom','#e4e9ec'],['ink','--detail-ink','#242824'],['muted','--detail-muted','#687074'],['watermarkTop','--detail-watermark-top','#f2f0f1'],['watermarkBottom','--detail-watermark-bottom','#d9dfe2'],['accent','--accent','#a38c69']])colors[key]=computed.getPropertyValue(property).trim()||fallback;
+  for(const [key,property,fallback] of [['top','--detail-top','#fdfbfb'],['bottom','--detail-bottom','#e4e9ec'],['ink','--detail-ink','#242824'],['muted','--detail-muted','#687074'],['watermarkTop','--detail-watermark-top','#f2f0f1'],['watermarkBottom','--detail-watermark-bottom','#d9dfe2'],['accent','--accent','#a38c69'],['frostedTint','--frosted-button-tint',FROSTED_BUTTON_DEFAULTS.tint],['frostedText','--frosted-button-text',FROSTED_BUTTON_DEFAULTS.text]])colors[key]=computed.getPropertyValue(property).trim()||fallback;
   const statusProperty={available:'--available',sold:'--sold',under_negotiation:'--negotiating',reserved:'--negotiating'}[a.status]||'--detail-muted';
   colors.status=job.fromDialog?getComputedStyle(dialog.querySelector('.status-pill')).color:computed.getPropertyValue(statusProperty).trim()||({available:'#4f7959',sold:'#b4564f',under_negotiation:'#b28a2f',reserved:'#b28a2f'}[a.status]||colors.muted);
   if(!job.fromDialog&&['under_negotiation','reserved'].includes(a.status))colors.status=`color-mix(in srgb, ${colors.status} 60%, ${colors.ink})`;
@@ -447,7 +448,7 @@ async function downloadDatasheet(id,trigger) {
     viewBox:floor||!validView?{x:0,y:0,width:1,height:1}:{x:view.x,y:view.y,width:view.width,height:view.height},
     markers:floor?[]:markers.map(marker=>({number:marker.number,x:marker.x,y:marker.y})),
     roomGroups,layoutLabel:typeof a.layoutLabel==='string'?a.layoutLabel.replace(/hálószoba/giu,'szoba'):hasNumber(a.rooms)?`${number.format(a.rooms)} szoba`:'',
-    price:apartmentPrice(a),status:statusText(a),pageUrl,actionUrl:actionUrl.href,actionLabel:inquiryUrl?'Érdeklődöm':'Lakás megtekintése',
+    price:apartmentPrice(a),status:statusText(a),pageUrl,actionUrl:actionUrl.href,actionIsInquiry:!!inquiryUrl,actionLabel:inquiryUrl?'Érdeklődöm':'Lakás megtekintése',
     fontRegular:assetUrl('assets/fonts/montserrat/montserrat-pdf-regular.ttf'),fontSemibold:assetUrl('assets/fonts/montserrat/montserrat-pdf-semibold.ttf'),
     logoUrl:assetUrl('assets/brand/admiral-park-full-logo-no-location.svg'),monogramUrl:assetUrl('assets/brand/ap-monogram.png'),
   };

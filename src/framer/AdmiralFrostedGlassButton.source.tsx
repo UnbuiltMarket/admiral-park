@@ -31,11 +31,11 @@ function frostedButtonLink(value?: string): string | undefined {
  * @framerIntrinsicHeight 48
  */
 export default function AdmiralFrostedGlassButton(props: FrostedGlassButtonProps): React.JSX.Element {
-    const {text = "Érdeklődöm", link, openInNewTab = false, tint = "#7395a0", textColor = "#183b43", disabled = false, width = 180, height = 48, onTap, style} = props
+    const {text = "Érdeklődöm", link, openInNewTab = false, tint = FROSTED_BUTTON_DEFAULTS.tint, textColor = FROSTED_BUTTON_DEFAULTS.text, disabled = false, width = 180, height = 48, onTap, style} = props
     const href = frostedButtonLink(link)
     const label = text.trim() || "Érdeklődöm"
     const theme = {
-        fontSize: 15, width, height, ...style,
+        fontSize: FROSTED_BUTTON_DEFAULTS.fontSize, width, height, ...style,
         "--frosted-button-tint": tint, "--frosted-button-text": textColor,
     } as React.CSSProperties
     const activate = (event: React.MouseEvent<HTMLButtonElement | HTMLAnchorElement>) => {
@@ -53,8 +53,8 @@ addPropertyControls(AdmiralFrostedGlassButton, {
     text: {type: ControlType.String, title: "Felirat", defaultValue: "Érdeklődöm"},
     link: {type: ControlType.Link, title: "Hivatkozás"},
     openInNewTab: {type: ControlType.Boolean, title: "Új lap", defaultValue: false, hidden: props => !props.link},
-    tint: {type: ControlType.Color, title: "Üveg színe", defaultValue: "#7395a0"},
-    textColor: {type: ControlType.Color, title: "Szöveg színe", defaultValue: "#183b43"},
+    tint: {type: ControlType.Color, title: "Üveg színe", defaultValue: FROSTED_BUTTON_DEFAULTS.tint},
+    textColor: {type: ControlType.Color, title: "Szöveg színe", defaultValue: FROSTED_BUTTON_DEFAULTS.text},
     width: {type: ControlType.Number, title: "Szélesség", defaultValue: 180, min: 80, max: 640, step: 1, unit: "px"},
     height: {type: ControlType.Number, title: "Magasság", defaultValue: 48, min: 32, max: 120, step: 1, unit: "px"},
     disabled: {type: ControlType.Boolean, title: "Letiltva", defaultValue: false},

@@ -1,3 +1,4 @@
+import {FROSTED_BUTTON_CSS} from '../src/shared/ui/frosted-button.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile,readdir} from 'node:fs/promises';
@@ -145,6 +146,6 @@ test('shared card keeps critical original style declarations while excluding lis
  assert.equal(createHash('sha256').update(original).digest('hex'),manifest.historicalSnapshots['styles.css'].sha256,'The original stylesheet remains as pinned provenance');
  const declaration=(css,selector)=>{const start=css.indexOf(selector+' {');assert.ok(start>=0,selector+' exists');const open=css.indexOf('{',start),close=css.indexOf('}',open);return css.slice(open+1,close).replace(/\s+/g,' ').trim();};
  for(const selector of ['.apartment-dialog','#detail-dialog','#detail-dialog .detail-shell','#detail-dialog .detail-plan-canvas','#detail-dialog .detail-plan-image','#detail-dialog .room-marker','#detail-dialog .share-popover','.media-dialog'])assert.equal(declaration(styles,selector),declaration(original,selector),selector+' retains its established declaration');
- assert.ok(sharedSource.includes(JSON.stringify(styles)),'The shared module contains the extracted card CSS');assert.ok(sharedSource.includes(JSON.stringify(shell)),'The shared module contains only its native card shell');
+ assert.ok(sharedSource.includes(JSON.stringify(styles+'\n'+FROSTED_BUTTON_CSS.replaceAll('.admiral-frosted-button', '#detail-dialog .inquiry-button.admiral-frosted-button'))),'The shared module contains the canonical card and frosted-button CSS');assert.ok(sharedSource.includes(JSON.stringify(shell)),'The shared module contains only its native card shell');
  assert.match(shell,/id="detail-dialog"/);assert.match(shell,/id="media-dialog"/);assert.doesNotMatch(shell,/id="filters"|id="results"|id="compare-dialog"|list-container/);assert.match(sharedSource,/data-orbit-detail-card/);
 });
