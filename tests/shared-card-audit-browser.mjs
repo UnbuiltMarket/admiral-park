@@ -40,14 +40,15 @@ try {
     await page.setViewportSize(viewport);
     for(const id of ['A001','C303']){
       await page.evaluate(id=>ctrl.open(id),id);await page.waitForTimeout(80);
+      const expectedPrice=new Intl.NumberFormat('hu-HU',{maximumFractionDigits:2}).format(JSON.parse(data).apartments.find(apartment=>apartment.id===id).price);
+      check(`${id} ${viewport.width}×${viewport.height} shows its full HUF price`,await card.locator('.price-value').innerText()===expectedPrice&&await card.locator('.price-unit').innerText()==='Ft');
       await card.locator('[data-detail-tab="rooms"]').evaluate(button=>button.click());await page.waitForTimeout(60);
-      const mobile=await card.locator('.detail-mobile-rooms').evaluate(node=>getComputedStyle(node).display!=='none');
-      for(const view of mobile?['mobile']:['type','unit']){
-        if(!mobile){const tab=card.locator(`button[data-room-view="${view}"]`);if(!await tab.count())continue;await tab.click();await page.waitForTimeout(40);}
+      check(`${id} has one room list and no alternate room tabs`,await card.locator('.detail-rooms').count()===1&&await card.locator('[data-room-view]').count()===0);
+      for(const view of ['unit']){
         const seen=new Set();let pages=0;
         do {
           const state=await page.evaluate(view=>{
-            const panel=card.querySelector(view==='mobile'?'.detail-mobile-rooms':`[data-room-panel="${view}"]`),frame=panel.querySelector('.room-page'),dialog=card.querySelector('#detail-dialog'),close=dialog.querySelector('[data-close]');
+            const panel=card.querySelector('.detail-rooms'),frame=panel.querySelector('.room-page'),dialog=card.querySelector('#detail-dialog'),close=dialog.querySelector('[data-close]');
             const list=frame.querySelector('ol,ul'),rows=[...list.children],rect=frame.getBoundingClientRect(),bounds=dialog.getBoundingClientRect(),closeBounds=close.getBoundingClientRect();
             return {rows:rows.filter(row=>!row.hidden).map(row=>{const b=row.getBoundingClientRect();return {index:rows.indexOf(row),top:b.top,bottom:b.bottom,left:b.left,right:b.right};}),count:rows.length,frame:rect.toJSON(),bounds:bounds.toJSON(),close:closeBounds.toJSON(),scroll:dialog.scrollHeight,client:dialog.clientHeight,more:!!panel.querySelector('.room-pagination:not([hidden]) [data-room-page="1"]:not(:disabled)')};
           },view);
@@ -57,11 +58,15 @@ try {
           check(`${id} ${view} ${viewport.width}×${viewport.height} popup needs no scrolling`,state.scroll<=state.client+1);
           for(const row of state.rows)seen.add(row.index);
           if(!state.more){check(`${id} ${view} ${viewport.width}×${viewport.height} every room is reachable`,seen.size===state.count);break;}
-          await card.locator(`${mobile?'.detail-mobile-rooms':`[data-room-panel="${view}"]`} [data-room-page="1"]`).click();await page.waitForTimeout(20);
+          await card.locator('.detail-rooms [data-room-page="1"]').click();await page.waitForTimeout(20);
         }while(++pages<30);
         check(`${id} ${view} pagination terminates`,pages<30);
       }
       await page.screenshot({path:fileURLToPath(new URL(`${id}-${viewport.width}x${viewport.height}.png`,out))});
+      if(viewport.width===1440&&id==='A001'){
+        await card.locator('.room-legend-button[data-plan-room="1"]').hover();
+        check('Unified desktop room list highlights the corresponding floorplan number',await card.locator('.room-marker[data-plan-room="1"]').evaluate(node=>node.classList.contains('is-active')));
+      }
       await page.evaluate(()=>ctrl.close());
     }
   }

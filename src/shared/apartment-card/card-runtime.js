@@ -300,19 +300,15 @@ function numberedUnitRooms(a) {
 }
 
 function detailRooms(a) {
-  const rooms=Array.isArray(a.roomList)?a.roomList:[],markers=validPlanMarkers(data.roomLayouts?.[a.apartmentType]);
-  const mapped=markers.length&&rooms.length===markers.length&&markers.every(marker=>rooms.some(room=>room.planNumber===marker.number));
   const layoutSummary=typeof a.layoutLabel==='string'&&a.layoutLabel.trim()?a.layoutLabel.trim().replace(/hálószoba/giu,'szoba'):hasNumber(a.rooms)?`${number.format(a.rooms)} szoba`:'';
-  const roomHeading=`Helyiségek.${layoutSummary?` <span class="detail-layout-label">${esc(layoutSummary)}</span>`:''}`;
-  const ownRooms=`<ul class="unit-room-list">${rooms.map(room=>`<li><span>${esc(roomLabel(room.name))}</span><strong>${area(room.area)}</strong></li>`).join('')||'<li>A helyiséglista még nem érhető el.</li>'}</ul>`;
-  const mobileRooms=`<div class="detail-mobile-rooms"><h3>Helyiséglista.${layoutSummary?` <span class="detail-layout-label">${esc(layoutSummary)}</span>`:''}</h3><div class="room-page"><ol class="type-room-list">${numberedUnitRooms(a).sort((left,right)=>(left.planNumber??Infinity)-(right.planNumber??Infinity)).map(({room,planNumber})=>`<li>${planNumber?`<button type="button" class="room-legend-button" data-plan-room="${planNumber}" aria-pressed="false">`:'<div class="room-legend-button">'}<span class="room-number">${planNumber?String(planNumber).padStart(2,'0'):'—'}</span><span class="room-name">${esc(roomLabel(room.name))}</span><span class="room-area">${area(room.area)}</span>${planNumber?'</button>':'</div>'}</li>`).join('')||'<li>A helyiséglista még nem érhető el.</li>'}</ol></div></div>`;
-  return `<section class="detail-room-panel" data-detail-panel="rooms" id="detail-panel-rooms" role="tabpanel" aria-labelledby="detail-tab-rooms" data-room-view="type"><div class="detail-room-tabs" role="tablist" aria-label="Helyiségjegyzék"><button type="button" id="detail-room-type-tab" data-room-view="type" role="tab" aria-selected="true" aria-controls="detail-room-type">Típusterv</button>${!mapped?'<button type="button" id="detail-room-unit-tab" data-room-view="unit" role="tab" aria-selected="false" tabindex="-1" aria-controls="detail-room-unit">Lakásterületek</button>':''}</div><div class="detail-rooms" data-room-panel="type" id="detail-room-type" role="tabpanel" aria-labelledby="detail-room-type-tab"><h3>${roomHeading}</h3><div class="room-page">${markers.length?`<ol class="type-room-list">${markers.map(marker=>{const room=mapped?rooms.find(room=>room.planNumber===marker.number):null;return `<li><button type="button" class="room-legend-button" data-plan-room="${marker.number}" aria-pressed="false"><span class="room-number">${String(marker.number).padStart(2,'0')}</span><span class="room-name">${esc(roomLabel(marker.name))}</span>${room?`<span class="room-area">${area(room.area)}</span>`:''}</button></li>`;}).join('')}</ol>`:ownRooms}</div></div>${!mapped?`<div class="unit-room-section" data-room-panel="unit" id="detail-room-unit" role="tabpanel" aria-labelledby="detail-room-unit-tab" hidden><h3>${roomHeading}</h3><div class="room-page">${ownRooms}</div></div>`:''}${mobileRooms}</section>`;
+  const rooms=`<div class="detail-rooms"><h3>Helyiséglista.${layoutSummary?` <span class="detail-layout-label">${esc(layoutSummary)}</span>`:''}</h3><div class="room-page"><ol class="type-room-list">${numberedUnitRooms(a).sort((left,right)=>(left.planNumber??Infinity)-(right.planNumber??Infinity)).map(({room,planNumber})=>`<li>${planNumber?`<button type="button" class="room-legend-button" data-plan-room="${planNumber}" aria-pressed="false">`:'<div class="room-legend-button">'}<span class="room-number">${planNumber?String(planNumber).padStart(2,'0'):'—'}</span><span class="room-name">${esc(roomLabel(room.name))}</span><span class="room-area">${area(room.area)}</span>${planNumber?'</button>':'</div>'}</li>`).join('')||'<li>A helyiséglista még nem érhető el.</li>'}</ol></div></div>`;
+  return `<section class="detail-room-panel" data-detail-panel="rooms" id="detail-panel-rooms" role="tabpanel" aria-labelledby="detail-tab-rooms">${rooms}</section>`;
 }
 function detailMetrics(a) {
   return `<dl class="detail-metrics${a.areaGarden>0?' has-garden':''}"><div class="detail-id-metric"><dt>Lakás<wbr>szám</dt><dd><h2 class="detail-apartment-number">${esc(a.id)}</h2></dd></div>${detailMetric('Beltér',a.areaInterior)}${detailMetric('Erkély',a.areaTerrace)}${hasNumber(a.areaGarden)&&a.areaGarden>0?detailMetric('Kert',a.areaGarden):''}</dl>`;
 }
 function detailPrice(a) {
-  return hasNumber(a.price)?`<span class="price-value">${priceNumber.format(a.price/1000000)}</span> <small class="price-unit">M Ft</small><span class="mobile-price-value">${priceNumber.format(a.price)}</span> <small class="mobile-price-unit">Ft</small>`:`<span class="price-unavailable">${esc(apartmentPrice(a))}</span>`;
+  return hasNumber(a.price)?`<span class="price-value">${priceNumber.format(a.price)}</span> <small class="price-unit">Ft</small>`:`<span class="price-unavailable">${esc(apartmentPrice(a))}</span>`;
 }
 function detailUnitMeta(a) {
   const caption=String(floorText(a)),match=/^(.*?)\s*emelet$/iu.exec(caption);
@@ -329,7 +325,7 @@ function refreshFacts() {
   if(status)status.innerHTML=`<span class="status-pill status-${esc(a.status)}">${esc(statusText(a))}</span>`;
   if(meta)meta.innerHTML=detailUnitMeta(a);
   const summary=typeof a.layoutLabel==='string'&&a.layoutLabel.trim()?a.layoutLabel.trim().replace(/hálószoba/giu,'szoba'):hasNumber(a.rooms)?`${number.format(a.rooms)} szoba`:'';
-  for(const heading of dialog.querySelectorAll('.detail-room-panel h3'))heading.innerHTML=`${heading.closest('.detail-mobile-rooms')?'Helyiséglista':'Helyiségek'}.${summary?` <span class="detail-layout-label">${esc(summary)}</span>`:''}`;
+  for(const heading of dialog.querySelectorAll('.detail-room-panel h3'))heading.innerHTML=`Helyiséglista.${summary?` <span class="detail-layout-label">${esc(summary)}</span>`:''}`;
   // A refresh must not deliver a PDF snapshot carrying an old price or status.
   pdfExportJob?.controller.abort();pdfExportJob=null;
   requestAnimationFrame(fitDetailRooms);
@@ -398,18 +394,11 @@ function selectDetailDocument(value) {
   dialog.querySelectorAll('[data-document-panel]').forEach(panel=>{panel.hidden=panel.dataset.documentPanel!==value;});
   if(value==='floor'&&!dialog.querySelector('img[data-detail-image="floor"]')?.hasAttribute('src'))startDetailImage('floor');
 }
-function selectDetailRoomView(value) {
-  const dialog=$('detail-dialog'),panel=dialog.querySelector('.detail-room-panel');if(!panel)return;
-  panel.dataset.roomView=value;
-  panel.querySelectorAll('button[data-room-view]').forEach(button=>{const active=button.dataset.roomView===value;button.setAttribute('aria-selected',String(active));button.tabIndex=active?0:-1;});
-  panel.querySelectorAll('[data-room-panel]').forEach(item=>{item.hidden=item.dataset.roomPanel!==value;});
-  fitDetailRooms();
-}
 function fitDetailRooms() {
   const dialog=$('detail-dialog');if(signal.aborted||!dialog.open)return;
-  const panel=dialog.querySelector('.detail-room-panel'),view=panel?.dataset.roomView;
+  const panel=dialog.querySelector('.detail-room-panel');
   panel?.style.setProperty('--room-slack','0px');
-  const frame=visibleRoomFrame(panel,view);if(!frame?.clientHeight)return;
+  const frame=visibleRoomFrame(panel);if(!frame?.clientHeight)return;
   const list=frame.querySelector('ol,ul');if(!list)return;
   const rows=[...list.children];rows.forEach(row=>row.hidden=false);
   let navigation=frame.parentElement.querySelector('.room-pagination');
@@ -448,17 +437,16 @@ function fitDetailRooms() {
   navigation.querySelector('[data-room-page="1"]').disabled=page===pages-1;
   navigation.querySelector('span').textContent=`${page+1} / ${pages}`;
 }
-function visibleRoomFrame(panel,view) {
-  const mobile=panel?.querySelector('.detail-mobile-rooms');
-  return mobile&&getComputedStyle(mobile).display!=='none'?mobile.querySelector('.room-page'):panel?.querySelector(`[data-room-panel="${view}"] .room-page`);
+function visibleRoomFrame(panel) {
+  return panel?.querySelector('.room-page');
 }
 function paintPlanRoom(value) {
   const dialog=$('detail-dialog'),number=value==null?null:String(value);
   dialog.querySelectorAll('[data-plan-room]').forEach(button=>{button.classList.toggle('is-active',button.dataset.planRoom===number);button.setAttribute('aria-pressed',String(button.dataset.planRoom===selectedPlanRoom));});
 }
 function selectPlanRoom(value,origin) {
-  selectedPlanRoom=String(value);selectDetailRoomView('type');paintPlanRoom(selectedPlanRoom);
-  const frame=visibleRoomFrame($('detail-dialog').querySelector('.detail-room-panel'),'type'),rows=frame?.querySelectorAll('li'),row=origin?.classList.contains('room-marker')?[...rows||[]].findIndex(item=>item.querySelector(`[data-plan-room="${selectedPlanRoom}"]`)): -1;
+  selectedPlanRoom=String(value);paintPlanRoom(selectedPlanRoom);
+  const frame=visibleRoomFrame($('detail-dialog').querySelector('.detail-room-panel')),rows=frame?.querySelectorAll('li'),row=origin?.classList.contains('room-marker')?[...rows||[]].findIndex(item=>item.querySelector(`[data-plan-room="${selectedPlanRoom}"]`)): -1;
   if(frame&&row>=0&&Number(frame.dataset.pageSize)>0){frame.dataset.page=String(Math.floor(row/Number(frame.dataset.pageSize)));}
   if(origin?.classList.contains('room-marker'))selectDetailPanel('rooms',true);else {selectDetailDocument('plan');selectDetailPanel('plan',true);}
 }
@@ -679,9 +667,8 @@ root.addEventListener('click',event=>{
   if(t.hasAttribute('data-detail-tab'))selectDetailPanel(t.dataset.detailTab);
   if(t.hasAttribute('data-document-view'))selectDetailDocument(t.dataset.documentView);
   if(t.hasAttribute('data-detail-image-retry'))startDetailImage(t.dataset.detailImageRetry,true);
-  if(t.hasAttribute('data-room-view'))selectDetailRoomView(t.dataset.roomView);
   if(t.hasAttribute('data-room-page')){
-    const panel=t.closest('[data-room-panel],.detail-mobile-rooms'),frame=panel?.querySelector('.room-page');
+    const panel=t.closest('.detail-rooms'),frame=panel?.querySelector('.room-page');
     if(frame){frame.dataset.page=String((Number(frame.dataset.page)||0)+Number(t.dataset.roomPage));fitDetailRooms();if(t.disabled)panel.querySelector('.room-pagination button:not(:disabled)')?.focus({preventScroll:true});}
   }
   if(t.hasAttribute('data-plan-room'))selectPlanRoom(t.dataset.planRoom,t);
@@ -725,7 +712,7 @@ window.addEventListener('storage',syncFavorites,events);
 window.addEventListener('admiral:apartment-favorites',syncFavorites,events);
 root.addEventListener('keydown',event=>{
   if(event.key==='Escape'&&closeShare()){event.preventDefault();event.stopPropagation();return;}
-  const tab=event.target.closest('[role=tab][data-detail-tab],[role=tab][data-document-view],[role=tab][data-room-view]');
+  const tab=event.target.closest('[role=tab][data-detail-tab],[role=tab][data-document-view]');
   if(!tab||!['ArrowLeft','ArrowRight','Home','End'].includes(event.key))return;
   const tabs=[...tab.closest('[role=tablist]').querySelectorAll('[role=tab]')],current=tabs.indexOf(tab),index=event.key==='Home'?0:event.key==='End'?tabs.length-1:(current+(event.key==='ArrowRight'?1:-1)+tabs.length)%tabs.length;
   event.preventDefault();tabs[index].click();tabs[index].focus({preventScroll:true});

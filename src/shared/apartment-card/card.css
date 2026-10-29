@@ -159,7 +159,7 @@ input[aria-invalid="true"] { border-color: var(--negotiating); }
 #detail-dialog .empty-plan { display: flex; flex: 1; flex-direction: column; justify-content: center; min-height: 0; padding: 0; border: 0; color: var(--detail-muted); }
 #detail-dialog .empty-plan h3 { color: var(--detail-ink); }
 #detail-dialog .detail-rooms, #detail-dialog .unit-room-section { display: flex; flex: 1; flex-direction: column; min-width: 0; min-height: 0; margin: 0; }
-#detail-dialog :is(.detail-rooms, .unit-room-section) > h3 { flex-shrink: 0; min-height: 28px; margin: 0 0 6px; padding-right: 190px; color: var(--detail-ink); font-family: inherit; font-size: 20px; font-weight: 400; letter-spacing: -.4px; line-height: 1.3; }
+#detail-dialog :is(.detail-rooms, .unit-room-section) > h3 { flex-shrink: 0; min-height: 28px; margin: 0 0 6px; padding-right: 0; color: var(--detail-ink); font-family: inherit; font-size: 20px; font-weight: 400; letter-spacing: -.4px; line-height: 1.3; }
 #detail-dialog .room-page { flex: 1; min-width: 0; min-height: 0; }
 #detail-dialog .room-pagination { display: flex; flex-shrink: 0; align-items: center; justify-content: center; gap: 12px; min-height: 28px; margin-top: 4px; color: var(--detail-muted); font-size: 10px; }
 #detail-dialog .room-pagination button { min-width: 32px; min-height: 28px; padding: 3px 8px; color: var(--detail-ink); border: 1px solid color-mix(in srgb, var(--detail-muted) 30%, transparent); border-radius: 999px; }
@@ -521,7 +521,7 @@ input[aria-invalid="true"] { border-color: var(--negotiating); }
 
 /* Mobile keeps the drawing tall: quiet metadata runs beside the image,
    while the room tab has one numbered apartment-area list. */
-#detail-dialog :is(.detail-mobile-save, .detail-mobile-rooms, .mobile-price-value, .mobile-price-unit) { display: none; }
+#detail-dialog .detail-mobile-save { display: none; }
 @media (max-width: 1100px), (max-height: 600px) {
   #detail-dialog .detail-topbar { left: 12px; right: 12px; display: flex; align-items: flex-start; justify-content: space-between; height: 40px; }
   #detail-dialog .detail-top-actions { margin-left: auto; }
@@ -547,15 +547,13 @@ input[aria-invalid="true"] { border-color: var(--negotiating); }
   #detail-dialog .detail-metrics.has-garden dt { min-height: 0; }
   #detail-dialog .detail-metrics.has-garden .detail-id-metric dt { white-space: nowrap; }
   #detail-dialog .detail-room-panel { padding-top: 0; }
-  #detail-dialog .detail-room-panel > :is(.detail-room-tabs, .detail-rooms, .unit-room-section) { display: none !important; }
-  #detail-dialog .detail-mobile-rooms { display: flex; flex: 1; flex-direction: column; min-width: 0; min-height: 0; }
-  #detail-dialog .detail-mobile-rooms > h3 { min-height: 0; margin: 0 0 5px; padding: 0; color: var(--detail-ink); font-size: 13px; font-weight: 400; line-height: 1.3; }
-  #detail-dialog .detail-mobile-rooms .room-legend-button { grid-template-columns: var(--room-circle, 18px) minmax(0, 1fr) auto; gap: 6px; }
-  #detail-dialog .detail-mobile-rooms .room-page { min-height: 0; }
+  #detail-dialog .detail-rooms { display: flex; flex: 1; flex-direction: column; min-width: 0; min-height: 0; }
+  #detail-dialog .detail-rooms > h3 { min-height: 0; margin: 0 0 5px; padding: 0; color: var(--detail-ink); font-size: 13px; font-weight: 400; line-height: 1.3; }
+  #detail-dialog .detail-rooms .room-legend-button { grid-template-columns: var(--room-circle, 18px) minmax(0, 1fr) auto; gap: 6px; }
+  #detail-dialog .detail-rooms .room-page { min-height: 0; }
   #detail-dialog .detail-shell[data-panel="rooms"] .detail-panel-nav { justify-content: center; padding-right: 0; }
-  #detail-dialog .detail-price :is(.price-value, .price-unit) { display: none; }
-  #detail-dialog .detail-price .mobile-price-value { display: inline; color: var(--detail-ink); font-size: 25px; font-weight: 500; letter-spacing: -.7px; line-height: 1.1; white-space: nowrap; }
-  #detail-dialog .detail-price .mobile-price-unit { display: inline; color: var(--detail-ink); font-size: 11px; font-weight: 400; line-height: 1.3; }
+  #detail-dialog .detail-price .price-value { display: inline; color: var(--detail-ink); font-size: 25px; font-weight: 500; letter-spacing: -.7px; line-height: 1.1; white-space: nowrap; }
+  #detail-dialog .detail-price .price-unit { display: inline; color: var(--detail-ink); font-size: 11px; font-weight: 400; line-height: 1.3; }
   #detail-dialog .detail-footer { grid-template-columns: minmax(0, 1fr) minmax(70px, .9fr) minmax(0, 1fr); gap: 5px; }
   #detail-dialog .detail-footer .footer-pill { height: 40px; min-height: 40px; max-height: 40px; padding: 5px 6px; font-size: 10px; }
   #detail-dialog .detail-status { min-height: 40px; }
@@ -586,7 +584,7 @@ input[aria-invalid="true"] { border-color: var(--negotiating); }
   #detail-dialog .detail-metrics dd { font-size: 19px; }
   #detail-dialog .detail-metrics.has-garden dd { font-size: clamp(14px, 4.2vw, 17px); }
   #detail-dialog .detail-conversion { row-gap: 4px; }
-  #detail-dialog .detail-price .mobile-price-value { font-size: 23px; }
+  #detail-dialog .detail-price .price-value { font-size: 23px; }
   #detail-dialog .detail-footer .footer-pill { height: 38px; min-height: 38px; max-height: 38px; }
   #detail-dialog .detail-status { min-height: 38px; }
 }
@@ -602,7 +600,7 @@ input[aria-invalid="true"] { border-color: var(--negotiating); }
   #detail-dialog .detail-mobile-save .save-button.save-with-label { width: 40px; padding: 4px; }
   #detail-dialog .detail-panel-nav { padding-right: 48px; gap: 4px; }
   #detail-dialog .detail-panel-nav button { min-width: 0; padding-inline: 5px; font-size: 10px; }
-  #detail-dialog .detail-mobile-rooms > h3 { font-size: 12px; }
-  #detail-dialog .detail-price .mobile-price-value { font-size: 22px; }
+  #detail-dialog .detail-rooms > h3 { font-size: 12px; }
+  #detail-dialog .detail-price .price-value { font-size: 22px; }
   #detail-dialog .detail-drawing-toolbar .detail-unit-meta { gap: 7px; }
 }

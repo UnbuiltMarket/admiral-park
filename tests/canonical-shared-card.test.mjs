@@ -103,7 +103,7 @@ test('rendered shared card keeps Lakásszám in its metrics row and gross-price 
     assert.match(metrics[2],/^<div class="detail-id-metric"><dt>Lakás<wbr>szám<\/dt><dd><h2 class="detail-apartment-number">A001<\/h2>/);
     assert.equal(metrics[1].includes('has-garden'),garden!==null);
     const price=html.match(/<div class="detail-price">([\s\S]*?)<\/p><\/div>/)?.[1];
-    assert.ok(price);assert.match(price,/price-value">75<\/span>/);assert.doesNotMatch(price,/Bruttó vételár/);
+    assert.ok(price);assert.match(price,/price-value">75000000<\/span>/);assert.match(price,/price-unit">Ft<\/small>/);assert.doesNotMatch(price,/M Ft|Bruttó vételár/);
     assert.match(html,/<p class="detail-illustration-note">[^<]*Bruttó vételár\.<\/p>/);
   }
   assert.match(styles,/#detail-dialog \.detail-metrics \{[^}]*repeat\(3,/);
