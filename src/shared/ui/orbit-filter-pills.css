@@ -14,7 +14,7 @@
     --ofp-shadow: color-mix(in srgb, var(--ofp-ink) 5%, transparent);
     --ofp-sheen: radial-gradient(130% 100% at 0% 0%, rgb(255 255 255 / 30%), transparent 48%), radial-gradient(110% 130% at 100% 100%, rgb(255 255 255 / 18%), transparent 52%), linear-gradient(150deg, rgb(255 255 255 / 18%), rgb(255 255 255 / 2%) 46%, rgb(255 255 255 / 12%));
 }
-[data-orbit-filters][data-presentation="overlay"][data-active] {
+[data-orbit-filters][data-orbit-ignore][data-presentation="overlay"][data-active] {
     --ofp-ink: #fff;
     --ofp-fill: rgb(255 255 255 / 10%);
     --ofp-rim: rgb(255 255 255 / 30%);
@@ -54,13 +54,13 @@
     }
 }
 [data-orbit-filters][data-orbit-ignore][data-presentation][data-active] button:focus-visible { outline: 2px solid var(--ofp-accent); outline-offset: 3px; }
-[data-orbit-filters][data-presentation="overlay"][data-active] button:focus-visible { outline-color: #fff; }
+[data-orbit-filters][data-orbit-ignore][data-presentation="overlay"][data-active] button:focus-visible { outline-color: #fff; }
 @media (prefers-reduced-motion: reduce) {
     [data-orbit-filters][data-orbit-ignore][data-presentation][data-active] button { transition: none; }
 }
 @media (prefers-reduced-transparency: reduce) {
     [data-orbit-filters][data-orbit-ignore][data-presentation][data-active] { --ofp-fill: var(--ofp-paper); }
-    [data-orbit-filters][data-presentation="overlay"][data-active] { --ofp-fill: #243742; --ofp-selected: #655d4e; }
+    [data-orbit-filters][data-orbit-ignore][data-presentation="overlay"][data-active] { --ofp-fill: #243742; --ofp-selected: #655d4e; }
 }
 @media (forced-colors: active) {
     [data-orbit-filters][data-orbit-ignore][data-presentation][data-active] :is([data-orbit-filter-status], [data-orbit-range-toggle], [data-orbit-filter-reset]) { border-color: ButtonText; color: ButtonText; background: ButtonFace; box-shadow: none; }
