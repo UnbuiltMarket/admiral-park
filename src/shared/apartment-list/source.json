@@ -2,19 +2,23 @@
   "schemaVersion": "2.0",
   "sourceProject": "admiral-park",
   "description": "Canonical list-only runtime. Apartment selection delegates to AdmiralApartmentDetailCard and reuses the loaded dataset.",
-  "updated": "2026-10-28",
+  "updated": "2026-10-29",
   "canonicalSources": {
     "app.js": {
-      "sha256": "d485be511be0555f8862eba4e799bb4c76033595e00fd1ec38fabe2eee1db008",
-      "bytes": 46869
+      "sha256": "238b0f8874a4dec86e123a1e5d8000e978ca4b0884dd987b9487c14a01f650f5",
+      "bytes": 46792
     },
     "styles.css": {
-      "sha256": "056a1a9c6bcf3f5a056365fbfaeeec052bd2eaa65ff99bbe7ae5673feb892aea",
-      "bytes": 51531
+      "sha256": "f959ff247bfa6e800dad28f84342408d0241c9d86db41eb030cfb9b768dbd820",
+      "bytes": 51668
     },
     "shell.html": {
       "sha256": "f249d7cff974255cd81b4195fca2886d9b993f7a969173351121a444f1483d45",
       "bytes": 5433
+    },
+    "../ui/frosted-button.js": {
+      "sha256": "8f9ed3a55ba756bb2129557d7c5654d563c9d17218361017f33d47c1d75a6b9e",
+      "bytes": 5903
     }
   },
   "detailRenderer": "src/shared/apartment-card/card-runtime.js",

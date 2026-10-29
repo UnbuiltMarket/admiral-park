@@ -1,10 +1,12 @@
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import {createRequire} from 'node:module';
+import {FROSTED_BUTTON_CSS} from '../src/shared/ui/frosted-button.js';
 
 // Mount authored sources directly, so this catches regressions before generation.
 const root=new URL('../',import.meta.url),read=file=>readFile(new URL(file,root),'utf8');
-const [runtime,css,shell,json]=await Promise.all(['src/shared/apartment-list/app.js','src/shared/apartment-list/styles.css','src/shared/apartment-list/shell.html','data/apartment-details.json'].map(read));
+const [listRuntime,listCss,shell,json,buttonRuntime]=await Promise.all(['src/shared/apartment-list/app.js','src/shared/apartment-list/styles.css','src/shared/apartment-list/shell.html','data/apartment-details.json','src/shared/ui/frosted-button.js'].map(read));
+const runtime=buttonRuntime.replace(/^export /gm,'')+'\n'+listRuntime,css=listCss+'\n'+FROSTED_BUTTON_CSS;
 const dataset=JSON.parse(json),require=createRequire(import.meta.url);
 dataset.apartments.find(a=>a.id==='A001').status='under_negotiation';
 dataset.apartments.find(a=>a.id==='A002').areaGarden=12;
@@ -68,7 +70,7 @@ try {
   await f.list.locator('#favoritesOnly').uncheck();
   await f.list.locator('#search').focus();await f.list.locator('#search').fill('A00');
   check('Filtering preserves search input focus',await f.list.locator('#search').evaluate(el=>el.getRootNode().activeElement===el));
-  const contrast=await f.list.locator('[data-unit="A001"] .cell-status .status-pill').evaluate(el=>{
+  const contrast=await f.list.locator('[data-unit="A001"] .unit-identification .unit-status').evaluate(el=>{
    const canvas=document.createElement('canvas'),ctx=canvas.getContext('2d');
    const rgb=color=>{ctx.clearRect(0,0,1,1);ctx.fillStyle=color;ctx.fillRect(0,0,1,1);return [...ctx.getImageData(0,0,1,1).data].slice(0,3);};
    const luminance=channels=>channels.map(c=>c/255).map(c=>c<=.04045?c/12.92:((c+.055)/1.055)**2.4).reduce((sum,c,i)=>sum+c*[.2126,.7152,.0722][i],0);
@@ -77,8 +79,8 @@ try {
   });
   check('Negotiation text meets 4.5:1 contrast',contrast.ratio>=4.5);
   check('Negotiation dot retains original yellow',JSON.stringify(contrast.dot)==='[178,138,47]');
-  check('Reserved status remains supported after integration',await f.list.locator('[data-unit="A003"] .cell-status .status-reserved').count()===1);
-  check('Reserved text uses the same readable hue',await f.list.locator('[data-unit="A003"] .cell-status .status-pill').evaluate(el=>getComputedStyle(el).color===getComputedStyle(el.closest('table').querySelector('[data-unit="A001"] .cell-status .status-pill')).color));
+  check('Reserved status remains supported after integration',await f.list.locator('[data-unit="A003"] .unit-identification .status-reserved').count()===1);
+  check('Reserved text uses the same readable hue',await f.list.locator('[data-unit="A003"] .unit-identification .unit-status').evaluate(el=>getComputedStyle(el).color===getComputedStyle(el.closest('table').querySelector('[data-unit="A001"] .unit-identification .unit-status')).color));
   await f.page.setViewportSize({width:390,height:844});
   check('Absent mobile garden remains omitted',!await f.list.locator('[data-unit="A001"] .cell-garden').isVisible());
   check('Known mobile garden area remains visible',await f.list.locator('[data-unit="A002"] .cell-garden').isVisible());

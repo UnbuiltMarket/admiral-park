@@ -7,7 +7,7 @@ const root=new URL('../',import.meta.url),out=new URL('tmp/priority-card-check/'
 const require=createRequire(import.meta.url),{chromium}=require(process.env.PLAYWRIGHT_MODULE_PATH||'playwright');
 const data=JSON.parse(await read('data/apartment-details.json'));
 const runtime=await read('src/shared/apartment-card/card-runtime.js'),css=await read('src/shared/apartment-card/card.css'),shell=await read('src/shared/apartment-card/card-shell.html');
-const listRuntime=(await read('src/shared/apartment-list/app.js')).replace('export function mountApartmentList','function mountApartmentList');
+const listRuntime=(await read('src/shared/ui/frosted-button.js')).replace(/^export /gm,'')+'\n'+(await read('src/shared/apartment-list/app.js')).replace('export function mountApartmentList','function mountApartmentList');
 await mkdir(out,{recursive:true});
 const browser=await chromium.launch({headless:true,channel:process.env.PLAYWRIGHT_CHANNEL||'chrome'}),results=[];
 try{

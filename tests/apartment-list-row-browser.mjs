@@ -65,7 +65,8 @@ try{
     for(const a of dataset.apartments.filter(a=>Number.isFinite(a.price))){const actual=prices.find(row=>row.id===a.id)?.text;check(a.id+' shows its full forint price',normalize(actual||'')===normalize(expectedPrice(a.price)),{actual,expected:expectedPrice(a.price)});}
     const first=f.list.locator('[data-unit="A001"]');
     check('Type has no stacked building or floor beneath it',normalize(await first.locator('.cell-type').innerText())==='B'&&await first.locator('.cell-type .unit-location').count()===0);
-    check('Building and floor belong to the apartment identity group',await first.locator('.unit-identification .unit-desktop-location').innerText().then(text=>/A épület\s*·\s*Földszint/.test(normalize(text))));
+    check('Building and floor have an explicit location column away from type and apartment number',await first.locator('.cell-location').innerText().then(text=>/A épület\s+Földszint/.test(normalize(text)))&&await first.locator('.unit-identification .unit-location').count()===0);
+    check('Availability belongs directly to the apartment identity group',await first.locator('.unit-identification > .unit-status').count()===1&&await first.locator('.cell-status').count()===0);
     check('Missing garden area stays blank in its own cell',await first.locator('td.cell-garden').count()===1&&normalize(await first.locator('td.cell-garden').textContent())==='');
     check('Terrace cell no longer contains garden data',await first.locator('.cell-outdoor .cell-garden').count()===0);
 
@@ -78,22 +79,32 @@ try{
       const m=await f.list.evaluate(host=>{
         const r=host.shadowRoot||host,rows=[...r.querySelectorAll('.apartment-row')],row=rows[0],rect=e=>e?.getBoundingClientRect().toJSON();
         const headings=[...r.querySelectorAll('thead th')].map(e=>{const range=document.createRange();range.selectNodeContents(e);return {text:e.textContent.trim(),rect:rect(e),textRect:range.getBoundingClientRect().toJSON(),display:getComputedStyle(e).display};});
-        const statusIndex=headings.findIndex(e=>e.text==='Elérhetőség'),statusCell=row.children[statusIndex],priceCell=row.querySelector('.price-amount')?.closest('td');
-        const pills=[...row.querySelectorAll('.action-pill')].map(e=>({text:e.textContent.trim(),rect:rect(e),bg:getComputedStyle(e).backgroundImage,color:getComputedStyle(e).backgroundColor}));
+        const locationIndex=headings.findIndex(e=>e.text==='Épület, emelet'),locationCell=row.children[locationIndex],priceCell=row.querySelector('.price-amount')?.closest('td'),identity=row.querySelector('.unit-id'),status=row.querySelector('.unit-identification > .unit-status');
+        const pills=[...row.querySelectorAll('.action-pill')].map(e=>({text:e.textContent.trim(),rect:rect(e),bg:getComputedStyle(e).backgroundImage,color:getComputedStyle(e).backgroundColor,frosted:e.classList.contains('admiral-frosted-button')}));
         const clipping=rows.flatMap(row=>[...row.querySelectorAll('.price-amount,.unit-id,.action-pill,.status-pill')].filter(e=>e.clientWidth>0&&e.scrollWidth>e.clientWidth+1).map(e=>({id:row.dataset.unit,text:e.textContent,client:e.clientWidth,scroll:e.scrollWidth,rect:rect(e)})));
-        return {width:innerWidth,pageWidth:document.documentElement.scrollWidth,host:rect(host),row:rect(row),rowHeights:rows.map(e=>e.getBoundingClientRect().height),pills,clipping,headings,priceCell:rect(priceCell),statusCell:rect(statusCell),separateStatus:!!statusCell&&statusCell!==priceCell&&!!statusCell.querySelector('.status-pill'),rowText:row.innerText};
+        return {width:innerWidth,pageWidth:document.documentElement.scrollWidth,host:rect(host),row:rect(row),rowHeights:rows.map(e=>e.getBoundingClientRect().height),pills,clipping,headings,priceCell:rect(priceCell),locationCell:rect(locationCell),identity:rect(identity),status:rect(status),statusInIdentity:!!status&&status.closest('td')===row.querySelector('.cell-unit'),rowText:row.innerText};
       });
       measurements.push(m);
+      if(width===1440){
+        const before=await first.evaluate(row=>({background:getComputedStyle(row).backgroundImage,height:row.getBoundingClientRect().height}));
+        await first.locator('.cell-interior').hover();await f.page.waitForTimeout(220);
+        const hover=await first.evaluate(row=>({background:getComputedStyle(row).backgroundImage,outline:getComputedStyle(row).outlineColor,shadow:getComputedStyle(row).boxShadow,height:row.getBoundingClientRect().height}));
+        check('Hover adds a visible layered glass surface and rim',hover.background!==before.background&&hover.background.includes('gradient')&&hover.outline!=='rgba(0, 0, 0, 0)'&&hover.shadow!=='none',hover);
+        check('Glass hover preserves the row height',Math.abs(before.height-hover.height)<.5,{before,hover});
+        await f.page.screenshot({path:fileURLToPath(new URL(`${mode}-row-hover-1440.png`,out)),fullPage:false});
+        await f.page.mouse.move(0,0);await f.page.waitForTimeout(200);
+      }
       check('No horizontal page overflow at '+width,m.pageWidth<=width+1,m);
       check('Full prices and action labels do not clip at '+width,m.clipping.length===0,m.clipping);
       check('Exactly three equal row pills at '+width,m.pills.length===3&&m.pills.every(p=>Math.abs(p.rect.width-m.pills[0].rect.width)<=1&&Math.abs(p.rect.height-m.pills[0].rect.height)<=1),m.pills);
       check('Pills follow datasheet, comparison, inquiry order at '+width,m.pills.map(p=>p.text).join('|')==='Adatlap|Összevetés|Érdeklődöm',m.pills);
-      check('Inquiry is the final gold pill at '+width,m.pills[2].text==='Érdeklődöm'&&(m.pills[2].bg!=='none'||m.pills[2].color!=='rgba(0, 0, 0, 0)'),m.pills[2]);
+      check('Inquiry is the final shared frosted pill at '+width,m.pills[2].text==='Érdeklődöm'&&m.pills[2].frosted&&(m.pills[2].bg!=='none'||m.pills[2].color!=='rgba(0, 0, 0, 0)'),m.pills[2]);
+      check('Availability is visible beneath and aligned with its apartment number at '+width,m.statusInIdentity&&m.status.width>0&&m.status.height>0&&m.status.top>=m.identity.bottom-1&&Math.abs(m.status.left-m.identity.left)<=1,{identity:m.identity,status:m.status});
       check('Row does not repeat an Erkély label at '+width,!m.rowText.includes('Erkély'),m.rowText);
       if(width>=1101){
-        check('Desktop exposes separate Terasz, Kert and Elérhetőség headings at '+width,m.headings.length===10&&['Terasz','Kert','Elérhetőség'].every(text=>m.headings.some(h=>h.text===text&&h.display!=='none'&&h.rect.height>0)),m.headings);
+        check('Desktop exposes separate Terasz, Kert and Épület, emelet headings at '+width,m.headings.length===10&&['Terasz','Kert','Épület, emelet'].every(text=>m.headings.some(h=>h.text===text&&h.display!=='none'&&h.rect.height>0)),m.headings);
         check('Rooms and interior headings stay clearly separated at '+width,m.headings[2].textRect.right<=m.headings[3].textRect.left-2,{rooms:m.headings[2],interior:m.headings[3]});
-        check('Price and availability occupy distinct visible desktop columns at '+width,m.separateStatus&&m.priceCell.width>0&&m.statusCell.width>0&&m.statusCell.left>=m.priceCell.right-1,{price:m.priceCell,status:m.statusCell});
+        check('Location has a visible desktop column separate from price at '+width,m.priceCell.width>0&&m.locationCell.width>0&&m.locationCell.left>=m.priceCell.right-1,{price:m.priceCell,location:m.locationCell});
         check('Desktop row height is preserved at '+width,Math.max(...m.rowHeights)<=157,{maxHeight:Math.max(...m.rowHeights)});
         check('Desktop pills stay 112 by 36 at '+width,m.pills.every(p=>Math.abs(p.rect.width-112)<=1&&Math.abs(p.rect.height-36)<=1),m.pills);
       }

@@ -17,6 +17,7 @@ const DEFAULT_COLORS = {
     background: "#fcfcfa", text: "#242a27", muted: "#666d67", accent: "#a38c69",
     borders: "#e3e4de", surface: "#f4f3ef", filterHeader: "#f4f3ef", button: "#242a27", buttonText: "#ffffff",
     available: "#4f7959", negotiating: "#b28a2f", sold: "#b4564f",
+    frostedTint: "#7395a0", frostedText: "#183b43",
 }
 type ListProps = {
     dataUrl?: string; assetBaseUrl?: string; inquiryUrl?: string; pageUrl?: string;
@@ -65,6 +66,7 @@ export default function AdmiralApartmentList(props: ListProps) {
         "--accent": palette.accent, "--line": palette.borders, "--surface": palette.surface, "--filter-background": palette.filterHeader,
         "--button": palette.button, "--button-text": palette.buttonText, "--available": palette.available,
         "--negotiating": palette.negotiating, "--sold": palette.sold,
+        "--frosted-button-tint": palette.frostedTint, "--frosted-button-text": palette.frostedText,
         "--component-padding": inset + "px",
         "--list-top-space": Math.max(0, Number.isFinite(topSpacing) ? topSpacing : 120) + "px",
         "--list-mobile-top-space": Math.max(0, Number.isFinite(mobileTopSpacing) ? mobileTopSpacing : 88) + "px",

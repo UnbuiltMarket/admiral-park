@@ -13,6 +13,8 @@ addPropertyControls(AdmiralApartmentList, {
         surface: {type: ControlType.Color, title: "Surface", defaultValue: DEFAULT_COLORS.surface},
         button: {type: ControlType.Color, title: "Buttons", defaultValue: DEFAULT_COLORS.button},
         buttonText: {type: ControlType.Color, title: "Button text", defaultValue: DEFAULT_COLORS.buttonText},
+        frostedTint: {type: ControlType.Color, title: "Glass button tint", defaultValue: DEFAULT_COLORS.frostedTint},
+        frostedText: {type: ControlType.Color, title: "Glass button text", defaultValue: DEFAULT_COLORS.frostedText},
         available: {type: ControlType.Color, title: "Available", defaultValue: DEFAULT_COLORS.available},
         negotiating: {type: ControlType.Color, title: "Negotiating", defaultValue: DEFAULT_COLORS.negotiating},
         sold: {type: ControlType.Color, title: "Sold", defaultValue: DEFAULT_COLORS.sold},
