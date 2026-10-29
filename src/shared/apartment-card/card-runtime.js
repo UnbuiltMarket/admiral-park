@@ -179,24 +179,145 @@ function detailPlan(a) {
   const markers=validPlanMarkers(layout);
   return `<section class="detail-plan" data-document-panel="plan" id="detail-document-plan" role="tabpanel" aria-labelledby="detail-document-plan-tab"><div class="detail-plan-stage" data-detail-image-stage="plan" data-image-state="loading" aria-busy="true">${detailImageFeedback('plan')}<div class="detail-plan-canvas" style="--plan-aspect:${imageWidth*view.width/(imageHeight*view.height)};aspect-ratio:${imageWidth*view.width}/${imageHeight*view.height}"><div class="detail-plan-surface" style="${surface}"><img class="detail-plan-image" data-detail-image="plan" data-image-url="${esc(url)}" src="${esc(url)}" alt="${esc(a.apartmentType||a.id)} típus számozott alaprajza" decoding="async"><div class="detail-plan-markers" aria-label="A típusterv helyiségei">${markers.map(marker=>`<button type="button" class="room-marker" data-plan-room="${marker.number}" style="left:${marker.x*100}%;top:${marker.y*100}%" aria-label="${marker.number}. ${esc(roomLabel(marker.name))}" aria-pressed="false">${marker.number}</button>`).join('')}</div></div></div></div></section>`;
 }
+// Display-only joins for the shared illustrative plans. The source room rows
+// and their actual apartment areas remain unchanged; inferred joins are never
+// written back as verified planNumber data.
+function numberedUnitRooms(a) {
+  const rooms = Array.isArray(a?.roomList) ? a.roomList : [];
+  const markers = validPlanMarkers(data.roomLayouts?.[a?.apartmentType]);
+  const markerByNumber = new Map(markers.map(marker => [marker.number, marker]));
+  // Owner-confirmed links, keyed by stable source-room keys. The two equal
+  // C303 bedrooms use one consistent remaining assignment below.
+  const confirmedNumbers = {C303: {'rooms:1184': 6}, C101: {'rooms:944': 5, 'rooms:946': 10}};
+  const rows = rooms.map(room => {
+    const linkedNumber = room.planNumber ?? confirmedNumbers[a.id]?.[room.key];
+    const marker = markerByNumber.get(linkedNumber);
+    const planNumber = marker && marker.kind === room.kind ? linkedNumber : null;
+    return {room, planNumber, candidateNumbers: planNumber === null ? [] : [planNumber]};
+  });
+  if (!markers.length || !rows.length) return rows;
+
+  const prototype = (data.apartments || []).find(item =>
+    item.apartmentType === a.apartmentType &&
+    Array.isArray(item.roomList) && item.roomList.length === markers.length &&
+    new Set(item.roomList.map(room => room.planNumber)).size === markers.length &&
+    item.roomList.every(room => markerByNumber.get(room.planNumber)?.kind === room.kind && hasNumber(room.area))
+  );
+  const reference = prototype?.roomList || [];
+  const basicName = name => {
+    const key = String(name || '').toLocaleLowerCase('hu').normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/g, '');
+    const aliases = {terasz:'erkely', furdo:'furdoszoba', kozl:'kozlekedo',
+      hazth:'utility', haztartasihelyiseg:'utility', tarolo:'utility',
+      konyaetkezo:'konyhaetkezo'};
+    return aliases[key] || key;
+  };
+  // A single kitchen may be called either Konyha or Konyha, étkező. Keep those
+  // names distinct in two-kitchen plans so their areas cannot be interchanged.
+  const singleKitchen = markers.filter(marker => /^konyha/.test(basicName(marker.name))).length === 1;
+  // C101's actual list calls the E1 wardrobe a Tároló (3.75 m²), and its
+  // 5.16 m² utility room Házt.h. Group only this missing-wardrobe case, then
+  // resolve it by area; retain both original names and actual values in rows.
+  const e1StorageAlias = a.apartmentType === 'E1' &&
+    !rooms.some(room => basicName(room.name) === 'gardrob') &&
+    rooms.filter(room => basicName(room.name) === 'utility').length === 2 &&
+    markers.some(marker => basicName(marker.name) === 'gardrob');
+  const keyFor = room => {
+    let key = basicName(room.name);
+    if (singleKitchen && /^konyha/.test(key)) key = 'konyha';
+    if (e1StorageAlias && (key === 'gardrob' || key === 'utility')) key = 'e1-storage';
+    return room.kind + ':' + key;
+  };
+  const setNumber = (row, number) => { row.planNumber = number; row.candidateNumbers = [number]; };
+  const used = new Set(rows.filter(row => row.planNumber !== null).map(row => row.planNumber));
+
+  // A complete compatible order is useful evidence. An isolated same-index
+  // bedroom is not enough: reordered lists such as C303 must use the groups.
+  const ordered = rooms.length === markers.length && rooms.every((room, index) =>
+    keyFor(room) === keyFor(markers[index]) &&
+    (rows[index].planNumber === null || rows[index].planNumber === markers[index].number)
+  );
+  if (ordered) {
+    rows.forEach((row, index) => {
+      if (row.planNumber === null && !used.has(markers[index].number)) {
+        setNumber(row, markers[index].number); used.add(markers[index].number);
+      }
+    });
+    return rows;
+  }
+
+  const unlinked = rows.filter(row => row.planNumber === null);
+  const available = reference.filter(room => !used.has(room.planNumber));
+  for (const key of new Set(unlinked.map(row => keyFor(row.room)))) {
+    const group = unlinked.filter(row => keyFor(row.room) === key);
+    const targets = available.filter(room => keyFor(room) === key)
+      .sort((left, right) => left.planNumber - right.planNumber);
+    if (group.length !== targets.length || !targets.length) {
+      // Without a verified reference, only a unique name+kind pair is safe.
+      const remaining = markers.filter(marker => !used.has(marker.number) && keyFor(marker) === key);
+      if (group.length === 1 && remaining.length === 1) {
+        setNumber(group[0], remaining[0].number); used.add(remaining[0].number);
+      }
+      continue;
+    }
+    if (group.length === 1) {
+      setNumber(group[0], targets[0].planNumber); used.add(targets[0].planNumber); continue;
+    }
+    if (group.length > 7 || !group.every(row => hasNumber(row.room.area))) continue;
+    const cents = value => Math.round(value * 100);
+    let bestScore = Infinity, solutions = [];
+    const visit = (assignment, remaining, score) => {
+      if (score > bestScore) return;
+      if (!remaining.length) {
+        if (score < bestScore) { bestScore = score; solutions = []; }
+        solutions.push(assignment); return;
+      }
+      const index = assignment.length;
+      remaining.forEach((target, position) => visit(
+        assignment.concat(target), remaining.filter((_, i) => i !== position),
+        score + (cents(group[index].room.area) - cents(target.area)) ** 2
+      ));
+    };
+    visit([], targets, 0);
+    const rowValue = row => [row.room.name, row.room.kind, cents(row.room.area)].join('|');
+    // Identical balcony rows can be numbered deterministically: every optimal
+    // assignment presents the exact same name and area at both markers.
+    const harmlessTie = targets.every(target => new Set(solutions.map(solution =>
+      rowValue(group[solution.findIndex(item => item.planNumber === target.planNumber)])
+    )).size === 1);
+    group.forEach((row, index) => {
+      const candidates = [...new Set(solutions.map(solution => solution[index].planNumber))]
+        .sort((left, right) => left - right);
+      if (solutions.length === 1 || harmlessTie) setNumber(row, solutions[0][index].planNumber);
+      else {
+        row.candidateNumbers = candidates;
+        row.planNumber = candidates.length === 1 ? candidates[0] : null;
+      }
+      row.candidateNumbers.forEach(number => used.add(number));
+    });
+  }
+  return rows;
+}
+
 function detailRooms(a) {
   const rooms=Array.isArray(a.roomList)?a.roomList:[],markers=validPlanMarkers(data.roomLayouts?.[a.apartmentType]);
   const mapped=markers.length&&rooms.length===markers.length&&markers.every(marker=>rooms.some(room=>room.planNumber===marker.number));
   const layoutSummary=typeof a.layoutLabel==='string'&&a.layoutLabel.trim()?a.layoutLabel.trim().replace(/hálószoba/giu,'szoba'):hasNumber(a.rooms)?`${number.format(a.rooms)} szoba`:'';
   const roomHeading=`Helyiségek.${layoutSummary?` <span class="detail-layout-label">${esc(layoutSummary)}</span>`:''}`;
   const ownRooms=`<ul class="unit-room-list">${rooms.map(room=>`<li><span>${esc(roomLabel(room.name))}</span><strong>${area(room.area)}</strong></li>`).join('')||'<li>A helyiséglista még nem érhető el.</li>'}</ul>`;
-  return `<section class="detail-room-panel" data-detail-panel="rooms" id="detail-panel-rooms" role="tabpanel" aria-labelledby="detail-tab-rooms" data-room-view="type"><div class="detail-room-tabs" role="tablist" aria-label="Helyiségjegyzék"><button type="button" id="detail-room-type-tab" data-room-view="type" role="tab" aria-selected="true" aria-controls="detail-room-type">Típusterv</button>${!mapped?'<button type="button" id="detail-room-unit-tab" data-room-view="unit" role="tab" aria-selected="false" tabindex="-1" aria-controls="detail-room-unit">Lakásterületek</button>':''}</div><div class="detail-rooms" data-room-panel="type" id="detail-room-type" role="tabpanel" aria-labelledby="detail-room-type-tab"><h3>${roomHeading}</h3><div class="room-page">${markers.length?`<ol class="type-room-list">${markers.map(marker=>{const room=mapped?rooms.find(room=>room.planNumber===marker.number):null;return `<li><button type="button" class="room-legend-button" data-plan-room="${marker.number}" aria-pressed="false"><span class="room-number">${String(marker.number).padStart(2,'0')}</span><span class="room-name">${esc(roomLabel(marker.name))}</span>${room?`<span class="room-area">${area(room.area)}</span>`:''}</button></li>`;}).join('')}</ol>`:ownRooms}</div></div>${!mapped?`<div class="unit-room-section" data-room-panel="unit" id="detail-room-unit" role="tabpanel" aria-labelledby="detail-room-unit-tab" hidden><h3>${roomHeading}</h3><div class="room-page">${ownRooms}</div></div>`:''}</section>`;
+  const mobileRooms=`<div class="detail-mobile-rooms"><h3>Helyiséglista.${layoutSummary?` <span class="detail-layout-label">${esc(layoutSummary)}</span>`:''}</h3><div class="room-page"><ol class="type-room-list">${numberedUnitRooms(a).sort((left,right)=>(left.planNumber??Infinity)-(right.planNumber??Infinity)).map(({room,planNumber})=>`<li>${planNumber?`<button type="button" class="room-legend-button" data-plan-room="${planNumber}" aria-pressed="false">`:'<div class="room-legend-button">'}<span class="room-number">${planNumber?String(planNumber).padStart(2,'0'):'—'}</span><span class="room-name">${esc(roomLabel(room.name))}</span><span class="room-area">${area(room.area)}</span>${planNumber?'</button>':'</div>'}</li>`).join('')||'<li>A helyiséglista még nem érhető el.</li>'}</ol></div></div>`;
+  return `<section class="detail-room-panel" data-detail-panel="rooms" id="detail-panel-rooms" role="tabpanel" aria-labelledby="detail-tab-rooms" data-room-view="type"><div class="detail-room-tabs" role="tablist" aria-label="Helyiségjegyzék"><button type="button" id="detail-room-type-tab" data-room-view="type" role="tab" aria-selected="true" aria-controls="detail-room-type">Típusterv</button>${!mapped?'<button type="button" id="detail-room-unit-tab" data-room-view="unit" role="tab" aria-selected="false" tabindex="-1" aria-controls="detail-room-unit">Lakásterületek</button>':''}</div><div class="detail-rooms" data-room-panel="type" id="detail-room-type" role="tabpanel" aria-labelledby="detail-room-type-tab"><h3>${roomHeading}</h3><div class="room-page">${markers.length?`<ol class="type-room-list">${markers.map(marker=>{const room=mapped?rooms.find(room=>room.planNumber===marker.number):null;return `<li><button type="button" class="room-legend-button" data-plan-room="${marker.number}" aria-pressed="false"><span class="room-number">${String(marker.number).padStart(2,'0')}</span><span class="room-name">${esc(roomLabel(marker.name))}</span>${room?`<span class="room-area">${area(room.area)}</span>`:''}</button></li>`;}).join('')}</ol>`:ownRooms}</div></div>${!mapped?`<div class="unit-room-section" data-room-panel="unit" id="detail-room-unit" role="tabpanel" aria-labelledby="detail-room-unit-tab" hidden><h3>${roomHeading}</h3><div class="room-page">${ownRooms}</div></div>`:''}${mobileRooms}</section>`;
 }
 function detailMetrics(a) {
   return `<dl class="detail-metrics${a.areaGarden>0?' has-garden':''}"><div class="detail-id-metric"><dt>Lakás<wbr>szám</dt><dd><h2 class="detail-apartment-number">${esc(a.id)}</h2></dd></div>${detailMetric('Beltér',a.areaInterior)}${detailMetric('Erkély',a.areaTerrace)}${hasNumber(a.areaGarden)&&a.areaGarden>0?detailMetric('Kert',a.areaGarden):''}</dl>`;
 }
 function detailPrice(a) {
-  return hasNumber(a.price)?`<span class="price-value">${priceNumber.format(a.price/1000000)}</span> <small class="price-unit">M Ft</small>`:`<span class="price-unavailable">${esc(apartmentPrice(a))}</span>`;
+  return hasNumber(a.price)?`<span class="price-value">${priceNumber.format(a.price/1000000)}</span> <small class="price-unit">M Ft</small><span class="mobile-price-value">${priceNumber.format(a.price)}</span> <small class="mobile-price-unit">Ft</small>`:`<span class="price-unavailable">${esc(apartmentPrice(a))}</span>`;
 }
 function detailUnitMeta(a) {
   const caption=String(floorText(a)),match=/^(.*?)\s*emelet$/iu.exec(caption);
   const floor=match&&match[1].trim()?`<strong>${esc(match[1].trim())}</strong> emelet`:`<strong>${esc(caption)}</strong>`;
-  return `<strong>${esc(a.apartmentType||'')}</strong> típus <span>·</span> <strong>${esc(a.building)}</strong> épület <span>·</span> ${floor} <span>·</span> <strong>${esc(a.orientation||'Nincs adat')}</strong> tájolás`;
+  return `<span class="detail-meta-item"><strong>${esc(a.apartmentType||'')}</strong> típus</span> <span class="detail-meta-separator">·</span> <span class="detail-meta-item"><strong>${esc(a.building)}</strong> épület</span> <span class="detail-meta-separator">·</span> <span class="detail-meta-item">${floor}</span> <span class="detail-meta-separator">·</span> <span class="detail-meta-item"><strong>${esc(a.orientation||'Nincs adat')}</strong> tájolás</span>`;
 }
 function refreshFacts() {
   const dialog=$('detail-dialog'),a=dialog?.open&&byId(dialog.dataset.apartment);if(!a)return false;
@@ -208,7 +329,7 @@ function refreshFacts() {
   if(status)status.innerHTML=`<span class="status-pill status-${esc(a.status)}">${esc(statusText(a))}</span>`;
   if(meta)meta.innerHTML=detailUnitMeta(a);
   const summary=typeof a.layoutLabel==='string'&&a.layoutLabel.trim()?a.layoutLabel.trim().replace(/hálószoba/giu,'szoba'):hasNumber(a.rooms)?`${number.format(a.rooms)} szoba`:'';
-  for(const heading of dialog.querySelectorAll('.detail-room-panel h3'))heading.innerHTML=`Helyiségek.${summary?` <span class="detail-layout-label">${esc(summary)}</span>`:''}`;
+  for(const heading of dialog.querySelectorAll('.detail-room-panel h3'))heading.innerHTML=`${heading.closest('.detail-mobile-rooms')?'Helyiséglista':'Helyiségek'}.${summary?` <span class="detail-layout-label">${esc(summary)}</span>`:''}`;
   // A refresh must not deliver a PDF snapshot carrying an old price or status.
   pdfExportJob?.controller.abort();pdfExportJob=null;
   requestAnimationFrame(fitDetailRooms);
@@ -219,9 +340,9 @@ function detail(id) {
   selectedPlanRoom=null;hoverPlanRoom=null;focusedPlanRoom=null;
   const floor=mediaEntries(a).find(item=>item.key==='floorLayout');
   const monogram=assetUrl('assets/brand/ap-monogram.png'),logo=assetUrl('assets/brand/admiral-park-full-logo-no-location.svg');
-  const dialog=$('detail-dialog');dialog.dataset.apartment=id;renderedFactsSignature=factsSignature(a);detailResize?.disconnect();
+  const dialog=$('detail-dialog');dialog.dataset.apartment=id;dialog.dataset.documentView='plan';renderedFactsSignature=factsSignature(a);detailResize?.disconnect();
   dialog.innerHTML=`<div class="detail-shell" data-panel="plan"><div class="detail-brand-motif" aria-hidden="true"></div>
-    <header class="detail-topbar"><div class="detail-top-actions"><button type="button" class="dialog-close" data-close aria-label="Bezárás">×</button></div></header>
+    <header class="detail-topbar"><div class="detail-mobile-save">${saveButton(a,true)}</div><div class="detail-top-actions"><button type="button" class="dialog-close" data-close aria-label="Bezárás">×</button></div></header>
     <div class="detail-layout">
       <aside class="detail-sidebar" aria-label="A lakás adatai">
         <div class="detail-core">
@@ -232,7 +353,7 @@ function detail(id) {
         ${detailRooms(a)}
         <div class="detail-conversion"><div class="detail-price"><p>${detailPrice(a)}</p></div><div class="detail-inquiry">${inquiry(a)}</div><div class="detail-downloads detail-footer">${downloadLink(a,true)}<div class="detail-status"><span class="status-pill status-${esc(a.status)}">${esc(statusText(a))}</span></div>${shareControl(a)}</div></div>
       </aside>
-      <nav class="detail-panel-nav" role="tablist" aria-label="Rajz és helyiségjegyzék">${[['plan','Rajzok'],['rooms','Helyiségek']].map(([key,label])=>`<button type="button" role="tab" id="detail-tab-${key}" data-detail-tab="${key}" aria-controls="detail-panel-${key}" aria-selected="${key==='plan'}" tabindex="${key==='plan'?0:-1}">${label}</button>`).join('')}</nav>
+      <nav class="detail-panel-nav" role="tablist" aria-label="Alaprajz és helyiséglista"><button type="button" role="tab" id="detail-tab-plan" data-detail-tab="plan" data-top-document-view="plan" aria-controls="detail-panel-plan" aria-selected="true" tabindex="0">Alaprajz</button>${floor?'<button type="button" role="tab" id="detail-tab-floor" data-detail-tab="plan" data-top-document-view="floor" aria-controls="detail-panel-plan" aria-selected="false" tabindex="-1">Szintrajz</button>':''}<button type="button" role="tab" id="detail-tab-rooms" data-detail-tab="rooms" aria-controls="detail-panel-rooms" aria-selected="false" tabindex="-1">Helyiséglista</button></nav>
       <section class="detail-drawing" data-detail-panel="plan" id="detail-panel-plan" role="tabpanel" aria-labelledby="detail-tab-plan"><div class="detail-drawing-toolbar"><div class="detail-document-tabs" role="tablist" aria-label="Rajz kiválasztása"><button type="button" id="detail-document-plan-tab" role="tab" data-document-view="plan" aria-selected="true" aria-controls="detail-document-plan">Alaprajz</button>${floor?'<button type="button" id="detail-document-floor-tab" role="tab" data-document-view="floor" aria-selected="false" tabindex="-1" aria-controls="detail-document-floor">Szintrajz</button>':''}</div><div class="detail-drawing-save">${saveButton(a,true)}</div><p class="detail-unit-meta">${detailUnitMeta(a)}</p></div>${detailPlan(a)}${floor?`<section class="detail-floor-plan" data-detail-image-stage="floor" data-image-state="idle" data-document-panel="floor" id="detail-document-floor" role="tabpanel" aria-labelledby="detail-document-floor-tab" hidden><p class="detail-section-label">${esc(floorText(a))} · A, B, C épület</p>${detailImageFeedback('floor')}<img class="detail-floor-image" data-detail-image="floor" data-image-url="${esc(floor.full)}" alt="${esc(floorText(a))} szintrajza" decoding="async"><p class="detail-plan-note">${esc(a.id)} · ${esc(a.building)} épület</p></section>`:''}</section>
     </div><p class="detail-illustration-note">Az alaprajz illusztráció. Bútorozatlan átadás. Bruttó vételár.</p><div class="toast detail-feedback" role="status" aria-live="polite"></div></div>`;
   const shell=dialog.querySelector('.detail-shell');
@@ -245,8 +366,8 @@ function detail(id) {
 function selectDetailPanel(value,focus=false) {
   const dialog=$('detail-dialog'),shell=dialog.querySelector('.detail-shell');if(!shell)return;
   shell.dataset.panel=value;
-  dialog.querySelectorAll('[data-detail-tab]').forEach(button=>{const active=button.dataset.detailTab===value;button.setAttribute('aria-selected',String(active));button.tabIndex=active?0:-1;});
-  if(focus&&getComputedStyle(dialog.querySelector('.detail-panel-nav')).display!=='none')dialog.querySelector(`[data-detail-tab="${value}"]`)?.focus({preventScroll:true});
+  dialog.querySelectorAll('[data-detail-tab]').forEach(button=>{const active=button.dataset.detailTab===value&&(!button.dataset.topDocumentView||button.dataset.topDocumentView===dialog.dataset.documentView);button.setAttribute('aria-selected',String(active));button.tabIndex=active?0:-1;});
+  if(focus&&getComputedStyle(dialog.querySelector('.detail-panel-nav')).display!=='none')dialog.querySelector('[data-detail-tab][aria-selected="true"]')?.focus({preventScroll:true});
   requestAnimationFrame(fitDetailRooms);
 }
 function detailImageFeedback(kind) {
@@ -270,7 +391,10 @@ function startDetailImage(kind,retry=false) {
 }
 function selectDetailDocument(value) {
   const dialog=$('detail-dialog');
+  dialog.dataset.documentView=value;
+  dialog.querySelector('#detail-panel-plan')?.setAttribute('aria-labelledby',value==='floor'?'detail-tab-floor':'detail-tab-plan');
   dialog.querySelectorAll('[data-document-view]').forEach(button=>{const active=button.dataset.documentView===value;button.setAttribute('aria-selected',String(active));button.tabIndex=active?0:-1;});
+  dialog.querySelectorAll('[data-top-document-view]').forEach(button=>{const active=dialog.querySelector('.detail-shell')?.dataset.panel==='plan'&&button.dataset.topDocumentView===value;button.setAttribute('aria-selected',String(active));button.tabIndex=active?0:-1;});
   dialog.querySelectorAll('[data-document-panel]').forEach(panel=>{panel.hidden=panel.dataset.documentPanel!==value;});
   if(value==='floor'&&!dialog.querySelector('img[data-detail-image="floor"]')?.hasAttribute('src'))startDetailImage('floor');
 }
@@ -285,7 +409,7 @@ function fitDetailRooms() {
   const dialog=$('detail-dialog');if(signal.aborted||!dialog.open)return;
   const panel=dialog.querySelector('.detail-room-panel'),view=panel?.dataset.roomView;
   panel?.style.setProperty('--room-slack','0px');
-  const frame=panel?.querySelector(`[data-room-panel="${view}"] .room-page`);if(!frame?.clientHeight)return;
+  const frame=visibleRoomFrame(panel,view);if(!frame?.clientHeight)return;
   const list=frame.querySelector('ol,ul');if(!list)return;
   const rows=[...list.children];rows.forEach(row=>row.hidden=false);
   let navigation=frame.parentElement.querySelector('.room-pagination');
@@ -324,13 +448,17 @@ function fitDetailRooms() {
   navigation.querySelector('[data-room-page="1"]').disabled=page===pages-1;
   navigation.querySelector('span').textContent=`${page+1} / ${pages}`;
 }
+function visibleRoomFrame(panel,view) {
+  const mobile=panel?.querySelector('.detail-mobile-rooms');
+  return mobile&&getComputedStyle(mobile).display!=='none'?mobile.querySelector('.room-page'):panel?.querySelector(`[data-room-panel="${view}"] .room-page`);
+}
 function paintPlanRoom(value) {
   const dialog=$('detail-dialog'),number=value==null?null:String(value);
   dialog.querySelectorAll('[data-plan-room]').forEach(button=>{button.classList.toggle('is-active',button.dataset.planRoom===number);button.setAttribute('aria-pressed',String(button.dataset.planRoom===selectedPlanRoom));});
 }
 function selectPlanRoom(value,origin) {
   selectedPlanRoom=String(value);selectDetailRoomView('type');paintPlanRoom(selectedPlanRoom);
-  const frame=$('detail-dialog').querySelector('[data-room-panel="type"] .room-page'),rows=frame?.querySelectorAll('li'),row=origin?.classList.contains('room-marker')?[...rows||[]].findIndex(item=>item.querySelector(`[data-plan-room="${selectedPlanRoom}"]`)): -1;
+  const frame=visibleRoomFrame($('detail-dialog').querySelector('.detail-room-panel'),'type'),rows=frame?.querySelectorAll('li'),row=origin?.classList.contains('room-marker')?[...rows||[]].findIndex(item=>item.querySelector(`[data-plan-room="${selectedPlanRoom}"]`)): -1;
   if(frame&&row>=0&&Number(frame.dataset.pageSize)>0){frame.dataset.page=String(Math.floor(row/Number(frame.dataset.pageSize)));}
   if(origin?.classList.contains('room-marker'))selectDetailPanel('rooms',true);else {selectDetailDocument('plan');selectDetailPanel('plan',true);}
 }
@@ -547,12 +675,13 @@ root.addEventListener('click',event=>{
   if(t.hasAttribute('data-share'))shareApartment(t.dataset.share,t);
   if(t.hasAttribute('data-share-close'))closeShare();
   if(t.hasAttribute('data-share-copy'))copyShareLink(t.dataset.shareCopy);
+  if(t.hasAttribute('data-top-document-view'))selectDetailDocument(t.dataset.topDocumentView);
   if(t.hasAttribute('data-detail-tab'))selectDetailPanel(t.dataset.detailTab);
   if(t.hasAttribute('data-document-view'))selectDetailDocument(t.dataset.documentView);
   if(t.hasAttribute('data-detail-image-retry'))startDetailImage(t.dataset.detailImageRetry,true);
   if(t.hasAttribute('data-room-view'))selectDetailRoomView(t.dataset.roomView);
   if(t.hasAttribute('data-room-page')){
-    const panel=t.closest('[data-room-panel]'),frame=panel?.querySelector('.room-page');
+    const panel=t.closest('[data-room-panel],.detail-mobile-rooms'),frame=panel?.querySelector('.room-page');
     if(frame){frame.dataset.page=String((Number(frame.dataset.page)||0)+Number(t.dataset.roomPage));fitDetailRooms();if(t.disabled)panel.querySelector('.room-pagination button:not(:disabled)')?.focus({preventScroll:true});}
   }
   if(t.hasAttribute('data-plan-room'))selectPlanRoom(t.dataset.planRoom,t);
@@ -569,7 +698,7 @@ root.addEventListener('click',event=>{
     const id=t.dataset.save;if(favorites.has(id))favorites.delete(id);else favorites.add(id);
     try{localStorage.setItem('admiral-park:favorites:v1',JSON.stringify([...favorites]));}catch{storage=false;}
     updateFavoriteButton();
-    $('detail-dialog').querySelector('[data-save]')?.focus({preventScroll:true});
+    t.focus({preventScroll:true});
     window.dispatchEvent(new CustomEvent('admiral:apartment-favorites',{detail:{ids:[...favorites]}}));
     toast(favorites.has(id)?`A(z) ${id} lakást elmentettük${storage?'':'. A mentés csak ezen az oldalon marad meg'}.`:`A(z) ${id} lakást eltávolítottuk a kedvencekből.`);
   }
@@ -579,10 +708,13 @@ root.addEventListener('click',event=>{
   }
 },events);
 function updateFavoriteButton(){
-  const dialog=$('detail-dialog'),id=dialog.dataset.apartment,a=byId(id),button=dialog.querySelector('[data-save]');if(!button||!a)return;
-  const saved=favorites.has(id);button.classList.toggle('is-saved',saved);button.setAttribute('aria-pressed',String(saved));
-  button.setAttribute('aria-label',id+' '+(saved?'eltávolítása a kedvencekből':'mentése a kedvencekhez'));
-  const label=button.querySelector('.detail-save-label');if(label)label.textContent=saved?'Kedvencekhez mentve':'Mentés a kedvencekhez';
+  const dialog=$('detail-dialog'),id=dialog.dataset.apartment,a=byId(id);if(!a)return;
+  const saved=favorites.has(id);
+  for(const button of dialog.querySelectorAll('[data-save]')){
+    button.classList.toggle('is-saved',saved);button.setAttribute('aria-pressed',String(saved));
+    button.setAttribute('aria-label',id+' '+(saved?'eltávolítása a kedvencekből':'mentése a kedvencekhez'));
+    const label=button.querySelector('.detail-save-label');if(label)label.textContent=saved?'Kedvencekhez mentve':'Mentés a kedvencekhez';
+  }
 }
 function syncFavorites(event){
   if(event.type==='storage'&&event.key!=='admiral-park:favorites:v1')return;

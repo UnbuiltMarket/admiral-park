@@ -5,12 +5,12 @@
   "updated": "2026-10-29",
   "canonicalSources": {
     "card-runtime.js": {
-      "sha256": "8d8f9f8900cfabc64813a06ac79c148190204184fee9b501dca99298a2ad4512",
-      "bytes": 60754
+      "sha256": "ad7095643707ce1ccf7b115b6134f122eb5382fea13f18b09e77696a87a04281",
+      "bytes": 69609
     },
     "card.css": {
-      "sha256": "fa06186f76e8d3184b930f4a412e2dca6d140666019efe312f389a3fc974f153",
-      "bytes": 50218
+      "sha256": "e5f29446fba77f44d1ce902612388e1febbb57dd4ceee254195b6b60b742689a",
+      "bytes": 58005
     },
     "card-shell.html": {
       "sha256": "93638e8f18b7a11da371804032266ac9c76932c21baeea10fa7bfe6068308370",

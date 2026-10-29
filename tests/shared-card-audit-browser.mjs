@@ -41,13 +41,13 @@ try {
     for(const id of ['A001','C303']){
       await page.evaluate(id=>ctrl.open(id),id);await page.waitForTimeout(80);
       await card.locator('[data-detail-tab="rooms"]').evaluate(button=>button.click());await page.waitForTimeout(60);
-      for(const view of ['type','unit']){
-        const tab=card.locator(`button[data-room-view="${view}"]`);if(!await tab.count())continue;
-        await tab.click();await page.waitForTimeout(40);
+      const mobile=await card.locator('.detail-mobile-rooms').evaluate(node=>getComputedStyle(node).display!=='none');
+      for(const view of mobile?['mobile']:['type','unit']){
+        if(!mobile){const tab=card.locator(`button[data-room-view="${view}"]`);if(!await tab.count())continue;await tab.click();await page.waitForTimeout(40);}
         const seen=new Set();let pages=0;
         do {
           const state=await page.evaluate(view=>{
-            const panel=card.querySelector(`[data-room-panel="${view}"]`),frame=panel.querySelector('.room-page'),dialog=card.querySelector('#detail-dialog'),close=dialog.querySelector('[data-close]');
+            const panel=card.querySelector(view==='mobile'?'.detail-mobile-rooms':`[data-room-panel="${view}"]`),frame=panel.querySelector('.room-page'),dialog=card.querySelector('#detail-dialog'),close=dialog.querySelector('[data-close]');
             const list=frame.querySelector('ol,ul'),rows=[...list.children],rect=frame.getBoundingClientRect(),bounds=dialog.getBoundingClientRect(),closeBounds=close.getBoundingClientRect();
             return {rows:rows.filter(row=>!row.hidden).map(row=>{const b=row.getBoundingClientRect();return {index:rows.indexOf(row),top:b.top,bottom:b.bottom,left:b.left,right:b.right};}),count:rows.length,frame:rect.toJSON(),bounds:bounds.toJSON(),close:closeBounds.toJSON(),scroll:dialog.scrollHeight,client:dialog.clientHeight,more:!!panel.querySelector('.room-pagination:not([hidden]) [data-room-page="1"]:not(:disabled)')};
           },view);
@@ -57,7 +57,7 @@ try {
           check(`${id} ${view} ${viewport.width}×${viewport.height} popup needs no scrolling`,state.scroll<=state.client+1);
           for(const row of state.rows)seen.add(row.index);
           if(!state.more){check(`${id} ${view} ${viewport.width}×${viewport.height} every room is reachable`,seen.size===state.count);break;}
-          await card.locator(`[data-room-panel="${view}"] [data-room-page="1"]`).click();await page.waitForTimeout(20);
+          await card.locator(`${mobile?'.detail-mobile-rooms':`[data-room-panel="${view}"]`} [data-room-page="1"]`).click();await page.waitForTimeout(20);
         }while(++pages<30);
         check(`${id} ${view} pagination terminates`,pages<30);
       }
