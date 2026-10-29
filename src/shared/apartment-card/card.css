@@ -423,3 +423,106 @@ input[aria-invalid="true"] { border-color: var(--negotiating); }
 #detail-dialog .detail-image-feedback .button-secondary { min-height:34px; padding:7px 12px; font-size:11px; border-radius:999px; }
 #detail-dialog [data-image-state="error"] .detail-plan-markers { visibility:hidden; pointer-events:none; }
 #detail-dialog [data-image-state="error"] :is(.detail-plan-image,.detail-floor-image) { visibility:hidden; }
+
+/* Shared paper-glass material, matching the list and orbitdata. Preserve the
+   fitted card geometry: optical layers never add room or toolbar padding. */
+:root, :host {
+  --card-glass-blur: none;
+  --card-glass-edge: color-mix(in srgb, var(--detail-top) 88%, transparent);
+  --card-glass-rule: color-mix(in srgb, var(--detail-ink) 12%, transparent);
+  --card-glass-fill: color-mix(in srgb, var(--detail-top) 96%, transparent);
+  --card-glass-sheen: radial-gradient(130% 100% at 0% 0%, rgb(255 255 255 / 30%), transparent 48%), radial-gradient(110% 130% at 100% 100%, rgb(255 255 255 / 18%), transparent 52%), linear-gradient(150deg, rgb(255 255 255 / 18%), rgb(255 255 255 / 2%) 46%, rgb(255 255 255 / 12%));
+  --card-glass-inset: inset 0 1px 1px rgb(255 255 255 / 85%), inset 0 -1px 1px color-mix(in srgb, var(--detail-ink) 7%, transparent);
+  --card-glass-lift: var(--card-glass-inset), 0 9px 28px color-mix(in srgb, var(--detail-ink) 10%, transparent), 0 1px 3px color-mix(in srgb, var(--detail-ink) 5%, transparent);
+}
+@supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  :root, :host { --card-glass-blur: blur(16px) saturate(145%); --card-glass-fill: color-mix(in srgb, var(--detail-top) 94%, transparent); }
+}
+#detail-dialog {
+  border-color: var(--card-glass-edge);
+  border-radius: 25px;
+  background: transparent;
+  box-shadow: var(--card-glass-inset), 0 28px 90px color-mix(in srgb, var(--detail-ink) 22%, transparent), 0 3px 12px color-mix(in srgb, var(--detail-ink) 9%, transparent);
+}
+/* Blur only the decorative sibling. A filtered dialog would change the
+   containing block of the share menu, whose coordinates use the viewport. */
+#detail-dialog::before {
+  content: ''; position: absolute; inset: 0; z-index: 0; border-radius: inherit; pointer-events: none;
+  background: var(--card-glass-sheen), linear-gradient(155deg, var(--card-glass-fill), color-mix(in srgb, var(--detail-bottom) 32%, var(--detail-top)));
+  -webkit-backdrop-filter: var(--card-glass-blur); backdrop-filter: var(--card-glass-blur);
+}
+#detail-dialog .detail-shell { z-index: 1; }
+#detail-dialog:not([open])::before { display: none; }
+#detail-dialog::backdrop { background: color-mix(in srgb, var(--detail-ink) 32%, transparent); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); }
+#detail-dialog .detail-brand-motif { opacity: .25; }
+#detail-dialog .detail-divider { background: var(--card-glass-rule); box-shadow: 0 1px 0 rgb(255 255 255 / 65%); }
+#detail-dialog .detail-price {
+  border-radius: 999px;
+  background: var(--card-glass-sheen), color-mix(in srgb, var(--detail-top) 60%, transparent);
+  box-shadow: var(--card-glass-inset), 0 2px 8px color-mix(in srgb, var(--detail-ink) 4%, transparent);
+}
+#detail-dialog .price-value { font-weight: 500; }
+#detail-dialog .dialog-close,
+#detail-dialog .detail-footer .footer-pill,
+#detail-dialog .room-pagination button,
+#detail-dialog .detail-image-feedback .button-secondary,
+#detail-dialog .share-heading > button {
+  border-color: color-mix(in srgb, var(--detail-ink) 16%, transparent);
+  border-radius: 999px;
+  background: var(--card-glass-sheen), color-mix(in srgb, var(--detail-top) 62%, transparent);
+  box-shadow: var(--card-glass-inset), 0 2px 6px color-mix(in srgb, var(--detail-ink) 5%, transparent);
+  transition: background .16s ease, box-shadow .16s ease, border-color .16s ease;
+}
+#detail-dialog .dialog-close { border: 1px solid var(--card-glass-edge); }
+#detail-dialog .detail-footer .footer-pill:hover,
+#detail-dialog .detail-footer .share-button[aria-expanded="true"],
+#detail-dialog .dialog-close:hover,
+#detail-dialog .room-pagination button:not(:disabled):hover { border-color: color-mix(in srgb, var(--detail-ink) 30%, transparent); background: var(--card-glass-sheen), color-mix(in srgb, var(--detail-top) 90%, transparent); }
+#detail-dialog :is(.detail-document-tabs, .detail-room-tabs, .detail-summary-tabs, .detail-panel-nav) button {
+  border-bottom-color: transparent;
+  border-radius: 999px;
+  box-shadow: none;
+  transition: background .16s ease, box-shadow .16s ease, color .16s ease;
+}
+#detail-dialog :is(.detail-document-tabs, .detail-room-tabs, .detail-summary-tabs, .detail-panel-nav) button:is([aria-selected="true"], .is-active) {
+  border-bottom-color: transparent;
+  background: var(--card-glass-sheen), color-mix(in srgb, var(--detail-top) 70%, transparent);
+  box-shadow: var(--card-glass-inset), 0 2px 7px color-mix(in srgb, var(--detail-ink) 5%, transparent);
+  color: var(--detail-ink);
+}
+#detail-dialog .detail-panel-nav { border-bottom-color: var(--card-glass-rule); }
+#detail-dialog .room-number,
+#detail-dialog .room-marker::before {
+  border-color: color-mix(in srgb, var(--detail-ink) 25%, var(--detail-top));
+  background: var(--card-glass-sheen), color-mix(in srgb, var(--detail-top) 94%, transparent);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 85%), 0 1px 4px color-mix(in srgb, var(--detail-ink) 7%, transparent);
+}
+#detail-dialog .room-legend-button, #detail-dialog .unit-room-list li { border-bottom-color: var(--card-glass-rule); }
+#detail-dialog .room-legend-button:is(:hover, .is-active) { background: linear-gradient(110deg, color-mix(in srgb, var(--detail-top) 70%, transparent), transparent); }
+#detail-dialog .room-legend-button.is-active .room-number,
+#detail-dialog .room-marker.is-active::before { border-color: var(--detail-ink); background: var(--detail-ink); box-shadow: inset 0 1px 0 rgb(255 255 255 / 20%), 0 1px 5px color-mix(in srgb, var(--detail-ink) 15%, transparent); }
+#detail-dialog .inquiry-button { box-shadow: inset 0 1px 1px color-mix(in srgb, var(--inquiry-shine) 85%, transparent), inset 0 -1px 0 rgb(115 86 35 / 16%), 0 3px 9px color-mix(in srgb, var(--inquiry-gold-shadow) 14%, transparent); }
+#detail-dialog .share-popover, #detail-dialog .inquiry-pending {
+  border-color: var(--card-glass-edge); border-radius: 20px;
+  background: var(--card-glass-sheen), color-mix(in srgb, var(--detail-top) 97%, transparent);
+  box-shadow: var(--card-glass-lift);
+}
+#detail-dialog .share-url { border-color: var(--card-glass-rule); border-radius: 999px; background: color-mix(in srgb, var(--detail-top) 70%, transparent); }
+#detail-dialog .share-options > :is(button, a) { border-bottom-color: var(--card-glass-rule); }
+.toast, #detail-dialog .detail-feedback { border: 1px solid var(--card-glass-edge); border-radius: 999px; background: var(--card-glass-sheen), var(--card-glass-fill); color: var(--detail-ink); box-shadow: var(--card-glass-lift); }
+.media-dialog { background: radial-gradient(ellipse at 15% 0, color-mix(in srgb, var(--detail-bottom) 45%, transparent), transparent 70%), var(--detail-top); }
+.media-header, .media-footer { border-color: var(--card-glass-rule); background: var(--card-glass-sheen), var(--card-glass-fill); }
+.media-zoom, .media-header .dialog-close { border-color: var(--card-glass-rule); border-radius: 999px; background: var(--card-glass-sheen), color-mix(in srgb, var(--detail-top) 70%, transparent); box-shadow: var(--card-glass-inset); }
+@media (pointer: coarse) {
+  :root, :host { --card-glass-blur: blur(12px) saturate(135%); }
+}
+@media (prefers-reduced-transparency: reduce) {
+  :root, :host { --card-glass-blur: none; --card-glass-fill: var(--detail-top); }
+  #detail-dialog::before { background-color: var(--detail-top); }
+  #detail-dialog::backdrop { -webkit-backdrop-filter: none; backdrop-filter: none; }
+  #detail-dialog :is(.detail-price, .footer-pill, .dialog-close, .share-popover, .inquiry-pending, .room-pagination button, .detail-feedback), .toast { background-color: var(--detail-top); }
+}
+@media (forced-colors: active) {
+  #detail-dialog, #detail-dialog :is(.footer-pill, .dialog-close, .room-pagination button, .share-popover, .inquiry-pending) { border: 1px solid CanvasText; box-shadow: none; }
+  #detail-dialog .room-legend-button.is-active .room-number, #detail-dialog .room-marker.is-active::before { background: Highlight; color: HighlightText; }
+}

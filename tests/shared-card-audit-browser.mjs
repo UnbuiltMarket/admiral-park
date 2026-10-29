@@ -79,6 +79,12 @@ try {
   failedAsset='';await card.locator('[data-detail-image-retry="floor"]').click();
   await card.locator('#detail-document-floor[data-image-state="ready"]').waitFor();
   check('Floor layout retry succeeds',await card.locator('.detail-floor-image').evaluate(image=>image.naturalWidth>0));
+  // Exercise desktop sharing even on hosts that also offer native Web Share.
+  await page.evaluate(()=>Object.defineProperty(navigator,'share',{value:undefined,configurable:true}));
+  await card.locator('[data-share]').click();
+  const shareBounds=await card.locator('.share-popover').evaluate(menu=>{const a=menu.getBoundingClientRect(),b=menu.closest('dialog').getBoundingClientRect();return {visible:!menu.hidden,inside:a.left>=b.left&&a.right<=b.right&&a.top>=b.top&&a.bottom<=b.bottom};});
+  check('Desktop share menu stays inside the open card',shareBounds.visible&&shareBounds.inside);
+  await card.locator('[data-share-close]').click();
   await card.locator('[data-download]').click();
   await page.waitForFunction(()=>card.querySelector('.detail-feedback')?.textContent.includes('Nem sikerült'));
   check('Open-card PDF error is inside the native modal',await card.locator('#detail-dialog .detail-feedback.visible').isVisible());
