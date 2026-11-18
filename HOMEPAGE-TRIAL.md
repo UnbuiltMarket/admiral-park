@@ -1,5 +1,9 @@
 # Admiral Park homepage motion trial
 
+The Framer `/homepage-draft-3` page uses [HERO_video_no_fullscreen.tsx](src/framer/homepage-draft-3/HERO_video_no_fullscreen.tsx). Its two sibling files in that folder provide the detail card and shared palette. The first two flights play MP4s served by Framer. The [homepage media](assets/videos/homepage) includes the shared still between flights and the supplied SEQ03 still that also matches the landing of SEQ02.
+
+## Earlier homepage trial
+
 Paste the entire generated `src/framer/AdmiralHomepageTrial.tsx` into the existing Framer hero code file. Keeping that code file retains the existing component instance and the named `OpeningContent`, `BuildingContent`, and `ArrivalCTA` overrides. Those names are preserved; the file also exports `BalatonfuredContent`, `AranyhidContent`, and `OrbitView1` through `OrbitView8` for the native content journey. A new Code Component file is also supported, but native wrappers must then use overrides from that same new file.
 
 Use one component filling one Relative Frame with height 100vh. The navbar stays above it as native Framer content. No sticky spacer or page content below the viewer is needed. Keep GitHub assets enabled, save, and test in Preview. Publish in Framer after accepting the trial. The editor canvas is a static still; interaction runs in Preview and on the published page.
