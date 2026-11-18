@@ -8032,12 +8032,8 @@ export default function AdmiralHomepageStudio(
             heroGeneration = 0,
             enterToken = 0
         let currentStage: HomepageStage = previewStage
-        let presentationProgress =
-            previewStage === "orbit" || previewStage === "handoff"
-                ? 1
-                : previewStage === "connection"
-                  ? 0.5
-                  : 0
+        // SEQ_01 and SEQ_02 fill the hero. The orbit uses its own measured slot.
+        let presentationProgress = previewStage === "orbit" || previewStage === "handoff" ? 1 : 0
         let mobileLayout: HomepageMobileLayout | null = null
         let hero: ReturnType<typeof createHeroSequence> | ReturnType<typeof createHomepageHeroVideo> | null = null
         let activeSequence: "SEQ_01" | "SEQ_02" = "SEQ_01",
@@ -8609,8 +8605,7 @@ export default function AdmiralHomepageStudio(
                 setHeroState((previous) =>
                     previous === snapshot.state ? previous : snapshot.state
                 )
-                presentationProgress = snapshot.progress
-                applyPresentation()
+                // SEQ_02's media clock drives the journey events independently of viewport framing.
                 // Compressed orbit downloads run from page load; decode its
                 // bounded window only near the connecting flight's handoff.
                 if (
@@ -8649,7 +8644,6 @@ export default function AdmiralHomepageStudio(
                 momentum,
                 triggerDistance,
                 preservePresentation: true,
-                viewport: (progress, bounds) => viewportFor(progress, bounds),
                 holdScroll: true,
                 preload: true,
                 cacheFrames: phone ? 10 : 14,
@@ -10864,7 +10858,7 @@ addPropertyControls(AdmiralHomepageStudio, {
         defaultValue: true,
         hidden: (p) => p.orbitLayout !== "classic",
         description:
-            "On phones, SEQ_02 opens from fullscreen into a landscape orbit image, with stories and apartment details below.",
+            "On phones, the orbit uses a landscape image with stories and apartment details below. SEQ_01 and SEQ_02 fill the hero.",
     },
     phoneImageWidth: {
         type: ControlType.Number,
@@ -11343,7 +11337,7 @@ addPropertyControls(AdmiralHomepageStudio, {
         optionTitles: ["Fullscreen desktop", "Apartment studio", "Classic"],
         defaultValue: "studio",
         description:
-            "Apartment studio places a wider framed orbit beside the floor plan and apartment data. SEQ_02 shrinks into the orbit slot. Phones use the mobile layout. Keep the component at 100vh.",
+            "Apartment studio places the orbit beside the floor plan and apartment data. SEQ_01 and SEQ_02 fill the hero. Phones use the mobile layout. Keep the component at 100vh.",
     },
     pageBackdrop: {
         type: ControlType.Boolean, title: "Shared page BG", defaultValue: false,
