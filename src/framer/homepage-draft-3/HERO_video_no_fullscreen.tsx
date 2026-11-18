@@ -12523,7 +12523,7 @@ function createHomepageHeroVideo(options: {
     async function revealGraphic() {
         if (graphic && await graphicReady && !signal.aborted && !leaving) {
             graphic.removeAttribute("aria-hidden")
-            await fade(graphic, 1, 1000)
+            await fade(graphic, 1, 2000)
         }
     }
     function stopCallbacks() {
@@ -12581,7 +12581,7 @@ function createHomepageHeroVideo(options: {
         publish()
         if (signal.aborted || leaving || !graphic) return
         if (instant || motion.matches) void revealGraphic()
-        else holdTimer = window.setTimeout(revealGraphic, 1000)
+        else holdTimer = window.setTimeout(revealGraphic, 2000)
     }
     function start() {
         if (signal.aborted || finished || finishing || document.hidden ||
