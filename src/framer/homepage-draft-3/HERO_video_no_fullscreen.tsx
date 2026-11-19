@@ -487,11 +487,11 @@ const HOMEPAGE_MASK_PALETTE: {
     },
 ]
 const HOMEPAGE_HERO_VERSION = "1d4b64cbfa4f"
-const HOMEPAGE_HERO_VIDEO = "https://framerusercontent.com/assets/0K2KSzIKDk6WJtkTOvhyn8LCH0g.mp4"
+const HOMEPAGE_HERO_VIDEO = "https://framerusercontent.com/assets/onxwvQct3TBTm6WVR33HaBWHo.mp4"
 const HOMEPAGE_HERO_VIDEO_START = "https://framerusercontent.com/images/sxlVxZ6PtNJDscul3QBquRGeK0k.avif"
 const HOMEPAGE_HERO_VIDEO_END = "https://framerusercontent.com/images/n4ONve6JK1gXwOuw3mL3Tm18j9c.avif"
 const HOMEPAGE_HERO_INFOGRAPHIC = "https://framerusercontent.com/images/vRuUWre5kfmD5Rif9y0jYbJQs.png"
-const HOMEPAGE_CONNECTION_VIDEO = "https://framerusercontent.com/assets/zdqmYzia9MfiLVIokrd5ieXXOg.mp4"
+const HOMEPAGE_CONNECTION_VIDEO = "https://framerusercontent.com/assets/k7Pa8VnMPXcXrWbDf90TY9ustsE.mp4"
 const HOMEPAGE_CONNECTION_END = "https://framerusercontent.com/images/uYMWXjUcDBc351olR2N5bRso.avif"
 const HOMEPAGE_CONNECTION_VERSION = "426c29f22325"
 const HOMEPAGE_ORBIT_V05 = "https://raw.githubusercontent.com/UnbuiltMarket/admiral-park/6be37e13fbb610cc41e3aa37fe9a6b28df828afb/assets/orbit-v05"
