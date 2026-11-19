@@ -763,6 +763,10 @@ const homepageOrbitHash = "#orbit"
 // The fragment is available to the browser before Framer hydrates. Keep this
 // guard ahead of the server-rendered sequence poster and scope it to boot.
 const homepageOrbitEntryStyles = `
+/* The landing still already shows the first orbit pose. Swap to the painted canvas
+   in the same stage change so the glass underneath never shows through. */
+[data-admiral-homepage] [data-orbit-render-canvas] { visibility: hidden; }
+[data-admiral-homepage][data-homepage-stage="orbit"] [data-orbit-render-canvas][data-orbit-painted] { visibility: visible; }
 [data-seq3-garden-cue] {
     position: absolute; z-index: 4; left: 50%; bottom: max(42px, env(safe-area-inset-bottom));
     width: min(268px, 90%); height: 54px; transform: translateX(-50%); pointer-events: none;
@@ -788,18 +792,20 @@ const homepageOrbitEntryStyles = `
 
 [data-admiral-homepage] [data-seq3-garden] {
     position: absolute;
-    inset: 0 0 220px;
+    /* The central roofline is one third down the SEQ_03 still. A wide
+       cover crop takes sky off the top, so account for both frame axes. */
+    inset: max(64px, env(safe-area-inset-top)) 0 max(68%, calc(50% + 9vw + 8px));
     z-index: 3;
     box-sizing: border-box;
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: center;
+    justify-content: safe flex-end;
     gap: 16px;
     padding-inline: max(12px, env(safe-area-inset-left)) max(12px, env(safe-area-inset-right));
     color: var(--token-af31bcae-daff-40c0-91b5-11fdb1730857, #fff);
     text-align: center;
-    text-shadow: 4px 3px 3px rgba(0, 0, 0, .25);
+    text-shadow: 0 1px 2px rgba(14, 36, 58, .85), 0 2px 7px rgba(14, 36, 58, .55);
     pointer-events: none;
     opacity: 0;
     visibility: hidden;
@@ -838,21 +844,26 @@ const homepageOrbitEntryStyles = `
 @media (min-width: 1440px) {
     [data-admiral-homepage] [data-seq3-garden] { gap: 23px; }
 }
-@media (max-height: 700px) {
+@media (max-width: 640px) {
     [data-admiral-homepage] [data-seq3-garden] {
-        top: max(60px, 12vh, env(safe-area-inset-top));
-        bottom: max(108px, 21vh);
+        gap: 10px;
     }
+    [data-admiral-homepage] [data-seq3-garden] h2 { font-size: clamp(22px, 7vw, 40px); line-height: 1.25; }
+    [data-admiral-homepage] [data-seq3-garden] p { font-size: clamp(14px, 4vw, 18px); line-height: 1.4; }
 }
-@media (max-height: 520px) and (max-width: 480px), (max-height: 380px) {
+@media (orientation: landscape) and (max-height: 700px) {
     [data-admiral-homepage] [data-seq3-garden] { gap: 8px; }
-    [data-admiral-homepage] [data-seq3-garden] h2 { font-size: 36px; }
+    [data-admiral-homepage] [data-seq3-garden] h2 { font-size: clamp(22px, 6vh, 40px); line-height: 1.25; }
+    [data-admiral-homepage] [data-seq3-garden] p { font-size: clamp(14px, 2.8vh, 18px); line-height: 1.35; }
 }
 @media (prefers-reduced-motion: reduce) {
     [data-admiral-homepage] [data-seq3-garden][data-visible] {
         transition: none;
         transform: none;
     }
+}
+[data-framer-name="SEQ01"] [data-framer-name="SEQ01 logo · gentle fade up"] {
+    filter: drop-shadow(0 2px 3px rgb(13 43 70 / 42%));
 }
 [data-admiral-homepage][data-homepage-booted="false"] > [data-admiral-orbit-anchor]:target ~ [data-admiral-sequence],
 [data-admiral-homepage][data-direct-orbit-entry="true"] > [data-admiral-sequence] { visibility: hidden; }
@@ -10292,8 +10303,6 @@ export default function AdmiralHomepageStudio(
                             width: "100%",
                             height: "100%",
                             zIndex: 2,
-                            opacity: orbitVisible ? 1 : 0,
-                            transition: reduced ? "none" : `opacity ${.35 + fadeExtra}s`,
                             touchAction: fullscreen.active
                                 ? "none"
                                 : "pan-y pinch-zoom",
@@ -15452,6 +15461,7 @@ function createOrbitPlayer(options: OrbitOptions) {
         setData("orbitFrameFrom", String(from))
         setData("orbitFrameTo", String(to))
         setData("orbitFrameMix", frameMix.toFixed(4))
+        if (!canvas.hasAttribute("data-orbit-painted")) canvas.setAttribute("data-orbit-painted", "")
         lastPaint = signature
     }
 
@@ -16453,6 +16463,7 @@ function createOrbitPlayer(options: OrbitOptions) {
     function deactivate(releaseDecoded = false) {
         activation++
         active = false
+        canvas.removeAttribute("data-orbit-painted")
         automaticPause = false
         wheelIntent = null
         wheelGesture = null

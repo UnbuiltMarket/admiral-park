@@ -2,6 +2,7 @@
 import * as React from "react"
 import { addPropertyControls, ControlType, RenderTarget } from "framer"
 import { motion } from "framer-motion"
+import { admiralButtonStyleMarkup } from "./AdmiralFrostedGlassButton.tsx"
 
 type Chapter = "area" | "overview" | "garden" | "comfort"
 
@@ -46,15 +47,11 @@ const styles = [
     '[data-admiral-intro] .ap-mapframe{width:100%;height:100%;border:0;display:block}',
     '[data-admiral-intro] .ap-mapbar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:clamp(14px,2.4cqi,24px);background:linear-gradient(135deg,#f9fcfe,#e6eff6);border-top:1px solid #afc4d1}',
     '[data-admiral-intro] .ap-address{color:#213d52;font-size:clamp(13px,1.8cqi,16px);font-weight:600}',
-    '[data-admiral-intro] .ap-maplink{color:#fff;background:var(--ap-accent);display:inline-flex;align-items:center;justify-content:center;gap:9px;min-height:44px;padding:0 16px;border-radius:999px;text-decoration:none;font-size:13px;font-weight:700}',
-    '[data-admiral-intro] .ap-maplink:hover{background:#113652}',
-    '[data-admiral-intro] .ap-maplink:focus-visible{outline:2px solid #184a72;outline-offset:4px}',
+    '[data-admiral-intro] .ap-maplink{max-width:100%;white-space:normal}',
     '@container (max-width:680px){[data-admiral-intro] .ap-split{grid-template-columns:minmax(0,1fr);min-height:0}[data-admiral-intro] .ap-art{padding:0 clamp(8px,3cqi,22px) 18px}[data-admiral-intro] .ap-numbers{margin-top:18px}[data-admiral-intro] .ap-copy{padding-bottom:14px}}',
     '@container (max-width:390px){[data-admiral-intro] .ap-maplink{width:100%}[data-admiral-intro] .ap-mapbar{padding:15px}[data-admiral-intro] .ap-garden-art{padding-bottom:20px}}',
     '[data-admiral-intro] .ap-card.ap-location-map{border:0;border-radius:0;background:transparent;box-shadow:none;overflow:visible}',
     '[data-admiral-intro] .ap-location-map .ap-mapbar{background:transparent;border-top:0;border-bottom:1px solid #afc4d5;border-radius:0;padding:7px 0;align-items:center}',
-    '[data-admiral-intro] .ap-location-map .ap-maplink{background:linear-gradient(145deg,#ffffff,#e8f1f8);color:#145083;min-height:42px;width:auto;border-radius:999px;padding:8px 16px;text-decoration:none;border:1px solid #a6bfd2;font-size:12px;font-weight:600}',
-    '[data-admiral-intro] .ap-location-map .ap-maplink:hover{color:#103c61;border-color:#668caa}',
     '[data-admiral-intro] .ap-location-map .ap-address{color:#254863;font-weight:550}',
     '@container(max-width:450px){[data-admiral-intro] .ap-location-map .ap-mapbar{display:flex;flex-wrap:wrap;gap:10px;padding:12px 0 14px}[data-admiral-intro] .ap-location-map .ap-address{display:block}}',
 ].join("\n")
@@ -70,6 +67,7 @@ function LocationMap({ target, pin }: { target: string; pin?: string }) {
     const query = pin?.trim() || (target === address ? siteMapPin : target)
     const encoded = encodeURIComponent(query)
     return <section className="ap-card ap-location-map" aria-label="Az Admiral Park a Google Térképen">
+        <style dangerouslySetInnerHTML={admiralButtonStyleMarkup} />
         <div className="ap-mapviewport">
             <iframe className="ap-mapframe"
                 title={"Google Térkép műholdnézetben – " + target}
@@ -78,7 +76,7 @@ function LocationMap({ target, pin }: { target: string; pin?: string }) {
         </div>
         <div className="ap-mapbar">
             <span className="ap-address">{target}</span>
-            <a className="ap-maplink" target="_blank" rel="noopener noreferrer"
+            <a className="admiral-frosted-button ap-maplink" data-appearance="blue" target="_blank" rel="noopener noreferrer"
                 href={"https://www.google.com/maps?q=" + encoded + "&hl=hu&t=k&z=16"}>
                 Megnyitás a Google Térképen
                 <svg aria-hidden="true" width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">

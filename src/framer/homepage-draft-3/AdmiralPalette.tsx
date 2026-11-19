@@ -32,6 +32,8 @@ export const admiralPalette = {
     lightGlassInset: whiteGlass(18),
     lightGlassDivider: "rgb(255 255 255 / 72%)",
     inquiryGradient: `linear-gradient(145deg, color-mix(in srgb, ${accent} 50%, #339de8), ${accent} 53%, color-mix(in srgb, ${accent} 65%, #001128))`,
+    inquiryRim: "#1c496b",
+    inquiryShadow: "inset 0 1px 1px rgb(220 240 255 / 32%), inset 0 -1px 0 rgb(5 24 46 / 18%), 0 3px 9px rgb(14 53 82 / 28%)",
 } as const
 
 interface SurfaceProps {
@@ -77,19 +79,24 @@ ${landing} ${navHost} {
     opacity: 0 !important; visibility: hidden; interactivity: inert;
     transition: opacity .32s ease, visibility 0s linear .32s;
 }
-${materialBar}, ${handover} {
+${materialBar} {
     --border-color: var(--admiral-glass-rim) !important;
     box-shadow: var(--admiral-glass-shadow) !important;
 }
-${handover} { background: var(--admiral-glass-fallback) !important; }
+${handover} {
+    background: #145083 !important;
+    background: ${admiralPalette.inquiryGradient} !important;
+    --border-color: ${admiralPalette.inquiryRim} !important;
+    box-shadow: ${admiralPalette.inquiryShadow} !important;
+    -webkit-backdrop-filter: none !important; backdrop-filter: none !important;
+}
 ${handover} .framer-text {
-    color: var(--admiral-glass-ink) !important; --framer-text-color: var(--admiral-glass-ink) !important;
+    color: white !important; --framer-text-color: white !important;
 }
 [data-admiral-nav-surface] { background: ${admiralPalette.lightGlassFallback}; }
 @supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
     [data-admiral-nav-surface="glass"] { background: ${admiralPalette.lightGlass}; }
-    ${handover} { background: var(--admiral-glass-fill) !important; }
-    ${glassBar}, ${handover} {
+    ${glassBar} {
         -webkit-backdrop-filter: ${admiralPalette.lightGlassBlur} !important;
         backdrop-filter: ${admiralPalette.lightGlassBlur} !important;
     }
@@ -132,10 +139,11 @@ ${lightInquiry}:focus-visible { outline: 2px solid white; outline-offset: 2px; }
 }
 @media (prefers-reduced-transparency: reduce) {
     [data-admiral-nav-surface="glass"] { background: ${admiralPalette.lightGlassFallback}; }
-    ${handover} { background: var(--admiral-glass-fallback) !important; }
-    ${glassBar}, ${handover} { -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
+    ${glassBar} { -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
 }
 @media (forced-colors: active) {
+    ${handover} { background: Canvas !important; box-shadow: none !important; --border-color: CanvasText !important; }
+    ${handover} .framer-text { color: CanvasText !important; --framer-text-color: CanvasText !important; }
     [data-admiral-nav-surface]::after { display: none; }
     ${lightInquiry}, ${lightInquiry}:not(:disabled):not([aria-disabled="true"]):is(:hover, :active) {
         background: ButtonFace; color: ButtonText; border-color: ButtonText; box-shadow: none;
