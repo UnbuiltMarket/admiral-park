@@ -8,6 +8,8 @@ import AdmiralApartmentDetailCard, { normalizeAdmiralFavorites, toggleAdmiralFav
 
 // @ts-ignore -- the Framer single-file checker does not resolve project-local modules.
 import { admiralPalette } from "./AdmiralPalette.tsx"
+// @ts-ignore -- resolved by Framer alongside this code file.
+import AdmiralScrollCue from "./AdmiralScrollCue.tsx"
 
 const HOMEPAGE_LIGHTING_ATLAS_URL = "https://framerusercontent.com/images/DxiRVoqzN1ZiE2KVkOho93CuQV0.webp"
 const HOMEPAGE_LIGHTING_DATA_URL = "https://framerusercontent.com/assets/z7Sd93G28iAn2iOVsGRmivrt4Q.json"
@@ -601,6 +603,9 @@ interface HomepageTiming {
     ctaIn: number
     rise: number
 }
+function homepageContentFadeSeconds(t: HomepageTiming) {
+    return (Number.isFinite(t.contentFadeDuration) ? Math.max(.1, Math.min(3, t.contentFadeDuration)) : .8) + t.fadeExtension
+}
 interface HomepageMobileLayout {
     enabled: boolean
     storyTop: number
@@ -716,6 +721,7 @@ interface AdmiralHomepageTrialProps {
     style?: React.CSSProperties
 }
 interface HomepageActions {
+    startOrbitApproach: () => void
     explore: () => void
     overview: () => void
     skip: () => void
@@ -756,26 +762,96 @@ const homepageOrbitHash = "#orbit"
 // The fragment is available to the browser before Framer hydrates. Keep this
 // guard ahead of the server-rendered sequence poster and scope it to boot.
 const homepageOrbitEntryStyles = `
+[data-seq3-garden-cue] {
+    position: absolute; z-index: 4; left: 50%; bottom: max(42px, env(safe-area-inset-bottom));
+    width: min(268px, 90%); height: 54px; transform: translateX(-50%); pointer-events: none;
+    opacity: 0; visibility: hidden; translate: 0 calc(0px - var(--admiral-sequence-copy-rise, 6px));
+    transition: opacity var(--admiral-sequence-copy-duration, .74s) ease, translate var(--admiral-sequence-copy-duration, .74s) ease, visibility 0s linear var(--admiral-sequence-copy-duration, .74s);
+}
+[data-seq3-garden-cue][data-visible="true"] { opacity: 1; visibility: visible; translate: none; transition-delay: 0s; }
+[data-seq3-garden-cue]:not([data-visible="true"]) :is(.admiral-scroll-cue-glass,.admiral-scroll-cue-caption,.admiral-scroll-cue-stroke) { animation-play-state: paused; }
+[data-seq3-garden-cue] > [aria-hidden="true"] { width: 100%; height: 100%; }
+[data-seq3-garden-cue] button {
+    appearance: none; position: absolute; inset: 0; padding: 0; cursor: pointer;
+    border: none; border-radius: 999px; background: transparent; pointer-events: auto; touch-action: manipulation;
+}
+[data-seq3-garden-cue] button:disabled { pointer-events: none; }
+[data-seq3-garden-cue] button:focus-visible { outline: 2px solid white; outline-offset: 3px; }
+@media (max-width: 1439.98px) {
+    [data-seq3-garden-cue] { bottom: max(50px, env(safe-area-inset-bottom)); }
+}
+@media (max-width: 767px), (pointer: coarse) and (max-height: 767px) {
+    [data-seq3-garden-cue] { width: 46px; }
+}
+@media (prefers-reduced-motion: reduce) { [data-seq3-garden-cue] { transition: none; translate: none; } }
+
 [data-admiral-homepage] [data-seq3-garden] {
-    position: absolute; inset: auto 0 0; z-index: 3; box-sizing: border-box;
-    padding: clamp(64px, 13vh, 150px) clamp(22px, 6vw, 112px) max(clamp(56px, 8vh, 112px), env(safe-area-inset-bottom));
-    color: #fff; text-align: left; pointer-events: none;
-    background: linear-gradient(0deg,rgba(6,20,28,.82),rgba(6,20,28,.61) 44%,rgba(6,20,28,0));
-    opacity: 0; visibility: hidden; transform: translateY(-6px);
-    transition: opacity var(--admiral-fade-panel) ease, transform var(--admiral-fade-panel) ease, visibility 0s linear var(--admiral-fade-panel);
+    position: absolute;
+    inset: 0 0 220px;
+    z-index: 3;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    padding-inline: max(12px, env(safe-area-inset-left)) max(12px, env(safe-area-inset-right));
+    color: var(--token-af31bcae-daff-40c0-91b5-11fdb1730857, #fff);
+    text-align: center;
+    text-shadow: 4px 3px 3px rgba(0, 0, 0, .25);
+    pointer-events: none;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(calc(0px - var(--admiral-sequence-copy-rise)));
+    transition:
+        opacity var(--admiral-sequence-copy-duration) cubic-bezier(.333333, 0, .666667, 1),
+        transform var(--admiral-sequence-copy-duration) cubic-bezier(.333333, 0, .666667, 1),
+        visibility 0s linear var(--admiral-sequence-copy-duration);
+}
+[data-admiral-homepage][data-homepage-stage="connection"] [data-seq3-garden][data-visible="false"] {
+    transform: translateY(var(--admiral-sequence-copy-rise));
 }
 [data-admiral-homepage] [data-seq3-garden][data-visible="true"] {
-    opacity: 1; visibility: visible; transform: none; transition-delay: 0s;
+    opacity: 1;
+    visibility: visible;
+    transform: none;
+    transition-delay: 0s;
+}
+[data-admiral-homepage] [data-seq3-garden] :is(h2, p) {
+    margin: 0;
+    max-width: 100%;
+    color: inherit;
+    letter-spacing: .03em;
+    overflow-wrap: anywhere;
 }
 [data-admiral-homepage] [data-seq3-garden] h2 {
-    margin: 0; max-width: 23ch; color: inherit; font: 400 clamp(34px, 4.35vw, 72px)/1.06 "Bodoni Moda", Georgia, serif;
-    letter-spacing: -.035em; text-wrap: balance;
+    font: 500 48px/1.5 Montserrat, "Montserrat Placeholder", sans-serif;
+    text-decoration: underline;
+    text-underline-offset: 6px;
 }
 [data-admiral-homepage] [data-seq3-garden] p {
-    margin: 12px 0 0; max-width: 55ch; color: inherit; font: 500 clamp(15px, 1.18vw, 20px)/1.5 Montserrat, Arial, sans-serif;
+    width: min(100%, 870px);
+    font: 300 18px/1.5 Montserrat, "Montserrat Placeholder", sans-serif;
+    text-wrap: balance;
+}
+@media (min-width: 1440px) {
+    [data-admiral-homepage] [data-seq3-garden] { gap: 23px; }
+}
+@media (max-height: 700px) {
+    [data-admiral-homepage] [data-seq3-garden] {
+        top: max(60px, 12vh, env(safe-area-inset-top));
+        bottom: max(108px, 21vh);
+    }
+}
+@media (max-height: 520px) and (max-width: 480px), (max-height: 380px) {
+    [data-admiral-homepage] [data-seq3-garden] { gap: 8px; }
+    [data-admiral-homepage] [data-seq3-garden] h2 { font-size: 36px; }
 }
 @media (prefers-reduced-motion: reduce) {
-    [data-admiral-homepage] [data-seq3-garden] { transition: none; transform: none; }
+    [data-admiral-homepage] [data-seq3-garden][data-visible] {
+        transition: none;
+        transform: none;
+    }
 }
 [data-admiral-homepage][data-homepage-booted="false"] > [data-admiral-orbit-anchor]:target ~ [data-admiral-sequence],
 [data-admiral-homepage][data-direct-orbit-entry="true"] > [data-admiral-sequence] { visibility: hidden; }
@@ -9258,7 +9334,7 @@ export default function AdmiralHomepageStudio(
             // over one of our visible controls; genuine links and buttons above stay native.
             for (const button of Array.from(
                 root!.querySelectorAll<HTMLButtonElement>(
-                    "[data-homepage-controls] button, [data-orbit-filters] button, button[data-apartment-open], button[data-orbit-detail-link], button[data-orbit-favorite], button[data-orbit-fullscreen-open], button[data-orbit-fullscreen-close]"
+                    "[data-homepage-controls] button, [data-orbit-filters] button, button[data-apartment-open], button[data-orbit-detail-link], button[data-orbit-favorite], button[data-orbit-fullscreen-open], button[data-orbit-fullscreen-close], button[data-seq3-cue-action]"
                 )
             )) {
                 if (
@@ -9375,6 +9451,10 @@ export default function AdmiralHomepageStudio(
                 currentStage === "orbitApproach"
             )
         }
+        function journeyGestureBlocked(target: EventTarget | null) {
+            if (target instanceof Element && target.closest("button[data-seq3-cue-action]")) return false
+            return homepageBlocked(target)
+        }
         function canAdvanceJourney() {
             return videoOpening() || currentStage === "building" || connectionLanded() || interruptedFlight()
         }
@@ -9418,7 +9498,7 @@ export default function AdmiralHomepageStudio(
                 event.clientX > box.right ||
                 event.clientY < box.top ||
                 event.clientY > box.bottom ||
-                homepageBlocked(event.target)
+                journeyGestureBlocked(event.target)
             )
                 return
             for (
@@ -9514,7 +9594,7 @@ export default function AdmiralHomepageStudio(
                     touch.clientX > box.right ||
                     touch.clientY < box.top ||
                     touch.clientY > box.bottom ||
-                    homepageBlocked(event.target)
+                    journeyGestureBlocked(event.target)
                 )
                     return
                 touchOrigin = { x: touch.clientX, y: touch.clientY }
@@ -9615,6 +9695,7 @@ export default function AdmiralHomepageStudio(
             { signal }
         )
         actions.current = {
+            startOrbitApproach,
             explore: () => {
                 void explore()
             },
@@ -10017,6 +10098,8 @@ export default function AdmiralHomepageStudio(
                     backgroundSize: useStudio && blueStudio && !pageBackdrop ? "clamp(930px,100%,1780px) auto, 100% 100%, 100% 100%" : undefined,
                     backgroundRepeat: useStudio && blueStudio && !pageBackdrop ? "no-repeat" : undefined,
                     "--admiral-orbit-background": orbitBackground,
+                    "--admiral-sequence-copy-duration": `${homepageContentFadeSeconds(timing.current)}s`,
+                    "--admiral-sequence-copy-rise": `${rise}px`,
                     "--admiral-fade-panel": `${240 + fadeExtra * 1000}ms`,
                     "--admiral-fade-shell": `${400 + fadeExtra * 1000}ms`,
                     "--admiral-fade-record": `${180 + fadeExtra * 1000}ms`,
@@ -10374,6 +10457,16 @@ export default function AdmiralHomepageStudio(
                     {gardenBody && <p>{gardenBody}</p>}
                 </div>
             )}
+            <div data-seq3-garden-cue="" data-visible={gardenVisible} aria-hidden={!gardenVisible}>
+                <div aria-hidden="true">
+                    <AdmiralScrollCue caption="A folytatáshoz görgessen lefelé" />
+                </div>
+                <button type="button" data-seq3-cue-action=""
+                    aria-label="A folytatáshoz görgessen lefelé – továbblépés a 3D nézethez"
+                    disabled={!gardenVisible || staticRenderer}
+                    onClick={() => actions.current?.startOrbitApproach()}
+                />
+            </div>
             {studioSideControls && orbitInfo.state !== "error" && (
                 <div
                     data-homepage-controls=""
@@ -10848,8 +10941,7 @@ function createHomepageOverlay(Component: React.ComponentType<any>, kind: "openi
             // Compose with the native Framer pose; never replace authored centring.
             const authoredTranslate = getComputedStyle(element).translate
             const baseTranslate = authoredTranslate === "none" ? ["0px", "0px"] : cssComponents(authoredTranslate)
-            const fadeDuration = (t: HomepageTiming) =>
-                (Number.isFinite(t.contentFadeDuration) ? Math.max(.1, Math.min(3, t.contentFadeDuration)) : .8) + t.fadeExtension
+            const fadeDuration = homepageContentFadeSeconds
             function stopContentFrames() {
                 if (contentFrame) cancelAnimationFrame(contentFrame)
                 contentFrame = 0
@@ -10990,14 +11082,14 @@ AdmiralHomepageStudio.displayName = "Admiral Homepage Studio"
 addPropertyControls(AdmiralHomepageStudio, {
     contentFadeDuration: {
         type: ControlType.Number,
-        title: "SEQ01/02 · Fade",
+        title: "SEQ01–03 · Fade",
         defaultValue: .8, min: .1, max: 3, step: .05, unit: "s",
-        description: "Base duration for the gentle upward departure of SEQ01 logo, caption and scroll cue, and SEQ02 content. Global fade extra is added once; 0.8 + 0.5 gives a gentle 1.3-second fade. Camera speed stays independent.",
+        description: "Base duration for the gentle upward departure of SEQ01 logo, caption and scroll cue, and SEQ02/03 content. Global fade extra is added once; 0.8 + 0.5 gives a gentle 1.3-second fade. Camera speed stays independent.",
     },
     openingLogoMotion: {
         type: ControlType.Object,
         title: "SEQ01 · Logo",
-        description: "OpeningContent: gently fades UP when SEQ01 starts, at its authored size. Uses SEQ01/02 · Fade plus Global fade extra.",
+        description: "OpeningContent: gently fades UP when SEQ01 starts, at its authored size. Uses SEQ01–03 · Fade plus Global fade extra.",
         controls: {
             delay: { type: ControlType.Number, title: "Departure delay", defaultValue: .2, min: 0, max: 2, step: .05, unit: "s", description: "Wait after the camera starts before the logo fades upward. 0.2 s lets the text and scroll cue begin disappearing slightly earlier; 0 synchronises all three." },
             distance: { type: ControlType.Number, title: "Move up", defaultValue: 20, min: 0, max: 80, step: 1, unit: "px", description: "Small upward travel during the fade. 20 px matches SEQ02; 0 gives an opacity-only fade. The logo does not enlarge." },
@@ -11006,7 +11098,7 @@ addPropertyControls(AdmiralHomepageStudio, {
     openingTextMotion: {
         type: ControlType.Object,
         title: "SEQ01 · Text",
-        description: "OpeningTextContent: the opening caption fades UP gently. The common duration is SEQ01/02 · Fade plus Global fade extra.",
+        description: "OpeningTextContent: the opening caption fades UP gently. The common duration is SEQ01–03 · Fade plus Global fade extra.",
         controls: {
             delay: { type: ControlType.Number, title: "Departure delay", defaultValue: 0, min: 0, max: 2, step: .05, unit: "s", description: "Seconds before the caption fades upward. 0 starts with the camera; the logo follows 0.2 s later by default." },
             distance: { type: ControlType.Number, title: "Move up", defaultValue: 20, min: 0, max: 80, step: 1, unit: "px", description: "Upward travel while the caption fades. 20 px matches the logo and SEQ02; 0 fades without movement." },
@@ -11029,7 +11121,7 @@ addPropertyControls(AdmiralHomepageStudio, {
         max: 2,
         step: .05,
         unit: "s",
-        description: "Extra seconds for image dissolves, native content fades, orbit UI and OrbitView stories. This is shared by the whole homepage. SEQ01/02 · Fade sets the common content departure duration; the three SEQ01 groups set their delay and upward travel.",
+        description: "Extra seconds for image dissolves, native content fades, orbit UI and OrbitView stories. This is shared by the whole homepage. SEQ01–03 · Fade sets the common content departure duration; the three SEQ01 groups set their delay and upward travel.",
     },
     useGitHubAssets: {
         type: ControlType.Boolean,
@@ -11691,7 +11783,7 @@ addPropertyControls(AdmiralHomepageStudio, {
     rise: {
         type: ControlType.Number,
         title: "Arrival · Rise",
-        description: "Travel distance for BuildingContent / AranyhidContent and ArrivalCTA. Content enters from below and departs upward. 20 px matches the opening groups above.",
+        description: "Travel distance for BuildingContent / AranyhidContent, ArrivalCTA and the SEQ03 garden caption. Content enters from below and departs upward. 20 px matches the opening groups above.",
         defaultValue: 20,
         min: 0,
         max: 60,
