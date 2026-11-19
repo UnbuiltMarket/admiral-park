@@ -4751,6 +4751,19 @@ const orbitBlueStudioStyles = `
     --workspace-glass: var(--orbit-panel);
     --workspace-control-fill: var(--orbit-panel);
 }
+[data-orbit-blue] [data-orbit-studio] :is([data-orbit-detail-bar], [data-orbit-plan-bar], .orbit-studio-mobile-panel) {
+    --orbit-on-panel: var(--orbit-accent);
+    --orbit-panel-rule: color-mix(in srgb, var(--orbit-accent) 22%, transparent);
+    --studio-ink: var(--orbit-accent);
+    --studio-muted: ${admiralPalette.secondary};
+    --studio-line: var(--orbit-panel-rule);
+    --workspace-ink: var(--studio-ink);
+    --workspace-muted: var(--studio-muted);
+    --workspace-rule: var(--studio-line);
+    --workspace-glass: var(--orbit-paper);
+    --workspace-control-fill: var(--orbit-paper);
+    color: var(--studio-ink);
+}
 [data-orbit-blue] [data-orbit-studio][data-layout="workspace"] [data-orbit-list-filters] {
     position: relative; isolation: isolate;
     box-sizing: border-box; align-content: center;
@@ -4785,7 +4798,7 @@ const orbitBlueStudioStyles = `
 }
 [data-orbit-blue] [data-orbit-studio] .orbit-studio-plan-crop { border-radius: 4px; }
 [data-orbit-blue] [data-orbit-studio][data-layout="workspace"] .orbit-studio-status {
-    color: var(--orbit-on-panel); background: rgb(0 0 0 / 15%); border-color: var(--orbit-panel-rule);
+    color: var(--orbit-on-panel); background: color-mix(in srgb, var(--orbit-accent) 5%, var(--orbit-paper)); border-color: var(--orbit-panel-rule);
 }
 [data-orbit-blue] [data-orbit-studio] .orbit-studio-status[data-status="available"] .orbit-studio-status-dot { background: var(--orbit-available-color,#46A66A); }
 [data-orbit-blue] [data-orbit-studio] .orbit-studio-status:is([data-status="under_negotiation"],[data-status="reserved"]) .orbit-studio-status-dot { background: var(--orbit-negotiation-color,#E2B849); }
@@ -4793,15 +4806,14 @@ const orbitBlueStudioStyles = `
 [data-orbit-blue] [data-orbit-studio][data-layout="workspace"] [data-orbit-plan-actions] :is([data-orbit-favorite],[data-orbit-detail-link]) { color: var(--orbit-on-panel); }
 [data-orbit-blue] [data-orbit-studio][data-layout="workspace"] [data-orbit-plan-actions] [data-orbit-favorite][aria-pressed="true"] { color: var(--orbit-on-panel); }
 [data-orbit-blue] [data-orbit-studio][data-layout="workspace"] .orbit-studio-primary.admiral-frosted-button[data-orbit-inquiry] {
-    color: var(--orbit-on-panel); background: ${admiralPalette.inquiryGradient}; border-color: var(--orbit-panel-rule);
+    color: var(--orbit-paper); background: ${admiralPalette.inquiryGradient}; border-color: var(--orbit-panel-rule);
 }
-[data-orbit-blue] [data-orbit-studio][data-mobile="true"][data-orbit-glass-tone="paper"] > [data-orbit-filters][data-presentation][data-active],
-[data-orbit-blue] [data-orbit-studio][data-mobile="true"][data-orbit-glass-tone="paper"] .orbit-studio-mobile-panel {
+[data-orbit-blue] [data-orbit-studio][data-mobile="true"][data-orbit-glass-tone="paper"] > [data-orbit-filters][data-presentation][data-active] {
     --studio-ink: var(--orbit-on-panel); --studio-muted: var(--orbit-on-panel); --studio-line: var(--orbit-panel-rule);
     color: var(--orbit-on-panel); background: var(--orbit-panel); border-color: var(--orbit-panel-rule);
 }
 [data-orbit-blue] [data-orbit-studio][data-mobile="true"][data-orbit-glass-tone="paper"] .orbit-studio-mobile-panel {
-    border-radius: 19px; padding-inline: clamp(6px,2cqw,12px);
+    background: var(--orbit-paper); border-radius: 19px; padding-inline: clamp(6px,2cqw,12px);
 }
 [data-orbit-blue] [data-orbit-studio][data-mobile="true"] :is(.orbit-studio-mobile-metrics dd,.orbit-studio-status-text) { color: var(--orbit-on-panel); }
 [data-orbit-blue] [data-orbit-studio][data-mobile="true"][data-orbit-glass-tone="paper"] .orbit-studio-mobile-summary { padding-block: 7px; }
@@ -4816,7 +4828,7 @@ const orbitBlueStudioStyles = `
     color: var(--orbit-accent); background: var(--orbit-paper); border-radius: 12px;
 }
 [data-orbit-blue] [data-orbit-studio][data-mobile="true"] [data-orbit-range-popover] .orbit-filter-price-caption { color: var(--orbit-accent); }
-[data-orbit-blue] [data-orbit-studio][data-mobile="true"][data-orbit-glass-tone="paper"] .orbit-studio-primary { color: var(--orbit-accent); background: var(--orbit-paper); }
+[data-orbit-blue] [data-orbit-studio][data-mobile="true"][data-orbit-glass-tone="paper"] .orbit-studio-primary { color: var(--orbit-accent); background: var(--orbit-paper); border-color: var(--orbit-panel-rule); }
 [data-admiral-homepage][data-orbit-blue] [data-orbit-group] {
     color: var(--orbit-on-panel); background: var(--orbit-panel); border-color: var(--orbit-panel-rule);
 }
@@ -4831,7 +4843,7 @@ const orbitBlueStudioStyles = `
     }
     [data-orbit-blue] [data-orbit-studio][data-layout="workspace"] .orbit-studio-plan-workspace[data-orbit-plan-openable="true"]:hover [data-orbit-plan-actions] :is([data-orbit-detail-link],[data-orbit-favorite]) { color: var(--orbit-on-panel); }
     [data-orbit-blue] [data-orbit-studio][data-layout="workspace"] .orbit-studio-primary.admiral-frosted-button[data-orbit-inquiry]:not([aria-disabled="true"]):not(:disabled):hover {
-        background: var(--orbit-paper); color: var(--orbit-accent); border-color: var(--orbit-paper);
+        background: var(--orbit-paper); color: var(--orbit-accent); border-color: var(--orbit-accent);
     }
 }
 [data-orbit-blue] [data-orbit-studio][data-layout="workspace"] :is([data-orbit-plan-actions],[data-orbit-list-filters]) :is(button,select,input,a):focus-visible,
