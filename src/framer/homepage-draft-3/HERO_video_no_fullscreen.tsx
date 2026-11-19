@@ -4789,12 +4789,6 @@ const orbitBlueStudioStyles = `
     }
 }
 [data-orbit-studio][data-active="false"] { --orbit-light-glass-blur: none; }
-[data-orbit-studio][data-layout="workspace"] :is([data-orbit-detail-bar], [data-orbit-plan-bar]),
-[data-orbit-studio][data-mobile="true"][data-orbit-glass-tone="paper"] .orbit-studio-mobile-panel {
-    background: var(--orbit-light-glass);
-    -webkit-backdrop-filter: var(--orbit-light-glass-blur);
-    backdrop-filter: var(--orbit-light-glass-blur);
-}
 [data-orbit-blue] [data-orbit-studio][data-layout="workspace"] [data-orbit-control-band] {
     background: transparent; box-shadow: none;
 }
@@ -4903,6 +4897,95 @@ const orbitBlueStudioStyles = `
 [data-orbit-blue] [data-orbit-studio][data-layout="workspace"] .orbit-studio-plan-content[role="button"]:focus-visible,
 [data-orbit-blue] [data-orbit-studio][data-mobile="true"] [data-orbit-filters] button:focus-visible,
 [data-admiral-homepage][data-orbit-blue] [data-orbit-group] button:focus-visible { outline: 2px solid var(--orbit-on-panel); outline-offset: 2px; }
+
+/* The film, orbit and mask canvases are siblings of the studio. Leave their
+   aperture clear while painting the connected glass surface around it. */
+[data-orbit-studio] [data-orbit-housing] {
+    position: relative;
+    --housing-radius: 19px;
+    --housing-rule: ${admiralPalette.lightGlassDivider};
+    border-radius: var(--housing-radius);
+    box-shadow: ${admiralPalette.lightGlassShadow};
+    pointer-events: none;
+}
+[data-orbit-housing]::before, [data-orbit-housing]::after {
+    content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+}
+[data-orbit-housing]::before {
+    background: var(--orbit-light-glass);
+    -webkit-backdrop-filter: var(--orbit-light-glass-blur); backdrop-filter: var(--orbit-light-glass-blur);
+}
+[data-orbit-housing]::after { border: 1px solid ${admiralPalette.lightGlassRim}; z-index: 4; }
+[data-orbit-studio][data-layout="workspace"] [data-orbit-housing] {
+    /* Keep the existing camera width and use the former inter-card gaps inside the housing. */
+    --housing-image: calc((100% - var(--workspace-rail) - var(--workspace-gap)) * 2 * var(--studio-orbit-scale) / (1 + var(--studio-orbit-scale)));
+    --housing-summary: calc(var(--workspace-summary) + var(--workspace-row-gap));
+    display: grid; grid-area: 3 / 1 / 6 / -1; gap: 0;
+    grid-template-columns: var(--housing-image) minmax(0,1fr);
+    grid-template-rows: auto var(--housing-summary);
+    margin-inline-start: calc((100% - var(--workspace-rail) - var(--workspace-gap)) * (1 - var(--studio-orbit-scale)) / 2);
+}
+[data-orbit-studio][data-layout="workspace"] [data-orbit-housing]::before {
+    clip-path: polygon(var(--housing-image) 0, 100% 0, 100% 100%, 0 100%, 0 calc(100% - var(--housing-summary)), var(--housing-image) calc(100% - var(--housing-summary)));
+}
+[data-orbit-studio][data-layout="workspace"] [data-orbit-housing] .orbit-studio-scene { grid-area: 1 / 1; }
+[data-orbit-studio][data-layout="workspace"] [data-orbit-housing] .orbit-studio-image-slot { width: 100%; }
+[data-orbit-studio] [data-orbit-housing] [data-orbit-viewport] { border: 0; border-radius: 0; box-shadow: none; }
+[data-orbit-studio][data-layout="workspace"] [data-orbit-detail-bar] {
+    grid-area: 2 / 1; width: 100%; border: 0; border-top: 1px solid var(--housing-rule);
+    border-radius: 0 0 0 var(--housing-radius); box-shadow: none; background: ${admiralPalette.lightGlassInset};
+    container: orbit-apartment-strip / inline-size;
+    grid-template-columns: max-content minmax(0,1fr) max-content;
+}
+[data-orbit-studio][data-layout="workspace"] [data-orbit-detail-bar] .orbit-studio-areas > div {
+    flex: 1 0 max-content; min-width: max-content;
+}
+/* On short desktop windows the image can be much narrower than the screen. */
+@container orbit-apartment-strip (max-width: 660px) {
+    [data-orbit-detail-bar] .orbit-studio-heading { grid-area: 1 / 1; align-self: end; }
+    [data-orbit-studio][data-layout="workspace"] [data-orbit-detail-bar] .orbit-studio-id { font-size: 24px; }
+    [data-orbit-studio][data-layout="workspace"] [data-orbit-detail-bar] .orbit-studio-facts {
+        grid-area: 1 / 2 / 3 / 4; padding-inline-start: clamp(8px,2cqw,14px);
+    }
+    [data-orbit-studio][data-layout="workspace"] [data-orbit-detail-bar] .orbit-studio-apartment-footer {
+        grid-area: 2 / 1; align-self: start; border: 0; padding: 0;
+    }
+    [data-orbit-detail-bar] .orbit-studio-price > .orbit-studio-label { display: inline; margin-right: 5px; }
+    [data-orbit-studio][data-layout="workspace"] [data-orbit-detail-bar] .orbit-studio-price-value { display: inline; font-size: 17px; }
+    [data-orbit-studio][data-layout="workspace"] [data-orbit-detail-bar] .orbit-studio-areas dd { font-size: clamp(14px,3cqw,18px); }
+    [data-orbit-studio][data-layout="workspace"] [data-orbit-detail-bar] .orbit-studio-areas > div { padding-inline: clamp(4px,1cqw,8px); }
+}
+[data-orbit-studio][data-layout="workspace"] [data-orbit-plan-bar] {
+    grid-area: 1 / 2 / 3 / 3; border: 0; border-inline-start: 1px solid var(--housing-rule);
+    border-radius: 0 var(--housing-radius) var(--housing-radius) 0; box-shadow: none; background: transparent;
+}
+[data-orbit-studio][data-mobile="true"][data-orbit-glass-tone="paper"] [data-orbit-housing] {
+    width: var(--studio-phone-frame-width); max-width: 100%; justify-self: center; gap: 0;
+    grid-template-rows: auto minmax(0,1fr); overflow: visible;
+}
+[data-orbit-studio][data-mobile="true"] [data-orbit-housing]::before { grid-area: 2 / 1; border-radius: 0 0 var(--housing-radius) var(--housing-radius); }
+[data-orbit-studio][data-mobile="true"] [data-orbit-housing] .orbit-studio-image-slot { width: 100%; height: auto; margin: 0; }
+[data-orbit-studio][data-mobile="true"][data-orbit-glass-tone="paper"] [data-orbit-housing] .orbit-studio-mobile-panel {
+    position: relative; width: 100%; gap: 0; border: 0; border-top: 1px solid var(--housing-rule);
+    border-radius: 0 0 var(--housing-radius) var(--housing-radius); background: transparent; box-shadow: none;
+    padding: 0; pointer-events: auto;
+}
+[data-orbit-studio][data-mobile="true"] [data-orbit-housing] .orbit-studio-mobile-summary {
+    padding-inline: clamp(6px,2cqw,12px); border-inline-start: 1px solid var(--housing-rule);
+    background: ${admiralPalette.lightGlassInset};
+}
+@container orbit-studio-mobile (max-height: 480px) and (min-aspect-ratio: 4/3) {
+    [data-orbit-studio][data-mobile="true"][data-orbit-glass-tone="paper"] [data-orbit-housing] {
+        width: 100%; grid-template-rows: minmax(0,1fr);
+    }
+    [data-orbit-studio][data-mobile="true"] [data-orbit-housing]::before { grid-area: 1 / 2; border-radius: 0 var(--housing-radius) var(--housing-radius) 0; }
+    [data-orbit-studio][data-mobile="true"] [data-orbit-housing] .orbit-studio-image-slot {
+        height: 100%; --studio-side-by-side: 1;
+    }
+    [data-orbit-studio][data-mobile="true"][data-orbit-glass-tone="paper"] [data-orbit-housing] .orbit-studio-mobile-panel {
+        border-top: 0; border-inline-start: 1px solid var(--housing-rule); border-radius: 0 var(--housing-radius) var(--housing-radius) 0;
+    }
+}
 `
 
 const orbitWorkspaceStyles = `
@@ -5797,7 +5880,7 @@ function OrbitApartmentStudio(
                         onChange={onFiltersChange}
                     />
                 )}
-                <div className="orbit-studio-body">
+                <div className="orbit-studio-body" data-orbit-housing="">
                     <div className="orbit-studio-scene">
                         <div className="orbit-studio-image-slot">
                             <div
@@ -8257,6 +8340,18 @@ export default function AdmiralHomepageStudio(
         const flightMedia = heroRoot.querySelector<HTMLElement>("[data-flight-media]")
         const flightShade = root.querySelector<HTMLElement>("[data-flight-shade]")
         const normalClip = heroRoot.style.clipPath
+        const sideBySidePhone = () => {
+            const slot = studioViewportRef.current
+            return !!slot && pickerLatest.current.mobilePresentation &&
+                getComputedStyle(slot).getPropertyValue("--studio-side-by-side").trim() === "1"
+        }
+        let splitPhone = sideBySidePhone()
+        function studioCorners(radius: number) {
+            if (!radius) return "0px"
+            const r = radius + "px"
+            if (!pickerLatest.current.mobilePresentation) return r + " 0 0 0"
+            return splitPhone ? r + " 0 0 " + r : r + " " + r + " 0 0"
+        }
         let flightGeometry: { width: number; height: number; x: number; y: number; w: number; h: number } | null = null
         function paintFlight() {
             if (!flightMedia || !studioEnabled.current || currentStage !== "orbitApproach") return false
@@ -8276,8 +8371,8 @@ export default function AdmiralHomepageStudio(
             const scale = Math.max(w / 1920, h / 1010)
             const tx = x + (w - 1920 * scale) * focalX / 100, ty = y + (h - 1010 * scale) * focalY / 100
             flightMedia.style.transform = `translate3d(${tx}px,${ty}px,0) scale(${scale})`
-            const radius = pickerLatest.current.mobilePresentation ? 0 : 19 * a
-            const clip = `inset(${y}px ${Math.max(0,g.width - x - w)}px ${Math.max(0,g.height - y - h)}px ${x}px round ${radius}px)`
+            const corners = studioCorners(19 * a)
+            const clip = `inset(${y}px ${Math.max(0,g.width - x - w)}px ${Math.max(0,g.height - y - h)}px ${x}px round ${corners})`
             heroRoot!.style.clipPath = clip
             if (flightShade) flightShade.style.clipPath = clip
             if (presentationProgress >= .68 && !root!.hasAttribute("data-orbit-arriving"))
@@ -8327,10 +8422,10 @@ export default function AdmiralHomepageStudio(
                 Math.max(0, bounds.height - rect.y - rect.height) * cssScaleY +
                     "px"
             )
-            const frameRadius = studioEnabled.current && !pickerLatest.current.mobilePresentation
+            const frameRadius = studioEnabled.current
                 ? 19 * sequenceEase(sequenceClamp(presentationProgress))
                 : 0
-            setStyle("--admiral-studio-radius", frameRadius + "px")
+            setStyle("--admiral-studio-radius", studioCorners(frameRadius))
             const controls = root!.querySelector<HTMLElement>(
                 "[data-homepage-controls]"
             )
@@ -9427,6 +9522,7 @@ export default function AdmiralHomepageStudio(
         const refresh = () => {
             if (!disposed) {
                 flightGeometry = null
+                splitPhone = sideBySidePhone()
                 applyPresentation()
                 hero?.redraw()
                 orbit?.redraw()

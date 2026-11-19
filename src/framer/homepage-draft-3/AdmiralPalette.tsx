@@ -11,15 +11,26 @@ export function admiralPanelGradient(base: string): string {
     return `radial-gradient(ellipse 85% 116% at 10% -24%, rgb(162 191 210 / 12%), transparent 69%), linear-gradient(126deg, color-mix(in srgb, ${base} 74%, #6b899a), ${base} 39%, color-mix(in srgb, ${base} 51%, #1c3147) 80%, color-mix(in srgb, ${base} 58%, #233e53))`
 }
 
+// White tint is given in percentage points. All white glass shares the same
+// light direction and cool lower edge, including the denser inquiry control.
+function whiteGlass(tint: number): string {
+    return `linear-gradient(145deg, rgb(255 255 255 / ${tint + 12}%), rgb(247 251 253 / ${tint}%) 50%, rgb(225 239 247 / ${tint - 6}%))`
+}
+
 export const admiralPalette = {
     accent,
     secondary,
     paper,
     onPanel: paper,
     panelGradient: admiralPanelGradient(secondary),
-    lightGlass: "linear-gradient(118deg, rgba(255,255,255,.80), rgba(244,249,252,.64) 45%, rgba(226,238,247,.51))",
-    lightGlassBlur: "blur(16px) saturate(116%)",
-    lightGlassFallback: "#eff4f8",
+    lightGlass: whiteGlass(44),
+    lightGlassBlur: "blur(10px) saturate(112%)",
+    lightGlassFallback: "#e6eef2",
+    lightGlassInk: "#112e43",
+    lightGlassRim: "rgb(255 255 255 / 57%)",
+    lightGlassShadow: "inset 0 1px 0 rgb(255 255 255 / 48%), inset 0 -1px 0 rgb(219 233 241 / 28%), 0 3px 10px -4px rgb(17 47 63 / 30%)",
+    lightGlassInset: whiteGlass(18),
+    lightGlassDivider: "rgb(255 255 255 / 72%)",
     inquiryGradient: `linear-gradient(145deg, color-mix(in srgb, ${accent} 50%, #339de8), ${accent} 53%, color-mix(in srgb, ${accent} 65%, #001128))`,
 } as const
 
@@ -30,15 +41,37 @@ interface SurfaceProps {
 }
 
 const navbar = '[data-framer-name="Navbar"]'
+const materialBar = navbar + ':has([data-admiral-nav-surface])'
 const glassBar = navbar + ':has([data-admiral-nav-surface="glass"])'
 const landed = ':root:has([data-admiral-homepage]:is([data-homepage-stage="handoff"],[data-homepage-stage="orbit"]))'
 const blueBar = `:is(${navbar}:has([data-admiral-nav-surface="blue"]), ${landed} ${glassBar})`
+const inquiry = materialBar + ' .admiral-frosted-button[data-appearance="blue"]'
+const handover = '[data-framer-name="Handover date glass"]'
 
 const surfaceCSS = `
+:root {
+    --admiral-glass-fill: ${admiralPalette.lightGlass};
+    --admiral-glass-blur: ${admiralPalette.lightGlassBlur};
+    --admiral-glass-fallback: ${admiralPalette.lightGlassFallback};
+    --admiral-glass-ink: ${admiralPalette.lightGlassInk};
+    --admiral-glass-rim: ${admiralPalette.lightGlassRim};
+    --admiral-glass-shadow: ${admiralPalette.lightGlassShadow};
+    --admiral-glass-inset: ${admiralPalette.lightGlassInset};
+    --admiral-glass-divider: ${admiralPalette.lightGlassDivider};
+}
+${materialBar}, ${handover} {
+    --border-color: var(--admiral-glass-rim) !important;
+    box-shadow: var(--admiral-glass-shadow) !important;
+}
+${handover} { background: var(--admiral-glass-fallback) !important; }
+${handover} .framer-text {
+    color: var(--admiral-glass-ink) !important; --framer-text-color: var(--admiral-glass-ink) !important;
+}
 [data-admiral-nav-surface] { background: ${admiralPalette.lightGlassFallback}; }
 @supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
     [data-admiral-nav-surface="glass"] { background: ${admiralPalette.lightGlass}; }
-    ${glassBar} {
+    ${handover} { background: var(--admiral-glass-fill) !important; }
+    ${glassBar}, ${handover} {
         -webkit-backdrop-filter: ${admiralPalette.lightGlassBlur} !important;
         backdrop-filter: ${admiralPalette.lightGlassBlur} !important;
     }
@@ -55,26 +88,39 @@ ${blueBar} [data-framer-name="Links"] .framer-text,
 ${blueBar} [data-desktop-tour-menu-button] button { color: #fff !important; --framer-text-color: #fff; }
 ${blueBar} [data-framer-name="Mobile menu toggle"] { background: rgba(255,255,255,.12) !important; }
 
-${blueBar} .admiral-frosted-button[data-appearance="blue"] {
-    color: ${admiralPalette.accent}; background: #fff; border-color: rgba(255,255,255,.94);
-    box-shadow: inset 0 1px 0 #fff, 0 2px 8px rgba(8,36,58,.21);
+${inquiry} {
+    --inquiry-glass: ${whiteGlass(70)};
+    color: ${admiralPalette.accent}; border-color: var(--admiral-glass-rim);
+    background: var(--inquiry-glass); box-shadow: var(--admiral-glass-shadow);
+    -webkit-backdrop-filter: var(--admiral-glass-blur); backdrop-filter: var(--admiral-glass-blur);
 }
 @media (hover: hover) {
-    ${blueBar} .admiral-frosted-button[data-appearance="blue"]:not(:disabled):not([aria-disabled="true"]):hover {
-        color: ${admiralPalette.accent}; background: #eaf3fa; border-color: #fff;
-        box-shadow: inset 0 1px 0 #fff, 0 3px 12px rgba(8,36,58,.32);
+    ${inquiry}:not(:disabled):not([aria-disabled="true"]):hover {
+        --inquiry-glass: ${whiteGlass(81)};
+        color: ${admiralPalette.accent}; background: var(--inquiry-glass); border-color: rgb(255 255 255 / 92%);
+        box-shadow: inset 0 1px 0 white, 0 4px 12px -3px rgb(17 47 63 / 35%);
     }
 }
-${blueBar} .admiral-frosted-button[data-appearance="blue"]:active { background: #dbeaf5; }
-${blueBar} .admiral-frosted-button[data-appearance="blue"]:focus-visible { outline: 2px solid white; outline-offset: 3px; }
+${inquiry}:not(:disabled):not([aria-disabled="true"]):active { --inquiry-glass: ${whiteGlass(62)}; background: var(--inquiry-glass); }
+${inquiry}:focus-visible { outline: 2px solid ${admiralPalette.accent}; outline-offset: 3px; }
+${blueBar} .admiral-frosted-button[data-appearance="blue"]:focus-visible { outline-color: white; }
 @media (prefers-reduced-motion: reduce) { [data-admiral-nav-surface]::after { transition: none; } }
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+    ${inquiry}, ${inquiry}:not(:disabled):not([aria-disabled="true"]):is(:hover,:active) { background: var(--admiral-glass-fallback); }
+}
 @media (prefers-reduced-transparency: reduce) {
     [data-admiral-nav-surface="glass"] { background: ${admiralPalette.lightGlassFallback}; }
-    ${glassBar} { -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
+    ${handover} { background: var(--admiral-glass-fallback) !important; }
+    ${glassBar}, ${handover} { -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
+    ${inquiry}, ${inquiry}:not(:disabled):not([aria-disabled="true"]):is(:hover,:active) {
+        background: var(--admiral-glass-fallback); -webkit-backdrop-filter: none; backdrop-filter: none;
+    }
 }
 @media (forced-colors: active) {
     [data-admiral-nav-surface]::after { display: none; }
-    ${blueBar} .admiral-frosted-button[data-appearance="blue"] { color: ButtonText; background: ButtonFace; border-color: ButtonText; }
+    ${inquiry}, ${inquiry}:not(:disabled):not([aria-disabled="true"]):is(:hover,:active) {
+        color: ButtonText; background: ButtonFace; border-color: ButtonText; box-shadow: none;
+    }
 }
 `
 
