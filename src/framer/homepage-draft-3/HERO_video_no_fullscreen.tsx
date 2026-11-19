@@ -495,11 +495,12 @@ const HOMEPAGE_HERO_VIDEO_END = "https://framerusercontent.com/images/n4ONve6JK1
 const HOMEPAGE_HERO_INFOGRAPHIC = "https://framerusercontent.com/images/vRuUWre5kfmD5Rif9y0jYbJQs.png"
 const HOMEPAGE_CONNECTION_VIDEO = "https://framerusercontent.com/assets/BfO7rinv7Ci9Naw3GW01EFAvHi0.mp4"
 const HOMEPAGE_CONNECTION_END = "https://framerusercontent.com/images/uYMWXjUcDBc351olR2N5bRso.avif"
-const HOMEPAGE_ORBIT_APPROACH_VIDEO = "https://framerusercontent.com/assets/x8FjP6g39gM7E6YQqfUUSUv5c.mp4"
+const HOMEPAGE_ORBIT_APPROACH_VIDEO = "https://framerusercontent.com/assets/N02rcgZxOCN9LfVxWZtmoNOx2ws.mp4"
 const HOMEPAGE_CHECKPOINT_ZERO = "https://framerusercontent.com/images/hgpRLE7Hi0Mt0Q9M3HFMumryopA.avif"
 const HOMEPAGE_CONNECTION_VERSION = "426c29f22325"
 const HOMEPAGE_ORBIT_V05 = "https://raw.githubusercontent.com/UnbuiltMarket/admiral-park/6be37e13fbb610cc41e3aa37fe9a6b28df828afb/assets/orbit-v05"
-const ORBIT_WEBP_BASE = "https://raw.githubusercontent.com/UnbuiltMarket/admiral-park/bf31f7662da49b0adcdcb6fef9d9453ab70675f2/assets/orbit-compat-v06"
+const ORBIT_RENDER_ASSETS = "https://raw.githubusercontent.com/UnbuiltMarket/admiral-park/a3ff5a346f501a0d2af5b4466c2d2f95b30a3fb0/assets"
+const ORBIT_WEBP_BASE = ORBIT_RENDER_ASSETS + "/orbit-compat-v06"
 // A local 2 × 2 AVIF tests the browser's actual image decoder once per page.
 const avifProbe = "data:image/avif;base64,AAAAIGZ0eXBhdmlmAAAAAGF2aWZtaWYxbWlhZk1BMUIAAADrbWV0YQAAAAAAAAAhaGRscgAAAAAAAAAAcGljdAAAAAAAAAAAAAAAAAAAAAAOcGl0bQAAAAAAAQAAAB5pbG9jAAAAAEQAAAEAAQAAAAEAAAETAAAAJgAAAChpaW5mAAAAAAABAAAAGmluZmUCAAAAAAEAAGF2MDFDb2xvcgAAAABqaXBycAAAAEtpcGNvAAAAFGlzcGUAAAAAAAAAAgAAAAIAAAAQcGl4aQAAAAADCAgIAAAADGF2MUOBAAwAAAAAE2NvbHJuY2x4AAEADQAGgAAAABdpcG1hAAAAAAAAAAEAAQQBAoMEAAAALm1kYXQSAAoIGAA2iAhoNCAyGBlHh4Yhh5555oAAAJBAyRxhRF5fXE5pgA=="
 type OrbitImageFormat = "avif" | "webp"
@@ -522,11 +523,11 @@ function orbitImageFormat(): Promise<OrbitImageFormat> {
 function orbitWebpFrame(folder: "movement" | "light" | "sold", frame: number) {
     return ORBIT_WEBP_BASE + "/" + folder + "/" + String(frame).padStart(4, "0") + ".webp"
 }
-function homepageOrbitV05Asset(folder: "movement" | "checkpoints" | "light" | "sold" | "masks", frame: number) {
+function homepageOrbitV05Asset(folder: "light" | "sold" | "masks", frame: number) {
     return HOMEPAGE_ORBIT_V05 + "/" + folder + "/" + String(frame).padStart(4,"0") + (folder === "masks" ? ".png" : ".avif")
 }
 const HOMEPAGE_ORBIT_MOVEMENT = Array.from({length:120}, (_,frame) =>
-    frame === 0 ? HOMEPAGE_CHECKPOINT_ZERO : homepageOrbitV05Asset("movement",frame))
+    ORBIT_RENDER_ASSETS + "/orbit-v06/movement/" + String(frame).padStart(4,"0") + ".avif")
 const HOMEPAGE_V05_MASKS = Array.from({length:8}, (_,view)=>homepageOrbitV05Asset("masks",view*15))
 const HOMEPAGE_ASSETS =
     "https://raw.githubusercontent.com/UnbuiltMarket/admiral-park/main/assets"
@@ -7322,7 +7323,7 @@ export default function AdmiralHomepageStudio(
     const heroStartPoster = useWebp ? ORBIT_WEBP_BASE + "/stills/seq01-start.webp" : heroVideoUrl ? HOMEPAGE_HERO_VIDEO_START : heroUrls[0]
     const heroEndPoster = useWebp ? ORBIT_WEBP_BASE + "/stills/seq01-end.webp" : heroVideoUrl ? HOMEPAGE_HERO_VIDEO_END : heroUrls[heroUrls.length - 1]
     const connectionEndPoster = useWebp ? ORBIT_WEBP_BASE + "/stills/seq02-end.webp" : HOMEPAGE_CONNECTION_END
-    const checkpointZeroPoster = useWebp ? orbitWebpFrame("movement", 0) : HOMEPAGE_CHECKPOINT_ZERO
+    const checkpointZeroPoster = useWebp ? ORBIT_WEBP_BASE + "/checkpoints/0000.webp" : HOMEPAGE_CHECKPOINT_ZERO
     // Use the actual SEQ_01 endpoint for the existing SEQ_02 dissolve.
     const connectionPlaybackUrls = React.useMemo(
         () => [heroEndPoster, ...connectionUrls],
@@ -7349,7 +7350,11 @@ export default function AdmiralHomepageStudio(
             )
         )
     )
-    const orbitPoster = orbitUrls[orbitStartIndex]
+    const parkedPoster = React.useCallback((frame: number) => {
+        const camera = frame * checkpointCount / orbitUrls.length
+        return (Number.isInteger(camera) && checkpointInspectionUrls[camera]) || orbitUrls[frame]
+    }, [checkpointCount, checkpointInspectionUrls, orbitUrls])
+    const orbitPoster = parkedPoster(orbitStartIndex)
     const editorViewNumber = /^[1-8]$/.test(editorOrbitView)
         ? Number(editorOrbitView)
         : 0
@@ -7374,7 +7379,7 @@ export default function AdmiralHomepageStudio(
             : staticRenderer && editorView === "building"
               ? heroEndPoster
               : staticRenderer && editorView === "orbit"
-                ? (editorPreviewFrame % 15 === 0 && checkpointInspectionUrls[editorPreviewFrame / 15] || orbitUrls[editorPreviewFrame])
+                ? parkedPoster(editorPreviewFrame)
                 : !staticRenderer && startView === "orbit"
                   ? orbitPoster
                   : heroStartPoster
@@ -7394,11 +7399,11 @@ export default function AdmiralHomepageStudio(
             const id = homepageOrbitApartment(url)
             const frame = group ? bestOrbitGroupFrame(group.ids) ?? orbitStartIndex
                 : id && apartmentOrbitAvailable ? orbitApartmentCameras[id][0] : orbitStartIndex
-            setDirectOrbitEntry({ poster: orbitUrls[frame], framed: false })
+            setDirectOrbitEntry({ poster: parkedPoster(frame), framed: false })
             setStage("handoff")
         }
         setHomepageBooted(true)
-    }, [orbitStartIndex, orbitUrls, apartmentOrbitAvailable, staticRenderer])
+    }, [orbitStartIndex, parkedPoster, apartmentOrbitAvailable, staticRenderer])
     const [heroState, setHeroState] = React.useState<SequenceState>("opening")
     const [orbitInfo, setOrbitInfo] = React.useState<OrbitSnapshot>({
         state: "idle",
@@ -9011,7 +9016,7 @@ export default function AdmiralHomepageStudio(
         }
         function showLinkedOrbit(frame = orbitStartIndex) {
             presentationProgress = 1
-            setDirectOrbitEntry({ poster: orbitUrls[frame], framed: true })
+            setDirectOrbitEntry({ poster: parkedPoster(frame), framed: true })
             void activateOrbit(frame)
         }
         function openOrbitFromLink(id: string | null, group: OrbitApartmentGroup | null, initial = false) {
@@ -9634,6 +9639,7 @@ export default function AdmiralHomepageStudio(
         connectionPlaybackUrls,
         orbitUrls,
         checkpointInspectionUrls,
+        parkedPoster,
         apartmentOrbitAvailable,
         staticRenderer,
         hostActive,
