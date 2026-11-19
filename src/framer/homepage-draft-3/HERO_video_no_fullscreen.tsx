@@ -4730,6 +4730,7 @@ const orbitApartmentStudioStyles = `
 }
 `
 
+const orbitWindowRadius = 19
 const orbitBlueBackdrop = "#d4dee4"
 // Soft silver-blue light falls from the top left across one continuous surface.
 // Brightness decreases toward the bottom right instead of forming a white centre band.
@@ -4902,7 +4903,7 @@ const orbitBlueStudioStyles = `
    aperture clear while painting the connected glass surface around it. */
 [data-orbit-studio] [data-orbit-housing] {
     position: relative;
-    --housing-radius: 19px;
+    --housing-radius: ${orbitWindowRadius}px;
     --housing-rule: ${admiralPalette.lightGlassDivider};
     border-radius: var(--housing-radius);
     box-shadow: ${admiralPalette.lightGlassShadow};
@@ -4930,7 +4931,7 @@ const orbitBlueStudioStyles = `
 }
 [data-orbit-studio][data-layout="workspace"] [data-orbit-housing] .orbit-studio-scene { grid-area: 1 / 1; }
 [data-orbit-studio][data-layout="workspace"] [data-orbit-housing] .orbit-studio-image-slot { width: 100%; }
-[data-orbit-studio] [data-orbit-housing] [data-orbit-viewport] { border: 0; border-radius: 0; box-shadow: none; }
+[data-orbit-studio] [data-orbit-housing] [data-orbit-viewport] { border: 0; border-radius: var(--housing-radius); box-shadow: none; }
 [data-orbit-studio][data-layout="workspace"] [data-orbit-detail-bar] {
     grid-area: 2 / 1; width: 100%; border: 0; border-top: 1px solid var(--housing-rule);
     border-radius: 0 0 0 var(--housing-radius); box-shadow: none; background: ${admiralPalette.lightGlassInset};
@@ -4980,7 +4981,7 @@ const orbitBlueStudioStyles = `
     }
     [data-orbit-studio][data-mobile="true"] [data-orbit-housing]::before { grid-area: 1 / 2; border-radius: 0 var(--housing-radius) var(--housing-radius) 0; }
     [data-orbit-studio][data-mobile="true"] [data-orbit-housing] .orbit-studio-image-slot {
-        height: 100%; --studio-side-by-side: 1;
+        height: 100%;
     }
     [data-orbit-studio][data-mobile="true"][data-orbit-glass-tone="paper"] [data-orbit-housing] .orbit-studio-mobile-panel {
         border-top: 0; border-inline-start: 1px solid var(--housing-rule); border-radius: 0 var(--housing-radius) var(--housing-radius) 0;
@@ -8340,18 +8341,6 @@ export default function AdmiralHomepageStudio(
         const flightMedia = heroRoot.querySelector<HTMLElement>("[data-flight-media]")
         const flightShade = root.querySelector<HTMLElement>("[data-flight-shade]")
         const normalClip = heroRoot.style.clipPath
-        const sideBySidePhone = () => {
-            const slot = studioViewportRef.current
-            return !!slot && pickerLatest.current.mobilePresentation &&
-                getComputedStyle(slot).getPropertyValue("--studio-side-by-side").trim() === "1"
-        }
-        let splitPhone = sideBySidePhone()
-        function studioCorners(radius: number) {
-            if (!radius) return "0px"
-            const r = radius + "px"
-            if (!pickerLatest.current.mobilePresentation) return r + " 0 0 0"
-            return splitPhone ? r + " 0 0 " + r : r + " " + r + " 0 0"
-        }
         let flightGeometry: { width: number; height: number; x: number; y: number; w: number; h: number } | null = null
         function paintFlight() {
             if (!flightMedia || !studioEnabled.current || currentStage !== "orbitApproach") return false
@@ -8371,8 +8360,7 @@ export default function AdmiralHomepageStudio(
             const scale = Math.max(w / 1920, h / 1010)
             const tx = x + (w - 1920 * scale) * focalX / 100, ty = y + (h - 1010 * scale) * focalY / 100
             flightMedia.style.transform = `translate3d(${tx}px,${ty}px,0) scale(${scale})`
-            const corners = studioCorners(19 * a)
-            const clip = `inset(${y}px ${Math.max(0,g.width - x - w)}px ${Math.max(0,g.height - y - h)}px ${x}px round ${corners})`
+            const clip = `inset(${y}px ${Math.max(0,g.width - x - w)}px ${Math.max(0,g.height - y - h)}px ${x}px round ${orbitWindowRadius * a}px)`
             heroRoot!.style.clipPath = clip
             if (flightShade) flightShade.style.clipPath = clip
             if (presentationProgress >= .68 && !root!.hasAttribute("data-orbit-arriving"))
@@ -8423,9 +8411,9 @@ export default function AdmiralHomepageStudio(
                     "px"
             )
             const frameRadius = studioEnabled.current
-                ? 19 * sequenceEase(sequenceClamp(presentationProgress))
+                ? orbitWindowRadius * sequenceEase(sequenceClamp(presentationProgress))
                 : 0
-            setStyle("--admiral-studio-radius", studioCorners(frameRadius))
+            setStyle("--admiral-studio-radius", frameRadius + "px")
             const controls = root!.querySelector<HTMLElement>(
                 "[data-homepage-controls]"
             )
@@ -9522,7 +9510,6 @@ export default function AdmiralHomepageStudio(
         const refresh = () => {
             if (!disposed) {
                 flightGeometry = null
-                splitPhone = sideBySidePhone()
                 applyPresentation()
                 hero?.redraw()
                 orbit?.redraw()
@@ -9880,6 +9867,7 @@ export default function AdmiralHomepageStudio(
             data-orbit-blue={useStudio && blueStudio ? "" : undefined}
             data-orbit-shared-backdrop={useStudio && blueStudio && pageBackdrop ? "" : undefined}
             data-homepage-stage={stage}
+            data-homepage-nav-active={String(hostActive)}
             data-homepage-booted={String(homepageBooted)}
             data-direct-orbit-entry={String(!!directOrbitEntry)}
             data-orbit-fullscreen={String(fullscreen.active)}

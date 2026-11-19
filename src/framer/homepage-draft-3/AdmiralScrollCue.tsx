@@ -9,6 +9,8 @@ function cueStyleMarkup(css: string): { __html: string } {
 
 const cueStyles = `
 .admiral-scroll-cue {
+    --admiral-cue-arrival: 1.6s;
+    --admiral-cue-settled: calc(var(--admiral-cue-arrival) + .8s);
     display: grid;
     place-items: center;
     pointer-events: none;
@@ -20,7 +22,7 @@ const cueStyles = `
     font: 550 13px/1.35 Montserrat, Arial, sans-serif;
     letter-spacing: .01em;
     text-align: center;
-    animation: admiral-cue-caption-scroll 3.2s cubic-bezier(.4,0,.2,1) 1.9s infinite;
+    animation: admiral-cue-caption-scroll 3.2s cubic-bezier(.4,0,.2,1) var(--admiral-cue-settled) infinite;
 }
 .admiral-scroll-cue-glass {
     position: relative;
@@ -33,7 +35,7 @@ const cueStyles = `
     color: var(--admiral-glass-ink, ${admiralPalette.lightGlassInk});
     background: var(--admiral-glass-fallback, ${admiralPalette.lightGlassFallback});
     box-shadow: var(--admiral-glass-shadow, ${admiralPalette.lightGlassShadow});
-    animation: admiral-cue-arrive 0.8s ease 1.1s both;
+    animation: admiral-cue-arrive 0.8s ease var(--admiral-cue-arrival) both;
 }
 @supports ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))) {
     .admiral-scroll-cue-glass {
@@ -80,7 +82,7 @@ const cueStyles = `
     height: 9px;
     border-radius: 2px;
     background: currentColor;
-    animation: admiral-cue-scroll 2.4s cubic-bezier(0.4,0,0.2,1) 1.9s infinite;
+    animation: admiral-cue-scroll 2.4s cubic-bezier(0.4,0,0.2,1) var(--admiral-cue-settled) infinite;
 }
 .admiral-scroll-cue-chevron {
     position: absolute;

@@ -12,7 +12,7 @@ export function admiralPanelGradient(base: string): string {
 }
 
 // White tint is given in percentage points. All white glass shares the same
-// light direction and cool lower edge, including the denser inquiry control.
+// light direction and cool lower edge.
 function whiteGlass(tint: number): string {
     return `linear-gradient(145deg, rgb(255 255 255 / ${tint + 12}%), rgb(247 251 253 / ${tint}%) 50%, rgb(225 239 247 / ${tint - 6}%))`
 }
@@ -43,9 +43,16 @@ interface SurfaceProps {
 const navbar = '[data-framer-name="Navbar"]'
 const materialBar = navbar + ':has([data-admiral-nav-surface])'
 const glassBar = navbar + ':has([data-admiral-nav-surface="glass"])'
-const landed = ':root:has([data-admiral-homepage]:is([data-homepage-stage="handoff"],[data-homepage-stage="orbit"]))'
+// Framer can mount hidden breakpoint copies. Follow the hero that owns the
+// camera and use its actual panel reveal, including direct entry or Skip.
+const activeHero = '[data-admiral-homepage][data-homepage-nav-active="true"]'
+const journey = `:root:has(${activeHero})`
+const landing = `:root:has(${activeHero}[data-homepage-stage="orbitApproach"]:not([data-orbit-arriving]))`
+const parkedStages = ':is([data-homepage-stage="handoff"],[data-homepage-stage="orbit"])'
+const landed = `:is(:root:has(${activeHero}:is([data-orbit-arriving],${parkedStages})), :root:not(:has([data-homepage-nav-active])):has([data-admiral-homepage]${parkedStages}))`
+const header = '[data-framer-name="Header || Appear"]'
+const navHost = header + ' > nav'
 const blueBar = `:is(${navbar}:has([data-admiral-nav-surface="blue"]), ${landed} ${glassBar})`
-const inquiry = materialBar + ' .admiral-frosted-button[data-appearance="blue"]'
 const handover = '[data-framer-name="Handover date glass"]'
 
 const surfaceCSS = `
@@ -58,6 +65,14 @@ const surfaceCSS = `
     --admiral-glass-shadow: ${admiralPalette.lightGlassShadow};
     --admiral-glass-inset: ${admiralPalette.lightGlassInset};
     --admiral-glass-divider: ${admiralPalette.lightGlassDivider};
+}
+/* Framer animates the fixed outer wrapper on page entry. The inner nav
+   fades independently so the authored entrance and position stay intact. */
+${journey} ${navHost} { transition: opacity .4s ease, visibility 0s; }
+${landing} ${header} { pointer-events: none !important; }
+${landing} ${navHost} {
+    opacity: 0 !important; visibility: hidden; interactivity: inert;
+    transition: opacity .32s ease, visibility 0s linear .32s;
 }
 ${materialBar}, ${handover} {
     --border-color: var(--admiral-glass-rim) !important;
@@ -82,45 +97,24 @@ ${handover} .framer-text {
     opacity: 0; transition: opacity .42s ease-in-out;
 }
 [data-admiral-nav-surface="blue"]::after, ${landed} [data-admiral-nav-surface="glass"]::after { opacity: 1; }
+${landed} [data-admiral-nav-surface="glass"]::after { transition: none; }
 ${blueBar} [data-framer-name="Logo"] { filter: brightness(0) invert(1); }
 ${blueBar} [data-framer-name="Link"] .framer-text,
 ${blueBar} [data-framer-name="Links"] .framer-text,
 ${blueBar} [data-desktop-tour-menu-button] button { color: #fff !important; --framer-text-color: #fff; }
 ${blueBar} [data-framer-name="Mobile menu toggle"] { background: rgba(255,255,255,.12) !important; }
 
-${inquiry} {
-    --inquiry-glass: ${whiteGlass(70)};
-    color: ${admiralPalette.accent}; border-color: var(--admiral-glass-rim);
-    background: var(--inquiry-glass); box-shadow: var(--admiral-glass-shadow);
-    -webkit-backdrop-filter: var(--admiral-glass-blur); backdrop-filter: var(--admiral-glass-blur);
-}
-@media (hover: hover) {
-    ${inquiry}:not(:disabled):not([aria-disabled="true"]):hover {
-        --inquiry-glass: ${whiteGlass(81)};
-        color: ${admiralPalette.accent}; background: var(--inquiry-glass); border-color: rgb(255 255 255 / 92%);
-        box-shadow: inset 0 1px 0 white, 0 4px 12px -3px rgb(17 47 63 / 35%);
-    }
-}
-${inquiry}:not(:disabled):not([aria-disabled="true"]):active { --inquiry-glass: ${whiteGlass(62)}; background: var(--inquiry-glass); }
-${inquiry}:focus-visible { outline: 2px solid ${admiralPalette.accent}; outline-offset: 3px; }
 ${blueBar} .admiral-frosted-button[data-appearance="blue"]:focus-visible { outline-color: white; }
-@media (prefers-reduced-motion: reduce) { [data-admiral-nav-surface]::after { transition: none; } }
-@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
-    ${inquiry}, ${inquiry}:not(:disabled):not([aria-disabled="true"]):is(:hover,:active) { background: var(--admiral-glass-fallback); }
+@media (prefers-reduced-motion: reduce) {
+    [data-admiral-nav-surface]::after, ${journey} ${navHost}, ${landing} ${navHost} { transition: none; }
 }
 @media (prefers-reduced-transparency: reduce) {
     [data-admiral-nav-surface="glass"] { background: ${admiralPalette.lightGlassFallback}; }
     ${handover} { background: var(--admiral-glass-fallback) !important; }
     ${glassBar}, ${handover} { -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
-    ${inquiry}, ${inquiry}:not(:disabled):not([aria-disabled="true"]):is(:hover,:active) {
-        background: var(--admiral-glass-fallback); -webkit-backdrop-filter: none; backdrop-filter: none;
-    }
 }
 @media (forced-colors: active) {
     [data-admiral-nav-surface]::after { display: none; }
-    ${inquiry}, ${inquiry}:not(:disabled):not([aria-disabled="true"]):is(:hover,:active) {
-        color: ButtonText; background: ButtonFace; border-color: ButtonText; box-shadow: none;
-    }
 }
 `
 
