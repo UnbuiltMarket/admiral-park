@@ -674,6 +674,7 @@ interface AdmiralHomepageTrialProps {
     phoneImageTop?: number
     snapDuration?: number
     frameBlend?: number
+    checkpointFadeSeconds?: number
     orbitStories?: boolean
     storyIn?: number
     storyOut?: number
@@ -7361,6 +7362,7 @@ export default function AdmiralHomepageStudio(
         dragReleaseDuration = .35,
         snapDuration = 1.2,
         frameBlend = 0,
+        checkpointFadeSeconds = 0,
         phoneFraming = true,
         phoneImageWidth = 100,
         phoneImageTop = 80,
@@ -8752,6 +8754,7 @@ export default function AdmiralHomepageStudio(
                   allowsPageScroll: () => studioEnabled.current && !fullscreen.geometryRef.current,
                   snapDuration,
                   frameBlend: frameBlend / 100,
+                  checkpointFadeSeconds,
                   focalX: focalX / 100,
                   focalY: focalY / 100,
                   renderBounds: () => fullscreen.geometryRef.current,
@@ -9823,6 +9826,7 @@ export default function AdmiralHomepageStudio(
         editorPreviewFrame,
         snapDuration,
         frameBlend,
+        checkpointFadeSeconds,
         focalX,
         focalY,
         showDiagnostics,
@@ -11267,7 +11271,7 @@ addPropertyControls(AdmiralHomepageStudio, {
         maxCount: 8,
         defaultValue: [],
         hidden: (p) => p.checkpointCount !== undefined && p.checkpointCount !== 8,
-        description: "Optional sharp images for the 8 parked cameras. Slots 1–8 match frames 0, 15, 30, 45, 60, 75, 90 and 105. With GitHub assets the empty list uses the eight supplied sharp checkpoints. Inside a custom list, an empty slot uses the movement frame. Downloaded only when parked; use the same camera, crop and aspect ratio.",
+        description: "Optional sharp images for the 8 parked cameras. Slots 1–8 match frames 0, 15, 30, 45, 60, 75, 90 and 105. With GitHub assets the empty list uses the eight supplied sharp checkpoints. An empty custom slot uses the movement frame. The destination image warms during travel and appears on arrival. Match the camera, crop and aspect ratio.",
     },
     orbitStartFrame: {
         type: ControlType.Number,
@@ -11468,6 +11472,16 @@ addPropertyControls(AdmiralHomepageStudio, {
         unit: "%",
         description:
             "Crossfade neighbouring orbit frames. 0% keeps frames crisp; 100% blends throughout each frame interval. Strong blending can produce double edges.",
+    },
+    checkpointFadeSeconds: {
+        type: ControlType.Number,
+        title: "Checkpoint fade",
+        defaultValue: 0,
+        min: 0,
+        max: 0.3,
+        step: 0.01,
+        unit: "s",
+        description: "How long the sharp image blends in when the orbit parks. At 0 s it appears on the first available paint. Try 0.05 s for a short blend.",
     },
     orbitStories: {
         type: ControlType.Boolean,
@@ -14268,6 +14282,7 @@ interface OrbitOptions {
     startFrame?: number
     snapDuration?: number
     frameBlend?: number
+    checkpointFadeSeconds?: number
     focalX?: number
     focalY?: number
     /** Logical CSS dimensions before a surrounding scene transform. */
@@ -14441,6 +14456,7 @@ function createOrbitPlayer(options: OrbitOptions) {
     const dragReleaseDuration = orbitClamp(options.dragReleaseDuration ?? .35, .1, 2)
     const snapDuration = orbitClamp(options.snapDuration ?? 1.2, 0.15, 10)
     const frameBlend = orbitClamp(options.frameBlend ?? 0, 0, 1)
+    const checkpointFadeMs = 1000 * orbitClamp(options.checkpointFadeSeconds ?? 0, 0, 0.3)
     const focalX = orbitClamp(options.focalX ?? 0.5, 0, 1),
         focalY = orbitClamp(options.focalY ?? 0.5, 0, 1)
     const context = canvas.getContext("2d", { alpha: false })
@@ -14482,10 +14498,12 @@ function createOrbitPlayer(options: OrbitOptions) {
     let prepareReject: ((reason: Error) => void) | null = null
     let inspection: OrbitBitmap | null = null,
         inspectionFrame = -1,
+        inspectionTarget = -1,
+        inspectionSource: Blob | undefined,
         inspectionGeneration = 0,
         qualityStartedAt = 0,
-        inspectionDecoding = false,
-        inspectionWanted = false
+        inspectionLoading = false,
+        inspectionDecoding = false
     let nativeDecodes = 0,
         decodeGeneration = 0
     let lastPaint = "",
@@ -15051,7 +15069,7 @@ function createOrbitPlayer(options: OrbitOptions) {
             )
                 void fetchFrame(index)
         }
-        if (inspectionWanted) void prepareInspection()
+        if (inspectionTarget >= 0) void prepareInspection()
         const allowed = prepared ? priority : preparationRequired
         for (const index of allowed) {
             if (
@@ -15109,7 +15127,8 @@ function createOrbitPlayer(options: OrbitOptions) {
         inspectionGeneration++
         inspectionRequest?.abort()
         inspectionRequest = null
-        inspectionWanted = false
+        inspectionTarget = -1
+        inspectionSource = undefined
         inspection?.close()
         inspection = null
         inspectionFrame = -1
@@ -15117,7 +15136,7 @@ function createOrbitPlayer(options: OrbitOptions) {
         lastPaint = ""
     }
 
-    /** One optional sharp request is made only after a camera parks. */
+    /** Cache compressed checkpoint files as their cameras are approached. */
     async function parkedInspectionBlob(frame: number, generation: number): Promise<Blob | undefined> {
         const checkpoint = checkpoints.indexOf(frame)
         const url = checkpoint >= 0 ? inspectionSources[checkpoint] : ""
@@ -15157,54 +15176,73 @@ function createOrbitPlayer(options: OrbitOptions) {
         }
     }
 
+    function queueInspection(position: number) {
+        const target = orbitModulo(Math.round(position), total)
+        if (target !== inspectionTarget) {
+            dropInspection()
+            inspectionTarget = target
+        }
+        void prepareInspection()
+    }
+
+    function revealInspection() {
+        if (!inspection || state !== "checkpoint" || inspectionTarget !== frameAt() ||
+            inspectionFrame === inspectionTarget) return
+        inspectionFrame = inspectionTarget
+        qualityStartedAt = performance.now()
+        lastPaint = ""
+        notify()
+        requestPaint()
+    }
+
     async function prepareInspection() {
-        const frame = frameAt(),
-            movementBlob = blobs.get(frame)
-        const parked =
-            state === "checkpoint" ||
-            state === "buffering" ||
-            (state === "paused" && !!pendingMove)
+        const frame = inspectionTarget
         if (
-            !movementBlob ||
-            destroyed ||
-            !active ||
-            !parked ||
-            inspectionWidth <= motionWidth ||
+            frame < 0 || !canRun() || state === "paused" || pendingMove ||
+            inspectionLoading || inspectionDecoding ||
             inspectionFrame === frame
-        ) {
-            inspectionWanted = false
+        ) return
+        if (inspection) {
+            revealInspection()
             return
         }
-        inspectionWanted = true
-        if (inspectionDecoding || decoding.size >= 2 || nativeDecodes >= 2)
+        const movementBlob = blobs.get(frame)
+        if (!movementBlob) return
+        const sharpUrl = inspectionSources[checkpoints.indexOf(frame)]
+        const separateSource = !!sharpUrl && sharpUrl !== urls[frame]
+        if (!separateSource && inspectionWidth <= motionWidth) return
+        const generation = inspectionGeneration
+        const current = () => !destroyed && active && generation === inspectionGeneration
+        const blob = inspectionSource ?? inspectionBlobs.get(frame) ?? (separateSource ? undefined : movementBlob)
+        if (!blob) {
+            // Fetching a sharp asset consumes no motion decoder permit.
+            inspectionLoading = true
+            try {
+                const source = await parkedInspectionBlob(frame, generation)
+                if (current()) inspectionSource = source
+            } finally {
+                inspectionLoading = false
+                if (!destroyed) resourcesChanged()
+            }
             return
-        inspectionWanted = false
-        const generation = ++inspectionGeneration
-        // The reservation remains held while fetching, so two motion jobs
-        // cannot fill both native slots before this optional decode begins.
+        }
+        if (decoding.size >= 2 || nativeDecodes >= 2) return
+        // Travel starts after its motion frames are ready. On entry, the first
+        // motion frame is also ready before this optional decode gets a slot.
         inspectionDecoding = true
-        let usingSharpSource = false
-        const current = () => !destroyed && generation === inspectionGeneration &&
-            active && frameAt() === frame &&
-            (state === "checkpoint" || state === "buffering" || (state === "paused" && !!pendingMove))
         try {
-            const blob = await parkedInspectionBlob(frame, generation)
-            if (!blob || !current()) return
-            usingSharpSource = blob !== movementBlob
             const bitmap = await decodeBlob(blob, inspectionWidth, true)
             if (!current()) bitmap.close()
             else {
-                inspection?.close()
                 inspection = bitmap
-                inspectionFrame = frame
-                qualityStartedAt = performance.now()
-                lastPaint = ""
+                // A warmed bitmap belongs exclusively to its destination. The
+                // final movement frame may be rounded to its index before arrival.
+                revealInspection()
                 notify()
-                requestPaint()
             }
         } catch {
             if (current()) {
-                if (usingSharpSource) {
+                if (blob !== movementBlob) {
                     inspectionBlobs.delete(frame)
                     inspectionRefresh.add(frame)
                 }
@@ -15214,14 +15252,6 @@ function createOrbitPlayer(options: OrbitOptions) {
             }
         } finally {
             inspectionDecoding = false
-            if (
-                !destroyed &&
-                generation !== inspectionGeneration &&
-                active &&
-                state === "checkpoint" &&
-                inspectionFrame !== frameAt()
-            )
-                inspectionWanted = true
             if (!destroyed) resourcesChanged()
         }
     }
@@ -15271,7 +15301,7 @@ function createOrbitPlayer(options: OrbitOptions) {
         )
     }
 
-    function paint(now: number) {
+    function paint() {
         const frame = frameAt()
         let from = frame,
             to = frame,
@@ -15368,9 +15398,9 @@ function createOrbitPlayer(options: OrbitOptions) {
         }
         const mix =
             inspection && inspectionFrame === frame
-                ? reduced()
+                ? checkpointFadeMs === 0 || reduced()
                     ? 1
-                    : orbitClamp((now - qualityStartedAt) / 120, 0, 1)
+                    : orbitClamp((performance.now() - qualityStartedAt) / checkpointFadeMs, 0, 1)
                 : 0
         const logicalRatio = backing
             ? viewport
@@ -15461,10 +15491,10 @@ function createOrbitPlayer(options: OrbitOptions) {
         pendingMove = null
         pausedAt = 0
         state = "checkpoint"
+        queueInspection(target)
         setRestBuffer(target)
-        paint(performance.now())
+        paint()
         notify()
-        void prepareInspection()
     }
 
     function startSettle(target = nextCheckpoint(position, direction), from = position, durationSeconds?: number) {
@@ -15511,7 +15541,6 @@ function createOrbitPlayer(options: OrbitOptions) {
         const pending = pendingMove
         if (failedIndex(pending.indices) !== undefined) return
         pendingMove = null
-        dropInspection()
         pausedAt = 0
         if (reduced()) {
             arrive(pending.target)
@@ -15526,6 +15555,7 @@ function createOrbitPlayer(options: OrbitOptions) {
                 : pending.durationMs ?? Math.max(snapDuration * 1000, wheelIntent ? 240 : 0),
         }
         state = "settling"
+        queueInspection(pending.target)
         notify()
         requestPaint()
     }
@@ -15599,6 +15629,7 @@ function createOrbitPlayer(options: OrbitOptions) {
         intent.followThrough = false
         position = arc.target + direction * Math.min(travel - distance, Math.abs(target - arc.target))
         settling = { start: arc.target, target, time: now, duration: snapDuration * 1000 }
+        queueInspection(target)
         const wanted = windowIndices(target, bufferCheckpoints)
         setBuffer(wanted, indices, [...indices, ...nearestFirst(wanted, target)])
         if (!intent.continuous || now - intent.lastDriveAt > ORBIT_WHEEL_RELEASE_MS)
@@ -15644,12 +15675,14 @@ function createOrbitPlayer(options: OrbitOptions) {
                 arrive(motion.target)
             }
         }
-        paint(now)
+        paint()
         notify()
         const qualityActive =
             inspection &&
             inspectionFrame === frameAt() &&
-            now - qualityStartedAt < 120
+            checkpointFadeMs > 0 &&
+            !reduced() &&
+            now - qualityStartedAt < checkpointFadeMs
         if (settling || qualityActive) requestPaint()
     }
 
@@ -15850,6 +15883,7 @@ function createOrbitPlayer(options: OrbitOptions) {
                 visibilityChanged()
             if (pendingMove) tryStartPending()
             if (interruptedScrub && state !== "paused") resume()
+            void prepareInspection()
             requestPaint()
         }
         notify()
@@ -16240,6 +16274,7 @@ function createOrbitPlayer(options: OrbitOptions) {
             if (pausedAt) settling.time += performance.now() - pausedAt
             pausedAt = 0
             state = "settling"
+            queueInspection(settling.target)
             notify()
             requestPaint()
             return
@@ -16253,9 +16288,9 @@ function createOrbitPlayer(options: OrbitOptions) {
             Math.abs(current - entryFrame) < 0.0001
         ) {
             state = "checkpoint"
-            paint(performance.now())
+            queueInspection(position)
+            paint()
             notify()
-            if (!inspection) void prepareInspection()
             requestPaint()
         } else {
             state = "moving"
@@ -16407,9 +16442,9 @@ function createOrbitPlayer(options: OrbitOptions) {
             pausedAt = suspended ? suspendedAt : performance.now()
         // A custom entry frame is parked exactly; the eight selectable cameras stay fixed.
         if (target === undefined) setRestBuffer(position)
-        paint(performance.now())
+        paint()
         notify()
-        void prepareInspection()
+        if (target === undefined) queueInspection(position)
         if (!suspended && (!visible || document.hidden)) pauseInternal(true)
         else if (target !== undefined) resourcesChanged()
     }
@@ -16522,7 +16557,7 @@ function createOrbitPlayer(options: OrbitOptions) {
             ? new ResizeObserver(() => {
                   lastPaint = ""
                   if (active && (state === "paused" || suspended))
-                      paint(performance.now())
+                      paint()
                   else requestPaint()
               })
             : null
@@ -16542,7 +16577,7 @@ function createOrbitPlayer(options: OrbitOptions) {
     const resize = () => {
         lastPaint = ""
         if (active && (state === "paused" || suspended))
-            paint(performance.now())
+            paint()
         else requestPaint()
     }
     const reducedChanged = () => {
@@ -16595,7 +16630,7 @@ function createOrbitPlayer(options: OrbitOptions) {
         retry,
         snapshot,
         setSuspended,
-        redraw: () => paint(performance.now()),
+        redraw: paint,
         destroy() {
             if (destroyed) return
             destroyed = true
