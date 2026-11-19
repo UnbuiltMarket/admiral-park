@@ -493,14 +493,17 @@ const HOMEPAGE_HERO_VIDEO_END = "https://framerusercontent.com/images/n4ONve6JK1
 const HOMEPAGE_HERO_INFOGRAPHIC = "https://framerusercontent.com/images/vRuUWre5kfmD5Rif9y0jYbJQs.png"
 const HOMEPAGE_CONNECTION_VIDEO = "https://framerusercontent.com/assets/BfO7rinv7Ci9Naw3GW01EFAvHi0.mp4"
 const HOMEPAGE_CONNECTION_END = "https://framerusercontent.com/images/uYMWXjUcDBc351olR2N5bRso.avif"
+const HOMEPAGE_ORBIT_APPROACH_VIDEO = "https://framerusercontent.com/assets/x8FjP6g39gM7E6YQqfUUSUv5c.mp4"
+const HOMEPAGE_CHECKPOINT_ZERO = "https://framerusercontent.com/images/hgpRLE7Hi0Mt0Q9M3HFMumryopA.avif"
 const HOMEPAGE_CONNECTION_VERSION = "426c29f22325"
 const HOMEPAGE_ORBIT_V05 = "https://raw.githubusercontent.com/UnbuiltMarket/admiral-park/6be37e13fbb610cc41e3aa37fe9a6b28df828afb/assets/orbit-v05"
 function homepageOrbitV05Asset(folder: "movement" | "checkpoints" | "light" | "sold" | "masks", frame: number) {
     return HOMEPAGE_ORBIT_V05 + "/" + folder + "/" + String(frame).padStart(4,"0") + (folder === "masks" ? ".png" : ".avif")
 }
-const HOMEPAGE_V05_MOVEMENT = Array.from({length:120}, (_,frame)=>homepageOrbitV05Asset("movement",frame))
+const HOMEPAGE_ORBIT_MOVEMENT = Array.from({length:120}, (_,frame) =>
+    frame === 0 ? HOMEPAGE_CHECKPOINT_ZERO : homepageOrbitV05Asset("movement",frame))
 const HOMEPAGE_V05_MASKS = Array.from({length:8}, (_,view)=>homepageOrbitV05Asset("masks",view*15))
-const HOMEPAGE_V05_SHARP: readonly string[] = [homepageOrbitV05Asset("checkpoints",0)]
+const HOMEPAGE_ORBIT_SHARP: readonly string[] = [HOMEPAGE_CHECKPOINT_ZERO]
 const HOMEPAGE_ASSETS =
     "https://raw.githubusercontent.com/UnbuiltMarket/admiral-park/main/assets"
 const HOMEPAGE_EXTENDED_FADE_STYLES = "[data-admiral-fullscreen-fades] [data-orbitdata-divider] { transition: opacity var(--admiral-fade-panel,740ms) ease; }\n[data-admiral-fullscreen-fades] [data-orbit-filters] { transition: opacity var(--admiral-fade-panel,740ms) ease; }\n[data-admiral-fullscreen-fades] [data-orbit-studio] { transition: opacity var(--admiral-fade-shell,900ms) ease, visibility 0s linear var(--admiral-fade-shell,900ms); }\n[data-admiral-fullscreen-fades] [data-orbit-studio] [data-orbitdata-transition] { transition: opacity var(--admiral-fade-record,680ms) ease; }\n[data-admiral-fullscreen-fades] [data-orbit-fullscreen-details] .orbit-fullscreen-bar { transition: opacity var(--admiral-fade-panel,740ms) ease; }\n[data-admiral-fullscreen-fades] [data-orbit-fullscreen-details] [data-orbitdata-transition] { transition: opacity var(--admiral-fade-record,680ms) ease; }\n[data-admiral-fullscreen-fades] [data-apartment-details] { transition: opacity var(--admiral-fade-panel,740ms) ease, transform var(--admiral-fade-panel,740ms) ease, visibility 0s linear var(--admiral-fade-panel,740ms); }\n[data-admiral-fullscreen-fades] [data-apartment-details] .admiral-details-grid { transition: opacity var(--admiral-fade-panel,740ms) ease; }\n[data-admiral-fullscreen-fades] [data-apartment-details] .admiral-details-plan-image { transition: opacity var(--admiral-fade-plan,660ms) ease; }\n[data-admiral-fullscreen-fades] [data-apartment-details] .admiral-details-grid [data-orbitdata-transition] { transition: opacity var(--admiral-fade-record,680ms) ease; }\n[data-admiral-fullscreen-fades] [data-apartment-details] .admiral-details-summary { transition: opacity var(--admiral-fade-panel,740ms) ease; }\n[data-admiral-fullscreen-fades] [data-apartment-details] .admiral-details-plan { transition: opacity var(--admiral-fade-panel,740ms) ease; }\n[data-admiral-fullscreen-fades] [data-orbit-studio][data-active=\"true\"], [data-admiral-fullscreen-fades] [data-apartment-details][data-details-shell-visible=\"true\"] { transition-delay: 0s; }\n[data-admiral-fullscreen-fades] [data-orbit-studio] .orbit-studio-status[data-status=\"available\"] .orbit-studio-status-dot::after { animation-duration: var(--admiral-fade-pulse,2900ms); }\n@media (prefers-reduced-motion:reduce) { [data-admiral-fullscreen-fades] [data-orbitdata-divider], [data-admiral-fullscreen-fades] [data-orbit-filters], [data-admiral-fullscreen-fades] [data-orbit-studio], [data-admiral-fullscreen-fades] [data-orbit-studio] [data-orbitdata-transition], [data-admiral-fullscreen-fades] [data-orbit-fullscreen-details] .orbit-fullscreen-bar, [data-admiral-fullscreen-fades] [data-orbit-fullscreen-details] [data-orbitdata-transition], [data-admiral-fullscreen-fades] [data-apartment-details], [data-admiral-fullscreen-fades] [data-apartment-details] .admiral-details-grid, [data-admiral-fullscreen-fades] [data-apartment-details] .admiral-details-plan-image, [data-admiral-fullscreen-fades] [data-apartment-details] .admiral-details-grid [data-orbitdata-transition], [data-admiral-fullscreen-fades] [data-apartment-details] .admiral-details-summary, [data-admiral-fullscreen-fades] [data-apartment-details] .admiral-details-plan { transition:none !important; } [data-admiral-fullscreen-fades] [data-orbit-studio] .orbit-studio-status[data-status=\"available\"] .orbit-studio-status-dot::after { animation:none !important; } }"
@@ -512,6 +515,7 @@ type HomepageStage =
     | "approach"
     | "building"
     | "connection"
+    | "orbitApproach"
     | "handoff"
     | "orbit"
 interface OpeningLogoMotion {
@@ -7158,11 +7162,11 @@ export default function AdmiralHomepageStudio(
         [heroEndPoster, connectionUrls]
     )
     const orbitUrls = React.useMemo(() => useGitHubAssets
-        ? HOMEPAGE_V05_MOVEMENT : homepageUrls(orbitBaseUrl, HOMEPAGE_ORBIT_NAMES),
+        ? HOMEPAGE_ORBIT_MOVEMENT : homepageUrls(orbitBaseUrl, HOMEPAGE_ORBIT_NAMES),
         [useGitHubAssets, orbitBaseUrl])
     const checkpointInspectionUrls = React.useMemo(() => {
         if (checkpointCount !== 8) return []
-        const sources = useGitHubAssets && !sharpCheckpointUrls.length ? HOMEPAGE_V05_SHARP : sharpCheckpointUrls
+        const sources = useGitHubAssets && !sharpCheckpointUrls.length ? HOMEPAGE_ORBIT_SHARP : sharpCheckpointUrls
         return Array.from({length:8}, (_,index)=> typeof sources[index] === "string" ? sources[index].trim() : "")
     }, [useGitHubAssets, sharpCheckpointUrls, checkpointCount])
     const maskUrls = React.useMemo(() => useGitHubAssets
@@ -7291,7 +7295,7 @@ export default function AdmiralHomepageStudio(
         jsonDetails &&
             ((staticRenderer && editorView === "orbit") ||
                 (hostVisible &&
-                    ["building", "connection", "handoff", "orbit"].includes(
+                    ["building", "connection", "orbitApproach", "handoff", "orbit"].includes(
                         stage
                     )))
     )
@@ -8048,7 +8052,7 @@ export default function AdmiralHomepageStudio(
         let presentationProgress = previewStage === "orbit" || previewStage === "handoff" ? 1 : 0
         let mobileLayout: HomepageMobileLayout | null = null
         let hero: ReturnType<typeof createHeroSequence> | ReturnType<typeof createHomepageHeroVideo> | null = null
-        let activeSequence: "SEQ_01" | "SEQ_02" = "SEQ_01",
+        let activeSequence: "SEQ_01" | "SEQ_02" | "SEQ_03" = "SEQ_01",
             connectionWarmed = false
         let heroSnapshot: SequenceSnapshot = {
             state: previewStage === "building" ? "arrival" : "opening",
@@ -8562,7 +8566,7 @@ export default function AdmiralHomepageStudio(
             requestedOrbitFrame = frame
             const token = ++enterToken
             // Keep the decoded landing still on top until the orbit paints its first frame.
-            const holdLanding = connectionLanded()
+            const holdLanding = connectionLanded() || currentStage === "orbitApproach"
             if (!holdLanding) {
                 destroyHero()
                 releaseConnectionPreload()
@@ -8623,7 +8627,7 @@ export default function AdmiralHomepageStudio(
                 if (
                     !orbitPreparing &&
                     snapshot.direction > 0 &&
-                    snapshot.progress >= 0.55
+                    !connectionVideoUrl && snapshot.progress >= 0.55
                 ) {
                     orbitPreparing = true
                     void orbit.prepare().catch(() => {})
@@ -8682,6 +8686,45 @@ export default function AdmiralHomepageStudio(
                                 return
                             if (returned) mountHero(true)
                             else void activateOrbit()
+                        })
+                    }
+                },
+            })
+            hero.start()
+        }
+        function startOrbitApproach() {
+            if (!connectionLanded() || disposed || !orbit || !connectionVideo || !heroEndLayerRef.current) return
+            if (reducedMedia.matches) {
+                void activateOrbit(0)
+                return
+            }
+            destroyHero()
+            activeSequence = "SEQ_03"
+            root!.dataset.activeSequence = activeSequence
+            changePoster(HOMEPAGE_CONNECTION_END)
+            heroSnapshot = { ...heroSnapshot, state: "loading", progress: 0, frame: 0 }
+            changeStage("orbitApproach")
+            const generation = ++heroGeneration
+            // Prepare checkpoint zero and its neighbours while the last flight is playing.
+            void orbit.prepare(0).catch(() => {})
+            hero = createHomepageHeroVideo({
+                video: connectionVideo, poster: poster!, endLayer: heroEndLayerRef.current,
+                url: HOMEPAGE_ORBIT_APPROACH_VIDEO, endPoster: HOMEPAGE_CHECKPOINT_ZERO,
+                startAtEnd: false, lastFrame: 1, fadeExtension: () => fadeExtensionRef.current,
+                onUpdate(snapshot) {
+                    if (disposed || generation !== heroGeneration) return
+                    heroSnapshot = snapshot
+                    setHeroState(previous => previous === snapshot.state ? previous : snapshot.state)
+                    if (presentationProgress !== snapshot.progress) {
+                        presentationProgress = snapshot.progress
+                        applyPresentation()
+                    }
+                    publish()
+                    if (snapshot.state === "arrival" || snapshot.state === "reduced") {
+                        changePoster(HOMEPAGE_CHECKPOINT_ZERO)
+                        queueMicrotask(() => {
+                            if (!disposed && generation === heroGeneration && currentStage === "orbitApproach")
+                                void activateOrbit(0)
                         })
                     }
                 },
@@ -9016,11 +9059,12 @@ export default function AdmiralHomepageStudio(
         function advanceJourney() {
             if (videoOpening()) hero?.start()
             else if (currentStage === "building") explore()
-            else if (connectionLanded()) void activateOrbit()
+            else if (connectionLanded()) startOrbitApproach()
         }
         function videoPlaying() {
             return (!!heroVideoUrl && currentStage === "approach") ||
-                (!!connectionVideoUrl && currentStage === "connection" && !connectionLanded())
+                (!!connectionVideoUrl && currentStage === "connection" && !connectionLanded()) ||
+                currentStage === "orbitApproach"
         }
         function resetWheelIntent() {
             wheelIntent = 0
@@ -9255,8 +9299,8 @@ export default function AdmiralHomepageStudio(
             overview,
             closeOrbitGroup,
             skip: () => {
-                if (connectionLanded() || (activeSequence === "SEQ_02" && reducedMedia.matches))
-                    void activateOrbit()
+                if (connectionLanded()) startOrbitApproach()
+                else if (activeSequence === "SEQ_02" && reducedMedia.matches) void activateOrbit()
                 else hero?.skip()
             },
             resumeHero: () => {
@@ -9707,6 +9751,7 @@ export default function AdmiralHomepageStudio(
                 )}
                 {connectionVideoUrl && !staticRenderer && (
                     <video ref={connectionVideoRef} data-admiral-connection-video=""
+                        data-admiral-orbit-approach-video={stage === "orbitApproach" ? "" : undefined}
                         aria-hidden="true" muted playsInline preload="none"
                         style={{ ...posterStyle, opacity: 0 }} />
                 )}
@@ -10026,18 +10071,18 @@ export default function AdmiralHomepageStudio(
                                     : "Continue approach"}
                             </button>
                         )}
-                    {stage === "connection" && (
+                    {(stage === "connection" || stage === "orbitApproach") && (
                         <button
                             type="button"
                             style={homepageButton}
                             onClick={() => actions.current?.skip()}
                         >
-                            {connectionVideoUrl && (heroState === "arrival" || heroState === "reduced")
+                            {stage === "connection" && connectionVideoUrl && (heroState === "arrival" || heroState === "reduced")
                                 ? (detailsLanguage === "en" ? "Explore in 3D" : "Tovább a 3D nézethez")
                                 : "Skip connection"}
                         </button>
                     )}
-                    {stage === "connection" &&
+                    {(stage === "connection" || stage === "orbitApproach") &&
                         (heroState === "paused" || heroState === "error") && (
                             <button
                                 type="button"
@@ -10087,7 +10132,7 @@ export default function AdmiralHomepageStudio(
                             </button>
                         )}
                     {(stage === "building" ||
-                        stage === "connection" ||
+                        stage === "connection" || stage === "orbitApproach" ||
                         stage === "handoff" ||
                         (stage === "orbit" && !useStudio)) && (
                         <button
@@ -10205,12 +10250,12 @@ export default function AdmiralHomepageStudio(
             )}
             {!staticRenderer &&
                 !showControls &&
-                ["opening", "approach", "connection"].includes(stage) &&
+                ["opening", "approach", "connection", "orbitApproach"].includes(stage) &&
                 (heroState === "paused" || heroState === "error") && (
                     <div
                         data-homepage-controls=""
                         data-homepage-recovery={
-                            stage === "connection" ? "SEQ_02" : "SEQ_01"
+                            stage === "orbitApproach" ? "SEQ_03" : stage === "connection" ? "SEQ_02" : "SEQ_01"
                         }
                         data-orbit-ignore=""
                         role="group"
@@ -10230,7 +10275,7 @@ export default function AdmiralHomepageStudio(
                             style={homepageButton}
                             onClick={() => actions.current?.resumeHero()}
                         >
-                            {stage === "connection"
+                            {stage === "connection" || stage === "orbitApproach"
                                 ? heroState === "error"
                                     ? "Retry connection"
                                     : "Continue connection"
@@ -10252,7 +10297,7 @@ export default function AdmiralHomepageStudio(
                                 style={homepageButton}
                                 onClick={() => actions.current?.skip()}
                             >
-                                Skip approach
+                                {stage === "orbitApproach" ? "Skip connection" : "Skip approach"}
                             </button>
                         )}
                     </div>
@@ -14626,7 +14671,7 @@ function createOrbitPlayer(options: OrbitOptions) {
     async function parkedInspectionBlob(frame: number, generation: number): Promise<Blob | undefined> {
         const checkpoint = checkpoints.indexOf(frame)
         const url = checkpoint >= 0 ? inspectionSources[checkpoint] : ""
-        if (!url) return blobs.get(frame)
+        if (!url || url === urls[frame]) return blobs.get(frame)
         const cached = inspectionBlobs.get(frame)
         if (cached) return cached
         const request = new AbortController()

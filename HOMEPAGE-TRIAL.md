@@ -1,6 +1,6 @@
 # Admiral Park homepage motion trial
 
-The Framer `/homepage-draft-3` page uses [HERO_video_no_fullscreen.tsx](src/framer/homepage-draft-3/HERO_video_no_fullscreen.tsx). Its two sibling files in that folder provide the detail card and shared palette. The first two flights play MP4s served by Framer. The [homepage media](assets/videos/homepage) includes the shared still between flights and the supplied SEQ03 still that also matches the landing of SEQ02.
+The Framer `/homepage-draft-3` page uses [HERO_video_no_fullscreen.tsx](src/framer/homepage-draft-3/HERO_video_no_fullscreen.tsx). Its two sibling files in that folder provide the detail card and shared palette. Each downscroll starts one of the three [homepage MP4s](assets/videos/homepage), served by Framer. SEQ_01 and SEQ_02 fill the hero. SEQ_03 starts on the SEQ_02 landing, shrinks into the orbit window as it plays, and opens the picker at [checkpoint 0](assets/orbit-v06/checkpoints/0000.avif). The other orbit views use the existing V05 movement frames.
 
 ## Earlier homepage trial
 
