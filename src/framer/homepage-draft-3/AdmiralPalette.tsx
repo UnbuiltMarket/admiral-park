@@ -46,14 +46,15 @@ const glassBar = navbar + ':has([data-admiral-nav-surface="glass"])'
 // Framer can mount hidden breakpoint copies. Follow the hero that owns the
 // camera and use its actual panel reveal, including direct entry or Skip.
 const activeHero = '[data-admiral-homepage][data-homepage-nav-active="true"]'
+const aboveArticle = ':root:not(:has([data-admiral-reading-article]))'
 const journey = `:root:has(${activeHero})`
-const landing = `:root:has(${activeHero}[data-homepage-stage="orbitApproach"]:not([data-orbit-arriving]))`
+const landing = `${aboveArticle}:has(${activeHero}[data-homepage-stage="orbitApproach"]:not([data-orbit-arriving]))`
 const parkedStages = ':is([data-homepage-stage="handoff"],[data-homepage-stage="orbit"])'
-const landed = `:is(:root:has(${activeHero}:is([data-orbit-arriving],${parkedStages})), :root:not(:has([data-homepage-nav-active])):has([data-admiral-homepage]${parkedStages}))`
+const landed = `${aboveArticle}:is(:has(${activeHero}:is([data-orbit-arriving],${parkedStages})), :not(:has([data-homepage-nav-active])):has([data-admiral-homepage]${parkedStages}))`
 const header = '[data-framer-name="Header || Appear"]'
 const navHost = header + ' > nav'
 const blueBar = `:is(${navbar}:has([data-admiral-nav-surface="blue"]), ${landed} ${glassBar})`
-const tourOrList = ':root:has(:is([data-admiral-homepage], [data-admiral-apartment-list="shared"]))'
+const tourOrList = `${aboveArticle}:has(:is([data-admiral-homepage], [data-admiral-apartment-list="shared"]))`
 const lightInquiry = `:is(${tourOrList} ${materialBar}, ${blueBar}) .admiral-frosted-button[data-appearance="blue"]`
 const handover = '[data-framer-name="Handover date glass"]'
 

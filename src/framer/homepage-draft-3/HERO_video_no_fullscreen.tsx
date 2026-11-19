@@ -496,7 +496,7 @@ const HOMEPAGE_HERO_INFOGRAPHIC = "https://framerusercontent.com/images/vRuUWre5
 const HOMEPAGE_CONNECTION_VIDEO = "https://framerusercontent.com/assets/BfO7rinv7Ci9Naw3GW01EFAvHi0.mp4"
 const HOMEPAGE_CONNECTION_END = "https://framerusercontent.com/images/uYMWXjUcDBc351olR2N5bRso.avif"
 const HOMEPAGE_ORBIT_APPROACH_VIDEO = "https://framerusercontent.com/assets/N02rcgZxOCN9LfVxWZtmoNOx2ws.mp4"
-const HOMEPAGE_CHECKPOINT_ZERO = "https://framerusercontent.com/images/hgpRLE7Hi0Mt0Q9M3HFMumryopA.avif"
+const ORBIT_CHECKPOINT_ASSETS = "https://raw.githubusercontent.com/UnbuiltMarket/admiral-park/bfb2349cf8af7e6ae3f1c665ca67c984b82cf024/assets"
 const HOMEPAGE_CONNECTION_VERSION = "426c29f22325"
 const HOMEPAGE_ORBIT_V05 = "https://raw.githubusercontent.com/UnbuiltMarket/admiral-park/6be37e13fbb610cc41e3aa37fe9a6b28df828afb/assets/orbit-v05"
 const ORBIT_RENDER_ASSETS = "https://raw.githubusercontent.com/UnbuiltMarket/admiral-park/a3ff5a346f501a0d2af5b4466c2d2f95b30a3fb0/assets"
@@ -7358,7 +7358,6 @@ export default function AdmiralHomepageStudio(
     const heroStartPoster = useWebp ? ORBIT_WEBP_BASE + "/stills/seq01-start.webp" : heroVideoUrl ? HOMEPAGE_HERO_VIDEO_START : heroUrls[0]
     const heroEndPoster = useWebp ? ORBIT_WEBP_BASE + "/stills/seq01-end.webp" : heroVideoUrl ? HOMEPAGE_HERO_VIDEO_END : heroUrls[heroUrls.length - 1]
     const connectionEndPoster = useWebp ? ORBIT_WEBP_BASE + "/stills/seq02-end.webp" : HOMEPAGE_CONNECTION_END
-    const checkpointZeroPoster = useWebp ? ORBIT_WEBP_BASE + "/checkpoints/0000.webp" : HOMEPAGE_CHECKPOINT_ZERO
     // Use the actual SEQ_01 endpoint for the existing SEQ_02 dissolve.
     const connectionPlaybackUrls = React.useMemo(
         () => [heroEndPoster, ...connectionUrls],
@@ -7368,11 +7367,20 @@ export default function AdmiralHomepageStudio(
         if (!useGitHubAssets) return homepageUrls(orbitBaseUrl, HOMEPAGE_ORBIT_NAMES)
         return useWebp ? HOMEPAGE_ORBIT_MOVEMENT.map((_, frame) => orbitWebpFrame("movement", frame)) : HOMEPAGE_ORBIT_MOVEMENT
     }, [useGitHubAssets, useWebp, orbitBaseUrl])
+    const defaultCheckpointUrls = React.useMemo(() => {
+        const folder = useWebp ? "orbit-compat-v06" : "orbit-v06"
+        const extension = useWebp ? "webp" : "avif"
+        return Array.from({ length: 8 }, (_, camera) => {
+            const frame = String(camera * 15).padStart(4, "0")
+            return ORBIT_CHECKPOINT_ASSETS + "/" + folder + "/checkpoints/" + frame + "." + extension
+        })
+    }, [useWebp])
+    const checkpointZeroPoster = defaultCheckpointUrls[0]
     const checkpointInspectionUrls = React.useMemo(() => {
         if (checkpointCount !== 8) return []
-        const sources = useGitHubAssets && !sharpCheckpointUrls.length ? [checkpointZeroPoster] : sharpCheckpointUrls
+        const sources = useGitHubAssets && !sharpCheckpointUrls.length ? defaultCheckpointUrls : sharpCheckpointUrls
         return Array.from({length:8}, (_,index)=> typeof sources[index] === "string" ? sources[index].trim() : "")
-    }, [useGitHubAssets, checkpointZeroPoster, sharpCheckpointUrls, checkpointCount])
+    }, [useGitHubAssets, defaultCheckpointUrls, sharpCheckpointUrls, checkpointCount])
     const maskUrls = React.useMemo(() => useGitHubAssets
         ? HOMEPAGE_V05_MASKS : maskBaseUrl.trim() ? homepageUrls(maskBaseUrl, HOMEPAGE_MASK_NAMES) : [],
         [useGitHubAssets, maskBaseUrl])
@@ -7419,7 +7427,8 @@ export default function AdmiralHomepageStudio(
                   ? orbitPoster
                   : heroStartPoster
     const [stage, setStage] = React.useState<HomepageStage>(previewStage)
-    const [posterUrl, setPosterUrl] = React.useState(initialPoster)
+    const [requestedPoster, setPosterUrl] = React.useState<string | null>(null)
+    const posterUrl = requestedPoster ?? initialPoster
     const [homepageBooted, setHomepageBooted] = React.useState(false)
     const [directOrbitEntry, setDirectOrbitEntry] = React.useState<{
         poster: string
@@ -10051,7 +10060,7 @@ export default function AdmiralHomepageStudio(
                 <div data-flight-media="">
                 <img
                     ref={posterRef}
-                    src={directOrbitEntry ? undefined : posterUrl}
+                    src={directOrbitEntry || (startView === "orbit" && waitingForFormat) ? undefined : posterUrl}
                     alt={alt}
                     loading="eager"
                     decoding="async"
@@ -10114,7 +10123,7 @@ export default function AdmiralHomepageStudio(
                     <img
                         key={directOrbitEntry.poster}
                         data-admiral-direct-orbit-poster=""
-                        src={directOrbitEntry.poster}
+                        src={directOrbitEntry.framed ? directOrbitEntry.poster : undefined}
                         alt=""
                         loading="eager"
                         decoding="async"
@@ -11115,7 +11124,7 @@ addPropertyControls(AdmiralHomepageStudio, {
         maxCount: 8,
         defaultValue: [],
         hidden: (p) => p.checkpointCount !== undefined && p.checkpointCount !== 8,
-        description: "Optional sharp images for the 8 parked cameras. Slots 1–8 match frames 0, 15, 30, 45, 60, 75, 90 and 105. With GitHub assets the empty list uses the supplied sharp checkpoints, currently frame 0. Inside a custom list, an empty slot uses the movement frame. Downloaded only when parked; use the same camera, crop and aspect ratio.",
+        description: "Optional sharp images for the 8 parked cameras. Slots 1–8 match frames 0, 15, 30, 45, 60, 75, 90 and 105. With GitHub assets the empty list uses the eight supplied sharp checkpoints. Inside a custom list, an empty slot uses the movement frame. Downloaded only when parked; use the same camera, crop and aspect ratio.",
     },
     orbitStartFrame: {
         type: ControlType.Number,
