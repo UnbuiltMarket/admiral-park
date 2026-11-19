@@ -4744,6 +4744,29 @@ const orbitBlueStudioStyles = `
     --orbit-panel-rule: rgb(255 255 255 / 30%);
     --orbit-panel-sheen: linear-gradient(145deg, rgb(8 30 48 / 7%), rgb(8 30 48 / 18%));
 }
+[data-orbit-studio] {
+    --orbit-light-glass: ${admiralPalette.lightGlassFallback};
+    --orbit-light-glass-blur: none;
+}
+@supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+    [data-orbit-studio] {
+        --orbit-light-glass: ${admiralPalette.lightGlass};
+        --orbit-light-glass-blur: ${admiralPalette.lightGlassBlur};
+    }
+}
+@media (prefers-reduced-transparency: reduce) {
+    [data-orbit-studio] {
+        --orbit-light-glass: ${admiralPalette.lightGlassFallback};
+        --orbit-light-glass-blur: none;
+    }
+}
+[data-orbit-studio][data-active="false"] { --orbit-light-glass-blur: none; }
+[data-orbit-studio][data-layout="workspace"] :is([data-orbit-detail-bar], [data-orbit-plan-bar]),
+[data-orbit-studio][data-mobile="true"][data-orbit-glass-tone="paper"] .orbit-studio-mobile-panel {
+    background: var(--orbit-light-glass);
+    -webkit-backdrop-filter: var(--orbit-light-glass-blur);
+    backdrop-filter: var(--orbit-light-glass-blur);
+}
 [data-orbit-blue] [data-orbit-studio][data-layout="workspace"] [data-orbit-control-band] {
     background: transparent; box-shadow: none;
 }
@@ -4764,8 +4787,6 @@ const orbitBlueStudioStyles = `
     --workspace-ink: var(--studio-ink);
     --workspace-muted: var(--studio-muted);
     --workspace-rule: var(--studio-line);
-    --workspace-glass: var(--orbit-paper);
-    --workspace-control-fill: var(--orbit-paper);
     color: var(--studio-ink);
 }
 [data-orbit-blue] [data-orbit-studio][data-layout="workspace"] [data-orbit-list-filters] {
@@ -4817,7 +4838,7 @@ const orbitBlueStudioStyles = `
     color: var(--orbit-on-panel); background: var(--orbit-panel); border-color: var(--orbit-panel-rule);
 }
 [data-orbit-blue] [data-orbit-studio][data-mobile="true"][data-orbit-glass-tone="paper"] .orbit-studio-mobile-panel {
-    background: var(--orbit-paper); border-radius: 19px; padding-inline: clamp(6px,2cqw,12px);
+    border-radius: 19px; padding-inline: clamp(6px,2cqw,12px);
 }
 [data-orbit-blue] [data-orbit-studio][data-mobile="true"] :is(.orbit-studio-mobile-metrics dd,.orbit-studio-status-text) { color: var(--orbit-on-panel); }
 [data-orbit-blue] [data-orbit-studio][data-mobile="true"][data-orbit-glass-tone="paper"] .orbit-studio-mobile-summary { padding-block: 7px; }

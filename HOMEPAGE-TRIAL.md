@@ -2,6 +2,8 @@
 
 The Framer `/homepage-draft-3` page uses [HERO_video_no_fullscreen.tsx](src/framer/homepage-draft-3/HERO_video_no_fullscreen.tsx). Its two sibling files in that folder provide the detail card and shared palette. Each downscroll starts one of the three [homepage MP4s](assets/videos/homepage), served by Framer. SEQ_01 and SEQ_02 fill the hero. SEQ_03 starts on the SEQ_02 landing, shrinks into the orbit window as it plays, and opens the picker at [checkpoint 0](assets/orbit-v06/checkpoints/0000.avif). The other orbit views use the existing V05 movement frames.
 
+The white Header uses the same translucent glass as the orbit detail bar and floor-plan card. Its FilterBarSurface layer uses the Glass finish and switches to the filter blue when the hero enters `handoff` or `orbit`. The separate Filter Blue header variants use that blue throughout. Both blue states give the inquiry button a white fill and accent-blue text.
+
 ## Earlier homepage trial
 
 Paste the entire generated `src/framer/AdmiralHomepageTrial.tsx` into the existing Framer hero code file. Keeping that code file retains the existing component instance and the named `OpeningContent`, `BuildingContent`, and `ArrivalCTA` overrides. Those names are preserved; the file also exports `BalatonfuredContent`, `AranyhidContent`, and `OrbitView1` through `OrbitView8` for the native content journey. A new Code Component file is also supported, but native wrappers must then use overrides from that same new file.
