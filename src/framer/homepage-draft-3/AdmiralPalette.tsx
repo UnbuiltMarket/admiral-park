@@ -68,8 +68,9 @@ const surfaceCSS = `
     --admiral-glass-inset: ${admiralPalette.lightGlassInset};
     --admiral-glass-divider: ${admiralPalette.lightGlassDivider};
 }
-/* Framer animates the fixed outer wrapper on page entry. The inner nav
-   fades independently so the authored entrance and position stay intact. */
+/* Keep the homepage header at its authored viewport inset once the orbit
+   releases page scrolling. Framer animates the wrapper and we fade its inner nav. */
+:root:has([data-admiral-homepage]) ${header} { position: fixed !important; }
 ${journey} ${navHost} { transition: opacity .4s ease, visibility 0s; }
 ${landing} ${header} { pointer-events: none !important; }
 ${landing} ${navHost} {
