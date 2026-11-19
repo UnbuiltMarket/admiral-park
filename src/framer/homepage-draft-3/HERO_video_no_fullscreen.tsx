@@ -4929,7 +4929,6 @@ const orbitBlueStudioStyles = `
     --housing-radius: ${orbitWindowRadius}px;
     --housing-rule: ${admiralPalette.lightGlassDivider};
     border-radius: var(--housing-radius);
-    box-shadow: ${admiralPalette.lightGlassShadow};
     pointer-events: none;
 }
 [data-orbit-housing]::before, [data-orbit-housing]::after {
@@ -4939,7 +4938,7 @@ const orbitBlueStudioStyles = `
     background: var(--orbit-light-glass);
     -webkit-backdrop-filter: var(--orbit-light-glass-blur); backdrop-filter: var(--orbit-light-glass-blur);
 }
-[data-orbit-housing]::after { border: 1px solid ${admiralPalette.lightGlassRim}; z-index: 4; }
+[data-orbit-housing]::after { border: 1px solid ${admiralPalette.lightGlassRim}; box-shadow: ${admiralPalette.lightGlassShadow}; z-index: 1; }
 [data-orbit-studio][data-layout="workspace"] [data-orbit-housing] {
     /* Keep the existing camera width and use the former inter-card gaps inside the housing. */
     --housing-image: calc((100% - var(--workspace-rail) - var(--workspace-gap)) * 2 * var(--studio-orbit-scale) / (1 + var(--studio-orbit-scale)));
@@ -4952,11 +4951,28 @@ const orbitBlueStudioStyles = `
 [data-orbit-studio][data-layout="workspace"] [data-orbit-housing]::before {
     clip-path: polygon(var(--housing-image) 0, 100% 0, 100% 100%, 0 100%, 0 calc(100% - var(--housing-summary)), var(--housing-image) calc(100% - var(--housing-summary)));
 }
+@supports (mask-composite: exclude) {
+  [data-orbit-studio][data-layout="workspace"] [data-orbit-housing]::before {
+    /* Mask the glass with a rounded aperture. With no viewBox the SVG radius
+       stays in CSS pixels as the camera's aspect-preserving grid cell resizes. */
+    clip-path: none;
+    mask: linear-gradient(#000 0 0), url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'%3E%3Crect width='100%25' height='100%25' rx='${orbitWindowRadius}'/%3E%3C/svg%3E") 0 0 / var(--housing-image) calc(100% - var(--housing-summary)) no-repeat;
+    mask-composite: exclude;
+  }
+}
+[data-orbit-studio][data-layout="workspace"] [data-orbit-housing]::after {
+    /* Only the floor plan and detail bar need the shared outer rim here. */
+    clip-path: polygon(var(--housing-image) -20px, calc(100% + 20px) -20px, calc(100% + 20px) calc(100% + 20px), -20px calc(100% + 20px), -20px calc(100% - var(--housing-summary)), var(--housing-image) calc(100% - var(--housing-summary)));
+}
 [data-orbit-studio][data-layout="workspace"] [data-orbit-housing] .orbit-studio-scene { grid-area: 1 / 1; }
+[data-orbit-studio] [data-orbit-housing] .orbit-studio-scene { position: relative; z-index: 4; pointer-events: none; }
 [data-orbit-studio][data-layout="workspace"] [data-orbit-housing] .orbit-studio-image-slot { width: 100%; }
-[data-orbit-studio] [data-orbit-housing] [data-orbit-viewport] { border: 0; border-radius: var(--housing-radius); box-shadow: none; }
+[data-orbit-studio] [data-orbit-housing] [data-orbit-viewport] {
+    border: 0; border-radius: var(--housing-radius);
+    box-shadow: inset 0 0 0 1px var(--housing-rule), 0 3px 10px -3px rgb(17 47 63 / 26%);
+}
 [data-orbit-studio][data-layout="workspace"] [data-orbit-detail-bar] {
-    grid-area: 2 / 1; width: 100%; border: 0; border-top: 1px solid var(--housing-rule);
+    grid-area: 2 / 1; width: 100%; border: 0; border-inline-end: 1px solid var(--housing-rule);
     border-radius: 0 0 0 var(--housing-radius); box-shadow: none; background: ${admiralPalette.lightGlassInset};
     container: orbit-apartment-strip / inline-size;
     grid-template-columns: max-content minmax(0,1fr) max-content;
@@ -4980,7 +4996,7 @@ const orbitBlueStudioStyles = `
     [data-orbit-studio][data-layout="workspace"] [data-orbit-detail-bar] .orbit-studio-areas > div { padding-inline: clamp(4px,1cqw,8px); }
 }
 [data-orbit-studio][data-layout="workspace"] [data-orbit-plan-bar] {
-    grid-area: 1 / 2 / 3 / 3; border: 0; border-inline-start: 1px solid var(--housing-rule);
+    grid-area: 1 / 2 / 3 / 3; border: 0;
     border-radius: 0 var(--housing-radius) var(--housing-radius) 0; box-shadow: none; background: transparent;
 }
 [data-orbit-studio][data-mobile="true"][data-orbit-glass-tone="paper"] [data-orbit-housing] {
@@ -4988,9 +5004,10 @@ const orbitBlueStudioStyles = `
     grid-template-rows: auto minmax(0,1fr); overflow: visible;
 }
 [data-orbit-studio][data-mobile="true"] [data-orbit-housing]::before { grid-area: 2 / 1; border-radius: 0 0 var(--housing-radius) var(--housing-radius); }
+[data-orbit-studio][data-mobile="true"] [data-orbit-housing]::after { grid-area: 2 / 1; border-radius: 0 0 var(--housing-radius) var(--housing-radius); border-top: 0; }
 [data-orbit-studio][data-mobile="true"] [data-orbit-housing] .orbit-studio-image-slot { width: 100%; height: auto; margin: 0; }
 [data-orbit-studio][data-mobile="true"][data-orbit-glass-tone="paper"] [data-orbit-housing] .orbit-studio-mobile-panel {
-    position: relative; width: 100%; gap: 0; border: 0; border-top: 1px solid var(--housing-rule);
+    position: relative; width: 100%; gap: 0; border: 0;
     border-radius: 0 0 var(--housing-radius) var(--housing-radius); background: transparent; box-shadow: none;
     padding: 0; pointer-events: auto;
 }
@@ -5003,11 +5020,12 @@ const orbitBlueStudioStyles = `
         width: 100%; grid-template-rows: minmax(0,1fr);
     }
     [data-orbit-studio][data-mobile="true"] [data-orbit-housing]::before { grid-area: 1 / 2; border-radius: 0 var(--housing-radius) var(--housing-radius) 0; }
+    [data-orbit-studio][data-mobile="true"] [data-orbit-housing]::after { grid-area: 1 / 2; border: 1px solid ${admiralPalette.lightGlassRim}; border-inline-start: 0; border-radius: 0 var(--housing-radius) var(--housing-radius) 0; }
     [data-orbit-studio][data-mobile="true"] [data-orbit-housing] .orbit-studio-image-slot {
         height: 100%;
     }
     [data-orbit-studio][data-mobile="true"][data-orbit-glass-tone="paper"] [data-orbit-housing] .orbit-studio-mobile-panel {
-        border-top: 0; border-inline-start: 1px solid var(--housing-rule); border-radius: 0 var(--housing-radius) var(--housing-radius) 0;
+        border-radius: 0 var(--housing-radius) var(--housing-radius) 0;
     }
 }
 `
@@ -5481,6 +5499,20 @@ const orbitWorkspaceStyles = `
 }
 `
 
+function OrbitBedroomMetric({ apartment, hu, number }: {
+    apartment: OrbitApartmentRecord | null
+    hu: boolean
+    number: Intl.NumberFormat
+}) {
+    const count = apartment ? orbitFilterBedrooms(apartment) : null
+    return (
+        <div data-orbit-apartment-metric="bedrooms" data-orbit-field="bedrooms">
+            <dt>{hu ? "Hálószoba" : "Bedrooms"}</dt>
+            <dd>{count === null ? "—" : number.format(count)}</dd>
+        </div>
+    )
+}
+
 function OrbitApartmentStudio(
     props: OrbitApartmentStudioProps
 ): React.JSX.Element {
@@ -5798,6 +5830,7 @@ function OrbitApartmentStudio(
                         </dd>
                     </div>
                 ))}
+                <OrbitBedroomMetric apartment={apartment} hu={hu} number={number} />
             </dl>
         </div>
     )
@@ -6118,6 +6151,7 @@ function OrbitApartmentStudio(
                                                     </dd>
                                                 </div>
                                             ))}
+                                            <OrbitBedroomMetric apartment={apartment} hu={hu} number={number} />
                                         </dl>
 
                                         <div className="orbit-studio-mobile-actions">
@@ -7037,6 +7071,7 @@ function OrbitFullscreenDetails({
                                     <dd>{area(apartment.areaGarden)}</dd>
                                 </div>
                                 )}
+                                <OrbitBedroomMetric apartment={apartment} hu={hu} number={number} />
                             </dl>
                         </div>
                         <figure
