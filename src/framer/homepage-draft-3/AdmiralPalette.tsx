@@ -54,8 +54,7 @@ const landed = `${aboveArticle}:is(:has(${activeHero}:is([data-orbit-arriving],$
 const header = '[data-framer-name="Header || Appear"]'
 const navHost = header + ' > nav'
 const blueBar = `:is(${navbar}:has([data-admiral-nav-surface="blue"]), ${landed} ${glassBar})`
-const tourOrList = `${aboveArticle}:has(:is([data-admiral-homepage], [data-admiral-apartment-list="shared"]))`
-const lightInquiry = `:is(${tourOrList} ${materialBar}, ${blueBar}) .admiral-frosted-button[data-appearance="blue"]`
+const lightInquiry = `${blueBar} .admiral-frosted-button[data-appearance="blue"]`
 const handover = '[data-framer-name="Handover date glass"]'
 
 const surfaceCSS = `
@@ -107,8 +106,7 @@ ${blueBar} [data-framer-name="Links"] .framer-text,
 ${blueBar} [data-desktop-tour-menu-button] button { color: #fff !important; --framer-text-color: #fff; }
 ${blueBar} [data-framer-name="Mobile menu toggle"] { background: rgba(255,255,255,.12) !important; }
 
-/* The tour and the apartment list use the same light inquiry treatment.
-   The apartment list and hero each supply a page-level marker in Framer's HTML. */
+/* The blue navbar uses a white inquiry button. Glass navbars inherit the button’s blue appearance. */
 ${lightInquiry} {
     color: ${admiralPalette.accent};
     border-color: rgb(255 255 255 / 82%);
@@ -127,8 +125,7 @@ ${lightInquiry}:not(:disabled):not([aria-disabled="true"]):active {
     background: linear-gradient(155deg, #e4edf5, #f8fbfe);
     box-shadow: inset 0 1px 3px rgb(19 52 78 / 18%);
 }
-${lightInquiry}:focus-visible { outline: 2px solid ${admiralPalette.accent}; outline-offset: 2px; }
-${blueBar} .admiral-frosted-button[data-appearance="blue"]:focus-visible { outline-color: white; }
+${lightInquiry}:focus-visible { outline: 2px solid white; outline-offset: 2px; }
 @media (prefers-reduced-motion: reduce) {
     [data-admiral-nav-surface]::after, ${journey} ${navHost}, ${landing} ${navHost} { transition: none; }
 }

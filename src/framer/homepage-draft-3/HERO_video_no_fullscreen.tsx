@@ -625,7 +625,11 @@ const homepageChannels = new Map<HTMLElement, HomepageChannel>()
 const homepageSubscribers = new Set<() => void>()
 const notifyHomepage = () => homepageSubscribers.forEach((update) => update())
 const HOMEPAGE_EMPTY_CHECKPOINT_URLS: readonly string[] = []
+const defaultGardenTitle = "Otthon a lombok között"
+const defaultGardenBody = "Az Admiral Park kertjében 46 különböző fafaj kap helyet, így a kilátás évszakról évszakra változik."
 interface AdmiralHomepageTrialProps {
+    gardenTitle?: string
+    gardenBody?: string
     fadeExtension?: number
     useGitHubAssets?: boolean
     heroBaseUrl?: string
@@ -752,6 +756,27 @@ const homepageOrbitHash = "#orbit"
 // The fragment is available to the browser before Framer hydrates. Keep this
 // guard ahead of the server-rendered sequence poster and scope it to boot.
 const homepageOrbitEntryStyles = `
+[data-admiral-homepage] [data-seq3-garden] {
+    position: absolute; inset: auto 0 0; z-index: 3; box-sizing: border-box;
+    padding: clamp(64px, 13vh, 150px) clamp(22px, 6vw, 112px) max(clamp(56px, 8vh, 112px), env(safe-area-inset-bottom));
+    color: #fff; text-align: left; pointer-events: none;
+    background: linear-gradient(0deg,rgba(6,20,28,.82),rgba(6,20,28,.61) 44%,rgba(6,20,28,0));
+    opacity: 0; visibility: hidden; transform: translateY(-6px);
+    transition: opacity var(--admiral-fade-panel) ease, transform var(--admiral-fade-panel) ease, visibility 0s linear var(--admiral-fade-panel);
+}
+[data-admiral-homepage] [data-seq3-garden][data-visible="true"] {
+    opacity: 1; visibility: visible; transform: none; transition-delay: 0s;
+}
+[data-admiral-homepage] [data-seq3-garden] h2 {
+    margin: 0; max-width: 23ch; color: inherit; font: 400 clamp(34px, 4.35vw, 72px)/1.06 "Bodoni Moda", Georgia, serif;
+    letter-spacing: -.035em; text-wrap: balance;
+}
+[data-admiral-homepage] [data-seq3-garden] p {
+    margin: 12px 0 0; max-width: 55ch; color: inherit; font: 500 clamp(15px, 1.18vw, 20px)/1.5 Montserrat, Arial, sans-serif;
+}
+@media (prefers-reduced-motion: reduce) {
+    [data-admiral-homepage] [data-seq3-garden] { transition: none; transform: none; }
+}
 [data-admiral-homepage][data-homepage-booted="false"] > [data-admiral-orbit-anchor]:target ~ [data-admiral-sequence],
 [data-admiral-homepage][data-direct-orbit-entry="true"] > [data-admiral-sequence] { visibility: hidden; }
 /* Framer can render a hidden replica at another breakpoint. */
@@ -857,12 +882,19 @@ function homepageJourneyLink(event: MouseEvent): URL | null {
             current = new URL(location.href)
         const path = (url: URL) => url.pathname.replace(/\/+$/, "") || "/"
         const hash = destination.hash.toLowerCase()
-        return destination.origin === current.origin &&
-            path(destination) === path(current) &&
-            homepageJourneyQuery(destination) === homepageJourneyQuery(current) &&
-            (!hash || hash === "#top" || hash === homepageOrbitHash)
-            ? destination
-            : null
+        if (destination.origin !== current.origin || path(destination) !== path(current)) return null
+        if (hash && hash !== "#top" && hash !== homepageOrbitHash) return null
+        const currentQuery = homepageJourneyQuery(current)
+        const linkedQuery = homepageJourneyQuery(destination)
+        if (hash !== homepageOrbitHash && linkedQuery && linkedQuery !== currentQuery) return null
+
+        // The navbar uses clean URLs. Keep campaign and preview parameters
+        // when switching views, and take apartment/group selection from the link.
+        const supplied = new URLSearchParams(destination.search)
+        new URLSearchParams(currentQuery).forEach((value, key) => {
+            if (!supplied.has(key)) destination.searchParams.append(key, value)
+        })
+        return destination
     } catch {
         return null
     }
@@ -7217,6 +7249,8 @@ export default function AdmiralHomepageStudio(
 ): React.JSX.Element {
     const {
         useGitHubAssets = true,
+        gardenTitle = defaultGardenTitle,
+        gardenBody = defaultGardenBody,
         heroBaseUrl = "",
         connectionBaseUrl = "",
         orbitBaseUrl = "",
@@ -9883,6 +9917,9 @@ export default function AdmiralHomepageStudio(
         return visible?.find(item => item.id === previewApartmentId) || visible?.[0] || null
     }, [arriving, useGitHubAssets, useVisibleMaskSelection, orbitGroup, orbitApartmentTarget,
         apartmentData.dataset, filterMatches, previewApartmentId])
+    // The last SEQ_02 poster is also the held first frame of SEQ_03.
+    const gardenVisible = !!connectionVideoUrl && stage === "connection" && posterUrl === connectionEndPoster &&
+        (staticRenderer || heroState === "arrival" || heroState === "reduced")
     const orbitStatic = staticRenderer && editorView === "orbit"
     const preparationPercent = Math.round(
         (100 * orbitInfo.requiredReady) / Math.max(1, orbitInfo.requiredTotal)
@@ -10331,6 +10368,12 @@ export default function AdmiralHomepageStudio(
                     zIndex: 2,
                 }}
             />
+            {(gardenTitle || gardenBody) && (
+                <div data-seq3-garden="" data-visible={gardenVisible} aria-hidden={!gardenVisible}>
+                    {gardenTitle && <h2>{gardenTitle}</h2>}
+                    {gardenBody && <p>{gardenBody}</p>}
+                </div>
+            )}
             {studioSideControls && orbitInfo.state !== "error" && (
                 <div
                     data-homepage-controls=""
@@ -11085,6 +11128,14 @@ addPropertyControls(AdmiralHomepageStudio, {
         optionTitles: ["Full journey", "Orbit directly"],
         defaultValue: "opening",
     },
+    gardenTitle: {
+        type: ControlType.String, title: "SEQ03 · Heading", defaultValue: defaultGardenTitle,
+        description: "Garden headline on the held frame before the third flight.",
+    },
+    gardenBody: {
+        type: ControlType.String, title: "SEQ03 · Body", defaultValue: defaultGardenBody, displayTextArea: true,
+        description: "One sentence beneath the heading. Choose SEQ_02 end / SEQ_03 start in Editor view to preview it.",
+    },
     editorView: {
         type: ControlType.Enum,
         title: "Editor view",
@@ -11092,7 +11143,7 @@ addPropertyControls(AdmiralHomepageStudio, {
         optionTitles: [
             "SEQ_01 opening",
             "SEQ_01 arrival",
-            "SEQ_02 midway",
+            "SEQ_02 end / SEQ_03 start",
             "Orbit",
         ],
         defaultValue: "opening",
