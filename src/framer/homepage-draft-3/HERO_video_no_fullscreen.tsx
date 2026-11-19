@@ -8630,6 +8630,7 @@ export default function AdmiralHomepageStudio(
                       !pickerLatest.current.mobilePresentation && !fullscreen.geometryRef.current
                           ? studioInputBounds()
                           : null,
+                  allowsPageScroll: () => studioEnabled.current && !fullscreen.geometryRef.current,
                   snapDuration,
                   frameBlend: frameBlend / 100,
                   focalX: focalX / 100,
@@ -14105,6 +14106,8 @@ interface OrbitOptions {
     bufferCheckpoints?: number
     /** Image bounds for Desktop Studio wheel flow and direct mouse dragging. */
     continuousWheelBounds?: () => DOMRect | null
+    /** The embedded studio shares the document with the sections below it. */
+    allowsPageScroll?: () => boolean
     /** Desktop image-width drags needed for a complete orbit. */
     dragTurnWidths?: number
     /** Desktop drag speed cap, independent of wheel and phone checkpoint moves. */
@@ -16116,6 +16119,12 @@ function createOrbitPlayer(options: OrbitOptions) {
     }
 
     function onKeyDown(event: KeyboardEvent) {
+        if (options.allowsPageScroll?.()) {
+            // Keep page navigation available even when a direct orbit link focuses the viewer.
+            if (["PageDown", "PageUp", "Home", "End"].includes(event.key)) return
+            const outside = !(event.target instanceof Node && root.contains(event.target))
+            if (outside && ["ArrowDown", "ArrowUp", " ", "Spacebar"].includes(event.key)) return
+        }
         if (
             !event.ctrlKey &&
             !event.metaKey &&

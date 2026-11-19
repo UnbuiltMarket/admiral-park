@@ -53,6 +53,8 @@ const landed = `:is(:root:has(${activeHero}:is([data-orbit-arriving],${parkedSta
 const header = '[data-framer-name="Header || Appear"]'
 const navHost = header + ' > nav'
 const blueBar = `:is(${navbar}:has([data-admiral-nav-surface="blue"]), ${landed} ${glassBar})`
+const tourOrList = ':root:has(:is([data-admiral-homepage], [data-admiral-apartment-list="shared"]))'
+const lightInquiry = `:is(${tourOrList} ${materialBar}, ${blueBar}) .admiral-frosted-button[data-appearance="blue"]`
 const handover = '[data-framer-name="Handover date glass"]'
 
 const surfaceCSS = `
@@ -104,6 +106,27 @@ ${blueBar} [data-framer-name="Links"] .framer-text,
 ${blueBar} [data-desktop-tour-menu-button] button { color: #fff !important; --framer-text-color: #fff; }
 ${blueBar} [data-framer-name="Mobile menu toggle"] { background: rgba(255,255,255,.12) !important; }
 
+/* The tour and the apartment list use the same light inquiry treatment.
+   The apartment list and hero each supply a page-level marker in Framer's HTML. */
+${lightInquiry} {
+    color: ${admiralPalette.accent};
+    border-color: rgb(255 255 255 / 82%);
+    background: linear-gradient(155deg, #fff 0%, #f6faff 52%, #e0eaf3 100%);
+    box-shadow: inset 0 1px 1px #fff, inset 0 -1px 0 rgb(50 94 125 / 13%), 0 2px 7px rgb(19 52 78 / 19%);
+}
+@media (hover: hover) {
+    ${lightInquiry}:not(:disabled):not([aria-disabled="true"]):hover {
+        color: ${admiralPalette.accent};
+        border-color: #fff;
+        background: linear-gradient(155deg, #fff, #f9fcff 58%, #dbe9f4);
+        box-shadow: inset 0 1px 1px #fff, 0 0 0 2px rgb(96 150 188 / 22%), 0 4px 11px rgb(19 52 78 / 24%);
+    }
+}
+${lightInquiry}:not(:disabled):not([aria-disabled="true"]):active {
+    background: linear-gradient(155deg, #e4edf5, #f8fbfe);
+    box-shadow: inset 0 1px 3px rgb(19 52 78 / 18%);
+}
+${lightInquiry}:focus-visible { outline: 2px solid ${admiralPalette.accent}; outline-offset: 2px; }
 ${blueBar} .admiral-frosted-button[data-appearance="blue"]:focus-visible { outline-color: white; }
 @media (prefers-reduced-motion: reduce) {
     [data-admiral-nav-surface]::after, ${journey} ${navHost}, ${landing} ${navHost} { transition: none; }
@@ -115,6 +138,10 @@ ${blueBar} .admiral-frosted-button[data-appearance="blue"]:focus-visible { outli
 }
 @media (forced-colors: active) {
     [data-admiral-nav-surface]::after { display: none; }
+    ${lightInquiry}, ${lightInquiry}:not(:disabled):not([aria-disabled="true"]):is(:hover, :active) {
+        background: ButtonFace; color: ButtonText; border-color: ButtonText; box-shadow: none;
+    }
+    ${lightInquiry}:focus-visible { outline-color: Highlight; }
 }
 `
 
