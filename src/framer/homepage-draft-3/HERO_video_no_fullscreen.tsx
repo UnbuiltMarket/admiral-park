@@ -790,6 +790,11 @@ const homepageOrbitEntryStyles = `
     border: 1px solid rgba(255,255,255,.72); background: rgba(235,244,251,.9);
     color: #203d55; font: 650 clamp(14px, 1.1vw, 18px)/1.3 "Inter", Arial, sans-serif;
     text-align: center; text-wrap: balance;
+    animation: admiral-orbit-notice-fade 1.2s ease-in-out 4s both;
+}
+@keyframes admiral-orbit-notice-fade {
+    from { opacity: 1; }
+    to { opacity: 0; }
 }
 [data-seq3-garden-cue] {
     position: absolute; z-index: 4; left: 50%; bottom: max(42px, env(safe-area-inset-bottom));
@@ -967,23 +972,10 @@ const useHomepageLayoutEffect = typeof window === "undefined" ? React.useEffect 
 
 function OrbitEntryNotice({ mobile, failed }: { mobile: boolean; failed: boolean }) {
     const [elapsed, setElapsed] = React.useState(false)
-    React.useEffect(() => {
-        // Count from presentation, even when the initial orbit decode takes a busy frame.
-        let timer = 0
-        let frame = requestAnimationFrame(() => {
-            frame = requestAnimationFrame(() => {
-                timer = window.setTimeout(() => setElapsed(true), 2000)
-            })
-        })
-        return () => {
-            cancelAnimationFrame(frame)
-            window.clearTimeout(timer)
-        }
-    }, [])
     if (elapsed || failed) return null
     return (
         <div data-orbit-entry-notice="">
-            <span data-orbit-entry-label="" role="status" lang="hu">
+            <span data-orbit-entry-label="" role="status" lang="hu" onAnimationEnd={() => setElapsed(true)}>
                 {mobile ? "Húzza el az ujját a forgatáshoz" : "Görgessen a forgatáshoz"}
             </span>
         </div>
