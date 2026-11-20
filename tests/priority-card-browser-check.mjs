@@ -68,7 +68,7 @@ try{
  assert.equal(facts.changed,true);assert.equal(facts.sameAgain,false);assert.match(facts.price,/123/);assert.equal(facts.status,'Eladva');assert.match(facts.metrics,/88,25/);
  assert.equal(facts.hasSameImage,true);assert.equal(facts.hasSameMarker,true);assert.equal(facts.floorSelected,'true');assert.equal(facts.focusPreserved,true);assert.doesNotMatch(facts.image,/evil/);assert.doesNotMatch(facts.html,/EVIL/);
  const pdf=await page.evaluate(async()=>({result:await window.card.download('A001'),snapshot:window.pdfSnapshot}));
- assert.equal(pdf.result.status,'downloaded');assert.equal(pdf.snapshot.price,'123 M Ft');assert.equal(pdf.snapshot.status,'Eladva');assert.doesNotMatch(pdf.snapshot.imageUrl,/evil/);
+ assert.equal(pdf.result.status,'downloaded');assert.equal(pdf.snapshot.price.replace(/\s/g,''),'123000000');assert.equal(pdf.snapshot.priceUnit,'Ft');assert.equal(pdf.snapshot.status,'Eladva');assert.doesNotMatch(pdf.snapshot.imageUrl,/evil/);
  results.push('Live canonical facts refresh in place, preserve geometry/tab/focus, and reach the PDF snapshot');
  await page.evaluate(()=>window.card.dispose());
  await page.addScriptTag({content:listRuntime});

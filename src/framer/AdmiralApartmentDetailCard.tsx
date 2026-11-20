@@ -197,11 +197,12 @@ async function createAdmiralApartmentPdf(snapshot: any, options: any): Promise<a
         pdf.setCreationDate(snapshot.date);
         const swatch: any = canvas(1, 1), sc: any = swatch.getContext('2d');
         function color(value: any, fallback: any): any { sc.clearRect(0, 0, 1, 1); sc.fillStyle = fallback; sc.fillStyle = value || fallback; sc.fillRect(0, 0, 1, 1); return ([...sc.getImageData(0, 0, 1, 1).data] as any).slice(0, 3).map((v: any): any => v / 255); }
-        const colors: any = ({ top: color(snapshot.colors.top, '#fdfbfb'), bottom: color(snapshot.colors.bottom, '#e4e9ec'), ink: color(snapshot.colors.ink, '#242824'), muted: color(snapshot.colors.muted, '#687074'), watermarkTop: color(snapshot.colors.watermarkTop, '#f2f0f1'), watermarkBottom: color(snapshot.colors.watermarkBottom, '#d9dfe2'), accent: color(snapshot.colors.accent, '#a38c69'), frostedTint: color(snapshot.colors.frostedTint, FROSTED_BUTTON_DEFAULTS.tint), frostedText: color(snapshot.colors.frostedText, FROSTED_BUTTON_DEFAULTS.text), status: color(snapshot.colors.status, '#4f7959') } as any);
+        const colors: any = ({ top: color(snapshot.colors.top, '#fdfbfb'), bottom: color(snapshot.colors.bottom, '#e4e9ec'), ink: color(snapshot.colors.ink, '#242824'), muted: color(snapshot.colors.muted, '#687074'), watermarkTop: color(snapshot.colors.watermarkTop, '#f2f0f1'), watermarkBottom: color(snapshot.colors.watermarkBottom, '#d9dfe2'), frostedTint: color(snapshot.colors.frostedTint, FROSTED_BUTTON_DEFAULTS.tint), frostedText: color(snapshot.colors.frostedText, FROSTED_BUTTON_DEFAULTS.text), status: color(snapshot.colors.status, '#4f7959') } as any);
         const rgb: any = (value: any): any => lib.rgb(...value);
         const css: any = (value: any): any => 'rgb(' + value.map((v: any): any => Math.round(v * 255)).join(',') + ')';
         const mix: any = (a: any, b: any, t: any): any => a.map((v: any, i: any): any => v + (b[i] - v) * t);
-        const ink: any = rgb(colors.ink), muted: any = rgb(colors.muted);
+        const ink: any = rgb(colors.ink), muted: any = rgb(colors.muted), blue: any = rgb(color(snapshot.colors.controlBlue, '#225d82'));
+        const rx: any = 640, rw: any = 454, actionTop: any = 580, actionHeight: any = 48;
         function text(value: any, x: any, top: any, size: any = 10, font: any = regular, tone: any = ink): any {
             const str: any = String(value ?? '').replace(/\u00a0|\u202f/g, ' ');
             // Unknown characters use an explicit replacement glyph; never drop ő/ű.
@@ -231,8 +232,9 @@ async function createAdmiralApartmentPdf(snapshot: any, options: any): Promise<a
         }
         // Only the soft gradient and watermark are rasterised; text and logo stay vectors.
         const background: any = canvas(W, H), bg: any = background.getContext('2d'), gradient: any = bg.createLinearGradient(0, 0, 0, H);
-        gradient.addColorStop(0, css(colors.top));
-        gradient.addColorStop(1, css(colors.bottom));
+        const paperTop: any = mix(colors.top, ([1, 1, 1] as any), .12), paperBottom: any = mix(colors.bottom, ([1, 1, 1] as any), .55);
+        gradient.addColorStop(0, css(paperTop));
+        gradient.addColorStop(1, css(paperBottom));
         bg.fillStyle = gradient;
         bg.fillRect(0, 0, W, H);
         const monogram: any = await image(monogramBytes, 'image/png'), motif: any = canvas(W, H), mc: any = motif.getContext('2d');
@@ -244,17 +246,36 @@ async function createAdmiralApartmentPdf(snapshot: any, options: any): Promise<a
         mc.globalCompositeOperation = 'destination-in';
         const scale: any = Math.min(W * .67 / monogram.naturalWidth, H / monogram.naturalHeight), mw: any = monogram.naturalWidth * scale, mh: any = monogram.naturalHeight * scale;
         mc.drawImage(monogram, W - W * .67 + (W * .67 - mw) / 2, (H - mh) / 2, mw, mh);
-        bg.globalAlpha = .6;
+        bg.globalAlpha = .24;
         bg.drawImage(motif, 0, 0);
         bg.globalAlpha = 1;
+        function glassBand(top: any, height: any, tint: any, strength: any): any {
+            const shade: any = bg.createLinearGradient(rx, top, rx + rw, top + height);
+            shade.addColorStop(0, css(mix(tint, ([1, 1, 1] as any), Math.min(1, strength + .12))));
+            shade.addColorStop(1, css(mix(tint, ([1, 1, 1] as any), strength)));
+            bg.save();
+            bg.beginPath();
+            bg.roundRect(rx + .5, top + .5, rw - 1, height - 1, height / 2);
+            bg.shadowColor = 'rgba(29,63,88,.13)';
+            bg.shadowBlur = 6;
+            bg.shadowOffsetY = 2;
+            bg.fillStyle = shade;
+            bg.fill();
+            bg.shadowColor = 'transparent';
+            bg.strokeStyle = css(mix(tint, ([1, 1, 1] as any), strength - .1));
+            bg.lineWidth = .8;
+            bg.stroke();
+            bg.restore();
+        }
+        glassBand(526, 44, colors.bottom, .73);
+        glassBand(actionTop, actionHeight, colors.frostedTint, .75);
         const backgroundImage: any = await pdf.embedJpg(await jpeg(background, .92));
         page.drawImage(backgroundImage, ({ x: 0, y: 0, width: W, height: H } as any));
-        const rx: any = 638, rw: any = 454;
         // Logo uses the same SVG paths as the card's CSS mask.
         const logoDocument: any = new DOMParser().parseFromString(new TextDecoder().decode(logoBytes), 'image/svg+xml');
         if (logoDocument.querySelector('parsererror'))
             throw new Error('Invalid brand SVG');
-        const vb: any = (logoDocument.documentElement.getAttribute('viewBox') || '0 0 1232 524').trim().split(/[\s,]+/).map(Number), logoW: any = 188, logoScale: any = logoW / vb[2], logoX: any = rx + (rw - logoW) / 2, logoY: any = 16;
+        const vb: any = (logoDocument.documentElement.getAttribute('viewBox') || '0 0 1232 524').trim().split(/[\s,]+/).map(Number), logoW: any = 174, logoScale: any = logoW / vb[2], logoX: any = rx + (rw - logoW) / 2, logoY: any = 30;
         const paths: any = ([...logoDocument.querySelectorAll('path')] as any);
         if (paths.length && !logoDocument.querySelector('[transform]')) {
             for (const path of paths)
@@ -271,14 +292,28 @@ async function createAdmiralApartmentPdf(snapshot: any, options: any): Promise<a
                 throw new Error('Logo encoding failed');
             page.drawImage(await pdf.embedPng(await png.arrayBuffer()), ({ x: logoX, y: H - logoY - logoW * vb[3] / vb[2], width: logoW, height: logoW * vb[3] / vb[2] } as any));
         }
-        const metrics: any = snapshot.metrics, metricsX: any = rx, metricsW: any = rw;
-        metrics.forEach((metric: any, i: any): any => { const cx: any = metricsX + metricsW * (i + .5) / metrics.length; centered(metric.label, cx, 108, 11, regular, muted); centered(metric.value, cx, 126, fit(metric.value, metricsW / metrics.length - 9, 23, semibold), semibold); });
-        line(rx, 160, rw);
-        text(snapshot.documentLabel, 28, 27, 10, regular);
-        line(28, 45, snapshot.documentLabel === 'Alaprajz' ? 42 : 44, .9);
-        right(snapshot.meta, 607, 28, fit(snapshot.meta, 450, 9), regular, muted);
+        function valueWithUnit(value: any, unit: any, cx: any, top: any, width: any, size: any, font: any, tone: any): any {
+            const gap: any = unit ? 3 : 0, unitSize: any = unit ? 10 : 0, uw: any = unit ? regular.widthOfTextAtSize(unit, unitSize) : 0;
+            const pointSize: any = fit(value, width - uw - gap, size, font), vw: any = font.widthOfTextAtSize(value, pointSize);
+            const x: any = cx - (vw + uw + gap) / 2;
+            text(value, x, top, pointSize, font, tone);
+            if (unit)
+                text(unit, x + vw + gap, top + pointSize - unitSize, unitSize, regular, muted);
+        }
+        const metrics: any = snapshot.metrics, cellWidth: any = rw / metrics.length;
+        metrics.forEach((metric: any, i: any): any => {
+            const cx: any = rx + cellWidth * (i + .5);
+            centered(metric.label, cx, 128, 12, regular, muted);
+            valueWithUnit(metric.value, metric.unit, cx, 146, cellWidth - 9, 26, semibold, i === 0 ? blue : ink);
+        });
+        line(rx, 193, rw);
+        right(snapshot.meta, 609, 26, fit(snapshot.meta, 485, 12, semibold), semibold, blue);
+        if (snapshot.documentLabel !== 'Alaprajz')
+            text(snapshot.documentLabel, 28, 27, 10, semibold, muted);
         // Crop and fit the same plan as the detail card; no live viewport/tab clipping.
-        const frame: any = ({ x: 28, top: 66, width: 579, height: 584 } as any);
+        const overview: any = snapshot.overview;
+        const legendSpace: any = overview ? 74 + overview.legend.length * 14 : 0;
+        const frame: any = ({ x: 40, top: 74, width: 558, height: 541 - legendSpace } as any);
         if (planBytes) {
             const img: any = await image(planBytes, 'image/*'), v: any = snapshot.viewBox, iw: any = img.naturalWidth, ih: any = img.naturalHeight;
             const sx: any = iw * v.x, sy: any = ih * v.y, sw: any = iw * v.width, sh: any = ih * v.height;
@@ -286,14 +321,58 @@ async function createAdmiralApartmentPdf(snapshot: any, options: any): Promise<a
                 throw new Error('Invalid floorplan dimensions');
             const scale: any = Math.min(frame.width / sw, frame.height / sh), pw: any = sw * scale, ph: any = sh * scale, px: any = frame.x + (frame.width - pw) / 2, pt: any = frame.top + (frame.height - ph) / 2;
             const rasterScale: any = Math.min(1, 1800 / Math.max(sw, sh)), plan: any = canvas(Math.round(sw * rasterScale), Math.round(sh * rasterScale)), ctx: any = plan.getContext('2d');
-            const pg: any = ctx.createLinearGradient(0, 0, 0, plan.height);
-            pg.addColorStop(0, css(mix(colors.top, colors.bottom, pt / H)));
-            pg.addColorStop(1, css(mix(colors.top, colors.bottom, (pt + ph) / H)));
-            ctx.fillStyle = pg;
-            ctx.fillRect(0, 0, plan.width, plan.height);
+            ctx.drawImage(background, px, pt, pw, ph, 0, 0, plan.width, plan.height);
             ctx.drawImage(img, sx, sy, sw, sh, 0, 0, plan.width, plan.height);
+            if (snapshot.unitOutline) {
+                ctx.save();
+                ctx.scale(plan.width / sw, plan.height / sh);
+                ctx.translate(-sx, -sy);
+                const outline: any = new Path2D(snapshot.unitOutline);
+                ctx.fillStyle = 'rgba(17,97,163,.18)';
+                ctx.fill(outline);
+                ctx.lineJoin = 'round';
+                ctx.strokeStyle = '#fff';
+                ctx.lineWidth = 7 / scale;
+                ctx.stroke(outline);
+                ctx.strokeStyle = '#17659c';
+                ctx.lineWidth = 3.5 / scale;
+                ctx.stroke(outline);
+                ctx.restore();
+            }
             const embedded: any = await pdf.embedJpg(await jpeg(plan, .94));
             page.drawImage(embedded, ({ x: px, y: H - pt - ph, width: pw, height: ph } as any));
+            if (overview) {
+                const mapX: any = (x: any): any => px + (x - sx) * scale, mapY: any = (y: any): any => pt + (y - sy) * scale;
+                for (const [letter, point] of (Object as any).entries(overview.labels)) {
+                    const x: any = mapX(point[0]), y: any = mapY(point[1]);
+                    page.drawCircle(({ x, y: H - y, size: 8, color: lib.rgb(1, 1, 1), borderColor: blue, borderWidth: .8 } as any));
+                    centered(letter, x, y - 5.8, 9, semibold, blue);
+                }
+                const north: any = overview.compass, nx: any = mapX(north.x), ny: any = mapY(north.y);
+                const angle: any = north.angle * Math.PI / 180;
+                const tip: any = ({ x: nx + 6 * Math.sin(angle), y: H - ny + 6 * Math.cos(angle) } as any);
+                page.drawLine(({ start: ({ x: nx - 5 * Math.sin(angle), y: H - ny - 5 * Math.cos(angle) } as any), end: tip, thickness: 1.4, color: blue } as any));
+                for (const side of ([-1, 1] as any)) {
+                    const a: any = angle + side * Math.PI / 5;
+                    page.drawLine(({ start: tip, end: ({ x: tip.x - 4 * Math.sin(a), y: tip.y - 4 * Math.cos(a) } as any), thickness: 1, color: blue } as any));
+                }
+                centered('É', nx + 9 * Math.sin(angle), ny - 9 * Math.cos(angle) - 9, 8, semibold, blue);
+                const lakeY: any = pt + ph + 10;
+                line(px, lakeY, pw * .43, .5);
+                line(px + pw * .57, lakeY, pw * .43, .5);
+                centered('Balaton', px + pw / 2, lakeY - 5.5, 8, semibold, blue);
+                const lx: any = frame.x + frame.width * .14, lw: any = frame.width * .72, legendTop: any = frame.top + frame.height + 22;
+                text('Lakástípusok', lx, legendTop, 11, semibold);
+                right('Beltér (m²)', lx + lw * .58, legendTop + 2, 8, regular, muted);
+                right(overview.exteriorLabel + ' (m²)', lx + lw, legendTop + 2, 8, regular, muted);
+                overview.legend.forEach((row: any, index: any): any => {
+                    const y: any = legendTop + 18 + index * 14;
+                    page.drawCircle(({ x: lx + 4, y: H - y - 5, size: 3.8, color: rgb(color(row.color, '#dde3e8')), borderColor: muted, borderWidth: .3 } as any));
+                    text(row.type, lx + 13, y, 8.5, semibold);
+                    right(row.interior, lx + lw * .58, y, 8.5, regular);
+                    right(row.exterior, lx + lw, y, 8.5, regular);
+                });
+            }
             for (const marker of snapshot.markers) {
                 const mx: any = (marker.x - v.x) / v.width, my: any = (marker.y - v.y) / v.height;
                 if (mx < 0 || mx > 1 || my < 0 || my > 1)
@@ -306,80 +385,42 @@ async function createAdmiralApartmentPdf(snapshot: any, options: any): Promise<a
         else {
             text('Az alaprajz még nem érhető el.', frame.x + 40, frame.top + 150, 13, regular, muted);
         }
-        text('Helyiségek.', rx, 186, 18, regular);
+        const heading: any = 'Helyiséglista.';
+        const headingWidth: any = text(heading, rx, 227, 18, regular);
         if (snapshot.layoutLabel)
-            text(snapshot.layoutLabel, rx + 112, 193, fit(snapshot.layoutLabel, rw - 112, 8), regular, muted);
-        // Mapped plans share one numbered list. Unmapped unit areas remain a separate
-        // list, never paired with type-plan markers by array index or room name.
-        const groups: any = snapshot.roomGroups, roomTop: any = 222, roomBottom: any = 502, columns: any = groups.length > 1 ? 2 : 1, columnGap: any = 20, columnWidth: any = (rw - columnGap * (columns - 1)) / columns;
-        const nameWidth: any = (row: any): any => columnWidth - (row.number != null ? 22 : 0) - (row.area ? 70 : 5);
-        const maxUnits: any = Math.max(1, ...groups.map((group: any): any => group.rows.reduce((n: any, row: any): any => n + Math.max(1, wrap(row.name, nameWidth(row), 9).length), 0) + 3.6));
-        const rowHeight: any = Math.min(22, (roomBottom - roomTop) / maxUnits), roomSize: any = Math.min(columns > 1 ? 9 : 10, rowHeight * .72);
+            text(snapshot.layoutLabel, rx + headingWidth + 9, 236, fit(snapshot.layoutLabel, rw - headingWidth - 9, 8), regular, muted);
+        // Use the online card's room ordering and its verified marker-number mapping.
+        const rows: any = snapshot.roomRows, roomTop: any = 259, roomBottom: any = 508, nameWidth: any = rw - 101;
+        const wrapped: any = rows.map((row: any): any => wrap(row.name, nameWidth, 10, regular));
+        const totalLines: any = wrapped.reduce((sum: any, names: any): any => sum + Math.max(1, names.length), 0);
+        const rowHeight: any = Math.min(22, (roomBottom - roomTop) / Math.max(1, totalLines));
+        const roomSize: any = Math.min(10, rowHeight * .72);
         if (roomSize < 7.5)
             throw new Error('The room list is too long for the export layout');
-        let maxY: any = roomTop;
-        for (const [groupIndex, group] of groups.entries()) {
-            const gx: any = rx + groupIndex * (columnWidth + columnGap);
-            let y: any = roomTop;
-            const headings: any = wrap(group.label, columnWidth, 7.5, semibold);
-            headings.forEach((heading: any, i: any): any => text(heading, gx, y + i * 10, 7.5, semibold, muted));
-            y += Math.max(rowHeight * 1.4, headings.length * 10 + 6);
-            if (!group.rows.length) {
-                text('A helyiséglista még nem érhető el.', gx, y, 8, regular, muted);
-                y += rowHeight;
+        let y: any = roomTop;
+        if (!rows.length)
+            text('A helyiséglista még nem érhető el.', rx, y, 10, regular, muted);
+        for (const [index, row] of rows.entries()) {
+            const names: any = wrapped[index];
+            if (row.number != null) {
+                const radius: any = Math.min(6.6, rowHeight * .4);
+                page.drawCircle(({ x: rx + 8, y: H - y - 5.8, size: radius, color: lib.rgb(1, 1, 1), borderColor: muted, borderWidth: .4, borderOpacity: .45 } as any));
+                centered(String(row.number).padStart(2, '0'), rx + 8, y + .9, Math.min(7.5, rowHeight * .53), regular, muted);
             }
-            for (const row of group.rows) {
-                const numbered: any = row.number != null, indent: any = numbered ? 22 : 0, names: any = wrap(row.name, nameWidth(row), roomSize);
-                if (numbered) {
-                    page.drawCircle(({ x: gx + 7, y: H - y - 5.5, size: Math.min(6.5, rowHeight * .42), borderColor: muted, borderWidth: .4, borderOpacity: .5 } as any));
-                    centered(String(row.number).padStart(2, '0'), gx + 7, y + .3, Math.min(6.7, rowHeight * .52), regular, muted);
-                }
-                names.forEach((name: any, i: any): any => text(name, gx + indent, y + i * rowHeight, roomSize, regular, muted));
-                if (row.area)
-                    right(row.area, gx + columnWidth, y, roomSize, regular, muted);
-                y += rowHeight * names.length;
-                line(gx, y - 2, columnWidth, .2);
-            }
-            maxY = Math.max(maxY, y);
+            names.forEach((name: any, i: any): any => text(name, rx + 22, y + i * rowHeight, roomSize, regular, ink));
+            right(row.area, rx + rw - 3, y, roomSize, regular, ink);
+            y += rowHeight * Math.max(1, names.length);
+            line(rx, y - 3, rw, .25);
         }
-        if (maxY > 515)
-            throw new Error('The room list is too long for the export layout');
-        // Keep the PDF action geometry and semantic link. Enquiries use the shared
-        // pearl tint; the apartment-view fallback retains its existing accent fill.
-        page.drawRectangle(({ x: rx, y: H - 575, width: rw, height: 64, color: ink, opacity: .035 } as any));
-        centered(snapshot.price, rx + rw / 2, 531, fit(snapshot.price, rw - 30, 28), regular);
-        const actionTop: any = 586, actionHeight: any = 43, inquiryAction: any = !!snapshot.actionIsInquiry && snapshot.actionLabel === 'Érdeklődöm';
-        if (inquiryAction) {
-            const fill: any = rgb(mix(colors.frostedTint, ([1, 1, 1] as any), .78)), edge: any = rgb(mix(colors.frostedTint, ([1, 1, 1] as any), .58)), left: any = rx, rightEdge: any = rx + rw, top: any = H - actionTop, bottom: any = top - actionHeight, radius: any = actionHeight / 2;
-            page.drawRectangle(({ x: left + radius, y: bottom, width: rw - 2 * radius, height: actionHeight, color: fill } as any));
-            page.drawCircle(({ x: left + radius, y: bottom + radius, size: radius, color: fill } as any));
-            page.drawCircle(({ x: rightEdge - radius, y: bottom + radius, size: radius, color: fill } as any));
-            // Draw the perimeter separately so the pill has no internal segment seams.
-            page.drawLine(({ start: ({ x: left + radius, y: top } as any), end: ({ x: rightEdge - radius, y: top } as any), thickness: .8, color: edge } as any));
-            page.drawLine(({ start: ({ x: left + radius, y: bottom } as any), end: ({ x: rightEdge - radius, y: bottom } as any), thickness: .8, color: edge } as any));
-            for (const [cx, from, to] of ([([left + radius, 90, 270] as any), ([rightEdge - radius, -90, 90] as any)] as any)) {
-                const steps: any = 24;
-                for (let step: any = 0; step < steps; step++) {
-                    const a: any = (from + (to - from) * step / steps) * Math.PI / 180, b: any = (from + (to - from) * (step + 1) / steps) * Math.PI / 180;
-                    page.drawLine(({ start: ({ x: cx + radius * Math.cos(a), y: bottom + radius + radius * Math.sin(a) } as any), end: ({ x: cx + radius * Math.cos(b), y: bottom + radius + radius * Math.sin(b) } as any), thickness: .8, color: edge } as any));
-                }
-            }
-            page.drawLine(({ start: ({ x: left + radius, y: top - .9 } as any), end: ({ x: rightEdge - radius, y: top - .9 } as any), thickness: .7, color: lib.rgb(1, 1, 1), opacity: .85 } as any));
-            centered(snapshot.actionLabel, rx + rw / 2, actionTop + 10, 17, semibold, rgb(colors.frostedText));
-        }
-        else {
-            page.drawRectangle(({ x: rx + 21, y: H - actionTop - actionHeight, width: rw - 42, height: actionHeight, color: rgb(colors.accent) } as any));
-            page.drawCircle(({ x: rx + 21, y: H - actionTop - actionHeight / 2, size: 21.5, color: rgb(colors.accent) } as any));
-            page.drawCircle(({ x: rx + rw - 21, y: H - actionTop - actionHeight / 2, size: 21.5, color: rgb(colors.accent) } as any));
-            centered(snapshot.actionLabel, rx + rw / 2, actionTop + 10, 17, semibold);
-        }
+        valueWithUnit(snapshot.price, snapshot.priceUnit, rx + rw / 2, 529, rw - 30, 31, regular, ink);
+        centered(snapshot.actionLabel, rx + rw / 2, actionTop + 14, 15, semibold, rgb(colors.frostedText));
         const actionLink: any = pdf.context.register(pdf.context.obj(({ Type: 'Annot', Subtype: 'Link', Rect: ([rx, H - actionTop - actionHeight, rx + rw, H - actionTop] as any), Border: ([0, 0, 0] as any), A: ({ Type: 'Action', S: 'URI', URI: lib.PDFString.of(snapshot.actionUrl) } as any) } as any)));
         page.node.addAnnot(actionLink);
-        page.drawCircle(({ x: rx + 8, y: H - 653, size: 2.2, color: rgb(colors.status) } as any));
-        text(snapshot.status, rx + 18, 646, 11, regular, rgb(colors.status));
-        right('admiralpark.hu', rx + rw, 647, 9, regular, muted);
-        text('Az alaprajz illusztráció. Bútorozatlan átadás. Bruttó vételár.', 9, 680, 7, regular, muted);
-        right('Letöltve: ' + new Intl.DateTimeFormat('hu-HU').format(snapshot.date), W - 12, 680, 7, regular, muted);
+        page.drawCircle(({ x: rx + 8, y: H - 653, size: 2.6, color: rgb(colors.status) } as any));
+        text(snapshot.status, rx + 18, 644, 13, regular, rgb(colors.status));
+        right('admiralpark.hu', rx + rw, 645, 10, semibold, blue);
+        centered('Az alaprajz illusztráció. Bútorozatlan átadás. Bruttó vételár.', frame.x + frame.width / 2, 663, 7, regular, muted);
+        right('Letöltve: ' + new Intl.DateTimeFormat('hu-HU').format(snapshot.date), rx + rw, 677, 7, regular, muted);
         const online: any = pdf.context.register(pdf.context.obj(({ Type: 'Annot', Subtype: 'Link', Rect: ([rx, H - 664, rx + rw, H - 643] as any), Border: ([0, 0, 0] as any), A: ({ Type: 'Action', S: 'URI', URI: lib.PDFString.of(snapshot.pageUrl) } as any) } as any)));
         page.node.addAnnot(online);
         check();
@@ -1143,13 +1184,12 @@ function mountOrbitApartmentCardRuntime(root: any = (document as any), config: a
                 colors.status = job.fromDialog ? getComputedStyle(dialog.querySelector('.status-pill')).color : computed.getPropertyValue(statusProperty).trim() || (({ available: '#4f7959', sold: '#b4564f', under_negotiation: '#b28a2f', reserved: '#b28a2f' } as any)[a.status] || colors.muted);
                 if (!job.fromDialog && (['under_negotiation', 'reserved'] as any).includes(a.status))
                     colors.status = `color-mix(in srgb, ${colors.status} 60%, ${colors.ink})`;
-                const layout: any = data.roomLayouts?.[a.apartmentType], markers: any = validPlanMarkers(layout), rooms: any = Array.isArray(a.roomList) ? a.roomList : ([] as any);
-                const mapped: any = markers.length && rooms.length === markers.length && markers.every((marker: any): any => rooms.some((room: any): any => room.planNumber === marker.number));
-                const unitRows: any = rooms.map((room: any): any => (({ name: roomLabel(room.name), area: area(room.area) } as any)));
-                const typeRows: any = markers.map((marker: any): any => (({ number: marker.number, name: roomLabel(marker.name), area: mapped ? area(rooms.find((room: any): any => room.planNumber === marker.number).area) : null } as any)));
-                const roomGroups: any = markers.length ? ([({ label: mapped ? 'Típusterv · Helyiségterületek' : 'Típusterv · Számozott helyiségek', rows: typeRows } as any)] as any) : ([] as any);
-                if (!mapped || !markers.length)
-                    roomGroups.push(({ label: markers.length ? 'Lakásterületek · A kiválasztott lakás adatai' : 'Helyiségterületek', rows: unitRows } as any));
+                colors.controlBlue = computed.getPropertyValue('--detail-control-blue').trim() || '#225d82';
+                const layout: any = data.roomLayouts?.[a.apartmentType], markers: any = validPlanMarkers(layout);
+                const roomRows: any = numberedUnitRooms(a)
+                    .sort((left: any, right: any): any => (left.planNumber ?? Infinity) - (right.planNumber ?? Infinity))
+                    .map(({ room, planNumber }: any): any => (({ number: planNumber, name: roomLabel(room.name), area: area(room.area) } as any)));
+                const metric: any = (label: any, value: any): any => (({ label, value: hasNumber(value) ? number.format(value) : 'Nincs adat', unit: hasNumber(value) ? 'm²' : '' } as any));
                 const floor: any = job.fromDialog && dialog.querySelector('[data-document-view="floor"][aria-selected="true"]') ? mediaEntries(a).find((item: any): any => item.key === 'floorLayout') : null;
                 const view: any = layout?.viewBox || ({ x: 0, y: 0, width: 1, height: 1 } as any);
                 const validView: any = ([view.x, view.y, view.width, view.height] as any).every(hasNumber) && view.x >= 0 && view.y >= 0 && view.width > 0 && view.height > 0 && view.x + view.width <= 1.001 && view.y + view.height <= 1.001;
@@ -1158,14 +1198,14 @@ function mountOrbitApartmentCardRuntime(root: any = (document as any), config: a
                     actionUrl.searchParams.set('apartment', a.id);
                 const snapshot: any = ({
                     id: String(a.id), date: new Date(), colors,
-                    metrics: ([({ label: 'Lakásszám', value: String(a.id) } as any), ({ label: 'Beltér', value: area(a.areaInterior).replace('m²', 'm2') } as any), ({ label: 'Erkély', value: area(a.areaTerrace).replace('m²', 'm2') } as any), ...(a.areaGarden > 0 ? ([({ label: 'Kert', value: area(a.areaGarden).replace('m²', 'm2') } as any)] as any) : ([] as any))] as any),
+                    metrics: ([({ label: 'Lakásszám', value: String(a.id) } as any), metric('Beltér', a.areaInterior), metric('Erkély', a.areaTerrace), ...(a.areaGarden > 0 ? ([metric('Kert', a.areaGarden)] as any) : ([] as any))] as any),
                     meta: ([a.apartmentType ? `${a.apartmentType} típus` : null, `${a.building} épület`, floorText(a), a.orientation ? `${a.orientation} tájolás` : null] as any).filter(Boolean).join(' · '),
                     documentLabel: floor ? 'Szintrajz' : 'Alaprajz',
                     imageUrl: floor?.full || detailPlanUrl(a),
                     viewBox: floor || !validView ? ({ x: 0, y: 0, width: 1, height: 1 } as any) : ({ x: view.x, y: view.y, width: view.width, height: view.height } as any),
                     markers: floor ? ([] as any) : markers.map((marker: any): any => (({ number: marker.number, x: marker.x, y: marker.y } as any))),
-                    roomGroups, layoutLabel: typeof a.layoutLabel === 'string' ? a.layoutLabel.replace(/hálószoba/giu, 'szoba') : hasNumber(a.rooms) ? `${number.format(a.rooms)} szoba` : '',
-                    price: apartmentPrice(a), status: statusText(a), pageUrl, actionUrl: actionUrl.href, actionIsInquiry: !!inquiryUrl, actionLabel: inquiryUrl ? 'Érdeklődöm' : 'Lakás megtekintése',
+                    roomRows, layoutLabel: typeof a.layoutLabel === 'string' ? a.layoutLabel.replace(/hálószoba/giu, 'szoba') : hasNumber(a.rooms) ? `${number.format(a.rooms)} szoba` : '',
+                    price: hasNumber(a.price) ? priceNumber.format(a.price) : apartmentPrice(a), priceUnit: hasNumber(a.price) ? 'Ft' : '', status: statusText(a), pageUrl, actionUrl: actionUrl.href, actionIsInquiry: !!inquiryUrl, actionLabel: inquiryUrl ? 'Érdeklődöm' : 'Lakás megtekintése',
                     fontRegular: assetUrl('assets/fonts/montserrat/montserrat-pdf-regular.ttf'), fontSemibold: assetUrl('assets/fonts/montserrat/montserrat-pdf-semibold.ttf'),
                     logoUrl: assetUrl('assets/brand/admiral-park-full-logo-no-location.svg'), monogramUrl: assetUrl('assets/brand/ap-monogram.png'),
                 } as any);

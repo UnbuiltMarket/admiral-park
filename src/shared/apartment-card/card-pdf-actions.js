@@ -45,26 +45,26 @@ async function downloadDatasheet(id,trigger) {
   const statusProperty={available:'--available',sold:'--sold',under_negotiation:'--negotiating',reserved:'--negotiating'}[a.status]||'--detail-muted';
   colors.status=job.fromDialog?getComputedStyle(dialog.querySelector('.status-pill')).color:computed.getPropertyValue(statusProperty).trim()||({available:'#4f7959',sold:'#b4564f',under_negotiation:'#b28a2f',reserved:'#b28a2f'}[a.status]||colors.muted);
   if(!job.fromDialog&&['under_negotiation','reserved'].includes(a.status))colors.status=`color-mix(in srgb, ${colors.status} 60%, ${colors.ink})`;
-  const layout=data.roomLayouts?.[a.apartmentType],markers=validPlanMarkers(layout),rooms=Array.isArray(a.roomList)?a.roomList:[];
-  const mapped=markers.length&&rooms.length===markers.length&&markers.every(marker=>rooms.some(room=>room.planNumber===marker.number));
-  const unitRows=rooms.map(room=>({name:roomLabel(room.name),area:area(room.area)}));
-  const typeRows=markers.map(marker=>({number:marker.number,name:roomLabel(marker.name),area:mapped?area(rooms.find(room=>room.planNumber===marker.number).area):null}));
-  const roomGroups=markers.length?[{label:mapped?'Típusterv · Helyiségterületek':'Típusterv · Számozott helyiségek',rows:typeRows}]:[];
-  if(!mapped||!markers.length)roomGroups.push({label:markers.length?'Lakásterületek · A kiválasztott lakás adatai':'Helyiségterületek',rows:unitRows});
+  colors.controlBlue=computed.getPropertyValue('--detail-control-blue').trim()||'#225d82';
+  const layout=data.roomLayouts?.[a.apartmentType],markers=validPlanMarkers(layout);
+  const roomRows=numberedUnitRooms(a)
+    .sort((left,right)=>(left.planNumber??Infinity)-(right.planNumber??Infinity))
+    .map(({room,planNumber})=>({number:planNumber,name:roomLabel(room.name),area:area(room.area)}));
+  const metric=(label,value)=>({label,value:hasNumber(value)?number.format(value):'Nincs adat',unit:hasNumber(value)?'m²':''});
   const floor=job.fromDialog&&dialog.querySelector('[data-document-view="floor"][aria-selected="true"]')?mediaEntries(a).find(item=>item.key==='floorLayout'):null;
   const view=layout?.viewBox||{x:0,y:0,width:1,height:1};
   const validView=[view.x,view.y,view.width,view.height].every(hasNumber)&&view.x>=0&&view.y>=0&&view.width>0&&view.height>0&&view.x+view.width<=1.001&&view.y+view.height<=1.001;
   const pageUrl=apartmentLink(a.id),inquiryUrl=safeUrl(config.inquiryUrl),actionUrl=new URL(inquiryUrl||pageUrl);if(inquiryUrl)actionUrl.searchParams.set('apartment',a.id);
   const snapshot={
     id:String(a.id),date:new Date(),colors,
-    metrics:[{label:'Lakásszám',value:String(a.id)},{label:'Beltér',value:area(a.areaInterior).replace('m²','m2')},{label:'Erkély',value:area(a.areaTerrace).replace('m²','m2')},...(a.areaGarden>0?[{label:'Kert',value:area(a.areaGarden).replace('m²','m2')}]:[])],
+    metrics:[{label:'Lakásszám',value:String(a.id)},metric('Beltér',a.areaInterior),metric('Erkély',a.areaTerrace),...(a.areaGarden>0?[metric('Kert',a.areaGarden)]:[])],
     meta:[a.apartmentType?`${a.apartmentType} típus`:null,`${a.building} épület`,floorText(a),a.orientation?`${a.orientation} tájolás`:null].filter(Boolean).join(' · '),
     documentLabel:floor?'Szintrajz':'Alaprajz',
     imageUrl:floor?.full||detailPlanUrl(a),
     viewBox:floor||!validView?{x:0,y:0,width:1,height:1}:{x:view.x,y:view.y,width:view.width,height:view.height},
     markers:floor?[]:markers.map(marker=>({number:marker.number,x:marker.x,y:marker.y})),
-    roomGroups,layoutLabel:typeof a.layoutLabel==='string'?a.layoutLabel.replace(/hálószoba/giu,'szoba'):hasNumber(a.rooms)?`${number.format(a.rooms)} szoba`:'',
-    price:apartmentPrice(a),status:statusText(a),pageUrl,actionUrl:actionUrl.href,actionIsInquiry:!!inquiryUrl,actionLabel:inquiryUrl?'Érdeklődöm':'Lakás megtekintése',
+    roomRows,layoutLabel:typeof a.layoutLabel==='string'?a.layoutLabel.replace(/hálószoba/giu,'szoba'):hasNumber(a.rooms)?`${number.format(a.rooms)} szoba`:'',
+    price:hasNumber(a.price)?priceNumber.format(a.price):apartmentPrice(a),priceUnit:hasNumber(a.price)?'Ft':'',status:statusText(a),pageUrl,actionUrl:actionUrl.href,actionIsInquiry:!!inquiryUrl,actionLabel:inquiryUrl?'Érdeklődöm':'Lakás megtekintése',
     fontRegular:assetUrl('assets/fonts/montserrat/montserrat-pdf-regular.ttf'),fontSemibold:assetUrl('assets/fonts/montserrat/montserrat-pdf-semibold.ttf'),
     logoUrl:assetUrl('assets/brand/admiral-park-full-logo-no-location.svg'),monogramUrl:assetUrl('assets/brand/ap-monogram.png'),
   };

@@ -797,6 +797,13 @@ const homepageOrbitEntryStyles = `
     transition: opacity 180ms ease-out;
 }
 [data-orbit-entry-notice][data-revealing="true"] { opacity: 0; }
+[data-orbit-window-group] {
+    position: absolute; z-index: 5; pointer-events: none; box-sizing: border-box;
+    left: var(--admiral-image-x, 0px); width: var(--admiral-image-width, 100%);
+    top: calc(var(--admiral-image-y, 0px) + 10px); padding-inline: 46px;
+}
+[data-orbit-window-group][data-classic="true"] { top: max(80px, calc(var(--admiral-image-y, 0px) + 10px)); }
+[data-orbit-group] button:disabled { opacity: .46; cursor: default; }
 [data-orbit-fullscreen-surface][data-active="true"] [data-orbit-entry-notice] {
     inset: 0; width: 100%; height: 100%; border-radius: 0;
 }
@@ -4424,10 +4431,11 @@ function OrbitFilterBar({
 const orbitGroupStyles = "[data-admiral-homepage] [data-orbit-group] {\n    display: flex; align-items: center; gap: 5px;\n    width: max-content; max-width: 100%; min-width: 0; box-sizing: border-box;\n    margin-inline: auto; padding: 3px 5px;\n    border: 1px solid rgb(33 90 129 / 24%); border-radius: 999px;\n    color: #1b4565; background: rgb(247 251 255 / 94%); pointer-events: auto;\n}\n[data-orbit-group-chips] {\n    display: flex; align-items: center; gap: 5px;\n    min-width: 0; padding: 3px; overflow-x: auto;\n    overscroll-behavior-x: contain; scrollbar-width: thin; touch-action: pan-x;\n}\n[data-orbit-group] button {\n    display: grid; place-items: center; flex: 0 0 auto;\n    min-height: 32px; box-sizing: border-box; padding: 0 10px;\n    border: 1px solid #81a8c8; border-radius: 999px; background: transparent;\n    color: inherit; font: 650 12px/1 system-ui,sans-serif; cursor: pointer; touch-action: manipulation;\n}\n[data-orbit-group] button[data-visible=\"true\"] { color: #fff; background: #176cb7; border-color: #176cb7; }\n[data-orbit-group] button[aria-pressed=\"true\"] { background: #0d477e; border-color: #0d477e; box-shadow: inset 0 0 0 1px #fff; }\n[data-orbit-group] button[data-requested=\"true\"] { border-style: dashed; }\n[data-orbit-group] button[data-orbit-group-close] { min-width: 32px; padding: 0; border-color: transparent; font-size: 21px; font-weight: 400; }\n[data-orbit-group] button:focus-visible { outline: 2px solid #133d66; outline-offset: 1px; }\n[data-orbit-fullscreen-group] {\n    position: absolute; inset: 12px auto auto 50%; transform: translateX(-50%);\n    width: min(440px, calc(100% - 128px)); z-index: 1; pointer-events: none;\n}\n@media (hover: hover) {\n    [data-orbit-group] button:hover { background: #e2eff9; border-color: #3c78a9; }\n    [data-orbit-group] button[data-visible=\"true\"]:hover { background: #125890; border-color: #125890; }\n    [data-orbit-group] button[aria-pressed=\"true\"]:hover { background: #153e67; border-color: #153e67; }\n}\n@media (max-width: 600px) {\n    [data-admiral-homepage] [data-orbit-group] { gap: 2px; padding-inline: 3px; }\n    [data-orbit-group-chips] { gap: 3px; }\n    [data-orbit-group] button { padding-inline: 6px; font-size: 11px; }\n}\n\n/* The visible Framer introduction frames sit above the orbit instance even\n   when their contents have faded. During group browsing they are decorative. */\n@supports selector(:has(*)) {\n    [data-framer-name=\"Hero Orbit Stage\"]:has([data-admiral-homepage][data-homepage-stage=\"orbit\"] [data-orbit-group])\n        > :is([data-framer-name=\"SEQ01\"], [data-framer-name=\"SEQ02\"]),\n    [data-framer-name=\"Hero Orbit Stage\"]:has([data-admiral-homepage][data-homepage-stage=\"orbit\"] [data-orbit-group])\n        > :is([data-framer-name=\"SEQ01\"], [data-framer-name=\"SEQ02\"]) * {\n        pointer-events: none !important;\n    }\n}\n"
 
 function OrbitGroupBar({
-    group, visible, selected, requested, language, onSelect, onClose,
+    group, visible, matches, selected, requested, language, onSelect, onClose,
 }: {
     group: OrbitApartmentGroup
     visible: readonly string[]
+    matches: ReadonlySet<string>
     selected: string | null
     requested: string | null
     language: "hu" | "en"
@@ -4444,7 +4452,10 @@ function OrbitGroupBar({
             <div data-orbit-group-chips="">
                 {group.ids.map(id => {
                     const shown = visible.includes(id)
-                    const state = shown
+                    const excluded = !matches.has(id)
+                    const state = excluded
+                        ? (hu ? "a szűrés kizárja" : "excluded by filters")
+                        : shown
                         ? (hu ? "ebben a nézetben látható" : "visible in this view")
                         : (hu ? "megtekintés másik nézetből" : "view from another camera")
                     return (
@@ -4452,6 +4463,7 @@ function OrbitGroupBar({
                             key={id}
                             type="button"
                             data-orbit-group-apartment={id}
+                            disabled={excluded}
                             data-visible={String(shown)}
                             data-requested={String(requested === id)}
                             aria-pressed={shown && selected === id}
@@ -6171,7 +6183,7 @@ function OrbitApartmentStudio(
                     )}
                     {!mobile && (
                         <div data-orbit-studio-filters="" data-orbit-filter-bar="">
-                            {groupControls || (<OrbitListFilters
+                            <OrbitListFilters
                                 apartments={dataset?.apartments || []}
                                 active={active && !moving}
                                 visible={active || arriving}
@@ -6183,12 +6195,12 @@ function OrbitApartmentStudio(
                                 matchCount={filterCount}
                                 total={dataset?.apartments.length || 0}
                                 onChange={onFiltersChange}
-                            />)}
+                            />
                         </div>
                     )}
                 </header>
                 {mobile && (
-                    groupControls || <OrbitFilterBar
+                    <OrbitFilterBar
                         active={active && !moving}
                         visible={active || arriving}
                         language={language}
@@ -7384,7 +7396,7 @@ function OrbitFullscreenDetails({
                 )}
                 <div className="orbit-fullscreen-right">
                     <div className="orbit-fullscreen-filters">
-                        {!groupControls && (<OrbitFilterBar
+                        <OrbitFilterBar
                             active={!moving}
                             visible={true}
                             language={language}
@@ -7396,7 +7408,7 @@ function OrbitFullscreenDetails({
                             total={total}
                             onChange={onFiltersChange}
                             presentation="overlay"
-                        />)}
+                        />
                     </div>
                     {apartment && (
                         <>
@@ -7792,6 +7804,11 @@ export default function AdmiralHomepageStudio(
     useWarmOrbitFloorplans(apartmentData.dataset, apartmentAssetBase,
         !staticRenderer && hostVisible && stage === "orbit" &&
         orbitInfo.state === "checkpoint" && !orbitInfo.suspended)
+    const filterDataset = React.useMemo(() => {
+        const dataset = apartmentData.dataset
+        if (!dataset || !orbitGroup) return dataset
+        return { ...dataset, apartments: dataset.apartments.filter(apartment => orbitGroup.ids.includes(apartment.id)) }
+    }, [apartmentData.dataset, orbitGroup])
     const filterBounds = React.useMemo(
         () => getOrbitPriceBounds(apartmentData.dataset?.apartments || []),
         [apartmentData.dataset]
@@ -7807,14 +7824,14 @@ export default function AdmiralHomepageStudio(
     const filterResult = React.useMemo(
         () =>
             getOrbitFilterResult(
-                apartmentData.dataset?.apartments || [],
+                filterDataset?.apartments || [],
                 apartmentFilters,
                 filterBounds,
                 filterAreaBounds,
                 filterBedroomBounds
             ),
         [
-            apartmentData.dataset,
+            filterDataset,
             apartmentFilters,
             filterBounds,
             filterAreaBounds,
@@ -7828,9 +7845,9 @@ export default function AdmiralHomepageStudio(
     const useVisibleMaskSelection = !staticRenderer && apartmentOrbitAvailable
     const visibleGroupIds = React.useMemo(() =>
         orbitGroup && orbitInfo.state === "checkpoint" && visibleMaskApartments?.checkpoint === orbitInfo.checkpoint
-            ? orbitGroup.ids.filter(id => visibleMaskApartments.ids.includes(id))
+            ? orbitGroup.ids.filter(id => filterMatches.has(id) && visibleMaskApartments.ids.includes(id))
             : [],
-        [orbitGroup, orbitInfo.state, orbitInfo.checkpoint, visibleMaskApartments]
+        [orbitGroup, orbitInfo.state, orbitInfo.checkpoint, visibleMaskApartments, filterMatches]
     )
     const selectedApartment = React.useMemo(() => {
         const visible = useVisibleMaskSelection
@@ -7949,13 +7966,17 @@ export default function AdmiralHomepageStudio(
             visibleMaskApartments?.checkpoint !== orbitInfo.checkpoint)
             return
         const { id, tried } = groupRequest
+        if (!filterMatches.has(id)) {
+            setGroupRequest(null)
+            return
+        }
         if (visibleGroupIds.includes(id)) {
             setSelectedApartmentId(id)
             setGroupRequest(null)
             return
         }
         const visited = [...tried, orbitInfo.frame]
-        const frame = bestOrbitGroupFrame(orbitGroup.ids, id, visited)
+        const frame = bestOrbitGroupFrame(filterResult.matchingIds, id, visited)
         if (frame === undefined) {
             setGroupRequest(null)
             return
@@ -7966,7 +7987,7 @@ export default function AdmiralHomepageStudio(
         setGroupRequest({ id, tried: visited })
     }, [
         orbitGroup, groupRequest, stage, orbitInfo.state, orbitInfo.checkpoint, orbitInfo.frame,
-        visibleMaskApartments, visibleGroupIds,
+        visibleMaskApartments, visibleGroupIds, filterMatches, filterResult.matchingIds,
     ])
     function selectOrbitGroupApartment(id: string) {
         if (visibleGroupIds.includes(id)) {
@@ -8195,7 +8216,7 @@ export default function AdmiralHomepageStudio(
                         Math.max(1, bounds.height),
                 }
             },
-            getAllowedIds: () => pickerLatest.current.orbitGroup?.ids ?? pickerLatest.current.filterResult.matchingIds,
+            getAllowedIds: () => pickerLatest.current.filterResult.matchingIds,
             getHighlightColor: (id) =>
                 pickerLatest.current.apartmentHighlightColors.get(id),
             isSold: (id) => pickerLatest.current.soldLightIds.has(id),
@@ -10115,6 +10136,7 @@ export default function AdmiralHomepageStudio(
         <OrbitGroupBar
             group={orbitGroup}
             visible={visibleGroupIds}
+            matches={filterMatches}
             selected={selectedApartment?.id || null}
             requested={groupRequest?.id || null}
             language={detailsLanguage}
@@ -10271,7 +10293,7 @@ export default function AdmiralHomepageStudio(
                     mobile={mobilePresentation}
                     moving={!staticRenderer && orbitDataMoving}
                     mode={detailsMode}
-                    dataset={apartmentData.dataset}
+                    dataset={filterDataset}
                     dataStatus={apartmentData.status}
                     error={apartmentData.error}
                     filters={filterResult.filters}
@@ -10448,6 +10470,9 @@ export default function AdmiralHomepageStudio(
                             clipPath: fullscreen.active ? "none" : imageClip,
                         }}
                     />
+                    {!fullscreen.active && groupControls && (
+                        <div data-orbit-window-group="" data-classic={String(!useStudio)}>{groupControls}</div>
+                    )}
                     {entryNoticeFrame !== null && !staticRenderer && (stage === "handoff" || orbitVisible) && (
                         <OrbitEntryNotice
                             preview={useGitHubAssets ? orbitEntryPreview(entryNoticeFrame) : undefined}
@@ -10490,7 +10515,7 @@ export default function AdmiralHomepageStudio(
                             filterBedroomBounds={filterBedroomBounds}
                             filterCount={filterResult.matchingIds.length}
                             total={
-                                apartmentData.dataset?.apartments.length || 0
+                                filterDataset?.apartments.length || 0
                             }
                             onFiltersChange={setApartmentFilters}
                             emptyMessage={
@@ -10944,7 +10969,7 @@ export default function AdmiralHomepageStudio(
                     moving={orbitVisible && orbitDataMoving}
                     filtersVisible={classicOrbitPanel}
                     filters={
-                        (!fullscreen.active && groupControls) || (stripFiltersEnabled ? (
+                        stripFiltersEnabled ? (
                             <div data-orbit-desktop-filters="">
                                 <OrbitFilterBar
                                     active={orbitPanelVisible && !orbitDataMoving}
@@ -10956,14 +10981,14 @@ export default function AdmiralHomepageStudio(
                                     bedroomBounds={filterBedroomBounds}
                                     matchCount={filterResult.matchingIds.length}
                                     total={
-                                        apartmentData.dataset?.apartments
+                                        filterDataset?.apartments
                                             .length || 0
                                     }
                                     onChange={setApartmentFilters}
                                     presentation="overlay"
                                 />
                             </div>
-                        ) : undefined)
+                        ) : undefined
                     }
                 />
             )}
@@ -11345,7 +11370,7 @@ addPropertyControls(AdmiralHomepageStudio, {
     maskHighlightOpacity: {
         type: ControlType.Number,
         title: "Solid mask strength",
-        description: "Solid mask opacity on hover or tap. Filter matches use half this value. Available apartments retain warm window lighting with a subtle lift across the entire apartment.",
+        description: "Solid mask opacity on hover or tap. Filter matches use half this value. Available apartments use the rendered window lighting.",
         defaultValue: 50,
         min: 5,
         max: 70,
@@ -18081,18 +18106,13 @@ function createOrbitApartmentPicker(options: OrbitApartmentPickerOptions) {
 
     function highlightStyles(highlighted: string[], lit: Set<string>, filtered: boolean, emphasis: string | null) {
         return highlighted.flatMap(id => {
-            const available = options.getLightTint?.(id) === null
+            // A rendered window or status mask supplies the complete highlight.
+            if (lit.has(id)) return []
+            if (options.getLightTint?.(id) === null && root.dataset.orbitLightingState === "loading") return []
             const filterMatchOnly = filtered && id !== emphasis
-            const lift = filterMatchOnly ? 0.08 : 0.16
-            const neutral = available && !!options.lightingEnabled
-            // Available units keep the same full-footprint lift while their window render loads.
-            // A rendered solid status already supplies its colour and must not get another fill.
-            if (lit.has(id) && !neutral) return []
-            const solidOpacity = highlightOpacity * (filterMatchOnly ? filteredSolidRatio : 1)
-            const opacity = neutral ? lift : solidOpacity
-            const rgb = neutral ? [255, 255, 255] : resolveStatusColor(options.getHighlightColor?.(id))
-            const whiteMix = available && !neutral && opacity > 0 ? Math.min(1, lift / opacity) : 0
-            return [{ index: indices.get(id)!, rgb, opacity, whiteMix, rim: !neutral }]
+            const opacity = highlightOpacity * (filterMatchOnly ? filteredSolidRatio : 1)
+            const rgb = resolveStatusColor(options.getHighlightColor?.(id))
+            return [{ index: indices.get(id)!, rgb, opacity }]
         })
     }
 
@@ -18116,9 +18136,9 @@ function createOrbitApartmentPicker(options: OrbitApartmentPickerOptions) {
             bottom = Math.max(bottom, mask.maxY[id])
             const offset = id * 4
             for (let k = 0; k < 3; k++) {
-                const channel = style.rgb[k] + (255 - style.rgb[k]) * style.whiteMix
+                const channel = style.rgb[k]
                 fill[offset + k] = channel
-                rim[offset + k] = style.rim ? channel * 0.65 + 255 * 0.35 : channel
+                rim[offset + k] = channel * 0.65 + 255 * 0.35
             }
             fill[offset + 3] = rim[offset + 3] = Math.round(255 * style.opacity)
         }
@@ -18259,7 +18279,7 @@ function createOrbitApartmentPicker(options: OrbitApartmentPickerOptions) {
             ":" +
             styles
                 .map((style) =>
-                    [style.index, ...style.rgb, style.opacity, style.whiteMix, style.rim].join(",")
+                    [style.index, ...style.rgb, style.opacity].join(",")
                 )
                 .join(";")
         const logicalWidth =

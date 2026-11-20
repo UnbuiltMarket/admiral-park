@@ -50,8 +50,9 @@ test('a list download exports the selected apartment through the card engine wit
   assert.equal(f.elements.get('detail-dialog').open,false);
   assert.equal(f.snapshots.length,1);
   const snapshot=f.snapshots[0];
-  assert.equal(snapshot.id,'C303');assert.equal(snapshot.price,'125 M Ft');assert.equal(snapshot.status,'Elkelt');
-  assert.deepEqual(Array.from(snapshot.metrics,metric=>metric.value),['C303','82 m2','23 m2']);
+  assert.equal(snapshot.id,'C303');assert.equal(snapshot.price.replace(/\s/g,''),'125000000');assert.equal(snapshot.priceUnit,'Ft');assert.equal(snapshot.status,'Elkelt');
+  assert.deepEqual(Array.from(snapshot.metrics,metric=>metric.value),['C303','82','23']);
+  assert.deepEqual(Array.from(snapshot.metrics,metric=>metric.unit||''),['','m²','m²']);
   assert.equal(snapshot.colors.ink,'#123456');assert.equal(snapshot.colors.status,'#ab1122');
   assert.equal(snapshot.documentLabel,'Alaprajz');assert.equal(snapshot.imageUrl,'https://assets.admiral.test/plan-d.png');
   assert.equal(snapshot.pageUrl,'https://admiral.test/?apartment=C303');
