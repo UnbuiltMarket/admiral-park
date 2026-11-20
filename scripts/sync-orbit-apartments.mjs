@@ -30,6 +30,7 @@ const mediaImage = (value, illustrative = false) => {
     assert(plain(value) && typeof value.full === 'string' && value.full.length > 0, 'Apartment media requires a full image path.');
     const projected = Object.fromEntries(['thumbnail', 'full', 'label'].filter(key => typeof value[key] === 'string').map(key => [key, value[key]]));
     if (illustrative) projected.isIllustrative = value.isIllustrative === true;
+    if (illustrative && typeof value.preview === 'string' && value.preview) projected.preview = value.preview;
     return projected;
 };
 const apartments = source.apartments.map(apartment => {

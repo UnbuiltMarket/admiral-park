@@ -533,7 +533,7 @@ const HOMEPAGE_ORBIT_MOVEMENT = Array.from({length:120}, (_,frame) =>
 const HOMEPAGE_V05_MASKS = Array.from({length:8}, (_,view)=>homepageOrbitV05Asset("masks",view*15))
 const HOMEPAGE_ASSETS =
     "https://raw.githubusercontent.com/UnbuiltMarket/admiral-park/main/assets"
-const HOMEPAGE_EXTENDED_FADE_STYLES = "[data-admiral-fullscreen-fades] [data-orbitdata-divider] { transition: opacity var(--admiral-fade-panel,740ms) ease; }\n[data-admiral-fullscreen-fades] [data-orbit-filters] { transition: opacity var(--admiral-fade-panel,740ms) ease; }\n[data-admiral-fullscreen-fades] [data-orbit-studio] { transition: opacity var(--admiral-fade-shell,900ms) ease, visibility 0s linear var(--admiral-fade-shell,900ms); }\n[data-admiral-fullscreen-fades] [data-orbit-studio] [data-orbitdata-transition] { transition: opacity var(--admiral-fade-record,680ms) ease; }\n[data-admiral-fullscreen-fades] [data-orbit-fullscreen-details] .orbit-fullscreen-bar { transition: opacity var(--admiral-fade-panel,740ms) ease; }\n[data-admiral-fullscreen-fades] [data-orbit-fullscreen-details] [data-orbitdata-transition] { transition: opacity var(--admiral-fade-record,680ms) ease; }\n[data-admiral-fullscreen-fades] [data-apartment-details] { transition: opacity var(--admiral-fade-panel,740ms) ease, transform var(--admiral-fade-panel,740ms) ease, visibility 0s linear var(--admiral-fade-panel,740ms); }\n[data-admiral-fullscreen-fades] [data-apartment-details] .admiral-details-grid { transition: opacity var(--admiral-fade-panel,740ms) ease; }\n[data-admiral-fullscreen-fades] [data-apartment-details] .admiral-details-plan-image { transition: opacity var(--admiral-fade-plan,660ms) ease; }\n[data-admiral-fullscreen-fades] [data-apartment-details] .admiral-details-grid [data-orbitdata-transition] { transition: opacity var(--admiral-fade-record,680ms) ease; }\n[data-admiral-fullscreen-fades] [data-apartment-details] .admiral-details-summary { transition: opacity var(--admiral-fade-panel,740ms) ease; }\n[data-admiral-fullscreen-fades] [data-apartment-details] .admiral-details-plan { transition: opacity var(--admiral-fade-panel,740ms) ease; }\n[data-admiral-fullscreen-fades] [data-orbit-studio][data-active=\"true\"], [data-admiral-fullscreen-fades] [data-apartment-details][data-details-shell-visible=\"true\"] { transition-delay: 0s; }\n[data-admiral-fullscreen-fades] [data-orbit-studio] .orbit-studio-status[data-status=\"available\"] .orbit-studio-status-dot::after { animation-duration: var(--admiral-fade-pulse,2900ms); }\n@media (prefers-reduced-motion:reduce) { [data-admiral-fullscreen-fades] [data-orbitdata-divider], [data-admiral-fullscreen-fades] [data-orbit-filters], [data-admiral-fullscreen-fades] [data-orbit-studio], [data-admiral-fullscreen-fades] [data-orbit-studio] [data-orbitdata-transition], [data-admiral-fullscreen-fades] [data-orbit-fullscreen-details] .orbit-fullscreen-bar, [data-admiral-fullscreen-fades] [data-orbit-fullscreen-details] [data-orbitdata-transition], [data-admiral-fullscreen-fades] [data-apartment-details], [data-admiral-fullscreen-fades] [data-apartment-details] .admiral-details-grid, [data-admiral-fullscreen-fades] [data-apartment-details] .admiral-details-plan-image, [data-admiral-fullscreen-fades] [data-apartment-details] .admiral-details-grid [data-orbitdata-transition], [data-admiral-fullscreen-fades] [data-apartment-details] .admiral-details-summary, [data-admiral-fullscreen-fades] [data-apartment-details] .admiral-details-plan { transition:none !important; } [data-admiral-fullscreen-fades] [data-orbit-studio] .orbit-studio-status[data-status=\"available\"] .orbit-studio-status-dot::after { animation:none !important; } }"
+const HOMEPAGE_EXTENDED_FADE_STYLES = "[data-admiral-fullscreen-fades] [data-orbitdata-divider] { transition: opacity var(--admiral-fade-panel,740ms) ease; }\n[data-admiral-fullscreen-fades] [data-orbit-filters] { transition: opacity var(--admiral-fade-panel,740ms) ease; }\n[data-admiral-fullscreen-fades] [data-orbit-studio] { transition: opacity var(--admiral-fade-shell,900ms) ease, visibility 0s linear var(--admiral-fade-shell,900ms); }\n[data-admiral-fullscreen-fades] [data-orbit-studio] [data-orbitdata-transition] { transition: opacity var(--admiral-fade-record,680ms) ease; }\n[data-admiral-fullscreen-fades] [data-orbit-fullscreen-details] .orbit-fullscreen-bar { transition: opacity var(--admiral-fade-panel,740ms) ease; }\n[data-admiral-fullscreen-fades] [data-orbit-fullscreen-details] [data-orbitdata-transition] { transition: opacity var(--admiral-fade-record,680ms) ease; }\n[data-admiral-fullscreen-fades] [data-apartment-details] { transition: opacity var(--admiral-fade-panel,740ms) ease, transform var(--admiral-fade-panel,740ms) ease, visibility 0s linear var(--admiral-fade-panel,740ms); }\n[data-admiral-fullscreen-fades] [data-apartment-details] .admiral-details-grid { transition: opacity var(--admiral-fade-panel,740ms) ease; }\n[data-admiral-fullscreen-fades] [data-apartment-details] .admiral-details-plan-image { transition: opacity var(--admiral-fade-plan,660ms) ease; }\n[data-admiral-fullscreen-fades] [data-apartment-details] .admiral-details-grid [data-orbitdata-transition] { transition: opacity var(--admiral-fade-record,680ms) ease; }\n[data-admiral-fullscreen-fades] [data-apartment-details] .admiral-details-summary { transition: opacity var(--admiral-fade-panel,740ms) ease; }\n[data-admiral-fullscreen-fades] [data-apartment-details] .admiral-details-plan { transition: opacity var(--admiral-fade-panel,740ms) ease; }\n[data-admiral-fullscreen-fades] [data-orbit-studio][data-active=\"true\"], [data-admiral-fullscreen-fades] [data-apartment-details][data-details-shell-visible=\"true\"] { transition-delay: 0s; }\n@media (prefers-reduced-motion:reduce) { [data-admiral-fullscreen-fades] [data-orbitdata-divider], [data-admiral-fullscreen-fades] [data-orbit-filters], [data-admiral-fullscreen-fades] [data-orbit-studio], [data-admiral-fullscreen-fades] [data-orbit-studio] [data-orbitdata-transition], [data-admiral-fullscreen-fades] [data-orbit-fullscreen-details] .orbit-fullscreen-bar, [data-admiral-fullscreen-fades] [data-orbit-fullscreen-details] [data-orbitdata-transition], [data-admiral-fullscreen-fades] [data-apartment-details], [data-admiral-fullscreen-fades] [data-apartment-details] .admiral-details-grid, [data-admiral-fullscreen-fades] [data-apartment-details] .admiral-details-plan-image, [data-admiral-fullscreen-fades] [data-apartment-details] .admiral-details-grid [data-orbitdata-transition], [data-admiral-fullscreen-fades] [data-apartment-details] .admiral-details-summary, [data-admiral-fullscreen-fades] [data-apartment-details] .admiral-details-plan { transition:none !important; } [data-admiral-fullscreen-fades] [data-orbit-studio] .orbit-studio-status[data-status=\"available\"] .orbit-studio-status-dot::after { animation:none !important; } }"
 const HomepageFadeContext = React.createContext(.5)
 function homepageFadeSeconds(value: number | undefined) { return Number.isFinite(value) ? Math.max(0, Math.min(2, value!)) : .5 }
 
@@ -2017,6 +2017,7 @@ function useOrbitDataTransition<T>(
 }
 interface OrbitApartmentImage {
     thumbnail?: string
+    preview?: string
     full: string
     label?: string
     isIllustrative?: boolean
@@ -2118,6 +2119,7 @@ function parseOrbitApartmentDataset(value: unknown): OrbitApartmentDataset {
             ...(text(entry.thumbnail, 4096)
                 ? { thumbnail: text(entry.thumbnail, 4096)! }
                 : {}),
+            ...(text(entry.preview, 4096) ? { preview: text(entry.preview, 4096)! } : {}),
             ...(text(entry.original, 4096)
                 ? { original: text(entry.original, 4096)! }
                 : {}),
@@ -2332,13 +2334,15 @@ function orbitApartmentPlan(
     record: OrbitApartmentRecord,
     dataset: OrbitApartmentDataset,
     base: string,
-    preferThumbnail = false
+    size: "thumbnail" | "preview"
 ): OrbitApartmentPlan | null {
     const source = record.media?.floorplan
-    const thumbnail = preferThumbnail
+    const thumbnail = size === "thumbnail"
         ? orbitApartmentAssetUrl(source?.thumbnail, base)
         : null
-    const url = thumbnail || orbitApartmentAssetUrl(source?.full || record.floorplan, base)
+    const url = size === "preview"
+        ? orbitApartmentAssetUrl(source?.preview, base)
+        : thumbnail || orbitApartmentAssetUrl(source?.full || record.floorplan, base)
     if (!url) return null
     const layout =
         record.apartmentType ? dataset.roomLayouts[record.apartmentType] : null
@@ -4654,7 +4658,7 @@ const orbitApartmentStudioStyles = `
 [data-orbit-studio] .orbit-studio-status { display: inline-flex; align-items: center; gap: 8px; color: var(--studio-muted); font-size: 12px; font-weight: 500; line-height: 1.4; }
 [data-orbit-studio] .orbit-studio-status-dot { position: relative; display: block; width: 6px; height: 6px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
 [data-orbit-studio] .orbit-studio-status[data-status="available"] { color: #35764c; color: color-mix(in srgb,var(--orbit-available-color,#46A66A) 65%,#263b32); }
-[data-orbit-studio] .orbit-studio-status[data-status="available"] .orbit-studio-status-dot::after { position: absolute; content: ""; inset: -3px; border: 1px solid currentColor; border-radius: 50%; animation: orbitStudioAvailablePulse 2.4s ease-out infinite; }
+[data-orbit-studio] .orbit-studio-status[data-status="available"] .orbit-studio-status-dot::after { position: absolute; content: ""; inset: -3px; border: 1px solid currentColor; border-radius: 50%; opacity: 0; animation: orbitStudioAvailablePulse .65s ease-out 1; }
 [data-orbit-studio] .orbit-studio-status[data-status="under_negotiation"],[data-orbit-studio] .orbit-studio-status[data-status="reserved"] { color: #79723c; color: color-mix(in srgb,var(--orbit-negotiation-color,#E2B849) 45%,#263b32); }
 [data-orbit-studio] .orbit-studio-status[data-status="sold"] { color: #ae4f56; color: color-mix(in srgb,var(--orbit-sold-color,#DA5961) 75%,#263b32); }
 @keyframes orbitStudioAvailablePulse { 0%,15% { opacity: .55; transform: scale(.6); } 75%,100% { opacity: 0; transform: scale(1.5); } }
@@ -5705,13 +5709,14 @@ function OrbitApartmentStudio(
     })
     const previewPlan =
         (active || arriving) && apartment && dataset
-            ? orbitApartmentPlan(apartment, dataset, assetBase, true)
+            ? orbitApartmentPlan(apartment, dataset, assetBase, "thumbnail")
             : null
     const previewImage = useOrbitPreviewImage(previewPlan?.url, active || arriving, !!previewPlan?.isThumbnail)
-    // Keep the quick thumbnail while a stable large-screen selection sharpens.
+    // Large orbit panels can refine to a dedicated preview on a stable selection.
+    // The full-resolution sheet belongs to the detail card.
     const sharpPlan = active && !mobile && widePlanPreview &&
         previewPlan?.isThumbnail && apartment && dataset
-        ? orbitApartmentPlan(apartment, dataset, assetBase)
+        ? orbitApartmentPlan(apartment, dataset, assetBase, "preview")
         : null
     const sharpImage = useOrbitPreviewImage(
         sharpPlan?.url === failedImage ? null : sharpPlan?.url,
@@ -6200,6 +6205,7 @@ function OrbitApartmentStudio(
                                                 title={statusText}
                                             >
                                                 <span
+                                                    key={apartment?.id}
                                                     className="orbit-studio-status-dot"
                                                     aria-hidden="true"
                                                 />
@@ -6301,6 +6307,7 @@ function OrbitApartmentStudio(
                                             data-orbit-field="status"
                                         >
                                             <span
+                                                key={apartment?.id}
                                                 className="orbit-studio-status-dot"
                                                 aria-hidden="true"
                                             />
@@ -7005,7 +7012,7 @@ function OrbitFullscreenDetails({
                   apartment,
                   dataset,
                   assetBase,
-                  true
+                  "thumbnail"
               )
             : null
     const floorplanSource =
@@ -8454,8 +8461,7 @@ export default function AdmiralHomepageStudio(
         let lastWheelAt = -Infinity,
             wheelIntent = 0,
             wheelCanEnter = false,
-            lastUI = 0,
-            lastOrbitUI = ""
+            lastUI = 0
         let resetWheelAt: number | null = null
         const abort = new AbortController(),
             signal = abort.signal
@@ -8476,6 +8482,24 @@ export default function AdmiralHomepageStudio(
         )
         const decodeWidth = phone ? orbitMobileWidth : motionWidth
         root.dataset.orbitMotionWidth = String(decodeWidth)
+        // The studio slot is stationary during camera movement. All consumers
+        // use the same physical rectangles until scrolling or layout changes.
+        let orbitLayout: { root: DOMRect; slot: DOMRect | null } | null = null
+        function measureOrbitLayout() {
+            return orbitLayout ??= {
+                root: root!.getBoundingClientRect(),
+                slot: studioEnabled.current
+                    ? studioViewportRef.current?.getBoundingClientRect() ?? null
+                    : null,
+            }
+        }
+        function invalidateOrbitLayout() {
+            orbitLayout = null
+        }
+        window.addEventListener("scroll", invalidateOrbitLayout, { capture: true, passive: true, signal })
+        window.addEventListener("resize", invalidateOrbitLayout, { passive: true, signal })
+        window.visualViewport?.addEventListener("scroll", invalidateOrbitLayout, { passive: true, signal })
+        window.visualViewport?.addEventListener("resize", invalidateOrbitLayout, { passive: true, signal })
         function isVisible(box = root!.getBoundingClientRect()) {
             return (
                 box.width > 0 &&
@@ -8488,11 +8512,14 @@ export default function AdmiralHomepageStudio(
             progress: number,
             bounds: { width: number; height: number }
         ) {
-            const slot = studioEnabled.current
+            const layout = currentStage === "orbit" || currentStage === "handoff"
+                ? measureOrbitLayout()
+                : null
+            const slot = layout ? layout.slot : studioEnabled.current
                 ? studioViewportRef.current?.getBoundingClientRect()
                 : null
             if (slot && slot.width > 0 && slot.height > 0) {
-                const rootBounds = root!.getBoundingClientRect(),
+                const rootBounds = layout?.root ?? root!.getBoundingClientRect(),
                     amount = sequenceEase(sequenceClamp(progress))
                 const scale = Math.min(slot.width / 1920, slot.height / 1010)
                 const targetWidth = 1920 * scale,
@@ -8534,7 +8561,9 @@ export default function AdmiralHomepageStudio(
                 fadeProgress: (from, to, delaySeconds = 0) => activeSequence === "SEQ_01" ? hero?.fadeProgress(from, to, delaySeconds) ?? heroSnapshot.progress : 1,
                 timing: timing.current,
                 stage: currentStage,
-                orbit: orbitSnapshot,
+                // Precise position remains readable without notifying every
+                // Framer overlay on every fractional camera step.
+                get orbit() { return orbitSnapshot },
                 story: story.current,
                 static: staticRenderer,
                 mobile: mobileLayout,
@@ -8707,6 +8736,7 @@ export default function AdmiralHomepageStudio(
             if (next !== "orbitApproach" && next !== "connection" && next !== "handoff") delete root!.dataset.orbitPrepaint
             if (next !== "orbitApproach" && next !== "handoff" && next !== "orbit") delete root!.dataset.orbitArriving
             currentStage = next
+            invalidateOrbitLayout()
             root!.dataset.homepageStage = next
             setStage(next)
             applyPresentation()
@@ -8736,9 +8766,12 @@ export default function AdmiralHomepageStudio(
             }
             return true
         }
-        function studioInputBounds() {
+        function studioInputBounds(forInput = false) {
             if (!studioEnabled.current || currentStage !== "orbit") return null
-            return studioViewportRef.current?.getBoundingClientRect() ?? null
+            // Framer ancestors can translate without resizing. Recheck at input
+            // boundaries so a moved window never steals the page's next scroll.
+            if (forInput) invalidateOrbitLayout()
+            return measureOrbitLayout().slot
         }
 
         const orbit = staticRenderer
@@ -8768,9 +8801,9 @@ export default function AdmiralHomepageStudio(
                   checkpointFadeSeconds,
                   focalX: focalX / 100,
                   focalY: focalY / 100,
-                  renderBounds: () => fullscreen.geometryRef.current,
+                  renderBounds: () => fullscreen.geometryRef.current ?? measureOrbitLayout().root,
                   inputBounds: () =>
-                      fullscreen.geometryRef.current?.physical ?? studioInputBounds(),
+                      fullscreen.geometryRef.current?.physical ?? studioInputBounds(true),
                   inputPoint: (clientX, clientY) => {
                       const geometry = fullscreen.geometryRef.current
                       if (!geometry) return { x: clientX, y: clientY }
@@ -8793,21 +8826,22 @@ export default function AdmiralHomepageStudio(
                           : viewportFor(1, bounds),
                   onUpdate(snapshot) {
                       if (disposed) return
-                      maskPickerRef.current?.refresh()
+                      const previous = orbitSnapshot
                       orbitSnapshot = snapshot
-                      publish()
-                      if (
-                          snapshot.state !== "checkpoint" ||
-                          snapshot.checkpoint < 0
-                      )
-                          setInteractionApartmentId(null)
-                      const key = `${snapshot.state}:${snapshot.checkpoint}:${Math.floor(snapshot.ready / 6)}:${Math.floor(snapshot.buffered / 6)}:${Math.floor(snapshot.requiredReady / 3)}:${snapshot.buffered === snapshot.bufferTotal}:${snapshot.requiredReady === snapshot.requiredTotal}:${snapshot.decoded > snapshot.buffered}`
+                      const viewChanged = previous.state !== snapshot.state ||
+                          previous.checkpoint !== snapshot.checkpoint ||
+                          previous.suspended !== snapshot.suspended
+                      if (viewChanged) {
+                          maskPickerRef.current?.refresh()
+                          if (snapshot.state !== "checkpoint" || snapshot.checkpoint < 0)
+                              setInteractionApartmentId(null)
+                          publish()
+                      }
+                      const loadingChanged = currentStage === "handoff" &&
+                          (previous.requiredReady !== snapshot.requiredReady ||
+                           previous.requiredTotal !== snapshot.requiredTotal)
                       const now = performance.now()
-                      if (
-                          key !== lastOrbitUI ||
-                          (showDiagnostics && now - lastUI > 150)
-                      ) {
-                          lastOrbitUI = key
+                      if (viewChanged || loadingChanged || (showDiagnostics && now - lastUI > 150)) {
                           lastUI = now
                           setOrbitInfo(snapshot)
                       }
@@ -9025,6 +9059,7 @@ export default function AdmiralHomepageStudio(
                 // Compressed orbit downloads run from page load; decode its
                 // bounded window only near the connecting flight's handoff.
                 if (
+                    orbit &&
                     !orbitPreparing &&
                     snapshot.direction > 0 &&
                     (connectionVideoUrl ? snapshot.state === "arrival" : snapshot.progress >= 0.55)
@@ -9731,6 +9766,7 @@ export default function AdmiralHomepageStudio(
         ).retryOrbit = retry
         const refresh = () => {
             if (!disposed) {
+                invalidateOrbitLayout()
                 flightGeometry = null
                 applyPresentation()
                 hero?.redraw()
@@ -10119,7 +10155,6 @@ export default function AdmiralHomepageStudio(
                     "--admiral-fade-shell": `${400 + fadeExtra * 1000}ms`,
                     "--admiral-fade-record": `${180 + fadeExtra * 1000}ms`,
                     "--admiral-fade-plan": `${160 + fadeExtra * 1000}ms`,
-                    "--admiral-fade-pulse": `${2400 + fadeExtra * 1000}ms`,
                     "--orbit-available-color": maskAvailableColor,
                     "--orbit-negotiation-color": maskNegotiationColor,
                     "--orbit-sold-color": maskSoldColor,
@@ -10299,15 +10334,16 @@ export default function AdmiralHomepageStudio(
                         height={1}
                         style={{
                             position: "absolute",
-                            inset: 0,
-                            width: "100%",
-                            height: "100%",
+                            left: fullscreen.active ? 0 : "var(--admiral-image-x, 0px)",
+                            top: fullscreen.active ? 0 : "var(--admiral-image-y, 0px)",
+                            width: fullscreen.active ? "100%" : "var(--admiral-image-width, 100%)",
+                            height: fullscreen.active ? "100%" : "var(--admiral-image-height, 100%)",
                             zIndex: 2,
                             touchAction: fullscreen.active
                                 ? "none"
                                 : "pan-y pinch-zoom",
                             pointerEvents: orbitVisible ? "auto" : "none",
-                            clipPath: fullscreen.active ? "none" : imageClip,
+                            borderRadius: fullscreen.active ? 0 : frameRadius,
                         }}
                     />
                     <canvas
@@ -14296,8 +14332,6 @@ interface OrbitOptions {
     focalY?: number
     /** Logical CSS dimensions before a surrounding scene transform. */
     renderBounds?: () => { width: number; height: number } | null
-    /** Optional fixed pixel allocation while the logical scene changes shape. */
-    backingSize?: () => { width: number; height: number } | null
     /** Map physical pointer coordinates into the transformed scene's logical space. */
     inputPoint?: (clientX: number, clientY: number) => { x: number; y: number }
     inputBounds?: () => {
@@ -14421,6 +14455,24 @@ function sampleOrbitWheel(
 }
 
 /** Keep compressed files, both adjacent motion arcs by default, and one sharp parked view. */
+function orbitControlCoversPoint(root: HTMLElement, x: number, y: number, selector: string) {
+    // Framer can position a transparent sibling above the actual control. Native
+    // hit testing includes every rendered layer under the pointer and ignores
+    // clipped boxes and full-screen wrappers with pointer-events:none.
+    return document.elementsFromPoint(x, y).some((control) => {
+        if (!root.contains(control) || !control.matches(selector) ||
+            control.matches(":disabled") || control.closest("[inert],[hidden],[aria-hidden='true']"))
+            return false
+        for (let element: Element | null = control; element; element = element.parentElement) {
+            const css = getComputedStyle(element)
+            if (css.visibility === "hidden" || css.visibility === "collapse" || Number(css.opacity) === 0)
+                return false
+            if (element === root) break
+        }
+        return true
+    })
+}
+
 function createOrbitPlayer(options: OrbitOptions) {
     const { root, canvas } = options
     const urls = [...options.urls],
@@ -14549,12 +14601,14 @@ function createOrbitPlayer(options: OrbitOptions) {
         time: number
         duration: number
         startSlope?: number
+        loadingArc?: { indices: number[]; readyCount: number }
     } | null = null
     let pendingMove: {
         start: number
         target: number
         indices: number[]
         durationMs?: number
+        deliverySample?: { time: number; ready: number }
     } | null = null
     let desired = new Set<number>(),
         required = new Set<number>(),
@@ -14807,14 +14861,12 @@ function createOrbitPlayer(options: OrbitOptions) {
     }
 
     function indicesBetween(start: number, end: number) {
-        const result = new Set<number>()
-        for (
-            let index = Math.floor(Math.min(start, end));
-            index <= Math.ceil(Math.max(start, end)) && result.size < total;
-            index++
-        )
-            result.add(orbitModulo(index, total))
-        return [...result]
+        // Fetch and decode the first angle the visitor will see first in either direction.
+        const step = end < start ? -1 : 1
+        const first = step > 0 ? Math.floor(start) : Math.ceil(start)
+        const last = step > 0 ? Math.ceil(end) : Math.floor(end)
+        const count = Math.min(total, Math.abs(last - first) + 1)
+        return Array.from({ length: count }, (_, i) => orbitModulo(first + i * step, total))
     }
 
     /** The drag waits only for pixels that paint() will actually draw. */
@@ -14987,6 +15039,12 @@ function createOrbitPlayer(options: OrbitOptions) {
             if (failure !== undefined) fail(failure)
             else tryStartPending()
         }
+        const arc = settling?.loadingArc
+        if (arc && settling) {
+            while (arc.readyCount < arc.indices.length && frames.has(arc.indices[arc.readyCount]))
+                arc.readyCount++
+            if (arc.readyCount === arc.indices.length) settling.loadingArc = undefined
+        }
         const scrub = activeScrub()
         if (scrub && scrub.target !== position)
             requestPaint()
@@ -15063,20 +15121,15 @@ function createOrbitPlayer(options: OrbitOptions) {
 
     function pump() {
         if (destroyed || !started) return
-        const all = nearestFirst(
-            urls.map((_, index) => index),
-            position
-        )
-        const downloads = [...new Set([...required, ...priority, ...all])]
         const downloadLimit = prepared || preparing ? 4 : 2
-        for (const index of downloads) {
-            if (fetching.size >= downloadLimit) break
-            if (
-                !blobs.has(index) &&
-                !fetching.has(index) &&
-                !fetchFailed.has(index)
-            )
-                void fetchFrame(index)
+        if (blobs.size < total && fetching.size < downloadLimit) {
+            const all = nearestFirst(urls.map((_, index) => index), position)
+            const downloads = new Set([...required, ...priority, ...all])
+            for (const index of downloads) {
+                if (fetching.size >= downloadLimit) break
+                if (!blobs.has(index) && !fetching.has(index) && !fetchFailed.has(index))
+                    void fetchFrame(index)
+            }
         }
         if (inspectionTarget >= 0) void prepareInspection()
         const allowed = prepared ? priority : preparationRequired
@@ -15235,9 +15288,8 @@ function createOrbitPlayer(options: OrbitOptions) {
             }
             return
         }
-        if (decoding.size >= 2 || nativeDecodes >= 2) return
-        // Travel starts after its motion frames are ready. On entry, the first
-        // motion frame is also ready before this optional decode gets a slot.
+        // Give in-flight motion priority over the optional high-resolution decode.
+        if (settling?.loadingArc || decoding.size >= 2 || nativeDecodes >= 2) return
         inspectionDecoding = true
         try {
             const bitmap = await decodeBlob(blob, inspectionWidth, true)
@@ -15265,46 +15317,18 @@ function createOrbitPlayer(options: OrbitOptions) {
         }
     }
 
-    function drawImage(
-        bitmap: OrbitBitmap,
-        viewport?: { x: number; y: number; width: number; height: number },
-        logicalRatio?: number
-    ) {
+    function drawImage(bitmap: OrbitBitmap) {
         if (!context) return
-        const target = viewport ?? {
-            x: 0,
-            y: 0,
-            width: canvas.width,
-            height: canvas.height,
-        }
-        if (logicalRatio) {
-            let width = bitmap.width,
-                height = bitmap.height
-            if (width / height > logicalRatio) width = height * logicalRatio
-            else height = width / logicalRatio
-            context.drawImage(
-                bitmap.image,
-                (bitmap.width - width) * focalX,
-                (bitmap.height - height) * focalY,
-                width,
-                height,
-                target.x,
-                target.y,
-                target.width,
-                target.height
-            )
-            return
-        }
         const scale = Math.max(
-            target.width / bitmap.width,
-            target.height / bitmap.height
+            canvas.width / bitmap.width,
+            canvas.height / bitmap.height
         )
         const width = bitmap.width * scale,
             height = bitmap.height * scale
         context.drawImage(
             bitmap.image,
-            target.x + (target.width - width) * focalX,
-            target.y + (target.height - height) * focalY,
+            (canvas.width - width) * focalX,
+            (canvas.height - height) * focalY,
             width,
             height
         )
@@ -15365,45 +15389,20 @@ function createOrbitPlayer(options: OrbitOptions) {
                 : null
         const useful =
             inspection && inspectionFrame === frame ? inspection : bitmap
-        // Match pixel density to the visible image, not the mostly clipped
-        // full-root backing. Inspection quality restores density only once ready.
+        // Presentation positions the canvas at the same rectangle as the poster and mask.
+        // Its backing needs only the visible camera pixels, even on a large desktop.
+        const view = viewport ?? bounds
         const usefulDPR = Math.min(
-            useful.width / (viewport?.width ?? bounds.width),
-            useful.height / (viewport?.height ?? bounds.height)
+            useful.width / view.width,
+            useful.height / view.height
         )
         const dpr = Math.min(window.devicePixelRatio || 1, 2, usefulDPR)
-        const requestedBacking = options.backingSize?.()
-        const backing =
-            requestedBacking &&
-            [requestedBacking.width, requestedBacking.height].every(
-                Number.isFinite
-            ) &&
-            requestedBacking.width > 0 &&
-            requestedBacking.height > 0
-                ? requestedBacking
-                : null
-        const width = Math.max(
-                1,
-                Math.round(backing?.width ?? bounds.width * dpr)
-            ),
-            height = Math.max(
-                1,
-                Math.round(backing?.height ?? bounds.height * dpr)
-            )
+        const width = Math.max(1, Math.round(view.width * dpr)),
+            height = Math.max(1, Math.round(view.height * dpr))
         if (canvas.width !== width || canvas.height !== height) {
             canvas.width = width
             canvas.height = height
             lastPaint = ""
-        }
-        let destination: { x: number; y: number; width: number; height: number } | undefined
-        if (viewport) {
-            // Cover the fractional pixels just outside the CSS clip so its
-            // antialiased edge always composites against the image.
-            const left = Math.floor(viewport.x * width / bounds.width) - 1
-            const top = Math.floor(viewport.y * height / bounds.height) - 1
-            const right = Math.ceil((viewport.x + viewport.width) * width / bounds.width) + 1
-            const bottom = Math.ceil((viewport.y + viewport.height) * height / bounds.height) + 1
-            destination = { x: left, y: top, width: right - left, height: bottom - top }
         }
         const mix =
             inspection && inspectionFrame === frame
@@ -15411,11 +15410,6 @@ function createOrbitPlayer(options: OrbitOptions) {
                     ? 1
                     : orbitClamp((performance.now() - qualityStartedAt) / checkpointFadeMs, 0, 1)
                 : 0
-        const logicalRatio = backing
-            ? viewport
-                ? viewport.width / viewport.height
-                : bounds.width / bounds.height
-            : undefined
         const signature = [
             from,
             to,
@@ -15424,40 +15418,20 @@ function createOrbitPlayer(options: OrbitOptions) {
             height,
             inspectionFrame,
             mix.toFixed(4),
-            logicalRatio ?? "",
-            viewport ? 1 : 0,
-            destination?.x ?? 0,
-            destination?.y ?? 0,
-            destination?.width ?? width,
-            destination?.height ?? height,
         ].join("|")
         if (signature === lastPaint) return
         context.globalAlpha = 1
-        if (destination) {
-            context.fillStyle = "#101820"
-            context.fillRect(0, 0, width, height)
-            context.save()
-            context.beginPath()
-            context.rect(
-                destination.x,
-                destination.y,
-                destination.width,
-                destination.height
-            )
-            context.clip()
-        }
-        drawImage(bitmap, destination, logicalRatio)
+        drawImage(bitmap)
         if (next) {
             context.globalAlpha = frameMix
-            drawImage(next, destination, logicalRatio)
+            drawImage(next)
             context.globalAlpha = 1
         }
         if (inspection && mix > 0 && inspectionFrame === frame) {
             context.globalAlpha = mix
-            drawImage(inspection, destination, logicalRatio)
+            drawImage(inspection)
             context.globalAlpha = 1
         }
-        if (destination) context.restore()
         setData("orbitFrameFrom", String(from))
         setData("orbitFrameTo", String(to))
         setData("orbitFrameMix", frameMix.toFixed(4))
@@ -15507,6 +15481,15 @@ function createOrbitPlayer(options: OrbitOptions) {
         notify()
     }
 
+    function finishReducedTurn(target: number) {
+        if (frames.has(orbitModulo(Math.round(target), total))) arrive(target)
+        else {
+            // The visitor may enable reduced motion during a partially loaded turn.
+            settling = null
+            startSettle(target)
+        }
+    }
+
     function startSettle(target = nextCheckpoint(position, direction), from = position, durationSeconds?: number) {
         if (!canRun() || !fullyReady()) return
         const distance = target - from
@@ -15532,7 +15515,18 @@ function createOrbitPlayer(options: OrbitOptions) {
         const retained = from === position ? wanted
             : [...new Set([...wanted, ...indicesBetween(position, position)])]
         // Preserve the release timing while its frames are being prepared.
-        pendingMove = { start: from, target, indices, durationMs: durationSeconds === undefined ? undefined : durationSeconds * 1000 }
+        // Only ordinary one-checkpoint turns use progressive playback. A short drag
+        // release, deep link or numbered jump keeps its existing complete-route gate.
+        const sampleDelivery = adjacent && durationSeconds === undefined && !reduced() &&
+            Number.isInteger(from) && checkpoints.includes(orbitModulo(from, total)) &&
+            Math.abs(distance) === indices.length - 1
+        pendingMove = {
+            start: from, target, indices,
+            durationMs: durationSeconds === undefined ? undefined : durationSeconds * 1000,
+            deliverySample: sampleDelivery
+                ? { time: performance.now(), ready: indices.filter(index => frames.has(index)).length }
+                : undefined,
+        }
         state = "buffering"
         setBuffer(retained, indices, [
             ...indices,
@@ -15544,12 +15538,22 @@ function createOrbitPlayer(options: OrbitOptions) {
         if (
             !pendingMove ||
             !canRun() ||
-            state === "paused" ||
-            !framesReady(pendingMove.indices)
+            state === "paused"
         )
             return
         const pending = pendingMove
         if (failedIndex(pending.indices) !== undefined) return
+        const missing = pending.indices.findIndex(index => !frames.has(index))
+        if (missing >= 0) {
+            const sample = pending.deliverySample
+            // Hold at least one third of the actual arc in travel order. Require
+            // three newly delivered frames and headroom over the fastest eased
+            // portion (1.5 times the average angular speed).
+            if (!sample || reduced() || missing < Math.max(4, Math.ceil(pending.indices.length / 3))) return
+            const delivered = pending.indices.filter(index => frames.has(index)).length - sample.ready
+            const frameInterval = snapDuration * 1000 / (pending.indices.length - 1)
+            if (delivered < 3 || (performance.now() - sample.time) / delivered > frameInterval * .6) return
+        }
         pendingMove = null
         pausedAt = 0
         if (reduced()) {
@@ -15559,6 +15563,7 @@ function createOrbitPlayer(options: OrbitOptions) {
         settling = {
             start: pending.start,
             target: pending.target,
+            loadingArc: missing < 0 ? undefined : { indices: pending.indices, readyCount: missing },
             time: performance.now(),
             duration: Math.abs(pending.target - pending.start) < 0.0001
                 ? 1
@@ -15593,7 +15598,7 @@ function createOrbitPlayer(options: OrbitOptions) {
 
     function tickWheel(now: number) {
         const intent = wheelIntent, arc = settling
-        if (!intent || !arc || (!intent.continuous && !intent.followThrough)) return false
+        if (!intent || !arc || arc.loadingArc || (!intent.continuous && !intent.followThrough)) return false
         if ((!intent.followThrough && now - intent.lastDriveAt > ORBIT_WHEEL_RELEASE_MS) ||
             !options.continuousWheelBounds?.()) {
             endWheelFlow(now)
@@ -15680,7 +15685,20 @@ function createOrbitPlayer(options: OrbitOptions) {
                 t = orbitClamp((now - motion.time) / motion.duration, 0, 1)
             const smooth = t * t * (3 - 2 * t)
                 + (motion.startSlope ?? 0) * t * (1 - t) * (1 - t)
-            position = motion.start + (motion.target - motion.start) * smooth
+            const proposed = motion.start + (motion.target - motion.start) * smooth
+            // If delivery unexpectedly slows, keep the painted pose and finish
+            // buffering this arc once. Never advance logical position past a hole.
+            if (motion.loadingArc && Math.abs(proposed - motion.start) > motion.loadingArc.readyCount - 1) {
+                pendingMove = {
+                    start: position, target: motion.target, indices: motion.loadingArc.indices,
+                    durationMs: Math.max(100, motion.duration * Math.abs(motion.target - position) / Math.abs(motion.target - motion.start)),
+                }
+                settling = null
+                state = "buffering"
+                resourcesChanged()
+                return
+            }
+            position = proposed
             if (t >= 1) {
                 arrive(motion.target)
             }
@@ -15771,41 +15789,8 @@ function createOrbitPlayer(options: OrbitOptions) {
     }
 
     function coveredTrialControl(x: number, y: number) {
-        return Array.from(
-            root.querySelectorAll<HTMLElement>(
-                "[data-homepage-controls] button, button[data-apartment-open], button[data-orbit-detail-link], button[data-orbit-favorite], button[data-orbit-fullscreen-open], button[data-orbit-fullscreen-close], [data-orbit-filters], [data-orbit-filters] button, [data-orbit-range-popover], [data-orbit-group]"
-            )
-        ).some((control) => {
-            if (
-                (control as HTMLButtonElement).disabled ||
-                control.getAttribute("aria-disabled") === "true" ||
-                control.closest("[inert], [hidden], [aria-hidden='true']")
-            )
-                return false
-            const box = control.getBoundingClientRect()
-            if (box.width <= 0 || box.height <= 0 ||
-                x < box.left || x > box.right || y < box.top || y > box.bottom)
-                return false
-            const style = getComputedStyle(control)
-            if (style.pointerEvents === "none") return false
-            for (
-                let element: HTMLElement | null = control;
-                element;
-                element = element.parentElement
-            ) {
-                const css =
-                    element === control ? style : getComputedStyle(element)
-                if (
-                    css.display === "none" ||
-                    css.visibility === "hidden" ||
-                    css.visibility === "collapse" ||
-                    Number(css.opacity) === 0
-                )
-                    return false
-                if (element === root) break
-            }
-            return true
-        })
+        return orbitControlCoversPoint(root, x, y,
+            ":is([data-homepage-controls] button, button[data-apartment-open], button[data-orbit-detail-link], button[data-orbit-favorite], button[data-orbit-fullscreen-open], button[data-orbit-fullscreen-close], [data-orbit-filters], [data-orbit-filters] button, [data-orbit-range-popover], [data-orbit-group]):not([aria-disabled='true'])")
     }
 
     function nestedScroll(
@@ -16278,7 +16263,7 @@ function createOrbitPlayer(options: OrbitOptions) {
         }
         if (settling) {
             if (reduced()) {
-                arrive(settling.target)
+                finishReducedTurn(settling.target)
                 return
             }
             if (pausedAt) settling.time += performance.now() - pausedAt
@@ -16600,7 +16585,7 @@ function createOrbitPlayer(options: OrbitOptions) {
             fullyReady() &&
             (state === "moving" || state === "settling")
         )
-            arrive(settling?.target ?? nextCheckpoint(position, direction))
+            finishReducedTurn(settling?.target ?? nextCheckpoint(position, direction))
     }
     window.addEventListener("wheel", onWheel, { passive: false, capture: true })
     root.addEventListener("lostpointercapture", onLostPointerCapture)
@@ -17311,8 +17296,7 @@ function createOrbitApartmentLighting(options: {
 }
 
 
-/** Compressed masks stay downloaded; at most two compact one-byte ID maps stay decoded. */
-/** Keep only the changed window pixels from the current camera's two matched lighting renders. */
+/** Keep sparse window pixels for recent cameras. Full lighting images are temporary. */
 function createOrbitSceneLighting(options: {
     root: HTMLElement
     ids: readonly string[]
@@ -17326,7 +17310,17 @@ function createOrbitSceneLighting(options: {
         right: number
         bottom: number
     }
-    const patches = new Map<string, WindowPatch>()
+    interface PreparedLighting {
+        patches: Map<string, WindowPatch>
+        sourceMask: WeakSet<OrbitMaskIndex>
+        width: number
+        height: number
+        bytes: number
+    }
+    // The mask/palette belong to this picker. Weak membership lets its ID-map
+    // cache evict masks independently and prevents reuse after a fresh decode.
+    const recent = new Map<string, PreparedLighting>()
+    let patches = new Map<string, WindowPatch>()
     let activeMask: OrbitMaskIndex | null = null
     let frame = -1, phone = false, width = 0, height = 0
     let request: AbortController | null = null
@@ -17348,7 +17342,7 @@ function createOrbitSceneLighting(options: {
     function release() {
         request?.abort()
         request = null
-        patches.clear()
+        patches = new Map()
         clearTexture()
         activeMask = null
         failed = false
@@ -17399,6 +17393,16 @@ function createOrbitSceneLighting(options: {
             if (objectUrl) URL.revokeObjectURL(objectUrl)
             if (canvas) canvas.width = canvas.height = 0
         }
+    }
+
+    function showPrepared(entry: PreparedLighting) {
+        patches = entry.patches
+        width = entry.width
+        height = entry.height
+        options.root.dataset.orbitLightingState = "ready"
+        options.root.dataset.orbitLightingDecoded = "1"
+        options.root.dataset.orbitLightingVariant = phone ? "phone" : "desktop"
+        options.root.dataset.orbitLightingBytes = String(entry.bytes)
     }
 
     async function load() {
@@ -17462,11 +17466,16 @@ function createOrbitSceneLighting(options: {
                 patches.set(options.ids[id-1], { samples:packed[id], left:minX[id], top:minY[id], right:maxX[id]+1, bottom:maxY[id]+1 })
                 bytes += packed[id].byteLength
             })
-            width = w; height = h
-            options.root.dataset.orbitLightingState = "ready"
-            options.root.dataset.orbitLightingDecoded = "1"
-            options.root.dataset.orbitLightingVariant = phone ? "phone" : "desktop"
-            options.root.dataset.orbitLightingBytes = String(bytes)
+            const entry = { patches, sourceMask: new WeakSet([mask]), width: w, height: h, bytes }
+            showPrepared(entry)
+            // Two views at most, with at most 2 MiB per desktop view and 512 KiB
+            // per phone view. An unusually large patch stays active only.
+            if (bytes <= (phone ? 512 * 1024 : 2 * 1024 * 1024)) {
+                const key = camera + (phone ? "-phone" : "-desktop")
+                recent.delete(key)
+                recent.set(key, entry)
+                if (recent.size > 2) recent.delete(recent.keys().next().value!)
+            }
         } catch (error) {
             if (request === controller && !destroyed) {
                 failed = true
@@ -17491,6 +17500,14 @@ function createOrbitSceneLighting(options: {
         frame = next
         phone = nextPhone
         activeMask = mask
+        const key = frame + (phone ? "-phone" : "-desktop")
+        const cached = recent.get(key)
+        if (cached?.sourceMask.has(mask)) {
+            recent.delete(key)
+            recent.set(key, cached)
+            showPrepared(cached)
+            return
+        }
         void load()
     }
 
@@ -17539,7 +17556,7 @@ function createOrbitSceneLighting(options: {
         options.root.dataset.orbitLightingCropBytes=String(dx*dy*4)
         return drawn
     }
-    return {sync,texture,retry(){if(failed){failed=false;void load()}},destroy(){destroyed=true;release()}}
+    return {sync,texture,retry(){if(failed){failed=false;void load()}},destroy(){destroyed=true;release();recent.clear()}}
 }
 
 function createOrbitApartmentPicker(options: OrbitApartmentPickerOptions) {
@@ -18248,54 +18265,12 @@ function createOrbitApartmentPicker(options: OrbitApartmentPickerOptions) {
         return false
     }
 
-    function coveredControl(x: number, y: number) {
-        return Array.from(root.querySelectorAll<HTMLElement>(controls)).some(
-            (control) => {
-                if (
-                    (control as HTMLButtonElement).disabled ||
-                    control.closest("[inert],[hidden],[aria-hidden='true']")
-                )
-                    return false
-                const style = getComputedStyle(control)
-                // The shared card keeps a full-window idle wrapper mounted with
-                // pointer-events:none. Only a hit-testable control should obscure
-                // the facade; an explicitly interactive child is checked itself.
-                if (style.pointerEvents === "none") return false
-                for (
-                    let element: HTMLElement | null = control;
-                    element;
-                    element = element.parentElement
-                ) {
-                    const css =
-                        element === control ? style : getComputedStyle(element)
-                    if (
-                        css.display === "none" ||
-                        css.visibility === "hidden" ||
-                        css.visibility === "collapse" ||
-                        Number(css.opacity) === 0
-                    )
-                        return false
-                    if (element === root) break
-                }
-                const bounds = control.getBoundingClientRect()
-                return (
-                    bounds.width > 0 &&
-                    bounds.height > 0 &&
-                    x >= bounds.left &&
-                    x <= bounds.right &&
-                    y >= bounds.top &&
-                    y <= bounds.bottom
-                )
-            }
-        )
-    }
-
     function hit(clientX: number, clientY: number, target: EventTarget | null) {
         const view = options.getView()
         if (
             !viewReady(view) ||
             ignored(target) ||
-            coveredControl(clientX, clientY)
+            orbitControlCoversPoint(root, clientX, clientY, controls)
         )
             return null
         const mask = masks.get(view.checkpoint),
@@ -18375,7 +18350,7 @@ function createOrbitApartmentPicker(options: OrbitApartmentPickerOptions) {
         if (
             !viewReady(view) ||
             ignored(event.target) ||
-            coveredControl(event.clientX, event.clientY)
+            orbitControlCoversPoint(root, event.clientX, event.clientY, controls)
         )
             return
         const point = options.inputPoint(event.clientX, event.clientY),
@@ -18434,7 +18409,7 @@ function createOrbitApartmentPicker(options: OrbitApartmentPickerOptions) {
         if (event.touches.length !== 1 || event.defaultPrevented) return
         const touch = event.touches[0], view = options.getView()
         if (!viewReady(view) || ignored(event.target) ||
-            coveredControl(touch.clientX, touch.clientY)) return
+            orbitControlCoversPoint(root, touch.clientX, touch.clientY, controls)) return
         const point = options.inputPoint(touch.clientX, touch.clientY), viewport = view.viewport
         if (!Number.isFinite(point.x) || !Number.isFinite(point.y) ||
             point.x < viewport.x || point.y < viewport.y ||
