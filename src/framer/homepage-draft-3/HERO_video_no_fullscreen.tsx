@@ -14,6 +14,25 @@ import AdmiralScrollCue from "./AdmiralScrollCue.tsx"
 const HOMEPAGE_LIGHTING_ATLAS_URL = "https://framerusercontent.com/images/DxiRVoqzN1ZiE2KVkOho93CuQV0.webp"
 const HOMEPAGE_LIGHTING_DATA_URL = "https://framerusercontent.com/assets/z7Sd93G28iAn2iOVsGRmivrt4Q.json"
 
+// Tiny, pre-blurred previews from the eight orbit-v06 checkpoint angles.
+// Embedding them lets the entry notice paint before the first network response.
+const ORBIT_ENTRY_PREVIEWS = [
+    "UklGRqIAAABXRUJQVlA4WAoAAAAQAAAAHwAAEAAAQUxQSA8AAAABEBIQ/y+zQNQiIsnuJQMAVlA4IGwAAACwBACdASogABEAPsFUokwnpKMiMBgIAPAYCWMAwoAN2psp3Gq3pYXyxfoxlguoAP6dx6xZlJTnk9FJYWUuG/m5VUTHot7VdJDWnDl6EYZtHggZkFcWMIomFfqpQwY2uj6LsviiGePAEHeAAAA=",
+    "UklGRqAAAABXRUJQVlA4WAoAAAAQAAAAHwAAEAAAQUxQSA8AAAABEBIQ/y+zQNQiIuneJQMAVlA4IGoAAABwBACdASogABEAPsFUnkqnpSKhsBgMAPAYCWUAuwAOyvsAJtqXJZQ+YDk2AAD+eMAgblKXG8ci+r4mdwFVOMJpJivB0boaoCEASdlb6Xx4eJM3x1pU8pZSQ+ivmxoNp7PmaC74UFGTZjgA",
+    "UklGRqQAAABXRUJQVlA4WAoAAAAQAAAAHwAAEAAAQUxQSA8AAAABEBIQ/y+zQNQiIsnuJQMAVlA4IG4AAABQBACdASogABEAPsFUoUunpKMhsBgIAPAYCWU4AAwzQLGvINhdy37sMy1gAP65yZR/3HQg5cJ2+971pjjwrNJmK/Xm9ESz7gziEMmsXdsjdupuB/SZcMLg6IpqnP7z0sglyYt/ESXsvXN3OYAAAA==",
+    "UklGRpgAAABXRUJQVlA4WAoAAAAQAAAAHwAAEAAAQUxQSA8AAAABEBIQ/y+zQNQiIsnuJQMAVlA4IGIAAAAwBQCdASogABEAPsFOnkunpCKhsBgMAPAYCWUAwoAQ6WUtCGovK+pJfqUo/QyOQyEbgAD82HEAcL8/PXVz4TxyfpQ2DpFy6MfKAbOhrO98XtI2GsStcgU6IxUHpFTBylCAAA==",
+    "UklGRpoAAABXRUJQVlA4WAoAAAAQAAAAHwAAEAAAQUxQSA8AAAABEBIQ/y+zQNQiIsnuJQMAVlA4IGQAAACQBACdASogABEAPrVEnUqnI6Kht/qoAOAWiWUAuwAebbhZKOY6JJL5xdhwuuAA/rXzvz938E8wunU+FKGG1w2tL1FKVtCA51QM95cwr7GQgT3joUBlbuRw9ksHmdYNYxL8AAAA",
+    "UklGRqAAAABXRUJQVlA4WAoAAAAQAAAAHwAAEAAAQUxQSA8AAAABEBIQ/y+zQNQiIsnuJQMAVlA4IGoAAABwBQCdASogABEAPsFWpU0npKOiKAqo8BgJZQDG9BBVu0yuLsZ/YuMxvmxc08Mm3nzNXJwAAPtiYDrUkmGupNZ6ARUo50NG11a1fFjYwGzqy7MDboqefzwcusGkyeExvWOytvoySFsMgAAA",
+    "UklGRpwAAABXRUJQVlA4WAoAAAAQAAAAHwAAEAAAQUxQSA8AAAABEBIQ/y+zQNQiIsnuJQMAVlA4IGYAAABwBACdASogABEAPsFMoEsnpCMhsBgMAPAYCWU4AArAAPANl3jtyF+s72rlAAD+PYBJGAd4J321NeHpLpwt9VgKKmqnV7w5395VnhS+qCqcZ2cAszJtc2ubXQCVV8d1ZIgV95U+WAA=",
+    "UklGRpoAAABXRUJQVlA4WAoAAAAQAAAAHwAAEAAAQUxQSA8AAAABEBIQ/y+zQNQiIsnuJQMAVlA4IGQAAAAQBQCdASogABEAPrlOn0qnJKMhsAwA4BcJZQCo9CBvpLNb2Eov1NphnESOv7Y/NPQAAP6plXkJLRL0kqZGOXAn/zEYoegDvVEGtLDM/3qvKT8zcznuzYhBLD5k5DPRlhNHikAA",
+]
+
+function orbitEntryPreview(frame: number): string {
+    const count = ORBIT_ENTRY_PREVIEWS.length
+    const checkpoint = Math.round(frame / 15)
+    return "data:image/webp;base64," + ORBIT_ENTRY_PREVIEWS[((checkpoint % count) + count) % count]
+}
+
 /** Keep CSS raw text identical between React SSR and client hydration. */
 function homepageStyleMarkup(css: string): { __html: string } {
     return { __html: css.replace(/<\/style/gi, "<\\/style") }
@@ -630,7 +649,7 @@ const homepageChannels = new Map<HTMLElement, HomepageChannel>()
 const homepageSubscribers = new Set<() => void>()
 const notifyHomepage = () => homepageSubscribers.forEach((update) => update())
 const HOMEPAGE_EMPTY_CHECKPOINT_URLS: readonly string[] = []
-const defaultGardenTitle = "Otthon a lombok között"
+const defaultGardenTitle = "Üdvözöljük az új otthonában!"
 const defaultGardenBody = "Az Admiral Park kertjében 46 különböző fafaj kap helyet, így a kilátás évszakról évszakra változik."
 interface AdmiralHomepageTrialProps {
     gardenTitle?: string
@@ -767,6 +786,27 @@ const homepageOrbitEntryStyles = `
    in the same stage change so the glass underneath never shows through. */
 [data-admiral-homepage] [data-orbit-render-canvas] { visibility: hidden; }
 [data-admiral-homepage][data-homepage-stage="orbit"] [data-orbit-render-canvas][data-orbit-painted] { visibility: visible; }
+
+[data-orbit-entry-notice] {
+    position: absolute; z-index: 4; pointer-events: none; user-select: none;
+    left: var(--admiral-image-x, 0px); top: var(--admiral-image-y, 0px);
+    width: var(--admiral-image-width, 100%); height: var(--admiral-image-height, 100%);
+    border-radius: var(--admiral-studio-radius, 0px); overflow: hidden;
+    display: grid; place-items: center;
+    background-color: #506575; background-size: cover; background-position: center;
+    transition: opacity 180ms ease-out;
+}
+[data-orbit-entry-notice][data-revealing="true"] { opacity: 0; }
+[data-orbit-fullscreen-surface][data-active="true"] [data-orbit-entry-notice] {
+    inset: 0; width: 100%; height: 100%; border-radius: 0;
+}
+[data-orbit-entry-label] {
+    max-width: 90%; box-sizing: border-box; padding: 9px 18px; border-radius: 999px;
+    border: 1px solid rgba(255,255,255,.72); background: rgba(235,244,251,.9);
+    color: #203d55; font: 650 clamp(14px, 1.1vw, 18px)/1.3 "Inter", Arial, sans-serif;
+    text-align: center; text-wrap: balance;
+}
+@media (prefers-reduced-motion: reduce) { [data-orbit-entry-notice] { transition: none; } }
 [data-seq3-garden-cue] {
     position: absolute; z-index: 4; left: 50%; bottom: max(42px, env(safe-area-inset-bottom));
     width: min(268px, 90%); height: 54px; transform: translateX(-50%); pointer-events: none;
@@ -805,7 +845,6 @@ const homepageOrbitEntryStyles = `
     padding-inline: max(12px, env(safe-area-inset-left)) max(12px, env(safe-area-inset-right));
     color: var(--token-af31bcae-daff-40c0-91b5-11fdb1730857, #fff);
     text-align: center;
-    text-shadow: 0 1px 2px rgba(14, 36, 58, .85), 0 2px 7px rgba(14, 36, 58, .55);
     pointer-events: none;
     opacity: 0;
     visibility: hidden;
@@ -823,6 +862,12 @@ const homepageOrbitEntryStyles = `
     visibility: visible;
     transform: none;
     transition-delay: 0s;
+}
+/* SEQ01/02 captions are native Framer layers; SEQ03 uses the same shadow here. */
+[data-framer-name="SEQ01"] [data-framer-name^="SEQ01 caption"] [data-framer-component-type="RichTextContainer"] :is(h1, h2, h3, h4, p),
+[data-framer-name="SEQ02"] [data-framer-component-type="RichTextContainer"] :is(h1, h2, h3, h4, p),
+[data-admiral-homepage] [data-seq3-garden] :is(h2, p) {
+    text-shadow: 0 1px 3px rgba(14, 36, 58, .45);
 }
 [data-admiral-homepage] [data-seq3-garden] :is(h2, p) {
     margin: 0;
@@ -936,6 +981,65 @@ function homepageJourneyQuery(url: URL) {
     return params.toString()
 }
 const useHomepageLayoutEffect = typeof window === "undefined" ? React.useEffect : React.useLayoutEffect
+
+function OrbitEntryNotice({ preview, canvasRef, ready, failed, mobile }: {
+    preview?: string
+    canvasRef: React.RefObject<HTMLCanvasElement | null>
+    ready: boolean
+    failed: boolean
+    mobile: boolean
+}) {
+    const [elapsed, setElapsed] = React.useState(false)
+    const [finished, setFinished] = React.useState(false)
+    const [painted, setPainted] = React.useState(false)
+    React.useEffect(() => {
+        // Let the browser present the notice before starting its reading time.
+        let timer = 0
+        let frame = requestAnimationFrame(() => {
+            frame = requestAnimationFrame(() => {
+                timer = window.setTimeout(() => setElapsed(true), 2000)
+            })
+        })
+        return () => {
+            cancelAnimationFrame(frame)
+            window.clearTimeout(timer)
+        }
+    }, [])
+    React.useEffect(() => {
+        const canvas = canvasRef.current
+        if (!ready || !canvas || painted) return
+        if (canvas.hasAttribute("data-orbit-painted")) {
+            setPainted(true)
+            return
+        }
+        // A zero-size host can become ready before its first drawable frame.
+        const observer = new MutationObserver(() => {
+            if (canvas.hasAttribute("data-orbit-painted")) {
+                observer.disconnect()
+                setPainted(true)
+            }
+        })
+        observer.observe(canvas, { attributes: true, attributeFilter: ["data-orbit-painted"] })
+        return () => observer.disconnect()
+    }, [canvasRef, ready, painted])
+    const revealing = elapsed && ready && painted
+    React.useEffect(() => {
+        if (!revealing || finished) return
+        const timer = window.setTimeout(() => setFinished(true), 180)
+        return () => window.clearTimeout(timer)
+    }, [revealing, finished])
+    if (finished) return null
+    return (
+        <div data-orbit-entry-notice="" data-revealing={String(revealing)}
+            style={{ backgroundImage: preview ? `url("${preview}")` : undefined }}>
+            {!elapsed && !failed && (
+                <span data-orbit-entry-label="" role="status" lang="hu">
+                    {mobile ? "Húzza el az ujját a forgatáshoz" : "Görgessen a forgatáshoz"}
+                </span>
+            )}
+        </div>
+    )
+}
 
 function homepageJourneyLink(event: MouseEvent): URL | null {
     if (
@@ -4666,24 +4770,10 @@ const orbitApartmentStudioStyles = `
 [data-orbit-studio] .orbit-studio-scene { display: grid; grid-template-rows: minmax(0,1fr) auto; gap: 18px; min-width: 0; min-height: 0; }
 [data-orbit-studio] .orbit-studio-image-slot { display: flex; align-items: center; justify-content: center; min-width: 0; min-height: 0; container-type: size; }
 [data-admiral-homepage][data-orbit-scrubbing="true"] { cursor: grabbing; user-select: none; }
-[data-admiral-homepage][data-orbit-wheel-pointer] [data-orbit-render-canvas] { cursor: grab; }
-[data-orbit-wheel-cursor] {
-    position: absolute;
-    inset: 0 auto auto 0;
-    z-index: 10;
-    pointer-events: none;
-    padding: 7px 10px;
-    color: #153748;
-    background: rgba(247, 252, 255, .91);
-    border: 1px solid rgba(255, 255, 255, .82);
-    border-radius: 999px;
-    box-shadow: 0 3px 12px rgba(13, 47, 66, .15);
-    font: 700 12px/1.2 "Inter", Arial, sans-serif;
-    white-space: nowrap;
+@media (hover: hover) and (pointer: fine) {
+    [data-admiral-homepage][data-homepage-stage="orbit"] [data-orbit-render-canvas] { cursor: grab; }
+    [data-admiral-homepage][data-orbit-scrubbing="true"] [data-orbit-render-canvas] { cursor: grabbing; }
 }
-[data-admiral-homepage]:not([data-homepage-stage="orbit"]) [data-orbit-wheel-cursor],
-[data-admiral-homepage][data-orbit-fullscreen="true"] [data-orbit-wheel-cursor],
-[data-admiral-homepage][data-apartment-detail-open="true"] [data-orbit-wheel-cursor] { display: none; }
 [data-orbit-studio] [data-orbit-viewport] { position: relative; width: 100%; max-width: 100%; max-height: 100%; aspect-ratio: 1920 / 1010; background: transparent; transform: scale(var(--studio-orbit-scale)); }
 @supports (width: 1cqh) { [data-orbit-studio] [data-orbit-viewport] { width: min(100cqw,calc(100cqh * 1920 / 1010)); } }
 [data-orbit-studio] .orbit-studio-facts { min-width: 0; border-top: 1px solid var(--studio-line); padding-top: 18px; }
@@ -7557,6 +7647,7 @@ export default function AdmiralHomepageStudio(
                   ? orbitPoster
                   : heroStartPoster
     const [stage, setStage] = React.useState<HomepageStage>(previewStage)
+    const [entryNoticeFrame, setEntryNoticeFrame] = React.useState<number | null>(null)
     const [requestedPoster, setPosterUrl] = React.useState<string | null>(null)
     const posterUrl = requestedPoster ?? initialPoster
     const [homepageBooted, setHomepageBooted] = React.useState(false)
@@ -7872,7 +7963,6 @@ export default function AdmiralHomepageStudio(
             rootRef.current.dataset.apartmentDetailOpen = String(open)
     }, [])
     const studioViewportRef = React.useRef<HTMLDivElement | null>(null)
-    const wheelCursorRef = React.useRef<HTMLSpanElement | null>(null)
     const studioEnabled = React.useRef(useStudio)
     studioEnabled.current = useStudio
     const framingConfig = React.useRef<HomepageFramingConfig>({
@@ -8740,7 +8830,6 @@ export default function AdmiralHomepageStudio(
             root!.dataset.homepageStage = next
             setStage(next)
             applyPresentation()
-            scheduleWheelCursor()
             publish()
         }
         function changePoster(url: string) {
@@ -8907,6 +8996,7 @@ export default function AdmiralHomepageStudio(
         }
         function mountHero(atEnd = false) {
             if (disposed) return
+            setEntryNoticeFrame(null)
             enterToken++
             orbit?.deactivate(true)
             setOrbitGroup(null)
@@ -9005,6 +9095,8 @@ export default function AdmiralHomepageStudio(
                 destroyHero()
                 releaseConnectionPreload()
             }
+            if (currentStage !== "orbit") setEntryNoticeFrame(frame)
+            presentationProgress = 1
             changeStage("handoff")
             try {
                 await orbit.activate(frame)
@@ -9430,61 +9522,6 @@ export default function AdmiralHomepageStudio(
             signal,
         })
 
-        // A cursor label leaves the browser's pointing hotspot available for apartment picking.
-        let wheelCursorFrame = 0
-        let mousePoint: { x: number; y: number } | null = null
-        let mousePressed = false
-        function updateWheelCursor() {
-            wheelCursorFrame = 0
-            const cursor = wheelCursorRef.current
-            const bounds = studioInputBounds()
-            const point = mousePoint
-            const show = !!(cursor && bounds && point && !mousePressed &&
-                !pickerLatest.current.mobilePresentation && !fullscreen.geometryRef.current &&
-                !detailOpen.current && !document.hidden && bounds.width > 0 && bounds.height > 0 &&
-                point.x >= bounds.left && point.x <= bounds.right &&
-                point.y >= bounds.top && point.y <= bounds.bottom &&
-                !homepageBlocked(document.elementFromPoint(point.x, point.y)))
-            root!.toggleAttribute("data-orbit-wheel-pointer", show)
-            if (!cursor) return
-            cursor.hidden = !show
-            if (!show || !bounds || !point) return
-            const box = root!.getBoundingClientRect()
-            const x = (point.x - box.left) * root!.clientWidth / box.width
-            const y = (point.y - box.top) * root!.clientHeight / box.height
-            const offsetX = point.x > bounds.right - 125 ? "calc(-100% - 13px)" : "13px"
-            const offsetY = point.y > bounds.bottom - 42 ? "calc(-100% - 12px)" : "12px"
-            cursor.style.transform = `translate3d(${x}px, ${y}px, 0) translate(${offsetX}, ${offsetY})`
-        }
-        function scheduleWheelCursor() {
-            if (!staticRenderer && !wheelCursorFrame)
-                wheelCursorFrame = requestAnimationFrame(updateWheelCursor)
-        }
-        function trackMouse(event: PointerEvent) {
-            if (event.pointerType !== "mouse") return
-            mousePressed = event.buttons !== 0
-            mousePoint = { x: event.clientX, y: event.clientY }
-            scheduleWheelCursor()
-        }
-        function clearMouse() {
-            mousePoint = null
-            mousePressed = false
-            scheduleWheelCursor()
-        }
-        for (const type of ["pointermove", "pointerdown", "pointerup"] as const)
-            window.addEventListener(type, trackMouse, { passive: true, capture: true, signal })
-        window.addEventListener("pointerout", (event) => {
-            if (event.pointerType === "mouse" && !event.relatedTarget) clearMouse()
-        }, { passive: true, signal })
-        window.addEventListener("blur", clearMouse, { signal })
-        window.addEventListener("scroll", scheduleWheelCursor, { passive: true, signal })
-        document.addEventListener("visibilitychange", scheduleWheelCursor, { signal })
-        signal.addEventListener("abort", () => {
-            if (wheelCursorFrame) cancelAnimationFrame(wheelCursorFrame)
-            root!.removeAttribute("data-orbit-wheel-pointer")
-            if (wheelCursorRef.current) wheelCursorRef.current.hidden = true
-        }, { once: true })
-
         function videoOpening() {
             return !!heroVideoUrl && activeSequence === "SEQ_01" && currentStage === "opening"
         }
@@ -9530,10 +9567,6 @@ export default function AdmiralHomepageStudio(
                 event.deltaY === 0
             )
                 return
-            if (studioEnabled.current && !pickerLatest.current.mobilePresentation) {
-                mousePoint = { x: event.clientX, y: event.clientY }
-                scheduleWheelCursor()
-            }
             if (currentStage === "orbit") {
                 // Its capture listener already checks the view and nested controls.
                 if (event.defaultPrevented) lastWheelAt = performance.now()
@@ -9771,7 +9804,6 @@ export default function AdmiralHomepageStudio(
                 applyPresentation()
                 hero?.redraw()
                 orbit?.redraw()
-                scheduleWheelCursor()
                 publish()
             }
         }
@@ -10363,6 +10395,15 @@ export default function AdmiralHomepageStudio(
                             clipPath: fullscreen.active ? "none" : imageClip,
                         }}
                     />
+                    {entryNoticeFrame !== null && !staticRenderer && (stage === "handoff" || orbitVisible) && (
+                        <OrbitEntryNotice
+                            preview={useGitHubAssets ? orbitEntryPreview(entryNoticeFrame) : undefined}
+                            canvasRef={orbitCanvasRef}
+                            ready={orbitVisible}
+                            failed={orbitInfo.state === "error"}
+                            mobile={mobilePresentation}
+                        />
+                    )}
                     {maskFailed && fullscreen.active && (
                         <button
                             type="button"
@@ -10418,9 +10459,6 @@ export default function AdmiralHomepageStudio(
                     )}
                 </div>
             </div>
-            <span ref={wheelCursorRef} data-orbit-wheel-cursor="" aria-hidden="true" hidden>
-                Turn the view
-            </span>
             {mobilePresentation &&
                 useStudio &&
                 orbitVisible &&
