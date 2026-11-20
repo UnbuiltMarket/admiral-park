@@ -17,12 +17,15 @@ function whiteGlass(tint: number): string {
     return `linear-gradient(145deg, rgb(255 255 255 / ${tint + 12}%), rgb(247 251 253 / ${tint}%) 50%, rgb(225 239 247 / ${tint - 6}%))`
 }
 
+const panelGradient = admiralPanelGradient(secondary)
+
 export const admiralPalette = {
     accent,
     secondary,
     paper,
     onPanel: paper,
-    panelGradient: admiralPanelGradient(secondary),
+    panelGradient,
+    filterPanelGradient: `linear-gradient(rgb(6 21 34 / 6%), rgb(6 21 34 / 6%)), ${panelGradient}`,
     lightGlass: whiteGlass(44),
     lightGlassBlur: "blur(10px) saturate(112%)",
     lightGlassFallback: "#e6eef2",
@@ -84,9 +87,9 @@ ${materialBar} {
     box-shadow: var(--admiral-glass-shadow) !important;
 }
 ${handover} {
-    background: #145083 !important;
-    background: ${admiralPalette.inquiryGradient} !important;
-    --border-color: ${admiralPalette.inquiryRim} !important;
+    background: ${admiralPalette.secondary} !important;
+    background: ${admiralPalette.filterPanelGradient} !important;
+    --border-color: rgb(255 255 255 / 30%) !important;
     box-shadow: ${admiralPalette.inquiryShadow} !important;
     -webkit-backdrop-filter: none !important; backdrop-filter: none !important;
 }

@@ -14,25 +14,6 @@ import AdmiralScrollCue from "./AdmiralScrollCue.tsx"
 const HOMEPAGE_LIGHTING_ATLAS_URL = "https://framerusercontent.com/images/DxiRVoqzN1ZiE2KVkOho93CuQV0.webp"
 const HOMEPAGE_LIGHTING_DATA_URL = "https://framerusercontent.com/assets/z7Sd93G28iAn2iOVsGRmivrt4Q.json"
 
-// Tiny, pre-blurred previews from the eight orbit-v06 checkpoint angles.
-// Embedding them lets the entry notice paint before the first network response.
-const ORBIT_ENTRY_PREVIEWS = [
-    "UklGRqIAAABXRUJQVlA4WAoAAAAQAAAAHwAAEAAAQUxQSA8AAAABEBIQ/y+zQNQiIsnuJQMAVlA4IGwAAACwBACdASogABEAPsFUokwnpKMiMBgIAPAYCWMAwoAN2psp3Gq3pYXyxfoxlguoAP6dx6xZlJTnk9FJYWUuG/m5VUTHot7VdJDWnDl6EYZtHggZkFcWMIomFfqpQwY2uj6LsviiGePAEHeAAAA=",
-    "UklGRqAAAABXRUJQVlA4WAoAAAAQAAAAHwAAEAAAQUxQSA8AAAABEBIQ/y+zQNQiIuneJQMAVlA4IGoAAABwBACdASogABEAPsFUnkqnpSKhsBgMAPAYCWUAuwAOyvsAJtqXJZQ+YDk2AAD+eMAgblKXG8ci+r4mdwFVOMJpJivB0boaoCEASdlb6Xx4eJM3x1pU8pZSQ+ivmxoNp7PmaC74UFGTZjgA",
-    "UklGRqQAAABXRUJQVlA4WAoAAAAQAAAAHwAAEAAAQUxQSA8AAAABEBIQ/y+zQNQiIsnuJQMAVlA4IG4AAABQBACdASogABEAPsFUoUunpKMhsBgIAPAYCWU4AAwzQLGvINhdy37sMy1gAP65yZR/3HQg5cJ2+971pjjwrNJmK/Xm9ESz7gziEMmsXdsjdupuB/SZcMLg6IpqnP7z0sglyYt/ESXsvXN3OYAAAA==",
-    "UklGRpgAAABXRUJQVlA4WAoAAAAQAAAAHwAAEAAAQUxQSA8AAAABEBIQ/y+zQNQiIsnuJQMAVlA4IGIAAAAwBQCdASogABEAPsFOnkunpCKhsBgMAPAYCWUAwoAQ6WUtCGovK+pJfqUo/QyOQyEbgAD82HEAcL8/PXVz4TxyfpQ2DpFy6MfKAbOhrO98XtI2GsStcgU6IxUHpFTBylCAAA==",
-    "UklGRpoAAABXRUJQVlA4WAoAAAAQAAAAHwAAEAAAQUxQSA8AAAABEBIQ/y+zQNQiIsnuJQMAVlA4IGQAAACQBACdASogABEAPrVEnUqnI6Kht/qoAOAWiWUAuwAebbhZKOY6JJL5xdhwuuAA/rXzvz938E8wunU+FKGG1w2tL1FKVtCA51QM95cwr7GQgT3joUBlbuRw9ksHmdYNYxL8AAAA",
-    "UklGRqAAAABXRUJQVlA4WAoAAAAQAAAAHwAAEAAAQUxQSA8AAAABEBIQ/y+zQNQiIsnuJQMAVlA4IGoAAABwBQCdASogABEAPsFWpU0npKOiKAqo8BgJZQDG9BBVu0yuLsZ/YuMxvmxc08Mm3nzNXJwAAPtiYDrUkmGupNZ6ARUo50NG11a1fFjYwGzqy7MDboqefzwcusGkyeExvWOytvoySFsMgAAA",
-    "UklGRpwAAABXRUJQVlA4WAoAAAAQAAAAHwAAEAAAQUxQSA8AAAABEBIQ/y+zQNQiIsnuJQMAVlA4IGYAAABwBACdASogABEAPsFMoEsnpCMhsBgMAPAYCWU4AArAAPANl3jtyF+s72rlAAD+PYBJGAd4J321NeHpLpwt9VgKKmqnV7w5395VnhS+qCqcZ2cAszJtc2ubXQCVV8d1ZIgV95U+WAA=",
-    "UklGRpoAAABXRUJQVlA4WAoAAAAQAAAAHwAAEAAAQUxQSA8AAAABEBIQ/y+zQNQiIsnuJQMAVlA4IGQAAAAQBQCdASogABEAPrlOn0qnJKMhsAwA4BcJZQCo9CBvpLNb2Eov1NphnESOv7Y/NPQAAP6plXkJLRL0kqZGOXAn/zEYoegDvVEGtLDM/3qvKT8zcznuzYhBLD5k5DPRlhNHikAA",
-]
-
-function orbitEntryPreview(frame: number): string {
-    const count = ORBIT_ENTRY_PREVIEWS.length
-    const checkpoint = Math.round(frame / 15)
-    return "data:image/webp;base64," + ORBIT_ENTRY_PREVIEWS[((checkpoint % count) + count) % count]
-}
-
 /** Keep CSS raw text identical between React SSR and client hydration. */
 function homepageStyleMarkup(css: string): { __html: string } {
     return { __html: css.replace(/<\/style/gi, "<\\/style") }
@@ -791,12 +772,9 @@ const homepageOrbitEntryStyles = `
     position: absolute; z-index: 4; pointer-events: none; user-select: none;
     left: var(--admiral-image-x, 0px); top: var(--admiral-image-y, 0px);
     width: var(--admiral-image-width, 100%); height: var(--admiral-image-height, 100%);
-    border-radius: var(--admiral-studio-radius, 0px); overflow: hidden;
+    border-radius: var(--admiral-studio-corners, 0px); overflow: hidden;
     display: grid; place-items: center;
-    background-color: #506575; background-size: cover; background-position: center;
-    transition: opacity 180ms ease-out;
 }
-[data-orbit-entry-notice][data-revealing="true"] { opacity: 0; }
 [data-orbit-window-group] {
     position: absolute; z-index: 5; pointer-events: none; box-sizing: border-box;
     left: var(--admiral-image-x, 0px); width: var(--admiral-image-width, 100%);
@@ -813,7 +791,6 @@ const homepageOrbitEntryStyles = `
     color: #203d55; font: 650 clamp(14px, 1.1vw, 18px)/1.3 "Inter", Arial, sans-serif;
     text-align: center; text-wrap: balance;
 }
-@media (prefers-reduced-motion: reduce) { [data-orbit-entry-notice] { transition: none; } }
 [data-seq3-garden-cue] {
     position: absolute; z-index: 4; left: 50%; bottom: max(42px, env(safe-area-inset-bottom));
     width: min(268px, 90%); height: 54px; transform: translateX(-50%); pointer-events: none;
@@ -988,18 +965,10 @@ function homepageJourneyQuery(url: URL) {
 }
 const useHomepageLayoutEffect = typeof window === "undefined" ? React.useEffect : React.useLayoutEffect
 
-function OrbitEntryNotice({ preview, canvasRef, ready, failed, mobile }: {
-    preview?: string
-    canvasRef: React.RefObject<HTMLCanvasElement | null>
-    ready: boolean
-    failed: boolean
-    mobile: boolean
-}) {
+function OrbitEntryNotice({ mobile, failed }: { mobile: boolean; failed: boolean }) {
     const [elapsed, setElapsed] = React.useState(false)
-    const [finished, setFinished] = React.useState(false)
-    const [painted, setPainted] = React.useState(false)
     React.useEffect(() => {
-        // Let the browser present the notice before starting its reading time.
+        // Count from presentation, even when the initial orbit decode takes a busy frame.
         let timer = 0
         let frame = requestAnimationFrame(() => {
             frame = requestAnimationFrame(() => {
@@ -1011,38 +980,12 @@ function OrbitEntryNotice({ preview, canvasRef, ready, failed, mobile }: {
             window.clearTimeout(timer)
         }
     }, [])
-    React.useEffect(() => {
-        const canvas = canvasRef.current
-        if (!ready || !canvas || painted) return
-        if (canvas.hasAttribute("data-orbit-painted")) {
-            setPainted(true)
-            return
-        }
-        // A zero-size host can become ready before its first drawable frame.
-        const observer = new MutationObserver(() => {
-            if (canvas.hasAttribute("data-orbit-painted")) {
-                observer.disconnect()
-                setPainted(true)
-            }
-        })
-        observer.observe(canvas, { attributes: true, attributeFilter: ["data-orbit-painted"] })
-        return () => observer.disconnect()
-    }, [canvasRef, ready, painted])
-    const revealing = elapsed && ready && painted
-    React.useEffect(() => {
-        if (!revealing || finished) return
-        const timer = window.setTimeout(() => setFinished(true), 180)
-        return () => window.clearTimeout(timer)
-    }, [revealing, finished])
-    if (finished) return null
+    if (elapsed || failed) return null
     return (
-        <div data-orbit-entry-notice="" data-revealing={String(revealing)}
-            style={{ backgroundImage: preview ? `url("${preview}")` : undefined }}>
-            {!elapsed && !failed && (
-                <span data-orbit-entry-label="" role="status" lang="hu">
-                    {mobile ? "Húzza el az ujját a forgatáshoz" : "Görgessen a forgatáshoz"}
-                </span>
-            )}
+        <div data-orbit-entry-notice="">
+            <span data-orbit-entry-label="" role="status" lang="hu">
+                {mobile ? "Húzza el az ujját a forgatáshoz" : "Görgessen a forgatáshoz"}
+            </span>
         </div>
     )
 }
@@ -5064,7 +5007,7 @@ OrbitPageBackdrop.displayName = "Orbit Page Background"
 
 const orbitBlueStudioStyles = `
 [data-orbit-blue] {
-    --orbit-panel: linear-gradient(rgb(6 21 34 / 6%), rgb(6 21 34 / 6%)), ${admiralPalette.panelGradient};
+    --orbit-panel: ${admiralPalette.filterPanelGradient};
     --orbit-on-panel: ${admiralPalette.onPanel};
     --orbit-paper: ${admiralPalette.paper};
     --orbit-accent: ${admiralPalette.accent};
@@ -5118,7 +5061,9 @@ const orbitBlueStudioStyles = `
 /* The painted surface follows the allocated track, including its padding. */
 [data-orbit-blue] [data-orbit-list-filters]::before {
     content: ""; position: absolute; z-index: -1; inset: 0;
-    pointer-events: none; border-radius: 23px; background: var(--orbit-panel);
+    pointer-events: none; border-radius: 23px 23px 0 0; background: var(--orbit-panel);
+    /* Trim only the painted shadow at the join; menus can still open across it. */
+    clip-path: inset(-32px -32px 0);
     box-shadow: var(--workspace-shadow); border: 1px solid var(--orbit-panel-rule);
 }
 [data-orbit-blue] [data-orbit-list-filters] .orbit-list-primary {
@@ -5203,7 +5148,7 @@ const orbitBlueStudioStyles = `
     position: relative;
     --housing-radius: ${orbitWindowRadius}px;
     --housing-rule: ${admiralPalette.lightGlassDivider};
-    border-radius: var(--housing-radius);
+    border-radius: 0 0 var(--housing-radius) var(--housing-radius);
     pointer-events: none;
 }
 [data-orbit-housing]::before, [data-orbit-housing]::after {
@@ -5231,19 +5176,20 @@ const orbitBlueStudioStyles = `
     /* Mask the glass with a rounded aperture. With no viewBox the SVG radius
        stays in CSS pixels as the camera's aspect-preserving grid cell resizes. */
     clip-path: none;
-    mask: linear-gradient(#000 0 0), url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'%3E%3Crect width='100%25' height='100%25' rx='${orbitWindowRadius}'/%3E%3C/svg%3E") 0 0 / var(--housing-image) calc(100% - var(--housing-summary)) no-repeat;
+    mask: linear-gradient(#000 0 0), url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'%3E%3Crect width='100%25' height='100%25' rx='${orbitWindowRadius}'/%3E%3Crect width='100%25' height='${orbitWindowRadius}'/%3E%3C/svg%3E") 0 0 / var(--housing-image) calc(100% - var(--housing-summary)) no-repeat;
     mask-composite: exclude;
   }
 }
 [data-orbit-studio][data-layout="workspace"] [data-orbit-housing]::after {
     /* Only the floor plan and detail bar need the shared outer rim here. */
-    clip-path: polygon(var(--housing-image) -20px, calc(100% + 20px) -20px, calc(100% + 20px) calc(100% + 20px), -20px calc(100% + 20px), -20px calc(100% - var(--housing-summary)), var(--housing-image) calc(100% - var(--housing-summary)));
+    border-top: 0;
+    clip-path: polygon(var(--housing-image) 0, calc(100% + 20px) 0, calc(100% + 20px) calc(100% + 20px), -20px calc(100% + 20px), -20px calc(100% - var(--housing-summary)), var(--housing-image) calc(100% - var(--housing-summary)));
 }
 [data-orbit-studio][data-layout="workspace"] [data-orbit-housing] .orbit-studio-scene { grid-area: 1 / 1; }
 [data-orbit-studio] [data-orbit-housing] .orbit-studio-scene { position: relative; z-index: 4; pointer-events: none; }
 [data-orbit-studio][data-layout="workspace"] [data-orbit-housing] .orbit-studio-image-slot { width: 100%; }
 [data-orbit-studio] [data-orbit-housing] [data-orbit-viewport] {
-    border: 0; border-radius: var(--housing-radius);
+    border: 0; border-radius: 0 0 var(--housing-radius) var(--housing-radius);
     box-shadow: inset 0 0 0 1px var(--housing-rule), 0 3px 10px -3px rgb(17 47 63 / 26%);
 }
 [data-orbit-studio][data-layout="workspace"] [data-orbit-detail-bar] {
@@ -5272,7 +5218,7 @@ const orbitBlueStudioStyles = `
 }
 [data-orbit-studio][data-layout="workspace"] [data-orbit-plan-bar] {
     grid-area: 1 / 2 / 3 / 3; border: 0;
-    border-radius: 0 var(--housing-radius) var(--housing-radius) 0; box-shadow: none; background: transparent;
+    border-radius: 0 0 var(--housing-radius) 0; box-shadow: none; background: transparent;
 }
 [data-orbit-studio][data-mobile="true"][data-orbit-glass-tone="paper"] [data-orbit-housing] {
     width: var(--studio-phone-frame-width); max-width: 100%; justify-self: center; gap: 0;
@@ -5294,19 +5240,20 @@ const orbitBlueStudioStyles = `
     [data-orbit-studio][data-mobile="true"][data-orbit-glass-tone="paper"] [data-orbit-housing] {
         width: 100%; grid-template-rows: minmax(0,1fr);
     }
-    [data-orbit-studio][data-mobile="true"] [data-orbit-housing]::before { grid-area: 1 / 2; border-radius: 0 var(--housing-radius) var(--housing-radius) 0; }
-    [data-orbit-studio][data-mobile="true"] [data-orbit-housing]::after { grid-area: 1 / 2; border: 1px solid ${admiralPalette.lightGlassRim}; border-inline-start: 0; border-radius: 0 var(--housing-radius) var(--housing-radius) 0; }
+    [data-orbit-studio][data-mobile="true"] [data-orbit-housing]::before { grid-area: 1 / 2; border-radius: 0 0 var(--housing-radius) 0; }
+    [data-orbit-studio][data-mobile="true"] [data-orbit-housing]::after { grid-area: 1 / 2; border: 1px solid ${admiralPalette.lightGlassRim}; border-inline-start: 0; border-top: 0; border-radius: 0 0 var(--housing-radius) 0; }
     [data-orbit-studio][data-mobile="true"] [data-orbit-housing] .orbit-studio-image-slot {
-        height: 100%;
+        height: 100%; align-items: flex-start; justify-content: flex-start;
     }
+    [data-orbit-studio][data-mobile="true"] [data-orbit-housing] [data-orbit-viewport] { transform: none; }
     [data-orbit-studio][data-mobile="true"][data-orbit-glass-tone="paper"] [data-orbit-housing] .orbit-studio-mobile-panel {
-        border-radius: 0 var(--housing-radius) var(--housing-radius) 0;
+        border-radius: 0 0 var(--housing-radius) 0;
     }
 }
 `
 
 const orbitWorkspaceStyles = `
-/* Equal gaps frame the divider; the orbit and its floor plan share a row. */
+/* Filters, camera and floor plan share one continuous housing. */
 [data-orbit-studio][data-mobile="false"][data-layout="workspace"] {
     --workspace-top: clamp(100px, calc(11dvh + 4px), 120px);
     --workspace-bottom: clamp(16px, 3dvh, 36px);
@@ -5317,10 +5264,9 @@ const orbitWorkspaceStyles = `
     --workspace-summary: 78px;
     --workspace-plan-inset: clamp(12px,1.24vw,20px);
     --studio-orbit-scale: .94;
-    --workspace-divider-track: calc(2 * var(--workspace-row-gap) + 1px);
     --workspace-max: 1600px;
     --workspace-rail: clamp(264px, 25vw, 380px);
-    --workspace-content-height: calc(var(--studio-host-height,100dvh) - var(--workspace-top) - var(--workspace-bottom) - var(--workspace-toolbar) - var(--workspace-divider-track) - var(--workspace-row-gap) - var(--workspace-summary));
+    --workspace-content-height: calc(var(--studio-host-height,100dvh) - var(--workspace-top) - var(--workspace-bottom) - var(--workspace-toolbar) - var(--workspace-row-gap) - var(--workspace-summary));
     --workspace-image-limit: calc(var(--workspace-content-height) * 1920 / 1010 / var(--studio-orbit-scale));
     --workspace-ink: #183139;
     --workspace-muted: #536b74;
@@ -5336,7 +5282,7 @@ const orbitWorkspaceStyles = `
     padding: 0;
     display: grid;
     grid-template-columns: minmax(0,1fr) var(--workspace-rail);
-    grid-template-rows: var(--workspace-toolbar) var(--workspace-divider-track) auto var(--workspace-row-gap) var(--workspace-summary);
+    grid-template-rows: var(--workspace-toolbar) 0 auto var(--workspace-row-gap) var(--workspace-summary);
     column-gap: var(--workspace-gap);
     row-gap: 0;
     color: var(--workspace-ink);
@@ -5702,37 +5648,19 @@ const orbitWorkspaceStyles = `
     }
     [data-admiral-homepage] [data-orbit-side-controls][data-mobile="false"] { --side-arrow-size: clamp(48px,1.8vw,64px); }
 }
+[data-orbit-studio][data-mobile="true"][data-orbit-glass-tone="paper"] {
+    row-gap: 0;
+}
 [data-orbit-studio][data-mobile="true"][data-orbit-glass-tone="paper"] > [data-orbit-filters][data-presentation][data-active] {
-    background: linear-gradient(145deg, rgba(247, 251, 255, 0.96) 0%, rgba(216, 233, 247, 0.93) 55%, rgba(237, 246, 253, 0.96) 100%); box-shadow: 0 7px 18px rgba(9, 44, 92, 0.22), 0 2px 5px rgba(13, 62, 125, 0.14); border-color: rgba(73,108,119,.22);
+    background: linear-gradient(145deg, rgba(247, 251, 255, 0.96) 0%, rgba(216, 233, 247, 0.93) 55%, rgba(237, 246, 253, 0.96) 100%);
+    border-color: rgba(73,108,119,.22);
+    border-radius: 20px 20px 0 0;
+    box-shadow: none;
 }
-
-/* The divider sits in the existing gap; the image and card keep their geometry. */
-[data-orbit-studio] > [data-orbit-section-divider] { display: none; pointer-events: none; }
-[data-orbit-studio][data-layout="workspace"] > [data-orbit-section-divider] {
-    display: block; grid-column: 1 / -1; grid-row: 2; align-self: center;
-    position: relative; height: 1px; min-height: 1px; z-index: 2;
-    margin-inline-start: calc((100% - var(--workspace-rail) - var(--workspace-gap)) * (1 - var(--studio-orbit-scale)) / 2);
-    background: rgba(255,255,255,.58);
-}
-[data-orbit-studio][data-mobile="true"] > [data-orbit-filters][data-presentation]::after {
-    content: ""; position: absolute; inset: auto 0 -11px; height: 1px;
-    background: rgba(255,255,255,.58); pointer-events: none;
-}
-/* Size the portrait orbit in layout so its painted edges and the divider share one gutter. */
 @media (orientation: portrait) {
-    [data-orbit-studio][data-mobile="true"][data-orbit-glass-tone="paper"] {
-        --phone-orbit-gap: clamp(8px, 1.45dvh, 12px);
-        grid-template-rows: auto 1px minmax(0,1fr);
-        row-gap: var(--phone-orbit-gap);
-    }
     [data-orbit-studio][data-mobile="true"] > :is([data-orbit-filters],[data-orbit-group]) { grid-row: 1; }
-    [data-orbit-studio][data-mobile="true"] > [data-orbit-filters][data-presentation]::after { content: none; }
-    [data-orbit-studio][data-mobile="true"] > [data-orbit-section-divider] {
-        display: block; grid-row: 2; width: var(--studio-phone-frame-width); justify-self: center;
-        height: 1px; background: rgba(255,255,255,.58);
-    }
     [data-orbit-studio][data-mobile="true"][data-orbit-glass-tone="paper"] .orbit-studio-body {
-        grid-row: 3; row-gap: var(--phone-orbit-gap);
+        grid-row: 2;
         grid-template-rows: calc((100cqw + 2 * var(--studio-phone-gutter)) * var(--studio-orbit-scale) * 1010 / 1920) minmax(0,1fr);
     }
     [data-orbit-studio][data-mobile="true"] .orbit-studio-image-slot {
@@ -6136,7 +6064,6 @@ function OrbitApartmentStudio(
             >
                 <style dangerouslySetInnerHTML={homepageStyleMarkup(fontStyles + orbitApartmentStudioStyles + orbitFrostedButtonStyles + orbitWorkspaceStyles + orbitBlueStudioStyles)} />
                 {!mobile && <div data-orbit-control-band="" aria-hidden="true" />}
-                <div data-orbit-section-divider="" aria-hidden="true" />
                 <header className="orbit-studio-header" data-orbit-ignore="">
                     {logo && !mobile && (
                         <img
@@ -7711,7 +7638,8 @@ export default function AdmiralHomepageStudio(
                   ? orbitPoster
                   : heroStartPoster
     const [stage, setStage] = React.useState<HomepageStage>(previewStage)
-    const [entryNoticeFrame, setEntryNoticeFrame] = React.useState<number | null>(null)
+    const [enteredOrbit, setEnteredOrbit] = React.useState(false)
+    const [loadedEntryPoster, setLoadedEntryPoster] = React.useState<string | null>(null)
     const [requestedPoster, setPosterUrl] = React.useState<string | null>(null)
     const posterUrl = requestedPoster ?? initialPoster
     const [homepageBooted, setHomepageBooted] = React.useState(false)
@@ -8760,7 +8688,8 @@ export default function AdmiralHomepageStudio(
             const scale = Math.max(w / 1920, h / 1010)
             const tx = x + (w - 1920 * scale) * focalX / 100, ty = y + (h - 1010 * scale) * focalY / 100
             flightMedia.style.transform = `translate3d(${tx}px,${ty}px,0) scale(${scale})`
-            const clip = `inset(${y}px ${Math.max(0,g.width - x - w)}px ${Math.max(0,g.height - y - h)}px ${x}px round ${orbitWindowRadius * a}px)`
+            const radius = orbitWindowRadius * a
+            const clip = `inset(${y}px ${Math.max(0,g.width - x - w)}px ${Math.max(0,g.height - y - h)}px ${x}px round 0 0 ${radius}px ${radius}px)`
             heroRoot!.style.clipPath = clip
             if (flightShade) flightShade.style.clipPath = clip
             if (presentationProgress >= .68 && !root!.hasAttribute("data-orbit-arriving"))
@@ -8813,7 +8742,7 @@ export default function AdmiralHomepageStudio(
             const frameRadius = studioEnabled.current
                 ? orbitWindowRadius * sequenceEase(sequenceClamp(presentationProgress))
                 : 0
-            setStyle("--admiral-studio-radius", frameRadius + "px")
+            setStyle("--admiral-studio-corners", `0 0 ${frameRadius}px ${frameRadius}px`)
             const controls = root!.querySelector<HTMLElement>(
                 "[data-homepage-controls]"
             )
@@ -9070,7 +8999,8 @@ export default function AdmiralHomepageStudio(
         }
         function mountHero(atEnd = false) {
             if (disposed) return
-            setEntryNoticeFrame(null)
+            setEnteredOrbit(false)
+            setLoadedEntryPoster(null)
             enterToken++
             orbit?.deactivate(true)
             setOrbitGroup(null)
@@ -9169,7 +9099,7 @@ export default function AdmiralHomepageStudio(
                 destroyHero()
                 releaseConnectionPreload()
             }
-            if (currentStage !== "orbit") setEntryNoticeFrame(frame)
+            if (currentStage !== "orbit") setEnteredOrbit(true)
             presentationProgress = 1
             changeStage("handoff")
             try {
@@ -10132,6 +10062,9 @@ export default function AdmiralHomepageStudio(
         if (detailsMode === "off") clearApartmentDetails()
     }, [detailsMode, clearApartmentDetails])
     const orbitVisible = !staticRenderer && stage === "orbit"
+    const entryPosterVisible = stage === "handoff" && (
+        !directOrbitEntry || (directOrbitEntry.framed && loadedEntryPoster === directOrbitEntry.poster)
+    )
     const groupControls = orbitVisible && orbitGroup ? (
         <OrbitGroupBar
             group={orbitGroup}
@@ -10211,7 +10144,7 @@ export default function AdmiralHomepageStudio(
         if (paused) player?.resume()
         player?.go(heading)
     }
-    const frameRadius = "var(--admiral-studio-radius, 0px)"
+    const frameRadius = "var(--admiral-studio-corners, 0px)"
     const imageClip =
         `inset(var(--admiral-image-y, 0px) var(--admiral-image-right, 0px) var(--admiral-image-cut, 0px) var(--admiral-image-x, 0px) round ${frameRadius})`
     const posterStyle: React.CSSProperties = {
@@ -10401,6 +10334,7 @@ export default function AdmiralHomepageStudio(
                         key={directOrbitEntry.poster}
                         data-admiral-direct-orbit-poster=""
                         src={directOrbitEntry.framed ? directOrbitEntry.poster : undefined}
+                        onLoad={() => setLoadedEntryPoster(directOrbitEntry.poster)}
                         alt=""
                         loading="eager"
                         decoding="async"
@@ -10473,11 +10407,8 @@ export default function AdmiralHomepageStudio(
                     {!fullscreen.active && groupControls && (
                         <div data-orbit-window-group="" data-classic={String(!useStudio)}>{groupControls}</div>
                     )}
-                    {entryNoticeFrame !== null && !staticRenderer && (stage === "handoff" || orbitVisible) && (
+                    {enteredOrbit && !staticRenderer && (orbitVisible || entryPosterVisible) && (
                         <OrbitEntryNotice
-                            preview={useGitHubAssets ? orbitEntryPreview(entryNoticeFrame) : undefined}
-                            canvasRef={orbitCanvasRef}
-                            ready={orbitVisible}
                             failed={orbitInfo.state === "error"}
                             mobile={mobilePresentation}
                         />
@@ -11370,7 +11301,7 @@ addPropertyControls(AdmiralHomepageStudio, {
     maskHighlightOpacity: {
         type: ControlType.Number,
         title: "Solid mask strength",
-        description: "Solid mask opacity on hover or tap. Filter matches use half this value. Available apartments use the rendered window lighting.",
+        description: "Solid mask opacity on hover or tap. Filter matches use half this value. Available apartments retain warm window lighting with a subtle lift across the entire apartment.",
         defaultValue: 50,
         min: 5,
         max: 70,
@@ -18106,13 +18037,18 @@ function createOrbitApartmentPicker(options: OrbitApartmentPickerOptions) {
 
     function highlightStyles(highlighted: string[], lit: Set<string>, filtered: boolean, emphasis: string | null) {
         return highlighted.flatMap(id => {
-            // A rendered window or status mask supplies the complete highlight.
-            if (lit.has(id)) return []
-            if (options.getLightTint?.(id) === null && root.dataset.orbitLightingState === "loading") return []
+            const available = options.getLightTint?.(id) === null
             const filterMatchOnly = filtered && id !== emphasis
-            const opacity = highlightOpacity * (filterMatchOnly ? filteredSolidRatio : 1)
-            const rgb = resolveStatusColor(options.getHighlightColor?.(id))
-            return [{ index: indices.get(id)!, rgb, opacity }]
+            const lift = filterMatchOnly ? 0.08 : 0.16
+            const neutral = available && !!options.lightingEnabled
+            // Available units keep the same full-footprint lift while their window render loads.
+            // A rendered solid status already supplies its colour and must not get another fill.
+            if (lit.has(id) && !neutral) return []
+            const solidOpacity = highlightOpacity * (filterMatchOnly ? filteredSolidRatio : 1)
+            const opacity = neutral ? lift : solidOpacity
+            const rgb = neutral ? [255, 255, 255] : resolveStatusColor(options.getHighlightColor?.(id))
+            const whiteMix = available && !neutral && opacity > 0 ? Math.min(1, lift / opacity) : 0
+            return [{ index: indices.get(id)!, rgb, opacity, whiteMix, rim: !neutral }]
         })
     }
 
@@ -18136,9 +18072,9 @@ function createOrbitApartmentPicker(options: OrbitApartmentPickerOptions) {
             bottom = Math.max(bottom, mask.maxY[id])
             const offset = id * 4
             for (let k = 0; k < 3; k++) {
-                const channel = style.rgb[k]
+                const channel = style.rgb[k] + (255 - style.rgb[k]) * style.whiteMix
                 fill[offset + k] = channel
-                rim[offset + k] = channel * 0.65 + 255 * 0.35
+                rim[offset + k] = style.rim ? channel * 0.65 + 255 * 0.35 : channel
             }
             fill[offset + 3] = rim[offset + 3] = Math.round(255 * style.opacity)
         }
@@ -18279,7 +18215,7 @@ function createOrbitApartmentPicker(options: OrbitApartmentPickerOptions) {
             ":" +
             styles
                 .map((style) =>
-                    [style.index, ...style.rgb, style.opacity].join(",")
+                    [style.index, ...style.rgb, style.opacity, style.whiteMix, style.rim].join(",")
                 )
                 .join(";")
         const logicalWidth =
