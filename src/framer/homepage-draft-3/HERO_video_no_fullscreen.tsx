@@ -864,8 +864,7 @@ const homepageOrbitEntryStyles = `
     transition-delay: 0s;
 }
 /* SEQ01/02 captions are native Framer layers; SEQ03 uses the same shadow here. */
-[data-framer-name="SEQ01"] [data-framer-name^="SEQ01 caption"] [data-framer-component-type="RichTextContainer"] :is(h1, h2, h3, h4, p),
-[data-framer-name="SEQ02"] [data-framer-component-type="RichTextContainer"] :is(h1, h2, h3, h4, p),
+:is([data-framer-name="SEQ01"], [data-framer-name="SEQ02"]) [data-framer-component-type="RichTextContainer"] :is(h1, h2, h3, h4, p),
 [data-admiral-homepage] [data-seq3-garden] :is(h2, p) {
     text-shadow: 0 1px 3px rgba(14, 36, 58, .45);
 }
