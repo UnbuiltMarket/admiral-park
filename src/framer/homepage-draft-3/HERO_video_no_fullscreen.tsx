@@ -2443,9 +2443,10 @@ function orbitApartmentPlan(
     const thumbnail = size === "thumbnail"
         ? orbitApartmentAssetUrl(source?.thumbnail, base)
         : null
+    const full = orbitApartmentAssetUrl(source?.full || record.floorplan, base)
     const url = size === "preview"
         ? orbitApartmentAssetUrl(source?.preview, base)
-        : thumbnail || orbitApartmentAssetUrl(source?.full || record.floorplan, base)
+        : thumbnail || full
     if (!url) return null
     const layout =
         record.apartmentType ? dataset.roomLayouts[record.apartmentType] : null
@@ -2454,13 +2455,13 @@ function orbitApartmentPlan(
     const aspect =
         (dimensions.width * viewBox.width) /
         (dimensions.height * viewBox.height)
-    // The existing thumbnails already contain the plan crop; applying it twice cuts
-    // away rooms. Retain the drawing's cropped aspect while showing the whole thumb.
+    // A thumbnail alias to the full sheet still needs the drawing's crop.
+    const croppedThumbnail = !!thumbnail && thumbnail !== full
     return {
         url,
-        isThumbnail: !!thumbnail,
+        isThumbnail: croppedThumbnail,
         aspect,
-        viewBox: thumbnail ? { x: 0, y: 0, width: 1, height: 1 } : viewBox,
+        viewBox: croppedThumbnail ? { x: 0, y: 0, width: 1, height: 1 } : viewBox,
     }
 }
 
@@ -2468,13 +2469,60 @@ function orbitApartmentPlan(
 // drawing request for every crossed unit. Cache URL readiness, not decoded images.
 const orbitPreviewImageReady = new Set<string>()
 const orbitPreviewImageRequests = new Map<string, Promise<void>>()
+const warmedOrbitPlanBytes = new Set<string>()
+const warmingOrbitPlanBytes = new Map<string, Promise<void>>()
+const compactOrbitPlan = /\/plan\.avif(?:$|[?#])/i
+
+// Match fetch's CORS and credentials mode for HTTP caches that vary by Origin.
+function orbitPlanCrossOrigin(url: string): "anonymous" | undefined {
+    return warmedOrbitPlanBytes.has(url) ? "anonymous" : undefined
+}
+
+function useWarmOrbitFloorplans(dataset: OrbitApartmentDataset | null, base: string, parked: boolean) {
+    React.useEffect(() => {
+        if (!parked || !dataset) return
+        const connection = (navigator as Navigator & {
+            connection?: { saveData?: boolean; effectiveType?: string }
+        }).connection
+        if (connection?.saveData || /(^|-)2g$/.test(connection?.effectiveType || "")) return
+
+        const urls = new Set<string>()
+        for (const apartment of dataset.apartments) {
+            const url = orbitApartmentAssetUrl(apartment.media?.floorplan?.full || apartment.floorplan, base)
+            if (url && compactOrbitPlan.test(url)) urls.add(url)
+        }
+        const controller = new AbortController()
+        async function warm() {
+            for (const url of urls) {
+                if (controller.signal.aborted || document.hidden) return
+                if (orbitPreviewImageReady.has(url) || orbitPreviewImageRequests.has(url) ||
+                    warmedOrbitPlanBytes.has(url) || warmingOrbitPlanBytes.has(url)) continue
+                // A plain fetch warms the HTTP cache without decoding or retaining a bitmap.
+                const request = fetch(url, { priority: "low", signal: controller.signal })
+                    .then(async response => {
+                        if (!response.ok) return
+                        await response.arrayBuffer()
+                        warmedOrbitPlanBytes.add(url)
+                    })
+                    .catch(() => { /* Demand loading can retry an aborted or failed warm. */ })
+                    .finally(() => warmingOrbitPlanBytes.delete(url))
+                warmingOrbitPlanBytes.set(url, request)
+                await request
+            }
+        }
+        const timer = window.setTimeout(() => { void warm() }, 1400)
+        return () => { window.clearTimeout(timer); controller.abort() }
+    }, [dataset, base, parked])
+}
+
 function requestOrbitPreviewImage(url: string): Promise<void> {
     if (orbitPreviewImageReady.has(url)) return Promise.resolve()
     const previous = orbitPreviewImageRequests.get(url)
     if (previous) return previous
-    const request = new Promise<void>((resolve, reject) => {
+    const loadImage = () => new Promise<void>((resolve, reject) => {
         const image = new Image()
         image.decoding = "async"
+        if (orbitPlanCrossOrigin(url)) image.crossOrigin = "anonymous"
         let finished = false
         const finish = (error?: Error) => {
             if (finished) return
@@ -2501,6 +2549,8 @@ function requestOrbitPreviewImage(url: string): Promise<void> {
         }
         image.src = url
     })
+    const warming = warmingOrbitPlanBytes.get(url)
+    const request = (warming ? warming.then(loadImage) : loadImage())
         .then(() => {
             orbitPreviewImageReady.add(url)
             if (orbitPreviewImageReady.size > 96)
@@ -2518,7 +2568,7 @@ function useOrbitPreviewImage(
     url: string | null | undefined,
     enabled = true,
     isThumbnail = false,
-    delayMs = isThumbnail ? 32 : 160
+    delayMs = isThumbnail || (url && compactOrbitPlan.test(url)) ? 32 : 160
 ): string | null {
     const requested = enabled && url ? url : null
     const [ready, setReady] = React.useState<string | null>(null)
@@ -6248,6 +6298,7 @@ function OrbitApartmentStudio(
                                                         <img
                                                             data-orbit-floorplan=""
                                                             className="orbit-studio-plan-image"
+                                                            crossOrigin={orbitPlanCrossOrigin(plan!.url)}
                                                             src={plan!.url}
                                                             style={planStyle}
                                                             alt={`${apartment.id} · ${labels.floorplan}`}
@@ -6488,6 +6539,7 @@ function OrbitApartmentStudio(
                                                     <img
                                                         data-orbit-floorplan=""
                                                         className="orbit-studio-plan-image"
+                                                        crossOrigin={orbitPlanCrossOrigin(plan!.url)}
                                                         src={plan!.url}
                                                         style={planStyle}
                                                         alt={`${apartment.id} · ${labels.floorplan}`}
@@ -7304,6 +7356,7 @@ function OrbitFullscreenDetails({
                                         data-orbit-plan-crop=""
                                     >
                                         <img
+                                            crossOrigin={orbitPlanCrossOrigin(floorplan)}
                                             src={floorplan}
                                             style={planStyle}
                                             alt={`${apartment.id} · ${hu ? "alaprajz" : "floorplan"}`}
@@ -7736,6 +7789,9 @@ export default function AdmiralHomepageStudio(
                         stage
                     )))
     )
+    useWarmOrbitFloorplans(apartmentData.dataset, apartmentAssetBase,
+        !staticRenderer && hostVisible && stage === "orbit" &&
+        orbitInfo.state === "checkpoint" && !orbitInfo.suspended)
     const filterBounds = React.useMemo(
         () => getOrbitPriceBounds(apartmentData.dataset?.apartments || []),
         [apartmentData.dataset]
@@ -7832,6 +7888,10 @@ export default function AdmiralHomepageStudio(
         orbitApartmentTarget, stage, orbitInfo.state, orbitInfo.checkpoint,
         visibleMaskApartments, apartmentData.dataset, filterMatches, filterResult.active,
     ])
+    const stripPlan = React.useMemo(() =>
+        !useStudio && selectedApartment && apartmentData.dataset
+            ? orbitApartmentPlan(selectedApartment, apartmentData.dataset, apartmentAssetBase, "thumbnail")
+            : null, [useStudio, selectedApartment, apartmentData.dataset, apartmentAssetBase])
     const selectedApartmentDetails = React.useMemo<ApartmentDetailsData | null>(
         () =>
             selectedApartment
@@ -7843,17 +7903,11 @@ export default function AdmiralHomepageStudio(
                       garden: selectedApartment.areaGarden,
                       rooms: selectedApartment.rooms,
                       availability: selectedApartment.status,
-                      floorplanUrl:
-                          orbitApartmentAssetUrl(
-                              selectedApartment.media?.floorplan?.thumbnail ||
-                                  selectedApartment.media?.floorplan?.full ||
-                                  selectedApartment.floorplan ||
-                                  "",
-                              apartmentAssetBase
-                          ) || undefined,
+                      floorplanUrl: stripPlan?.url,
+                      floorplanCrop: stripPlan || undefined,
                   }
                 : null,
-        [selectedApartment, apartmentAssetBase, detailsLanguage]
+        [selectedApartment, stripPlan]
     )
     const clearApartmentDetails = React.useCallback(() => {
         setInteractionApartmentId(null)
@@ -11953,7 +12007,7 @@ addPropertyControls(AdmiralHomepageStudio, {
             "https://raw.githubusercontent.com/UnbuiltMarket/admiral-park/main/data/apartments.json",
         hidden: (p) => p.detailsMode === "off",
         description:
-            "Apartment facts and media paths. All 69 records are small; only the selected plan is loaded.",
+            "Apartment facts and media paths. The orbit warms the compressed AVIF plans while parked and decodes each plan on selection.",
     },
     apartmentAssetBase: {
         type: ControlType.String,
@@ -12108,6 +12162,7 @@ interface ApartmentDetailsData {
     rooms: number | null
     availability: string
     floorplanUrl?: string
+    floorplanCrop?: OrbitApartmentPlan
 }
 
 interface ApartmentDetailsPreview {
@@ -12566,6 +12621,23 @@ function ApartmentDetailsStrip({
         data.floorplanUrl && data.floorplanUrl !== failedFloorplan
             ? data.floorplanUrl
             : ""
+    const planLabel = hu ? `${data.number} lakás alaprajza` : `Floor plan of apartment ${data.number}`
+    const crop = data.floorplanCrop
+    const planImage = !floorplan ? null :
+        crop && (crop.viewBox.width < 1 || crop.viewBox.height < 1) ? (
+            <svg className="admiral-details-plan-image" viewBox={`0 0 ${crop.aspect} 1`}
+                role="img" aria-label={planLabel}>
+                <svg width={crop.aspect} height={1} overflow="hidden" preserveAspectRatio="none"
+                    viewBox={`${crop.viewBox.x} ${crop.viewBox.y} ${crop.viewBox.width} ${crop.viewBox.height}`}>
+                    <image href={floorplan} width={1} height={1} preserveAspectRatio="none"
+                        crossOrigin={orbitPlanCrossOrigin(floorplan)} onError={() => setFailedFloorplan(floorplan)} />
+                </svg>
+            </svg>
+        ) : (
+            <img className="admiral-details-plan-image" src={floorplan} alt={planLabel}
+                crossOrigin={orbitPlanCrossOrigin(floorplan)} loading="lazy" decoding="async"
+                draggable={false} onError={() => setFailedFloorplan(floorplan)} />
+        )
     return (
         <div
             ref={root}
@@ -12686,23 +12758,7 @@ function ApartmentDetailsStrip({
                                 if (interactive) onOpen?.()
                             }}
                         >
-                            {floorplan ? (
-                                <img
-                                    className="admiral-details-plan-image"
-                                    src={floorplan}
-                                    alt={
-                                        hu
-                                            ? `${data.number} lakás alaprajza`
-                                            : `Floor plan of apartment ${data.number}`
-                                    }
-                                    loading="lazy"
-                                    decoding="async"
-                                    draggable={false}
-                                    onError={() =>
-                                        setFailedFloorplan(floorplan)
-                                    }
-                                />
-                            ) : (
+                            {planImage || (
                                 <span className="admiral-details-plan-empty">
                                     {hu ? "Részletek ↗" : "Details ↗"}
                                 </span>
@@ -12713,21 +12769,7 @@ function ApartmentDetailsStrip({
                                 </span>
                             )}
                         </button>
-                    ) : floorplan ? (
-                        <img
-                            className="admiral-details-plan-image"
-                            src={floorplan}
-                            alt={
-                                hu
-                                    ? `${data.number} lakás alaprajza`
-                                    : `Floor plan of apartment ${data.number}`
-                            }
-                            loading="lazy"
-                            decoding="async"
-                            draggable={false}
-                            onError={() => setFailedFloorplan(floorplan)}
-                        />
-                    ) : sample ? (
+                    ) : planImage ? planImage : sample ? (
                         <svg
                             className="admiral-details-plan-image"
                             viewBox="0 0 112 78"

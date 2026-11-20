@@ -15,12 +15,27 @@ test('expanded apartment details preserve all collapsed orbit facts without publ
         const collapsed = orbit.apartments.find(record => record.id === apartment.id);
         assert.ok(collapsed, `Matching collapsed apartment ${apartment.id}`);
         for (const field of ['id', 'name', 'building', 'floor', 'floorLabel', 'rooms', 'bedrooms', 'layoutLabel', 'orientation', 'areaInterior', 'areaTerrace', 'areaGarden', 'price', 'currency', 'priceIncludesVat', 'status', 'statusLabel', 'apartmentType', 'floorplan', 'note']) assert.deepEqual(apartment[field], collapsed[field], `${apartment.id} ${field}`);
-        assert.match(apartment.media.floorplan.original, /^assets\/floorplans\/types\/[^/]+\/original\.png$/);
+        const plan = `assets/floorplans/types/${apartment.apartmentType}/plan.avif`;
+        for (const path of [apartment.floorplan, ...['full', 'original', 'thumbnail'].map(key => apartment.media.floorplan[key]), collapsed.media.floorplan.thumbnail, collapsed.media.floorplan.full]) {
+            assert.equal(path, plan, `${apartment.id} floor plan`);
+        }
         for (const room of apartment.roomList) assert.ok(Object.keys(room).every(key => ['id', 'key', 'name', 'area', 'kind', 'planNumber'].includes(key)));
         assert.deepEqual(detail.roomLayouts[apartment.apartmentType].viewBox, orbit.roomLayouts[apartment.apartmentType].viewBox);
     }
     assert.doesNotMatch(JSON.stringify(detail), /"(?:sources|source|provenance|validation|dataIssues|originalFileName|sourceApartmentCode|sourceAsOf|roomLayoutSources)"\s*:/);
     assert.doesNotMatch(JSON.stringify(detail), /[A-Za-z]:\\|file:\/\//);
+});
+
+test('syncing an older source workbook retains the published floor plans and crop coordinates', () => {
+    const source = structuredClone(detail);
+    for (const apartment of source.apartments) {
+        const base = `assets/floorplans/types/${apartment.apartmentType}/`;
+        apartment.floorplan = apartment.media.floorplan.full = base + 'full.webp';
+        apartment.media.floorplan.thumbnail = base + 'thumb.webp';
+        apartment.media.floorplan.original = base + 'original.png';
+    }
+    source.roomLayouts.C.imageDimensions = { width: 1054, height: 1492 };
+    assert.deepEqual(createApartmentDetailDataset(source), detail);
 });
 
 test('detail projection keeps authentic room marker joins and repeated source room IDs without inventing links', () => {

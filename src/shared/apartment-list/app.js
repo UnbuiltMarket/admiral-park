@@ -184,7 +184,22 @@ function mediaEntries(a) {
   });
 }
 function previewButton(a,item) {
-  return `<button class="media-preview" data-media="${esc(a.id)}" data-media-kind="${item.key}" title="${esc(item.label)}" aria-label="${esc(a.id)} – ${esc(item.name)} megnyitása: ${esc(item.label)}"><span class="preview-visual">${item.thumbnail?`<img src="${esc(item.thumbnail)}" alt="" loading="lazy" decoding="async" data-thumbnail><span class="preview-unavailable" hidden>Megnyitás</span>`:'<span class="preview-unavailable">Megnyitás</span>'}</span></button>`;
+  const layout = item.key === "floorplan" && item.thumbnail === item.full ? data.roomLayouts?.[a.apartmentType] : null;
+  const view = layout?.viewBox;
+  const dims = layout?.imageDimensions;
+  const cropped = view && dims && [view.x, view.y, view.width, view.height, dims.width, dims.height].every(Number.isFinite)
+    && view.width > 0 && view.height > 0 && dims.width > 0 && dims.height > 0;
+  let image = "";
+  if (item.thumbnail) {
+    const placement = cropped ? `position:absolute;left:${-100 * view.x / view.width}%;top:${-100 * view.y / view.height}%;width:${100 / view.width}%;height:${100 / view.height}%;max-width:none` : "";
+    image = `<img src="${esc(item.thumbnail)}" style="${placement}" alt="" loading="lazy" decoding="async" data-thumbnail>`;
+    if (cropped) {
+      // Fit the drawing inside the thumbnail using the full sheet's known crop.
+      const aspect = dims.width * view.width / (dims.height * view.height);
+      image = `<span data-plan-crop style="position:relative;overflow:hidden;width:min(100%,${100 * aspect}cqh);aspect-ratio:${aspect}">${image}</span>`;
+    }
+  }
+  return `<button class="media-preview" data-media="${esc(a.id)}" data-media-kind="${item.key}" title="${esc(item.label)}" aria-label="${esc(a.id)} – ${esc(item.name)} megnyitása: ${esc(item.label)}"><span class="preview-visual"${cropped ? ' style="container-type:size"' : ''}>${image}<span class="preview-unavailable"${image ? " hidden" : ""}>Megnyitás</span></span></button>`;
 }
 
 function downloadLink(a) {
@@ -487,7 +502,13 @@ for(const name of ['pointerup','pointercancel'])$('filters').addEventListener(na
 $('sort').addEventListener('change',e=>{state.sort=e.target.value;render();},events);
 root.addEventListener('error',event=>{
   const image=event.target;
-  if(image.matches?.('img[data-thumbnail]')){image.hidden=true;const fallback=image.parentElement.querySelector('.preview-unavailable');if(fallback)fallback.hidden=false;}
+  if (image.matches?.('img[data-thumbnail]')) {
+    image.hidden = true;
+    const crop = image.closest('[data-plan-crop]');
+    if (crop) crop.hidden = true;
+    const fallback = image.closest('.preview-visual')?.querySelector('.preview-unavailable');
+    if (fallback) fallback.hidden = false;
+  }
 },{...events,capture:true});
 for(const dialog of dialogs) {
   dialog.addEventListener('cancel',e=>{e.preventDefault();closeDialog(dialog);},events);

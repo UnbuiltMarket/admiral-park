@@ -18,9 +18,9 @@
     "A": {
       "representativeApartmentId": "A003",
       "floorplan": {
-        "original": "assets/floorplans/types/A/original.png",
-        "thumbnail": "assets/floorplans/types/A/thumb.webp",
-        "full": "assets/floorplans/types/A/full.webp",
+        "original": "assets/floorplans/types/A/plan.avif",
+        "thumbnail": "assets/floorplans/types/A/plan.avif",
+        "full": "assets/floorplans/types/A/plan.avif",
         "label": "A típus · illusztráció",
         "isIllustrative": true
       },
@@ -34,9 +34,9 @@
     "B": {
       "representativeApartmentId": "A001",
       "floorplan": {
-        "original": "assets/floorplans/types/B/original.png",
-        "thumbnail": "assets/floorplans/types/B/thumb.webp",
-        "full": "assets/floorplans/types/B/full.webp",
+        "original": "assets/floorplans/types/B/plan.avif",
+        "thumbnail": "assets/floorplans/types/B/plan.avif",
+        "full": "assets/floorplans/types/B/plan.avif",
         "label": "B típus · illusztráció",
         "isIllustrative": true
       },
@@ -50,9 +50,9 @@
     "C": {
       "representativeApartmentId": "A103",
       "floorplan": {
-        "original": "assets/floorplans/types/C/original.png",
-        "thumbnail": "assets/floorplans/types/C/thumb.webp",
-        "full": "assets/floorplans/types/C/full.webp",
+        "original": "assets/floorplans/types/C/plan.avif",
+        "thumbnail": "assets/floorplans/types/C/plan.avif",
+        "full": "assets/floorplans/types/C/plan.avif",
         "label": "C típus · illusztráció",
         "isIllustrative": true
       },
@@ -66,9 +66,9 @@
     "D": {
       "representativeApartmentId": "A104",
       "floorplan": {
-        "original": "assets/floorplans/types/D/original.png",
-        "thumbnail": "assets/floorplans/types/D/thumb.webp",
-        "full": "assets/floorplans/types/D/full.webp",
+        "original": "assets/floorplans/types/D/plan.avif",
+        "thumbnail": "assets/floorplans/types/D/plan.avif",
+        "full": "assets/floorplans/types/D/plan.avif",
         "label": "D típus · illusztráció",
         "isIllustrative": true
       },
@@ -82,9 +82,9 @@
     "E": {
       "representativeApartmentId": "A304",
       "floorplan": {
-        "original": "assets/floorplans/types/E/original.png",
-        "thumbnail": "assets/floorplans/types/E/thumb.webp",
-        "full": "assets/floorplans/types/E/full.webp",
+        "original": "assets/floorplans/types/E/plan.avif",
+        "thumbnail": "assets/floorplans/types/E/plan.avif",
+        "full": "assets/floorplans/types/E/plan.avif",
         "label": "E típus · illusztráció",
         "isIllustrative": true
       },
@@ -98,9 +98,9 @@
     "E1": {
       "representativeApartmentId": "A205",
       "floorplan": {
-        "original": "assets/floorplans/types/E1/original.png",
-        "thumbnail": "assets/floorplans/types/E1/thumb.webp",
-        "full": "assets/floorplans/types/E1/full.webp",
+        "original": "assets/floorplans/types/E1/plan.avif",
+        "thumbnail": "assets/floorplans/types/E1/plan.avif",
+        "full": "assets/floorplans/types/E1/plan.avif",
         "label": "E1 típus · illusztráció",
         "isIllustrative": true
       },
@@ -114,9 +114,9 @@
     "E2": {
       "representativeApartmentId": "A201",
       "floorplan": {
-        "original": "assets/floorplans/types/E2/original.png",
-        "thumbnail": "assets/floorplans/types/E2/thumb.webp",
-        "full": "assets/floorplans/types/E2/full.webp",
+        "original": "assets/floorplans/types/E2/plan.avif",
+        "thumbnail": "assets/floorplans/types/E2/plan.avif",
+        "full": "assets/floorplans/types/E2/plan.avif",
         "label": "E2 típus · illusztráció",
         "isIllustrative": true
       },
@@ -130,9 +130,9 @@
     "F": {
       "representativeApartmentId": "A303",
       "floorplan": {
-        "original": "assets/floorplans/types/F/original.png",
-        "thumbnail": "assets/floorplans/types/F/thumb.webp",
-        "full": "assets/floorplans/types/F/full.webp",
+        "original": "assets/floorplans/types/F/plan.avif",
+        "thumbnail": "assets/floorplans/types/F/plan.avif",
+        "full": "assets/floorplans/types/F/plan.avif",
         "label": "F típus · illusztráció",
         "isIllustrative": true
       },
@@ -146,9 +146,9 @@
     "F1": {
       "representativeApartmentId": "B302",
       "floorplan": {
-        "original": "assets/floorplans/types/F1/original.png",
-        "thumbnail": "assets/floorplans/types/F1/thumb.webp",
-        "full": "assets/floorplans/types/F1/full.webp",
+        "original": "assets/floorplans/types/F1/plan.avif",
+        "thumbnail": "assets/floorplans/types/F1/plan.avif",
+        "full": "assets/floorplans/types/F1/plan.avif",
         "label": "F1 típus · illusztráció",
         "isIllustrative": true
       },
@@ -162,9 +162,9 @@
     "F2": {
       "representativeApartmentId": "A302",
       "floorplan": {
-        "original": "assets/floorplans/types/F2/original.png",
-        "thumbnail": "assets/floorplans/types/F2/thumb.webp",
-        "full": "assets/floorplans/types/F2/full.webp",
+        "original": "assets/floorplans/types/F2/plan.avif",
+        "thumbnail": "assets/floorplans/types/F2/plan.avif",
+        "full": "assets/floorplans/types/F2/plan.avif",
         "label": "F2 típus · illusztráció",
         "isIllustrative": true
       },
@@ -253,11 +253,11 @@
   "apartments": {
     "A001": {
       "apartmentType": "B",
-      "floorplan": "assets/floorplans/types/B/full.webp",
+      "floorplan": "assets/floorplans/types/B/plan.avif",
       "media": {
         "floorplan": {
-          "thumbnail": "assets/floorplans/types/B/thumb.webp",
-          "full": "assets/floorplans/types/B/full.webp",
+          "thumbnail": "assets/floorplans/types/B/plan.avif",
+          "full": "assets/floorplans/types/B/plan.avif",
           "label": "B típus · illusztráció",
           "isIllustrative": true
         },
@@ -276,11 +276,11 @@
     },
     "A002": {
       "apartmentType": "B",
-      "floorplan": "assets/floorplans/types/B/full.webp",
+      "floorplan": "assets/floorplans/types/B/plan.avif",
       "media": {
         "floorplan": {
-          "thumbnail": "assets/floorplans/types/B/thumb.webp",
-          "full": "assets/floorplans/types/B/full.webp",
+          "thumbnail": "assets/floorplans/types/B/plan.avif",
+          "full": "assets/floorplans/types/B/plan.avif",
           "label": "B típus · illusztráció",
           "isIllustrative": true
         },
@@ -299,11 +299,11 @@
     },
     "A003": {
       "apartmentType": "A",
-      "floorplan": "assets/floorplans/types/A/full.webp",
+      "floorplan": "assets/floorplans/types/A/plan.avif",
       "media": {
         "floorplan": {
-          "thumbnail": "assets/floorplans/types/A/thumb.webp",
-          "full": "assets/floorplans/types/A/full.webp",
+          "thumbnail": "assets/floorplans/types/A/plan.avif",
+          "full": "assets/floorplans/types/A/plan.avif",
           "label": "A típus · illusztráció",
           "isIllustrative": true
         },
@@ -322,11 +322,11 @@
     },
     "A004": {
       "apartmentType": "A",
-      "floorplan": "assets/floorplans/types/A/full.webp",
+      "floorplan": "assets/floorplans/types/A/plan.avif",
       "media": {
         "floorplan": {
-          "thumbnail": "assets/floorplans/types/A/thumb.webp",
-          "full": "assets/floorplans/types/A/full.webp",
+          "thumbnail": "assets/floorplans/types/A/plan.avif",
+          "full": "assets/floorplans/types/A/plan.avif",
           "label": "A típus · illusztráció",
           "isIllustrative": true
         },
@@ -345,11 +345,11 @@
     },
     "A005": {
       "apartmentType": "B",
-      "floorplan": "assets/floorplans/types/B/full.webp",
+      "floorplan": "assets/floorplans/types/B/plan.avif",
       "media": {
         "floorplan": {
-          "thumbnail": "assets/floorplans/types/B/thumb.webp",
-          "full": "assets/floorplans/types/B/full.webp",
+          "thumbnail": "assets/floorplans/types/B/plan.avif",
+          "full": "assets/floorplans/types/B/plan.avif",
           "label": "B típus · illusztráció",
           "isIllustrative": true
         },
@@ -368,11 +368,11 @@
     },
     "A006": {
       "apartmentType": "B",
-      "floorplan": "assets/floorplans/types/B/full.webp",
+      "floorplan": "assets/floorplans/types/B/plan.avif",
       "media": {
         "floorplan": {
-          "thumbnail": "assets/floorplans/types/B/thumb.webp",
-          "full": "assets/floorplans/types/B/full.webp",
+          "thumbnail": "assets/floorplans/types/B/plan.avif",
+          "full": "assets/floorplans/types/B/plan.avif",
           "label": "B típus · illusztráció",
           "isIllustrative": true
         },
@@ -391,11 +391,11 @@
     },
     "A101": {
       "apartmentType": "A",
-      "floorplan": "assets/floorplans/types/A/full.webp",
+      "floorplan": "assets/floorplans/types/A/plan.avif",
       "media": {
         "floorplan": {
-          "thumbnail": "assets/floorplans/types/A/thumb.webp",
-          "full": "assets/floorplans/types/A/full.webp",
+          "thumbnail": "assets/floorplans/types/A/plan.avif",
+          "full": "assets/floorplans/types/A/plan.avif",
           "label": "A típus · illusztráció",
           "isIllustrative": true
         },
@@ -414,11 +414,11 @@
     },
     "A102": {
       "apartmentType": "B",
-      "floorplan": "assets/floorplans/types/B/full.webp",
+      "floorplan": "assets/floorplans/types/B/plan.avif",
       "media": {
         "floorplan": {
-          "thumbnail": "assets/floorplans/types/B/thumb.webp",
-          "full": "assets/floorplans/types/B/full.webp",
+          "thumbnail": "assets/floorplans/types/B/plan.avif",
+          "full": "assets/floorplans/types/B/plan.avif",
           "label": "B típus · illusztráció",
           "isIllustrative": true
         },
@@ -437,11 +437,11 @@
     },
     "A103": {
       "apartmentType": "C",
-      "floorplan": "assets/floorplans/types/C/full.webp",
+      "floorplan": "assets/floorplans/types/C/plan.avif",
       "media": {
         "floorplan": {
-          "thumbnail": "assets/floorplans/types/C/thumb.webp",
-          "full": "assets/floorplans/types/C/full.webp",
+          "thumbnail": "assets/floorplans/types/C/plan.avif",
+          "full": "assets/floorplans/types/C/plan.avif",
           "label": "C típus · illusztráció",
           "isIllustrative": true
         },
@@ -460,11 +460,11 @@
     },
     "A104": {
       "apartmentType": "D",
-      "floorplan": "assets/floorplans/types/D/full.webp",
+      "floorplan": "assets/floorplans/types/D/plan.avif",
       "media": {
         "floorplan": {
-          "thumbnail": "assets/floorplans/types/D/thumb.webp",
-          "full": "assets/floorplans/types/D/full.webp",
+          "thumbnail": "assets/floorplans/types/D/plan.avif",
+          "full": "assets/floorplans/types/D/plan.avif",
           "label": "D típus · illusztráció",
           "isIllustrative": true
         },
@@ -483,11 +483,11 @@
     },
     "A105": {
       "apartmentType": "C",
-      "floorplan": "assets/floorplans/types/C/full.webp",
+      "floorplan": "assets/floorplans/types/C/plan.avif",
       "media": {
         "floorplan": {
-          "thumbnail": "assets/floorplans/types/C/thumb.webp",
-          "full": "assets/floorplans/types/C/full.webp",
+          "thumbnail": "assets/floorplans/types/C/plan.avif",
+          "full": "assets/floorplans/types/C/plan.avif",
           "label": "C típus · illusztráció",
           "isIllustrative": true
         },
@@ -506,11 +506,11 @@
     },
     "A106": {
       "apartmentType": "B",
-      "floorplan": "assets/floorplans/types/B/full.webp",
+      "floorplan": "assets/floorplans/types/B/plan.avif",
       "media": {
         "floorplan": {
-          "thumbnail": "assets/floorplans/types/B/thumb.webp",
-          "full": "assets/floorplans/types/B/full.webp",
+          "thumbnail": "assets/floorplans/types/B/plan.avif",
+          "full": "assets/floorplans/types/B/plan.avif",
           "label": "B típus · illusztráció",
           "isIllustrative": true
         },
@@ -529,11 +529,11 @@
     },
     "A107": {
       "apartmentType": "A",
-      "floorplan": "assets/floorplans/types/A/full.webp",
+      "floorplan": "assets/floorplans/types/A/plan.avif",
       "media": {
         "floorplan": {
-          "thumbnail": "assets/floorplans/types/A/thumb.webp",
-          "full": "assets/floorplans/types/A/full.webp",
+          "thumbnail": "assets/floorplans/types/A/plan.avif",
+          "full": "assets/floorplans/types/A/plan.avif",
           "label": "A típus · illusztráció",
           "isIllustrative": true
         },
@@ -552,11 +552,11 @@
     },
     "A201": {
       "apartmentType": "E2",
-      "floorplan": "assets/floorplans/types/E2/full.webp",
+      "floorplan": "assets/floorplans/types/E2/plan.avif",
       "media": {
         "floorplan": {
-          "thumbnail": "assets/floorplans/types/E2/thumb.webp",
-          "full": "assets/floorplans/types/E2/full.webp",
+          "thumbnail": "assets/floorplans/types/E2/plan.avif",
+          "full": "assets/floorplans/types/E2/plan.avif",
           "label": "E2 típus · illusztráció",
           "isIllustrative": true
         },
@@ -575,11 +575,11 @@
     },
     "A202": {
       "apartmentType": "C",
-      "floorplan": "assets/floorplans/types/C/full.webp",
+      "floorplan": "assets/floorplans/types/C/plan.avif",
       "media": {
         "floorplan": {
-          "thumbnail": "assets/floorplans/types/C/thumb.webp",
-          "full": "assets/floorplans/types/C/full.webp",
+          "thumbnail": "assets/floorplans/types/C/plan.avif",
+          "full": "assets/floorplans/types/C/plan.avif",
           "label": "C típus · illusztráció",
           "isIllustrative": true
         },
@@ -598,11 +598,11 @@
     },
     "A203": {
       "apartmentType": "D",
-      "floorplan": "assets/floorplans/types/D/full.webp",
+      "floorplan": "assets/floorplans/types/D/plan.avif",
       "media": {
         "floorplan": {
-          "thumbnail": "assets/floorplans/types/D/thumb.webp",
-          "full": "assets/floorplans/types/D/full.webp",
+          "thumbnail": "assets/floorplans/types/D/plan.avif",
+          "full": "assets/floorplans/types/D/plan.avif",
           "label": "D típus · illusztráció",
           "isIllustrative": true
         },
@@ -621,11 +621,11 @@
     },
     "A204": {
       "apartmentType": "C",
-      "floorplan": "assets/floorplans/types/C/full.webp",
+      "floorplan": "assets/floorplans/types/C/plan.avif",
       "media": {
         "floorplan": {
-          "thumbnail": "assets/floorplans/types/C/thumb.webp",
-          "full": "assets/floorplans/types/C/full.webp",
+          "thumbnail": "assets/floorplans/types/C/plan.avif",
+          "full": "assets/floorplans/types/C/plan.avif",
           "label": "C típus · illusztráció",
           "isIllustrative": true
         },
@@ -644,11 +644,11 @@
     },
     "A205": {
       "apartmentType": "E1",
-      "floorplan": "assets/floorplans/types/E1/full.webp",
+      "floorplan": "assets/floorplans/types/E1/plan.avif",
       "media": {
         "floorplan": {
-          "thumbnail": "assets/floorplans/types/E1/thumb.webp",
-          "full": "assets/floorplans/types/E1/full.webp",
+          "thumbnail": "assets/floorplans/types/E1/plan.avif",
+          "full": "assets/floorplans/types/E1/plan.avif",
           "label": "E1 típus · illusztráció",
           "isIllustrative": true
         },
@@ -667,11 +667,11 @@
     },
     "A301": {
       "apartmentType": "E2",
-      "floorplan": "assets/floorplans/types/E2/full.webp",
+      "floorplan": "assets/floorplans/types/E2/plan.avif",
       "media": {
         "floorplan": {
-          "thumbnail": "assets/floorplans/types/E2/thumb.webp",
-          "full": "assets/floorplans/types/E2/full.webp",
+          "thumbnail": "assets/floorplans/types/E2/plan.avif",
+          "full": "assets/floorplans/types/E2/plan.avif",
           "label": "E2 típus · illusztráció",
           "isIllustrative": true
         },
@@ -690,11 +690,11 @@
     },
     "A302": {
       "apartmentType": "F2",
-      "floorplan": "assets/floorplans/types/F2/full.webp",
+      "floorplan": "assets/floorplans/types/F2/plan.avif",
       "media": {
         "floorplan": {
-          "thumbnail": "assets/floorplans/types/F2/thumb.webp",
-          "full": "assets/floorplans/types/F2/full.webp",
+          "thumbnail": "assets/floorplans/types/F2/plan.avif",
+          "full": "assets/floorplans/types/F2/plan.avif",
           "label": "F2 típus · illusztráció",
           "isIllustrative": true
         },
@@ -713,11 +713,11 @@
     },
     "A303": {
       "apartmentType": "F",
-      "floorplan": "assets/floorplans/types/F/full.webp",
+      "floorplan": "assets/floorplans/types/F/plan.avif",
       "media": {
         "floorplan": {
-          "thumbnail": "assets/floorplans/types/F/thumb.webp",
-          "full": "assets/floorplans/types/F/full.webp",
+          "thumbnail": "assets/floorplans/types/F/plan.avif",
+          "full": "assets/floorplans/types/F/plan.avif",
           "label": "F típus · illusztráció",
           "isIllustrative": true
         },
@@ -736,11 +736,11 @@
     },
     "A304": {
       "apartmentType": "E",
-      "floorplan": "assets/floorplans/types/E/full.webp",
+      "floorplan": "assets/floorplans/types/E/plan.avif",
       "media": {
         "floorplan": {
-          "thumbnail": "assets/floorplans/types/E/thumb.webp",
-          "full": "assets/floorplans/types/E/full.webp",
+          "thumbnail": "assets/floorplans/types/E/plan.avif",
+          "full": "assets/floorplans/types/E/plan.avif",
           "label": "E típus · illusztráció",
           "isIllustrative": true
         },
@@ -759,11 +759,11 @@
     },
     "B001": {
       "apartmentType": "B",
-      "floorplan": "assets/floorplans/types/B/full.webp",
+      "floorplan": "assets/floorplans/types/B/plan.avif",
       "media": {
         "floorplan": {
-          "thumbnail": "assets/floorplans/types/B/thumb.webp",
-          "full": "assets/floorplans/types/B/full.webp",
+          "thumbnail": "assets/floorplans/types/B/plan.avif",
+          "full": "assets/floorplans/types/B/plan.avif",
           "label": "B típus · illusztráció",
           "isIllustrative": true
         },
@@ -782,11 +782,11 @@
     },
     "B002": {
       "apartmentType": "B",
-      "floorplan": "assets/floorplans/types/B/full.webp",
+      "floorplan": "assets/floorplans/types/B/plan.avif",
       "media": {
         "floorplan": {
-          "thumbnail": "assets/floorplans/types/B/thumb.webp",
-          "full": "assets/floorplans/types/B/full.webp",
+          "thumbnail": "assets/floorplans/types/B/plan.avif",
+          "full": "assets/floorplans/types/B/plan.avif",
           "label": "B típus · illusztráció",
           "isIllustrative": true
         },
@@ -805,11 +805,11 @@
     },
     "B003": {
       "apartmentType": "A",
-      "floorplan": "assets/floorplans/types/A/full.webp",
+      "floorplan": "assets/floorplans/types/A/plan.avif",
       "media": {
         "floorplan": {
-          "thumbnail": "assets/floorplans/types/A/thumb.webp",
-          "full": "assets/floorplans/types/A/full.webp",
+          "thumbnail": "assets/floorplans/types/A/plan.avif",
+          "full": "assets/floorplans/types/A/plan.avif",
           "label": "A típus · illusztráció",
           "isIllustrative": true
         },
@@ -828,11 +828,11 @@
     },
     "B004": {
       "apartmentType": "A",
-      "floorplan": "assets/floorplans/types/A/full.webp",
+      "floorplan": "assets/floorplans/types/A/plan.avif",
       "media": {
         "floorplan": {
-          "thumbnail": "assets/floorplans/types/A/thumb.webp",
-          "full": "assets/floorplans/types/A/full.webp",
+          "thumbnail": "assets/floorplans/types/A/plan.avif",
+          "full": "assets/floorplans/types/A/plan.avif",
           "label": "A típus · illusztráció",
           "isIllustrative": true
         },
@@ -851,11 +851,11 @@
     },
     "B005": {
       "apartmentType": "B",
-      "floorplan": "assets/floorplans/types/B/full.webp",
+      "floorplan": "assets/floorplans/types/B/plan.avif",
       "media": {
         "floorplan": {
-          "thumbnail": "assets/floorplans/types/B/thumb.webp",
-          "full": "assets/floorplans/types/B/full.webp",
+          "thumbnail": "assets/floorplans/types/B/plan.avif",
+          "full": "assets/floorplans/types/B/plan.avif",
           "label": "B típus · illusztráció",
           "isIllustrative": true
         },
@@ -874,11 +874,11 @@
     },
     "B006": {
       "apartmentType": "B",
-      "floorplan": "assets/floorplans/types/B/full.webp",
+      "floorplan": "assets/floorplans/types/B/plan.avif",
       "media": {
         "floorplan": {
-          "thumbnail": "assets/floorplans/types/B/thumb.webp",
-          "full": "assets/floorplans/types/B/full.webp",
+          "thumbnail": "assets/floorplans/types/B/plan.avif",
+          "full": "assets/floorplans/types/B/plan.avif",
           "label": "B típus · illusztráció",
           "isIllustrative": true
         },
@@ -897,11 +897,11 @@
     },
     "B101": {
       "apartmentType": "A",
-      "floorplan": "assets/floorplans/types/A/full.webp",
+      "floorplan": "assets/floorplans/types/A/plan.avif",
       "media": {
         "floorplan": {
-          "thumbnail": "assets/floorplans/types/A/thumb.webp",
-          "full": "assets/floorplans/types/A/full.webp",
+          "thumbnail": "assets/floorplans/types/A/plan.avif",
+          "full": "assets/floorplans/types/A/plan.avif",
           "label": "A típus · illusztráció",
           "isIllustrative": true
         },
@@ -920,11 +920,11 @@
     },
     "B102": {
       "apartmentType": "B",
-      "floorplan": "assets/floorplans/types/B/full.webp",
+      "floorplan": "assets/floorplans/types/B/plan.avif",
       "media": {
         "floorplan": {
-          "thumbnail": "assets/floorplans/types/B/thumb.webp",
-          "full": "assets/floorplans/types/B/full.webp",
+          "thumbnail": "assets/floorplans/types/B/plan.avif",
+          "full": "assets/floorplans/types/B/plan.avif",
           "label": "B típus · illusztráció",
           "isIllustrative": true
         },
@@ -943,11 +943,11 @@
     },
     "B103": {
       "apartmentType": "C",
-      "floorplan": "assets/floorplans/types/C/full.webp",
+      "floorplan": "assets/floorplans/types/C/plan.avif",
       "media": {
         "floorplan": {
-          "thumbnail": "assets/floorplans/types/C/thumb.webp",
-          "full": "assets/floorplans/types/C/full.webp",
+          "thumbnail": "assets/floorplans/types/C/plan.avif",
+          "full": "assets/floorplans/types/C/plan.avif",
           "label": "C típus · illusztráció",
           "isIllustrative": true
         },
@@ -966,11 +966,11 @@
     },
     "B104": {
       "apartmentType": "D",
-      "floorplan": "assets/floorplans/types/D/full.webp",
+      "floorplan": "assets/floorplans/types/D/plan.avif",
       "media": {
         "floorplan": {
-          "thumbnail": "assets/floorplans/types/D/thumb.webp",
-          "full": "assets/floorplans/types/D/full.webp",
+          "thumbnail": "assets/floorplans/types/D/plan.avif",
+          "full": "assets/floorplans/types/D/plan.avif",
           "label": "D típus · illusztráció",
           "isIllustrative": true
         },
@@ -989,11 +989,11 @@
     },
     "B105": {
       "apartmentType": "C",
-      "floorplan": "assets/floorplans/types/C/full.webp",
+      "floorplan": "assets/floorplans/types/C/plan.avif",
       "media": {
         "floorplan": {
-          "thumbnail": "assets/floorplans/types/C/thumb.webp",
-          "full": "assets/floorplans/types/C/full.webp",
+          "thumbnail": "assets/floorplans/types/C/plan.avif",
+          "full": "assets/floorplans/types/C/plan.avif",
           "label": "C típus · illusztráció",
           "isIllustrative": true
         },
@@ -1012,11 +1012,11 @@
     },
     "B106": {
       "apartmentType": "B",
-      "floorplan": "assets/floorplans/types/B/full.webp",
+      "floorplan": "assets/floorplans/types/B/plan.avif",
       "media": {
         "floorplan": {
-          "thumbnail": "assets/floorplans/types/B/thumb.webp",
-          "full": "assets/floorplans/types/B/full.webp",
+          "thumbnail": "assets/floorplans/types/B/plan.avif",
+          "full": "assets/floorplans/types/B/plan.avif",
           "label": "B típus · illusztráció",
           "isIllustrative": true
         },
@@ -1035,11 +1035,11 @@
     },
     "B107": {
       "apartmentType": "A",
-      "floorplan": "assets/floorplans/types/A/full.webp",
+      "floorplan": "assets/floorplans/types/A/plan.avif",
       "media": {
         "floorplan": {
-          "thumbnail": "assets/floorplans/types/A/thumb.webp",
-          "full": "assets/floorplans/types/A/full.webp",
+          "thumbnail": "assets/floorplans/types/A/plan.avif",
+          "full": "assets/floorplans/types/A/plan.avif",
           "label": "A típus · illusztráció",
           "isIllustrative": true
         },
@@ -1058,11 +1058,11 @@
     },
     "B201": {
       "apartmentType": "A",
-      "floorplan": "assets/floorplans/types/A/full.webp",
+      "floorplan": "assets/floorplans/types/A/plan.avif",
       "media": {
         "floorplan": {
-          "thumbnail": "assets/floorplans/types/A/thumb.webp",
-          "full": "assets/floorplans/types/A/full.webp",
+          "thumbnail": "assets/floorplans/types/A/plan.avif",
+          "full": "assets/floorplans/types/A/plan.avif",
           "label": "A típus · illusztráció",
           "isIllustrative": true
         },
@@ -1081,11 +1081,11 @@
     },
     "B202": {
       "apartmentType": "B",
-      "floorplan": "assets/floorplans/types/B/full.webp",
+      "floorplan": "assets/floorplans/types/B/plan.avif",
       "media": {
         "floorplan": {
-          "thumbnail": "assets/floorplans/types/B/thumb.webp",
-          "full": "assets/floorplans/types/B/full.webp",
+          "thumbnail": "assets/floorplans/types/B/plan.avif",
+          "full": "assets/floorplans/types/B/plan.avif",
           "label": "B típus · illusztráció",
           "isIllustrative": true
         },
@@ -1104,11 +1104,11 @@
     },
     "B203": {
       "apartmentType": "C",
-      "floorplan": "assets/floorplans/types/C/full.webp",
+      "floorplan": "assets/floorplans/types/C/plan.avif",
       "media": {
         "floorplan": {
-          "thumbnail": "assets/floorplans/types/C/thumb.webp",
-          "full": "assets/floorplans/types/C/full.webp",
+          "thumbnail": "assets/floorplans/types/C/plan.avif",
+          "full": "assets/floorplans/types/C/plan.avif",
           "label": "C típus · illusztráció",
           "isIllustrative": true
         },
@@ -1127,11 +1127,11 @@
     },
     "B204": {
       "apartmentType": "D",
-      "floorplan": "assets/floorplans/types/D/full.webp",
+      "floorplan": "assets/floorplans/types/D/plan.avif",
       "media": {
         "floorplan": {
-          "thumbnail": "assets/floorplans/types/D/thumb.webp",
-          "full": "assets/floorplans/types/D/full.webp",
+          "thumbnail": "assets/floorplans/types/D/plan.avif",
+          "full": "assets/floorplans/types/D/plan.avif",
           "label": "D típus · illusztráció",
           "isIllustrative": true
         },
@@ -1150,11 +1150,11 @@
     },
     "B205": {
       "apartmentType": "C",
-      "floorplan": "assets/floorplans/types/C/full.webp",
+      "floorplan": "assets/floorplans/types/C/plan.avif",
       "media": {
         "floorplan": {
-          "thumbnail": "assets/floorplans/types/C/thumb.webp",
-          "full": "assets/floorplans/types/C/full.webp",
+          "thumbnail": "assets/floorplans/types/C/plan.avif",
+          "full": "assets/floorplans/types/C/plan.avif",
           "label": "C típus · illusztráció",
           "isIllustrative": true
         },
@@ -1173,11 +1173,11 @@
     },
     "B206": {
       "apartmentType": "B",
-      "floorplan": "assets/floorplans/types/B/full.webp",
+      "floorplan": "assets/floorplans/types/B/plan.avif",
       "media": {
         "floorplan": {
-          "thumbnail": "assets/floorplans/types/B/thumb.webp",
-          "full": "assets/floorplans/types/B/full.webp",
+          "thumbnail": "assets/floorplans/types/B/plan.avif",
+          "full": "assets/floorplans/types/B/plan.avif",
           "label": "B típus · illusztráció",
           "isIllustrative": true
         },
@@ -1196,11 +1196,11 @@
     },
     "B207": {
       "apartmentType": "A",
-      "floorplan": "assets/floorplans/types/A/full.webp",
+      "floorplan": "assets/floorplans/types/A/plan.avif",
       "media": {
         "floorplan": {
-          "thumbnail": "assets/floorplans/types/A/thumb.webp",
-          "full": "assets/floorplans/types/A/full.webp",
+          "thumbnail": "assets/floorplans/types/A/plan.avif",
+          "full": "assets/floorplans/types/A/plan.avif",
           "label": "A típus · illusztráció",
           "isIllustrative": true
         },
@@ -1219,11 +1219,11 @@
     },
     "B301": {
       "apartmentType": "E2",
-      "floorplan": "assets/floorplans/types/E2/full.webp",
+      "floorplan": "assets/floorplans/types/E2/plan.avif",
       "media": {
         "floorplan": {
-          "thumbnail": "assets/floorplans/types/E2/thumb.webp",
-          "full": "assets/floorplans/types/E2/full.webp",
+          "thumbnail": "assets/floorplans/types/E2/plan.avif",
+          "full": "assets/floorplans/types/E2/plan.avif",
           "label": "E2 típus · illusztráció",
           "isIllustrative": true
         },
@@ -1242,11 +1242,11 @@
     },
     "B302": {
       "apartmentType": "F1",
-      "floorplan": "assets/floorplans/types/F1/full.webp",
+      "floorplan": "assets/floorplans/types/F1/plan.avif",
       "media": {
         "floorplan": {
-          "thumbnail": "assets/floorplans/types/F1/thumb.webp",
-          "full": "assets/floorplans/types/F1/full.webp",
+          "thumbnail": "assets/floorplans/types/F1/plan.avif",
+          "full": "assets/floorplans/types/F1/plan.avif",
           "label": "F1 típus · illusztráció",
           "isIllustrative": true
         },
@@ -1265,11 +1265,11 @@
     },
     "B303": {
       "apartmentType": "F",
-      "floorplan": "assets/floorplans/types/F/full.webp",
+      "floorplan": "assets/floorplans/types/F/plan.avif",
       "media": {
         "floorplan": {
-          "thumbnail": "assets/floorplans/types/F/thumb.webp",
-          "full": "assets/floorplans/types/F/full.webp",
+          "thumbnail": "assets/floorplans/types/F/plan.avif",
+          "full": "assets/floorplans/types/F/plan.avif",
           "label": "F típus · illusztráció",
           "isIllustrative": true
         },
@@ -1288,11 +1288,11 @@
     },
     "B304": {
       "apartmentType": "E2",
-      "floorplan": "assets/floorplans/types/E2/full.webp",
+      "floorplan": "assets/floorplans/types/E2/plan.avif",
       "media": {
         "floorplan": {
-          "thumbnail": "assets/floorplans/types/E2/thumb.webp",
-          "full": "assets/floorplans/types/E2/full.webp",
+          "thumbnail": "assets/floorplans/types/E2/plan.avif",
+          "full": "assets/floorplans/types/E2/plan.avif",
           "label": "E2 típus · illusztráció",
           "isIllustrative": true
         },
@@ -1311,11 +1311,11 @@
     },
     "C001": {
       "apartmentType": "A",
-      "floorplan": "assets/floorplans/types/A/full.webp",
+      "floorplan": "assets/floorplans/types/A/plan.avif",
       "media": {
         "floorplan": {
-          "thumbnail": "assets/floorplans/types/A/thumb.webp",
-          "full": "assets/floorplans/types/A/full.webp",
+          "thumbnail": "assets/floorplans/types/A/plan.avif",
+          "full": "assets/floorplans/types/A/plan.avif",
           "label": "A típus · illusztráció",
           "isIllustrative": true
         },
@@ -1334,11 +1334,11 @@
     },
     "C002": {
       "apartmentType": "B",
-      "floorplan": "assets/floorplans/types/B/full.webp",
+      "floorplan": "assets/floorplans/types/B/plan.avif",
       "media": {
         "floorplan": {
-          "thumbnail": "assets/floorplans/types/B/thumb.webp",
-          "full": "assets/floorplans/types/B/full.webp",
+          "thumbnail": "assets/floorplans/types/B/plan.avif",
+          "full": "assets/floorplans/types/B/plan.avif",
           "label": "B típus · illusztráció",
           "isIllustrative": true
         },
@@ -1357,11 +1357,11 @@
     },
     "C003": {
       "apartmentType": "B",
-      "floorplan": "assets/floorplans/types/B/full.webp",
+      "floorplan": "assets/floorplans/types/B/plan.avif",
       "media": {
         "floorplan": {
-          "thumbnail": "assets/floorplans/types/B/thumb.webp",
-          "full": "assets/floorplans/types/B/full.webp",
+          "thumbnail": "assets/floorplans/types/B/plan.avif",
+          "full": "assets/floorplans/types/B/plan.avif",
           "label": "B típus · illusztráció",
           "isIllustrative": true
         },
@@ -1380,11 +1380,11 @@
     },
     "C004": {
       "apartmentType": "A",
-      "floorplan": "assets/floorplans/types/A/full.webp",
+      "floorplan": "assets/floorplans/types/A/plan.avif",
       "media": {
         "floorplan": {
-          "thumbnail": "assets/floorplans/types/A/thumb.webp",
-          "full": "assets/floorplans/types/A/full.webp",
+          "thumbnail": "assets/floorplans/types/A/plan.avif",
+          "full": "assets/floorplans/types/A/plan.avif",
           "label": "A típus · illusztráció",
           "isIllustrative": true
         },
@@ -1403,11 +1403,11 @@
     },
     "C005": {
       "apartmentType": "A",
-      "floorplan": "assets/floorplans/types/A/full.webp",
+      "floorplan": "assets/floorplans/types/A/plan.avif",
       "media": {
         "floorplan": {
-          "thumbnail": "assets/floorplans/types/A/thumb.webp",
-          "full": "assets/floorplans/types/A/full.webp",
+          "thumbnail": "assets/floorplans/types/A/plan.avif",
+          "full": "assets/floorplans/types/A/plan.avif",
           "label": "A típus · illusztráció",
           "isIllustrative": true
         },
@@ -1426,11 +1426,11 @@
     },
     "C006": {
       "apartmentType": "B",
-      "floorplan": "assets/floorplans/types/B/full.webp",
+      "floorplan": "assets/floorplans/types/B/plan.avif",
       "media": {
         "floorplan": {
-          "thumbnail": "assets/floorplans/types/B/thumb.webp",
-          "full": "assets/floorplans/types/B/full.webp",
+          "thumbnail": "assets/floorplans/types/B/plan.avif",
+          "full": "assets/floorplans/types/B/plan.avif",
           "label": "B típus · illusztráció",
           "isIllustrative": true
         },
@@ -1449,11 +1449,11 @@
     },
     "C007": {
       "apartmentType": "B",
-      "floorplan": "assets/floorplans/types/B/full.webp",
+      "floorplan": "assets/floorplans/types/B/plan.avif",
       "media": {
         "floorplan": {
-          "thumbnail": "assets/floorplans/types/B/thumb.webp",
-          "full": "assets/floorplans/types/B/full.webp",
+          "thumbnail": "assets/floorplans/types/B/plan.avif",
+          "full": "assets/floorplans/types/B/plan.avif",
           "label": "B típus · illusztráció",
           "isIllustrative": true
         },
@@ -1472,11 +1472,11 @@
     },
     "C008": {
       "apartmentType": "A",
-      "floorplan": "assets/floorplans/types/A/full.webp",
+      "floorplan": "assets/floorplans/types/A/plan.avif",
       "media": {
         "floorplan": {
-          "thumbnail": "assets/floorplans/types/A/thumb.webp",
-          "full": "assets/floorplans/types/A/full.webp",
+          "thumbnail": "assets/floorplans/types/A/plan.avif",
+          "full": "assets/floorplans/types/A/plan.avif",
           "label": "A típus · illusztráció",
           "isIllustrative": true
         },
@@ -1495,11 +1495,11 @@
     },
     "C101": {
       "apartmentType": "E1",
-      "floorplan": "assets/floorplans/types/E1/full.webp",
+      "floorplan": "assets/floorplans/types/E1/plan.avif",
       "media": {
         "floorplan": {
-          "thumbnail": "assets/floorplans/types/E1/thumb.webp",
-          "full": "assets/floorplans/types/E1/full.webp",
+          "thumbnail": "assets/floorplans/types/E1/plan.avif",
+          "full": "assets/floorplans/types/E1/plan.avif",
           "label": "E1 típus · illusztráció",
           "isIllustrative": true
         },
@@ -1518,11 +1518,11 @@
     },
     "C102": {
       "apartmentType": "C",
-      "floorplan": "assets/floorplans/types/C/full.webp",
+      "floorplan": "assets/floorplans/types/C/plan.avif",
       "media": {
         "floorplan": {
-          "thumbnail": "assets/floorplans/types/C/thumb.webp",
-          "full": "assets/floorplans/types/C/full.webp",
+          "thumbnail": "assets/floorplans/types/C/plan.avif",
+          "full": "assets/floorplans/types/C/plan.avif",
           "label": "C típus · illusztráció",
           "isIllustrative": true
         },
@@ -1541,11 +1541,11 @@
     },
     "C103": {
       "apartmentType": "D",
-      "floorplan": "assets/floorplans/types/D/full.webp",
+      "floorplan": "assets/floorplans/types/D/plan.avif",
       "media": {
         "floorplan": {
-          "thumbnail": "assets/floorplans/types/D/thumb.webp",
-          "full": "assets/floorplans/types/D/full.webp",
+          "thumbnail": "assets/floorplans/types/D/plan.avif",
+          "full": "assets/floorplans/types/D/plan.avif",
           "label": "D típus · illusztráció",
           "isIllustrative": true
         },
@@ -1564,11 +1564,11 @@
     },
     "C104": {
       "apartmentType": "C",
-      "floorplan": "assets/floorplans/types/C/full.webp",
+      "floorplan": "assets/floorplans/types/C/plan.avif",
       "media": {
         "floorplan": {
-          "thumbnail": "assets/floorplans/types/C/thumb.webp",
-          "full": "assets/floorplans/types/C/full.webp",
+          "thumbnail": "assets/floorplans/types/C/plan.avif",
+          "full": "assets/floorplans/types/C/plan.avif",
           "label": "C típus · illusztráció",
           "isIllustrative": true
         },
@@ -1587,11 +1587,11 @@
     },
     "C105": {
       "apartmentType": "B",
-      "floorplan": "assets/floorplans/types/B/full.webp",
+      "floorplan": "assets/floorplans/types/B/plan.avif",
       "media": {
         "floorplan": {
-          "thumbnail": "assets/floorplans/types/B/thumb.webp",
-          "full": "assets/floorplans/types/B/full.webp",
+          "thumbnail": "assets/floorplans/types/B/plan.avif",
+          "full": "assets/floorplans/types/B/plan.avif",
           "label": "B típus · illusztráció",
           "isIllustrative": true
         },
@@ -1610,11 +1610,11 @@
     },
     "C106": {
       "apartmentType": "A",
-      "floorplan": "assets/floorplans/types/A/full.webp",
+      "floorplan": "assets/floorplans/types/A/plan.avif",
       "media": {
         "floorplan": {
-          "thumbnail": "assets/floorplans/types/A/thumb.webp",
-          "full": "assets/floorplans/types/A/full.webp",
+          "thumbnail": "assets/floorplans/types/A/plan.avif",
+          "full": "assets/floorplans/types/A/plan.avif",
           "label": "A típus · illusztráció",
           "isIllustrative": true
         },
@@ -1633,11 +1633,11 @@
     },
     "C201": {
       "apartmentType": "E1",
-      "floorplan": "assets/floorplans/types/E1/full.webp",
+      "floorplan": "assets/floorplans/types/E1/plan.avif",
       "media": {
         "floorplan": {
-          "thumbnail": "assets/floorplans/types/E1/thumb.webp",
-          "full": "assets/floorplans/types/E1/full.webp",
+          "thumbnail": "assets/floorplans/types/E1/plan.avif",
+          "full": "assets/floorplans/types/E1/plan.avif",
           "label": "E1 típus · illusztráció",
           "isIllustrative": true
         },
@@ -1656,11 +1656,11 @@
     },
     "C202": {
       "apartmentType": "C",
-      "floorplan": "assets/floorplans/types/C/full.webp",
+      "floorplan": "assets/floorplans/types/C/plan.avif",
       "media": {
         "floorplan": {
-          "thumbnail": "assets/floorplans/types/C/thumb.webp",
-          "full": "assets/floorplans/types/C/full.webp",
+          "thumbnail": "assets/floorplans/types/C/plan.avif",
+          "full": "assets/floorplans/types/C/plan.avif",
           "label": "C típus · illusztráció",
           "isIllustrative": true
         },
@@ -1679,11 +1679,11 @@
     },
     "C203": {
       "apartmentType": "D",
-      "floorplan": "assets/floorplans/types/D/full.webp",
+      "floorplan": "assets/floorplans/types/D/plan.avif",
       "media": {
         "floorplan": {
-          "thumbnail": "assets/floorplans/types/D/thumb.webp",
-          "full": "assets/floorplans/types/D/full.webp",
+          "thumbnail": "assets/floorplans/types/D/plan.avif",
+          "full": "assets/floorplans/types/D/plan.avif",
           "label": "D típus · illusztráció",
           "isIllustrative": true
         },
@@ -1702,11 +1702,11 @@
     },
     "C204": {
       "apartmentType": "C",
-      "floorplan": "assets/floorplans/types/C/full.webp",
+      "floorplan": "assets/floorplans/types/C/plan.avif",
       "media": {
         "floorplan": {
-          "thumbnail": "assets/floorplans/types/C/thumb.webp",
-          "full": "assets/floorplans/types/C/full.webp",
+          "thumbnail": "assets/floorplans/types/C/plan.avif",
+          "full": "assets/floorplans/types/C/plan.avif",
           "label": "C típus · illusztráció",
           "isIllustrative": true
         },
@@ -1725,11 +1725,11 @@
     },
     "C205": {
       "apartmentType": "E2",
-      "floorplan": "assets/floorplans/types/E2/full.webp",
+      "floorplan": "assets/floorplans/types/E2/plan.avif",
       "media": {
         "floorplan": {
-          "thumbnail": "assets/floorplans/types/E2/thumb.webp",
-          "full": "assets/floorplans/types/E2/full.webp",
+          "thumbnail": "assets/floorplans/types/E2/plan.avif",
+          "full": "assets/floorplans/types/E2/plan.avif",
           "label": "E2 típus · illusztráció",
           "isIllustrative": true
         },
@@ -1748,11 +1748,11 @@
     },
     "C301": {
       "apartmentType": "E",
-      "floorplan": "assets/floorplans/types/E/full.webp",
+      "floorplan": "assets/floorplans/types/E/plan.avif",
       "media": {
         "floorplan": {
-          "thumbnail": "assets/floorplans/types/E/thumb.webp",
-          "full": "assets/floorplans/types/E/full.webp",
+          "thumbnail": "assets/floorplans/types/E/plan.avif",
+          "full": "assets/floorplans/types/E/plan.avif",
           "label": "E típus · illusztráció",
           "isIllustrative": true
         },
@@ -1771,11 +1771,11 @@
     },
     "C302": {
       "apartmentType": "F",
-      "floorplan": "assets/floorplans/types/F/full.webp",
+      "floorplan": "assets/floorplans/types/F/plan.avif",
       "media": {
         "floorplan": {
-          "thumbnail": "assets/floorplans/types/F/thumb.webp",
-          "full": "assets/floorplans/types/F/full.webp",
+          "thumbnail": "assets/floorplans/types/F/plan.avif",
+          "full": "assets/floorplans/types/F/plan.avif",
           "label": "F típus · illusztráció",
           "isIllustrative": true
         },
@@ -1794,11 +1794,11 @@
     },
     "C303": {
       "apartmentType": "F2",
-      "floorplan": "assets/floorplans/types/F2/full.webp",
+      "floorplan": "assets/floorplans/types/F2/plan.avif",
       "media": {
         "floorplan": {
-          "thumbnail": "assets/floorplans/types/F2/thumb.webp",
-          "full": "assets/floorplans/types/F2/full.webp",
+          "thumbnail": "assets/floorplans/types/F2/plan.avif",
+          "full": "assets/floorplans/types/F2/plan.avif",
           "label": "F2 típus · illusztráció",
           "isIllustrative": true
         },
@@ -1817,11 +1817,11 @@
     },
     "C304": {
       "apartmentType": "E2",
-      "floorplan": "assets/floorplans/types/E2/full.webp",
+      "floorplan": "assets/floorplans/types/E2/plan.avif",
       "media": {
         "floorplan": {
-          "thumbnail": "assets/floorplans/types/E2/thumb.webp",
-          "full": "assets/floorplans/types/E2/full.webp",
+          "thumbnail": "assets/floorplans/types/E2/plan.avif",
+          "full": "assets/floorplans/types/E2/plan.avif",
           "label": "E2 típus · illusztráció",
           "isIllustrative": true
         },
@@ -2085,579 +2085,119 @@
       "sourceBookPage": 6
     },
     {
-      "path": "assets/floorplans/types/A/full.webp",
-      "bytes": 1167582,
-      "sha256": "d60539773c19d00e0d6e8ae49ae2ed41834ef2b6eb15690c015e652d31fbb900",
-      "role": "floorplan-full",
+      "path": "assets/floorplans/types/A/plan.avif",
+      "bytes": 46048,
+      "sha256": "839c78aae5c3e2508089962e084ea88ef6cddd8ad64f287365384837084ac7cf",
+      "role": "floorplan",
       "type": "A",
       "dimensions": [
         1500,
         2000
-      ],
-      "lossless": true
+      ]
     },
     {
-      "path": "assets/floorplans/types/A/original.png",
-      "bytes": 1966073,
-      "sha256": "3782a48fa425f4e1703d0310d7a3bbfbedbf4d1ad0e72f69761be2375ca60cd2",
-      "role": "floorplan-original",
-      "type": "A",
-      "dimensions": [
-        1500,
-        2000
-      ],
-      "sourceSha256": "3782a48fa425f4e1703d0310d7a3bbfbedbf4d1ad0e72f69761be2375ca60cd2"
-    },
-    {
-      "path": "assets/floorplans/types/A/thumb.webp",
-      "bytes": 88964,
-      "sha256": "c0cb61257c1d517da7977d0a1e032ea96399634725a69f15979a7f83d843d993",
-      "role": "floorplan-thumbnail",
-      "type": "A",
-      "dimensions": [
-        360,
-        301
-      ],
-      "lossless": true,
-      "sourceSha256": "3782a48fa425f4e1703d0310d7a3bbfbedbf4d1ad0e72f69761be2375ca60cd2",
-      "sourceDimensions": [
-        1500,
-        2000
-      ],
-      "sourceAlphaBounds": [
-        41,
-        514,
-        1250,
-        1517
-      ],
-      "sourceCropBox": [
-        16,
-        489,
-        1275,
-        1542
-      ],
-      "transparentPaddingPixels": 25,
-      "transparentPaddingFraction": 0.02,
-      "allNonzeroAlphaRetained": true,
-      "cropPolicy": "Only transparent outer margins; padding clamped to original canvas"
-    },
-    {
-      "path": "assets/floorplans/types/B/full.webp",
-      "bytes": 1661826,
-      "sha256": "00ab3e0eb14f619735a4adbe6db4b9e51d9f164212aa807e2e77dc6e18ad745e",
-      "role": "floorplan-full",
+      "path": "assets/floorplans/types/B/plan.avif",
+      "bytes": 44505,
+      "sha256": "813a0325939a112fdc25afded3b2ae48c8b1f1bea4f3e6e88aebcc3c1f93ef45",
+      "role": "floorplan",
       "type": "B",
       "dimensions": [
         1500,
         2000
-      ],
-      "lossless": true
+      ]
     },
     {
-      "path": "assets/floorplans/types/B/original.png",
-      "bytes": 2652726,
-      "sha256": "cee3c4f992fb308b8ff74bb8fbec7e1ff64da65aadc0b2057b2c16dc774528af",
-      "role": "floorplan-original",
-      "type": "B",
-      "dimensions": [
-        1500,
-        2000
-      ],
-      "sourceSha256": "cee3c4f992fb308b8ff74bb8fbec7e1ff64da65aadc0b2057b2c16dc774528af"
-    },
-    {
-      "path": "assets/floorplans/types/B/thumb.webp",
-      "bytes": 90562,
-      "sha256": "a3655ec0eae7acbbff0706d59d662dcaef366811cc8087a9c40d5bc06acb30e3",
-      "role": "floorplan-thumbnail",
-      "type": "B",
-      "dimensions": [
-        318,
-        360
-      ],
-      "lossless": true,
-      "sourceSha256": "cee3c4f992fb308b8ff74bb8fbec7e1ff64da65aadc0b2057b2c16dc774528af",
-      "sourceDimensions": [
-        1500,
-        2000
-      ],
-      "sourceAlphaBounds": [
-        38,
-        281,
-        1372,
-        1798
-      ],
-      "sourceCropBox": [
-        7,
-        250,
-        1403,
-        1829
-      ],
-      "transparentPaddingPixels": 31,
-      "transparentPaddingFraction": 0.02,
-      "allNonzeroAlphaRetained": true,
-      "cropPolicy": "Only transparent outer margins; padding clamped to original canvas"
-    },
-    {
-      "path": "assets/floorplans/types/C/full.webp",
-      "bytes": 1036616,
-      "sha256": "776c81f678867e4b5869b0813c2bbc43c52721edff73ae739e0f1987e813c140",
-      "role": "floorplan-full",
+      "path": "assets/floorplans/types/C/plan.avif",
+      "bytes": 27780,
+      "sha256": "ff69395e6185d029c41cdc0f0b9a398c03292c6bab2f1b6ca89962c0884f2992",
+      "role": "floorplan",
       "type": "C",
       "dimensions": [
-        1054,
-        1492
-      ],
-      "lossless": true
+        1130,
+        1600
+      ]
     },
     {
-      "path": "assets/floorplans/types/C/original.png",
-      "bytes": 1632608,
-      "sha256": "7978207b80ae38bd323576002a7dd3d16ded19c4e1db2868f74fc6af8575ccd7",
-      "role": "floorplan-original",
-      "type": "C",
-      "dimensions": [
-        1054,
-        1492
-      ],
-      "sourceSha256": "7978207b80ae38bd323576002a7dd3d16ded19c4e1db2868f74fc6af8575ccd7"
-    },
-    {
-      "path": "assets/floorplans/types/C/thumb.webp",
-      "bytes": 72900,
-      "sha256": "0fdb62394b8e7609623c674d78490819b17d6fa8f35247a9b9a221b98ddaf2a7",
-      "role": "floorplan-thumbnail",
-      "type": "C",
-      "dimensions": [
-        254,
-        360
-      ],
-      "lossless": true,
-      "sourceSha256": "7978207b80ae38bd323576002a7dd3d16ded19c4e1db2868f74fc6af8575ccd7",
-      "sourceDimensions": [
-        1054,
-        1492
-      ],
-      "sourceAlphaBounds": [
-        0,
-        0,
-        1053,
-        1492
-      ],
-      "sourceCropBox": [
-        0,
-        0,
-        1054,
-        1492
-      ],
-      "transparentPaddingPixels": 30,
-      "transparentPaddingFraction": 0.02,
-      "allNonzeroAlphaRetained": true,
-      "cropPolicy": "Only transparent outer margins; padding clamped to original canvas"
-    },
-    {
-      "path": "assets/floorplans/types/D/full.webp",
-      "bytes": 1463606,
-      "sha256": "23e5d10dec91a57d15c8dcf7694ff0ed74a8f6efcd6d53e2039a5e769630d73c",
-      "role": "floorplan-full",
+      "path": "assets/floorplans/types/D/plan.avif",
+      "bytes": 28498,
+      "sha256": "43e015ff8740d5cadc6785f0260226f05466ca0e366f89e66a6173722b02170d",
+      "role": "floorplan",
       "type": "D",
       "dimensions": [
         1046,
         1600
-      ],
-      "lossless": true
+      ]
     },
     {
-      "path": "assets/floorplans/types/D/original.png",
-      "bytes": 2131899,
-      "sha256": "3813789cbe0c5fa876c00a91476bbc10f11fc600f0366eb250ce1e79a71d3f68",
-      "role": "floorplan-original",
-      "type": "D",
-      "dimensions": [
-        1046,
-        1600
-      ],
-      "sourceSha256": "3813789cbe0c5fa876c00a91476bbc10f11fc600f0366eb250ce1e79a71d3f68"
-    },
-    {
-      "path": "assets/floorplans/types/D/thumb.webp",
-      "bytes": 86232,
-      "sha256": "b1807e8c2b95fefb54c7b6922360a76fae6bac0c7cc5bb3f0115e0325940056a",
-      "role": "floorplan-thumbnail",
-      "type": "D",
-      "dimensions": [
-        247,
-        360
-      ],
-      "lossless": true,
-      "sourceSha256": "3813789cbe0c5fa876c00a91476bbc10f11fc600f0366eb250ce1e79a71d3f68",
-      "sourceDimensions": [
-        1046,
-        1600
-      ],
-      "sourceAlphaBounds": [
-        18,
-        68,
-        1046,
-        1533
-      ],
-      "sourceCropBox": [
-        0,
-        38,
-        1046,
-        1563
-      ],
-      "transparentPaddingPixels": 30,
-      "transparentPaddingFraction": 0.02,
-      "allNonzeroAlphaRetained": true,
-      "cropPolicy": "Only transparent outer margins; padding clamped to original canvas"
-    },
-    {
-      "path": "assets/floorplans/types/E/full.webp",
-      "bytes": 1217988,
-      "sha256": "dcfc7adca4ac130db90c9788cfe7cbdb959c9dd9a8cd9d6141b6d30044961318",
-      "role": "floorplan-full",
+      "path": "assets/floorplans/types/E/plan.avif",
+      "bytes": 26504,
+      "sha256": "97288a69e4d22559ebce1b1ddea6e0836d93982db7cb2923fecaf5393ff48242",
+      "role": "floorplan",
       "type": "E",
       "dimensions": [
         889,
         1600
-      ],
-      "lossless": true
+      ]
     },
     {
-      "path": "assets/floorplans/types/E/original.png",
-      "bytes": 1724499,
-      "sha256": "aeafa3c1cc2ad11600a840c39c40dabf2c4995b774631978afc0cbb13a3e753e",
-      "role": "floorplan-original",
-      "type": "E",
-      "dimensions": [
-        889,
-        1600
-      ],
-      "sourceSha256": "aeafa3c1cc2ad11600a840c39c40dabf2c4995b774631978afc0cbb13a3e753e"
-    },
-    {
-      "path": "assets/floorplans/types/E/thumb.webp",
-      "bytes": 70164,
-      "sha256": "294bd32f6ccfc277384a4fc66167fd0d58d6ca410af4123ad9b5a5faf8f2f7a0",
-      "role": "floorplan-thumbnail",
-      "type": "E",
-      "dimensions": [
-        202,
-        360
-      ],
-      "lossless": true,
-      "sourceSha256": "aeafa3c1cc2ad11600a840c39c40dabf2c4995b774631978afc0cbb13a3e753e",
-      "sourceDimensions": [
-        889,
-        1600
-      ],
-      "sourceAlphaBounds": [
-        40,
-        46,
-        863,
-        1556
-      ],
-      "sourceCropBox": [
-        9,
-        15,
-        889,
-        1587
-      ],
-      "transparentPaddingPixels": 31,
-      "transparentPaddingFraction": 0.02,
-      "allNonzeroAlphaRetained": true,
-      "cropPolicy": "Only transparent outer margins; padding clamped to original canvas"
-    },
-    {
-      "path": "assets/floorplans/types/E1/full.webp",
-      "bytes": 1316150,
-      "sha256": "460af2a6eee018d5fc8b3f174b658724fb823536245a11635051181aadfde899",
-      "role": "floorplan-full",
+      "path": "assets/floorplans/types/E1/plan.avif",
+      "bytes": 24562,
+      "sha256": "0e2f39dfed3516b1d6fe1363ecf6274b46164260bc15d15ae83d4cb6e595bbc7",
+      "role": "floorplan",
       "type": "E1",
       "dimensions": [
         916,
         1600
-      ],
-      "lossless": true
+      ]
     },
     {
-      "path": "assets/floorplans/types/E1/original.png",
-      "bytes": 1838708,
-      "sha256": "d0f8a7d428b130861c58efe5221308debee34b841091916278397607d6b4e530",
-      "role": "floorplan-original",
-      "type": "E1",
-      "dimensions": [
-        916,
-        1600
-      ],
-      "sourceSha256": "d0f8a7d428b130861c58efe5221308debee34b841091916278397607d6b4e530"
-    },
-    {
-      "path": "assets/floorplans/types/E1/thumb.webp",
-      "bytes": 72724,
-      "sha256": "2ee18de483dd7d81e32b91cb7ed54d3110f8f84defc1aeed4e92c9bacfc99b11",
-      "role": "floorplan-thumbnail",
-      "type": "E1",
-      "dimensions": [
-        204,
-        360
-      ],
-      "lossless": true,
-      "sourceSha256": "d0f8a7d428b130861c58efe5221308debee34b841091916278397607d6b4e530",
-      "sourceDimensions": [
-        916,
-        1600
-      ],
-      "sourceAlphaBounds": [
-        40,
-        32,
-        882,
-        1570
-      ],
-      "sourceCropBox": [
-        9,
-        1,
-        913,
-        1600
-      ],
-      "transparentPaddingPixels": 31,
-      "transparentPaddingFraction": 0.02,
-      "allNonzeroAlphaRetained": true,
-      "cropPolicy": "Only transparent outer margins; padding clamped to original canvas"
-    },
-    {
-      "path": "assets/floorplans/types/E2/full.webp",
-      "bytes": 1015260,
-      "sha256": "97ac2cce2fe1782020f8d6a6e5e8003031a66ecece2eee1ed480acdf2011f658",
-      "role": "floorplan-full",
+      "path": "assets/floorplans/types/E2/plan.avif",
+      "bytes": 25691,
+      "sha256": "56e72f9b84b768a32a58effa848c3919add987e76bd2c7369bedad74d39085ae",
+      "role": "floorplan",
       "type": "E2",
       "dimensions": [
         907,
         1600
-      ],
-      "lossless": true
+      ]
     },
     {
-      "path": "assets/floorplans/types/E2/original.png",
-      "bytes": 1553303,
-      "sha256": "50dd36c3e272477ecb147ba5c5b811b8468aa38c4cfec34d55099d7e7c94b8a5",
-      "role": "floorplan-original",
-      "type": "E2",
-      "dimensions": [
-        907,
-        1600
-      ],
-      "sourceSha256": "50dd36c3e272477ecb147ba5c5b811b8468aa38c4cfec34d55099d7e7c94b8a5"
-    },
-    {
-      "path": "assets/floorplans/types/E2/thumb.webp",
-      "bytes": 62638,
-      "sha256": "83e537ed9e37215bd32c1e8ad23acd9f44e49bd6c6b48cd288d45c7998bb282f",
-      "role": "floorplan-thumbnail",
-      "type": "E2",
-      "dimensions": [
-        204,
-        360
-      ],
-      "lossless": true,
-      "sourceSha256": "50dd36c3e272477ecb147ba5c5b811b8468aa38c4cfec34d55099d7e7c94b8a5",
-      "sourceDimensions": [
-        907,
-        1600
-      ],
-      "sourceAlphaBounds": [
-        33,
-        32,
-        880,
-        1565
-      ],
-      "sourceCropBox": [
-        2,
-        1,
-        907,
-        1596
-      ],
-      "transparentPaddingPixels": 31,
-      "transparentPaddingFraction": 0.02,
-      "allNonzeroAlphaRetained": true,
-      "cropPolicy": "Only transparent outer margins; padding clamped to original canvas"
-    },
-    {
-      "path": "assets/floorplans/types/F/full.webp",
-      "bytes": 1190706,
-      "sha256": "fe7945a2b1be0ed169047cb56dbe9dffec7392caa1865b3f9e90518dcf2b5e6a",
-      "role": "floorplan-full",
+      "path": "assets/floorplans/types/F/plan.avif",
+      "bytes": 26754,
+      "sha256": "8ef90901e5ffc468cb697ba5e5cc996c2d0e417df30cef6cbdcec1215330a2cd",
+      "role": "floorplan",
       "type": "F",
       "dimensions": [
         812,
         1600
-      ],
-      "lossless": true
+      ]
     },
     {
-      "path": "assets/floorplans/types/F/original.png",
-      "bytes": 1677654,
-      "sha256": "59bec3b688af21eee2ff7cbbacb9817582d251074b414a903a9ccdf152db67de",
-      "role": "floorplan-original",
-      "type": "F",
-      "dimensions": [
-        812,
-        1600
-      ],
-      "sourceSha256": "59bec3b688af21eee2ff7cbbacb9817582d251074b414a903a9ccdf152db67de"
-    },
-    {
-      "path": "assets/floorplans/types/F/thumb.webp",
-      "bytes": 65162,
-      "sha256": "92dc88a3769e749d10e0894ab6f608b5b22ee660cac64ca5b12a44877a07ba56",
-      "role": "floorplan-thumbnail",
-      "type": "F",
-      "dimensions": [
-        182,
-        360
-      ],
-      "lossless": true,
-      "sourceSha256": "59bec3b688af21eee2ff7cbbacb9817582d251074b414a903a9ccdf152db67de",
-      "sourceDimensions": [
-        812,
-        1600
-      ],
-      "sourceAlphaBounds": [
-        37,
-        46,
-        773,
-        1565
-      ],
-      "sourceCropBox": [
-        6,
-        15,
-        804,
-        1596
-      ],
-      "transparentPaddingPixels": 31,
-      "transparentPaddingFraction": 0.02,
-      "allNonzeroAlphaRetained": true,
-      "cropPolicy": "Only transparent outer margins; padding clamped to original canvas"
-    },
-    {
-      "path": "assets/floorplans/types/F1/full.webp",
-      "bytes": 1105208,
-      "sha256": "cf92f49acd801450a0e48bb1eb002396b1e07894ae2cb6113a4b6fe2161f8cd2",
-      "role": "floorplan-full",
+      "path": "assets/floorplans/types/F1/plan.avif",
+      "bytes": 25975,
+      "sha256": "8f4abd521e2e163c6713936624d5689a94b58902dc6de4c5b72008d4b70b7fe4",
+      "role": "floorplan",
       "type": "F1",
       "dimensions": [
         816,
         1600
-      ],
-      "lossless": true
+      ]
     },
     {
-      "path": "assets/floorplans/types/F1/original.png",
-      "bytes": 1557964,
-      "sha256": "954086c32fd03fc71df355664bc3c74f44a48cf9ca0664de4c5cde603eab6acc",
-      "role": "floorplan-original",
-      "type": "F1",
-      "dimensions": [
-        816,
-        1600
-      ],
-      "sourceSha256": "954086c32fd03fc71df355664bc3c74f44a48cf9ca0664de4c5cde603eab6acc"
-    },
-    {
-      "path": "assets/floorplans/types/F1/thumb.webp",
-      "bytes": 64636,
-      "sha256": "023659c24ad594aa51a1dcd387d570bd5c7ba6933d5b196174b9ba3d9aa4a9ad",
-      "role": "floorplan-thumbnail",
-      "type": "F1",
-      "dimensions": [
-        182,
-        360
-      ],
-      "lossless": true,
-      "sourceSha256": "954086c32fd03fc71df355664bc3c74f44a48cf9ca0664de4c5cde603eab6acc",
-      "sourceDimensions": [
-        816,
-        1600
-      ],
-      "sourceAlphaBounds": [
-        43,
-        46,
-        776,
-        1557
-      ],
-      "sourceCropBox": [
-        12,
-        15,
-        807,
-        1588
-      ],
-      "transparentPaddingPixels": 31,
-      "transparentPaddingFraction": 0.02,
-      "allNonzeroAlphaRetained": true,
-      "cropPolicy": "Only transparent outer margins; padding clamped to original canvas"
-    },
-    {
-      "path": "assets/floorplans/types/F2/full.webp",
-      "bytes": 1150704,
-      "sha256": "55816f61d7d74fca20a8f9cbda83ecd27bb7f43af67a924e536d68263e310072",
-      "role": "floorplan-full",
+      "path": "assets/floorplans/types/F2/plan.avif",
+      "bytes": 28429,
+      "sha256": "9750eafdfbf38f88533dc3e63d548fca71ff23b5e2bd988f64aac5bd637bdcd2",
+      "role": "floorplan",
       "type": "F2",
       "dimensions": [
         807,
         1600
-      ],
-      "lossless": true
-    },
-    {
-      "path": "assets/floorplans/types/F2/original.png",
-      "bytes": 1652819,
-      "sha256": "eb670cab4da22e77d4d8167577d1647a2aad9535ba3da446336320fe53a7b317",
-      "role": "floorplan-original",
-      "type": "F2",
-      "dimensions": [
-        807,
-        1600
-      ],
-      "sourceSha256": "eb670cab4da22e77d4d8167577d1647a2aad9535ba3da446336320fe53a7b317"
-    },
-    {
-      "path": "assets/floorplans/types/F2/thumb.webp",
-      "bytes": 67456,
-      "sha256": "916e0df8a105c712dcce2b95ad06e6981a7dbcf1bffc4109a1f282546a28447c",
-      "role": "floorplan-thumbnail",
-      "type": "F2",
-      "dimensions": [
-        181,
-        360
-      ],
-      "lossless": true,
-      "sourceSha256": "eb670cab4da22e77d4d8167577d1647a2aad9535ba3da446336320fe53a7b317",
-      "sourceDimensions": [
-        807,
-        1600
-      ],
-      "sourceAlphaBounds": [
-        30,
-        38,
-        770,
-        1578
-      ],
-      "sourceCropBox": [
-        0,
-        7,
-        801,
-        1600
-      ],
-      "transparentPaddingPixels": 31,
-      "transparentPaddingFraction": 0.02,
-      "allNonzeroAlphaRetained": true,
-      "cropPolicy": "Only transparent outer margins; padding clamped to original canvas"
+      ]
     }
   ],
   "totals": {
-    "files": 48,
-    "bytes": 49567717,
+    "files": 28,
+    "bytes": 18417126,
     "apartments": 69,
     "types": 10,
     "floorLayouts": 4

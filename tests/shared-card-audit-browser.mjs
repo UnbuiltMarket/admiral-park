@@ -23,7 +23,7 @@ try {
     if(u.pathname.startsWith('/assets/')){
       if(failedAsset&&u.pathname.includes(failedAsset))return route.fulfill({status:404});
       const file=path.join(mediaRoot,decodeURIComponent(u.pathname.slice(8)));
-      try{return route.fulfill({body:await readFile(file),contentType:({'.png':'image/png','.svg':'image/svg+xml','.webp':'image/webp','.woff2':'font/woff2'})[path.extname(file)]||'application/octet-stream'});}
+      try{return route.fulfill({body:await readFile(file),contentType:({'.avif':'image/avif','.png':'image/png','.svg':'image/svg+xml','.webp':'image/webp','.woff2':'font/woff2'})[path.extname(file)]||'application/octet-stream'});}
       catch{return route.fulfill({status:404});}
     }
     return route.fulfill({contentType:'text/html',body:'<!doctype html><meta name="viewport" content="width=device-width,initial-scale=1"><button id="opener">Open</button><div id="card"></div>'});
@@ -80,7 +80,7 @@ try {
       await page.evaluate(()=>ctrl.close());
     }
   }
-  await page.setViewportSize({width:1440,height:900});failedAsset='/floorplans/types/B/original.png';
+  await page.setViewportSize({width:1440,height:900});failedAsset='/floorplans/types/B/plan.avif';
   await page.evaluate(()=>ctrl.open('A001'));
   await card.locator('.detail-plan-image').evaluate(image=>image.src+='?audit-error=1');
   await card.locator('[data-detail-image-stage="plan"][data-image-state="error"]').waitFor();

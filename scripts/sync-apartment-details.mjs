@@ -6,6 +6,7 @@ import { readFile, mkdir, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { getApartmentMaskColor } from './apartment-mask-colors.mjs';
+import { publishedPlanDimensions, usePublishedFloorplan } from './published-floorplan.mjs';
 
 const assert = (condition, message) => { if (!condition) throw new Error(message); };
 const plain = value => value !== null && typeof value === 'object' && !Array.isArray(value);
@@ -59,7 +60,7 @@ export function createApartmentDetailDataset(source) {
             return { number: marker.number, name: marker.name, x: marker.x, y: marker.y, kind: marker.kind };
         });
         roomLayouts[type] = {
-            imageDimensions: { width: dimensions.width, height: dimensions.height },
+            imageDimensions: publishedPlanDimensions(type),
             viewBox: { x: box.x, y: box.y, width: box.width, height: box.height }, markers,
         };
     }
@@ -106,7 +107,7 @@ export function createApartmentDetailDataset(source) {
                 if (sheet.page !== undefined) { assert(Number.isSafeInteger(sheet.page) && sheet.page > 0, `Invalid datasheet page for ${apartment.id}.`); output.media.datasheet.page = sheet.page; }
             }
         }
-        return output;
+        return usePublishedFloorplan(output);
     });
     const output = {
         schemaVersion: source.schemaVersion,

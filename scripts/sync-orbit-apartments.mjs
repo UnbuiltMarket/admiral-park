@@ -7,6 +7,7 @@ import { readFile, mkdir, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { getApartmentMaskColor } from './apartment-mask-colors.mjs';
+import { publishedPlanDimensions, usePublishedFloorplan } from './published-floorplan.mjs';
 
 const args = process.argv.slice(2);
 const sourceFlag = args.indexOf('--source');
@@ -55,7 +56,7 @@ const apartments = source.apartments.map(apartment => {
             record.media.datasheet = Object.fromEntries(['url', 'filename', 'label', 'page'].filter(key => sheet[key] !== undefined).map(key => [key, sheet[key]]));
         }
     }
-    return record;
+    return usePublishedFloorplan(record);
 });
 const roomLayouts = {};
 for (const [key, layout] of Object.entries(source.roomLayouts || {})) {
@@ -63,7 +64,7 @@ for (const [key, layout] of Object.entries(source.roomLayouts || {})) {
     const dimensions = layout?.imageDimensions, box = layout?.viewBox;
     assert(plain(dimensions) && ['width', 'height'].every(key => typeof dimensions[key] === 'number' && Number.isFinite(dimensions[key]) && dimensions[key] > 0), `Invalid plan dimensions for ${key}.`);
     assert(plain(box) && ['x', 'y', 'width', 'height'].every(key => typeof box[key] === 'number' && Number.isFinite(box[key]) && box[key] >= 0) && box.width > 0 && box.height > 0 && box.x + box.width <= 1.000001 && box.y + box.height <= 1.000001, `Invalid plan crop for ${key}.`);
-    roomLayouts[key] = { imageDimensions: { width: dimensions.width, height: dimensions.height }, viewBox: { x: box.x, y: box.y, width: box.width, height: box.height } };
+    roomLayouts[key] = { imageDimensions: publishedPlanDimensions(key), viewBox: { x: box.x, y: box.y, width: box.width, height: box.height } };
 }
 assert(Object.keys(roomLayouts).length === 10, 'Expected the ten confirmed apartment-type plans.');
 for (const apartment of apartments) assert(roomLayouts[apartment.apartmentType], `Missing confirmed plan geometry for ${apartment.id}.`);

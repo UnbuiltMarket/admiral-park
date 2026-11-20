@@ -18,19 +18,21 @@ test('orbit JSON retains all 69 canonical units, honest nulls and floorplan crop
  assert.equal(sample.maskColor,'#2080E0');assert.equal(parsed.apartments.filter(item=>/^#[0-9A-F]{6}$/.test(item.maskColor)).length,69);
  assert.ok(!JSON.stringify(parsed).includes('roomList'));assert.ok(!JSON.stringify(parsed).includes('markers'));assert.ok(!JSON.stringify(parsed).includes('original.png'));
  const plan=api.orbitApartmentPlan(sample,parsed,'https://media.test/apartment-assets');
- assert.equal(plan.url,'https://media.test/apartment-assets/floorplans/types/B/full.webp');assert.equal(plan.dimensions.width,1500);assert.equal(plan.dimensions.height,2000);assert.equal(plan.isIllustrative,true);
+ assert.equal(plan.url,'https://media.test/apartment-assets/floorplans/types/B/plan.avif');assert.equal(plan.dimensions.width,1500);assert.equal(plan.dimensions.height,2000);assert.equal(plan.isIllustrative,true);
  assert.ok(Math.abs(plan.aspect-(1500*.9306666666666666)/(2000*.7895))<1e-10);assert.equal(plan.viewBox.y,.125);
  const layout=api.orbitApartmentPlan(sample,parsed,'https://media.test/apartment-assets','floorLayout');assert.equal(layout.url,'https://media.test/apartment-assets/floor-layouts/00/full.webp');assert.equal(layout.isIllustrative,false);
 });
 
-test('orbit previews prefer existing cropped thumbnails without double cropping while full drawings remain unchanged',()=>{
+test('orbit preview crops the full AVIF sheet while separate legacy thumbnails keep their baked crop',()=>{
  const api=adapter(),parsed=api.parseOrbitApartmentDataset(dataset),sample=parsed.apartments.find(item=>item.id==='A001');
  const full=api.orbitApartmentPlan(sample,parsed,'https://media.test/apartment-assets');
  const thumbnail=api.orbitApartmentPlan(sample,parsed,'https://media.test/apartment-assets','floorplan',true);
- assert.equal(thumbnail.url,'https://media.test/apartment-assets/floorplans/types/B/thumb.webp');
- assert.equal(thumbnail.aspect,full.aspect);assert.deepEqual(JSON.parse(JSON.stringify(thumbnail.viewBox)),{x:0,y:0,width:1,height:1});
- assert.equal(thumbnail.dimensions.width,full.dimensions.width*full.viewBox.width);assert.equal(thumbnail.dimensions.height,full.dimensions.height*full.viewBox.height);
- assert.equal(full.url,'https://media.test/apartment-assets/floorplans/types/B/full.webp');assert.equal(full.viewBox.y,.125);
+ assert.equal(thumbnail.url,'https://media.test/apartment-assets/floorplans/types/B/plan.avif');
+ assert.deepEqual(thumbnail,full);assert.equal(full.viewBox.y,.125);
+ const old=structuredClone(sample);old.media.floorplan.thumbnail='assets/floorplans/types/B/thumb.webp';
+ const legacy=api.orbitApartmentPlan(old,parsed,'https://media.test/apartment-assets','floorplan',true);
+ assert.equal(legacy.aspect,full.aspect);assert.deepEqual(JSON.parse(JSON.stringify(legacy.viewBox)),{x:0,y:0,width:1,height:1});
+ assert.equal(legacy.dimensions.width,full.dimensions.width*full.viewBox.width);assert.equal(legacy.dimensions.height,full.dimensions.height*full.viewBox.height);
  for(const invalid of [undefined,'javascript:alert(1)']){
   const record=structuredClone(sample);record.media.floorplan.thumbnail=invalid;
   const fallback=api.orbitApartmentPlan(record,parsed,'https://media.test/apartment-assets','floorplan',true);

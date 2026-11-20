@@ -736,8 +736,8 @@ function mountOrbitApartmentCardRuntime(root: any = (document as any), config: a
         });
     }
     function detailPlanUrl(a: any): string | null {
-        const layout = data.roomLayouts?.[a.apartmentType], source = a.media?.floorplan;
-        return assetUrl(source?.original || (layout ? `assets/floorplans/types/${encodeURIComponent(a.apartmentType)}/original.png` : source?.full || a.floorplan));
+        const source = a.media?.floorplan;
+        return assetUrl(source?.original || source?.full || a.floorplan);
     }
     function detailPlan(a: any, url: string | null, hidden = false): string {
         const layout = data.roomLayouts?.[a.apartmentType];
@@ -1447,7 +1447,6 @@ function mountOrbitApartmentCardRuntime(root: any = (document as any), config: a
                 const floor: any = job.fromDialog && ['floor', 'building'].includes(dialog.dataset.documentView) ? mediaEntries(a).find((item: any): any => item.key === 'floorLayout') : null;
                 const view: any = layout?.viewBox || ({ x: 0, y: 0, width: 1, height: 1 } as any);
                 const validView: any = ([view.x, view.y, view.width, view.height] as any).every(hasNumber) && view.x >= 0 && view.y >= 0 && view.width > 0 && view.height > 0 && view.x + view.width <= 1.001 && view.y + view.height <= 1.001;
-                const source: any = a.media?.floorplan;
                 const pageUrl: any = apartmentLink(a.id), inquiryUrl: any = safeUrl(config.inquiryUrl), actionUrl: any = new URL(inquiryUrl || pageUrl);
                 if (inquiryUrl)
                     actionUrl.searchParams.set('apartment', a.id);
@@ -1456,7 +1455,7 @@ function mountOrbitApartmentCardRuntime(root: any = (document as any), config: a
                     metrics: ([({ label: 'Lakásszám', value: String(a.id) } as any), ({ label: 'Beltér', value: area(a.areaInterior).replace('m²', 'm2') } as any), ({ label: 'Erkély', value: area(a.areaTerrace).replace('m²', 'm2') } as any), ...(a.areaGarden > 0 ? ([({ label: 'Kert', value: area(a.areaGarden).replace('m²', 'm2') } as any)] as any) : ([] as any))] as any),
                     meta: ([a.apartmentType ? `${a.apartmentType} típus` : null, `${a.building} épület`, floorText(a), a.orientation ? `${a.orientation} tájolás` : null] as any).filter(Boolean).join(' · '),
                     documentLabel: floor ? 'Szintrajz' : 'Alaprajz',
-                    imageUrl: floor?.full || assetUrl(source?.original || (layout ? `assets/floorplans/types/${encodeURIComponent(a.apartmentType)}/original.png` : source?.full || a.floorplan)),
+                    imageUrl: floor?.full || detailPlanUrl(a),
                     viewBox: floor || !validView ? ({ x: 0, y: 0, width: 1, height: 1 } as any) : ({ x: view.x, y: view.y, width: view.width, height: view.height } as any),
                     markers: floor ? ([] as any) : markers.map((marker: any): any => (({ number: marker.number, x: marker.x, y: marker.y } as any))),
                     roomGroups, layoutLabel: typeof a.layoutLabel === 'string' ? a.layoutLabel.replace(/hálószoba/giu, 'szoba') : hasNumber(a.rooms) ? `${number.format(a.rooms)} szoba` : '',

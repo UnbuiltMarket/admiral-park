@@ -647,9 +647,13 @@ function mountOrbitApartmentCardRuntime(root: any = (document as any), config: a
             detailImageState(image, image.complete ? (image.naturalWidth ? 'ready' : 'error') : 'loading');
         });
     }
+    function detailPlanUrl(a: any): any {
+        const source: any = a.media?.floorplan;
+        return assetUrl(source?.original || source?.full || a.floorplan);
+    }
     function detailPlan(a: any): any {
-        const layout: any = data.roomLayouts?.[a.apartmentType], source: any = a.media?.floorplan;
-        const url: any = assetUrl(source?.original || (layout ? `assets/floorplans/types/${encodeURIComponent(a.apartmentType)}/original.png` : source?.full || a.floorplan));
+        const layout: any = data.roomLayouts?.[a.apartmentType];
+        const url: any = detailPlanUrl(a);
         if (!url)
             return '<div class="empty-plan"><h3>Alaprajz</h3><p>Az alaprajz még nem érhető el.</p></div>';
         const view: any = layout?.viewBox || ({ x: 0, y: 0, width: 1, height: 1 } as any);
@@ -1149,7 +1153,6 @@ function mountOrbitApartmentCardRuntime(root: any = (document as any), config: a
                 const floor: any = job.fromDialog && dialog.querySelector('[data-document-view="floor"][aria-selected="true"]') ? mediaEntries(a).find((item: any): any => item.key === 'floorLayout') : null;
                 const view: any = layout?.viewBox || ({ x: 0, y: 0, width: 1, height: 1 } as any);
                 const validView: any = ([view.x, view.y, view.width, view.height] as any).every(hasNumber) && view.x >= 0 && view.y >= 0 && view.width > 0 && view.height > 0 && view.x + view.width <= 1.001 && view.y + view.height <= 1.001;
-                const source: any = a.media?.floorplan;
                 const pageUrl: any = apartmentLink(a.id), inquiryUrl: any = safeUrl(config.inquiryUrl), actionUrl: any = new URL(inquiryUrl || pageUrl);
                 if (inquiryUrl)
                     actionUrl.searchParams.set('apartment', a.id);
@@ -1158,7 +1161,7 @@ function mountOrbitApartmentCardRuntime(root: any = (document as any), config: a
                     metrics: ([({ label: 'Lakásszám', value: String(a.id) } as any), ({ label: 'Beltér', value: area(a.areaInterior).replace('m²', 'm2') } as any), ({ label: 'Erkély', value: area(a.areaTerrace).replace('m²', 'm2') } as any), ...(a.areaGarden > 0 ? ([({ label: 'Kert', value: area(a.areaGarden).replace('m²', 'm2') } as any)] as any) : ([] as any))] as any),
                     meta: ([a.apartmentType ? `${a.apartmentType} típus` : null, `${a.building} épület`, floorText(a), a.orientation ? `${a.orientation} tájolás` : null] as any).filter(Boolean).join(' · '),
                     documentLabel: floor ? 'Szintrajz' : 'Alaprajz',
-                    imageUrl: floor?.full || assetUrl(source?.original || (layout ? `assets/floorplans/types/${encodeURIComponent(a.apartmentType)}/original.png` : source?.full || a.floorplan)),
+                    imageUrl: floor?.full || detailPlanUrl(a),
                     viewBox: floor || !validView ? ({ x: 0, y: 0, width: 1, height: 1 } as any) : ({ x: view.x, y: view.y, width: view.width, height: view.height } as any),
                     markers: floor ? ([] as any) : markers.map((marker: any): any => (({ number: marker.number, x: marker.x, y: marker.y } as any))),
                     roomGroups, layoutLabel: typeof a.layoutLabel === 'string' ? a.layoutLabel.replace(/hálószoba/giu, 'szoba') : hasNumber(a.rooms) ? `${number.format(a.rooms)} szoba` : '',

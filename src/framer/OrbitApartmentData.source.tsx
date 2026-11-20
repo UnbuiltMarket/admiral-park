@@ -261,16 +261,17 @@ function orbitApartmentAssetUrl(path: unknown, base: string): string | null {
 function orbitApartmentPlan(record: OrbitApartmentRecord, dataset: OrbitApartmentDataset, base: string, view: "floorplan" | "floorLayout" = "floorplan", preferThumbnail = false): OrbitApartmentPlan | null {
     const source = view === "floorLayout" ? record.media?.floorLayout : record.media?.floorplan
     const thumbnail = preferThumbnail ? orbitApartmentAssetUrl(source?.thumbnail, base) : null
-    const url = thumbnail || orbitApartmentAssetUrl(source?.full || (view === "floorplan" ? record.floorplan : null), base)
+    const full = orbitApartmentAssetUrl(source?.full || (view === "floorplan" ? record.floorplan : null), base)
+    const url = thumbnail || full
     if (!url) return null
     const layout = view === "floorplan" && record.apartmentType ? dataset.roomLayouts[record.apartmentType] : null
     const dimensions = layout?.imageDimensions || (view === "floorLayout" ? { width: 2560, height: 1600 } : { width: 1500, height: 2000 })
     const viewBox = layout?.viewBox || { x: 0, y: 0, width: 1, height: 1 }
     const aspect = dimensions.width * viewBox.width / (dimensions.height * viewBox.height)
-    // The existing thumbnails already contain the plan crop; applying it twice cuts
-    // away rooms. Retain the drawing's cropped aspect while showing the whole thumb.
-    return { url, aspect, dimensions: thumbnail ? { width: dimensions.width * viewBox.width, height: dimensions.height * viewBox.height } : dimensions,
-        viewBox: thumbnail ? { x: 0, y: 0, width: 1, height: 1 } : viewBox,
+    // A thumbnail alias to the full sheet still needs the drawing's crop.
+    const croppedThumbnail = !!thumbnail && thumbnail !== full
+    return { url, aspect, dimensions: croppedThumbnail ? { width: dimensions.width * viewBox.width, height: dimensions.height * viewBox.height } : dimensions,
+        viewBox: croppedThumbnail ? { x: 0, y: 0, width: 1, height: 1 } : viewBox,
         isIllustrative: view === "floorplan" && source?.isIllustrative !== false,
         label: source?.label || (view === "floorLayout" ? "Szintrajz" : "Alaprajz · illusztráció") }
 }
