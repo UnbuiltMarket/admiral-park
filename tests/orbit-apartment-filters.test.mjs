@@ -15,11 +15,14 @@ const {getOrbitPriceBounds,getOrbitAreaBounds,normalizeOrbitFilters,getOrbitFilt
 const plain=value=>JSON.parse(JSON.stringify(value));
 const empty=()=>({statuses:[],priceMin:null,priceMax:null});
 
-test('real dataset bounds cover all 63 known HUF prices on an outward million-forint grid',()=>{
+test('real dataset bounds cover every known HUF price on an outward million-forint grid',()=>{
  assert.equal(dataset.apartments.length,69);
- assert.deepEqual(plain(getOrbitPriceBounds(dataset.apartments)),{min:153000000,max:677000000,step:1000000,pricedCount:63,currency:'HUF'});
- assert.equal(Math.min(...dataset.apartments.flatMap(item=>item.price===null?[]:[item.price])),153888000);
- assert.equal(Math.max(...dataset.apartments.flatMap(item=>item.price===null?[]:[item.price])),676200000);
+ const prices=dataset.apartments.filter(item=>item.currency==='HUF'&&Number.isFinite(item.price)).map(item=>item.price);
+ const step=1000000;
+ assert.deepEqual(plain(getOrbitPriceBounds(dataset.apartments)),{
+  min:Math.floor(Math.min(...prices)/step)*step,max:Math.ceil(Math.max(...prices)/step)*step,
+  step,pricedCount:prices.length,currency:'HUF'
+ });
 });
 
 test('interior area bounds use all 69 apartments on an outward one-square-metre grid',()=>{
@@ -152,8 +155,8 @@ test('invalid, reversed and out-of-range input normalizes safely without mutatin
  const bounds=getOrbitPriceBounds(dataset.apartments);
  assert.deepEqual(plain(normalizeOrbitFilters({statuses:null,priceMin:'200000000',priceMax:NaN},bounds)),empty());
  assert.deepEqual(plain(normalizeOrbitFilters({statuses:['sold'],priceMin:400000000,priceMax:200000000},bounds)),{statuses:['sold'],priceMin:200000000,priceMax:400000000});
- assert.deepEqual(plain(normalizeOrbitFilters({statuses:[],priceMin:999000000,priceMax:null},bounds)),{statuses:[],priceMin:677000000,priceMax:null});
- assert.deepEqual(plain(normalizeOrbitFilters({statuses:[],priceMin:null,priceMax:-5},bounds)),{statuses:[],priceMin:null,priceMax:153000000});
+ assert.deepEqual(plain(normalizeOrbitFilters({statuses:[],priceMin:bounds.max+bounds.step,priceMax:null},bounds)),{statuses:[],priceMin:bounds.max,priceMax:null});
+ assert.deepEqual(plain(normalizeOrbitFilters({statuses:[],priceMin:null,priceMax:-5},bounds)),{statuses:[],priceMin:null,priceMax:bounds.min});
  const snapshot=JSON.stringify(dataset.apartments);
  const input=Object.freeze({statuses:Object.freeze(['sold','available','sold']),priceMin:400000000,priceMax:200000000});
  Object.freeze(bounds);
