@@ -64,6 +64,9 @@ const handover = '[data-framer-name="Handover date glass"]'
 
 const surfaceCSS = `
 :root {
+    --admiral-inquiry-fill: ${admiralPalette.inquiryGradient};
+    --admiral-inquiry-rim: ${admiralPalette.inquiryRim};
+    --admiral-inquiry-shadow: ${admiralPalette.inquiryShadow};
     --admiral-glass-fill: ${admiralPalette.lightGlass};
     --admiral-glass-blur: ${admiralPalette.lightGlassBlur};
     --admiral-glass-fallback: ${admiralPalette.lightGlassFallback};

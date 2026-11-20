@@ -549,6 +549,7 @@ async function downloadDatasheet(id,trigger) {
   colors.status=job.fromDialog?getComputedStyle(dialog.querySelector('.status-pill')).color:computed.getPropertyValue(statusProperty).trim()||({available:'#4f7959',sold:'#b4564f',under_negotiation:'#b28a2f',reserved:'#b28a2f'}[a.status]||colors.muted);
   if(!job.fromDialog&&['under_negotiation','reserved'].includes(a.status))colors.status=`color-mix(in srgb, ${colors.status} 60%, ${colors.ink})`;
   colors.controlBlue=computed.getPropertyValue('--detail-control-blue').trim()||'#225d82';
+  colors.inquiryAccent=computed.getPropertyValue('--token-OWqJomPzk').trim()||'#145083';
   const layout=data.roomLayouts?.[a.apartmentType],markers=validPlanMarkers(layout);
   const roomRows=numberedUnitRooms(a)
     .sort((left,right)=>(left.planNumber??Infinity)-(right.planNumber??Infinity))

@@ -651,3 +651,37 @@ input[aria-invalid="true"] { border-color: var(--negotiating); }
   #detail-dialog .detail-layout .detail-room-panel { grid-area: auto; left: calc(12px + var(--detail-landscape-rail) + 12px); right: calc(12px + var(--detail-side-width) + var(--detail-side-gap)); top: 12px; bottom: 26px; }
   #detail-dialog .detail-shell[data-panel="rooms"] .detail-unit-meta { grid-column: 2; grid-row: 1; justify-self: end; width: var(--detail-side-width); }
 }
+
+/* The card's shadow root inherits the same inquiry material as the navbar. */
+#detail-dialog .detail-conversion :is(.inquiry-button.admiral-frosted-button, .detail-footer .datasheet-link) {
+  --card-inquiry-accent: var(--token-OWqJomPzk, #145083);
+  color: #fff;
+  background: linear-gradient(145deg, #2477b6, #145083 53%, #0d3a63);
+  background: var(--admiral-inquiry-fill, linear-gradient(145deg, color-mix(in srgb, var(--card-inquiry-accent) 50%, #339de8), var(--card-inquiry-accent) 53%, color-mix(in srgb, var(--card-inquiry-accent) 65%, #001128)));
+  border-color: var(--admiral-inquiry-rim, #1c496b);
+  box-shadow: var(--admiral-inquiry-shadow, inset 0 1px 1px rgb(220 240 255 / 32%), inset 0 -1px 0 rgb(5 24 46 / 18%), 0 3px 9px rgb(14 53 82 / 28%));
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+@media (hover: hover) {
+  #detail-dialog .detail-conversion :is(.inquiry-button.admiral-frosted-button, .detail-footer .datasheet-link):not(:disabled):not([aria-disabled="true"]):hover {
+    border-color: #6fa9db;
+    background: linear-gradient(145deg, #1d537e, #113b64 53%, #0c294b);
+    box-shadow: inset 0 1px 1px rgb(230 244 255 / 45%), 0 0 0 2px rgb(91 155 219 / 24%), 0 6px 16px rgb(10 44 79 / 38%);
+  }
+}
+#detail-dialog .detail-conversion :is(.inquiry-button.admiral-frosted-button, .detail-footer .datasheet-link):not(:disabled):not([aria-disabled="true"]):active {
+  background: #103654;
+  box-shadow: inset 0 2px 4px rgb(3 20 36 / 28%), 0 1px 3px rgb(14 53 82 / 20%);
+}
+#detail-dialog .detail-conversion :is(.inquiry-button.admiral-frosted-button, .detail-footer .datasheet-link):focus-visible {
+  outline: 2px solid #438dd3;
+  outline-offset: 3px;
+}
+@media (forced-colors: active) {
+  #detail-dialog .detail-conversion :is(.inquiry-button.admiral-frosted-button, .detail-footer .datasheet-link),
+  #detail-dialog .detail-conversion :is(.inquiry-button.admiral-frosted-button, .detail-footer .datasheet-link):not(:disabled):not([aria-disabled="true"]):is(:hover, :active) {
+    background: ButtonFace; color: ButtonText; border-color: ButtonText; box-shadow: none;
+  }
+  #detail-dialog .detail-conversion :is(.inquiry-button.admiral-frosted-button, .detail-footer .datasheet-link):focus-visible { outline-color: Highlight; }
+}

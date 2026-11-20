@@ -5,24 +5,24 @@
   "updated": "2026-11-20",
   "canonicalSources": {
     "card-runtime.js": {
-      "sha256": "6df33f3be4787543238b033667199f4bfd1911d7688aaa42fffca1206a0f37e3",
-      "bytes": 66241
+      "sha256": "8a8a4c87444898c7434fb6830fad83960e4c59109c3daeb655dcbb20546df3b6",
+      "bytes": 66330
     },
     "card.css": {
-      "sha256": "d9aa300eb734415adeec0727fadf8f0169323221b8f10800e5848663bd7002cb",
-      "bytes": 62405
+      "sha256": "a8181fb36df15b0b0ceb467b87fec07c76c87cc2a706e103564a11cf4e67bc64",
+      "bytes": 64664
     },
     "card-shell.html": {
       "sha256": "93638e8f18b7a11da371804032266ac9c76932c21baeea10fa7bfe6068308370",
       "bytes": 250
     },
     "pdf-export.js": {
-      "sha256": "a6538a1efb950d4d438774140bb26e4ef9eacd471eacea080d2d4de71427f8e3",
-      "bytes": 16447
+      "sha256": "ec29ee28185515b972d031ff0af1c6a594167e916eaf5180a70a438b44ed8550",
+      "bytes": 16865
     },
     "card-pdf-actions.js": {
-      "sha256": "94f9cf0b209acd7294a1f795b15dd24b5b9e473049620efb5626cb949f2ecd98",
-      "bytes": 7980
+      "sha256": "bcfc8cd76a1cda2ba55aa6dd5545c873e69264c9dede005c079f78b8cf78c4ec",
+      "bytes": 8069
     },
     "../ui/frosted-button.js": {
       "sha256": "2461efcce3579cf83bcf5d6852aec3d5a5a5c5db9a48d1fb22e2a9f6dd1ad117",

@@ -53,7 +53,7 @@ async function createAdmiralApartmentPdf(snapshot,options) {
     pdf.setSubject(snapshot.id+' - egyedi lakásadatlap');pdf.setCreator('Admiral Park apartment detail card');pdf.setCreationDate(snapshot.date);
     const swatch=canvas(1,1),sc=swatch.getContext('2d');
     function color(value,fallback){sc.clearRect(0,0,1,1);sc.fillStyle=fallback;sc.fillStyle=value||fallback;sc.fillRect(0,0,1,1);return [...sc.getImageData(0,0,1,1).data].slice(0,3).map(v=>v/255);}
-    const colors={top:color(snapshot.colors.top,'#fdfbfb'),bottom:color(snapshot.colors.bottom,'#e4e9ec'),ink:color(snapshot.colors.ink,'#242824'),muted:color(snapshot.colors.muted,'#687074'),watermarkTop:color(snapshot.colors.watermarkTop,'#f2f0f1'),watermarkBottom:color(snapshot.colors.watermarkBottom,'#d9dfe2'),frostedTint:color(snapshot.colors.frostedTint,FROSTED_BUTTON_DEFAULTS.tint),frostedText:color(snapshot.colors.frostedText,FROSTED_BUTTON_DEFAULTS.text),status:color(snapshot.colors.status,'#4f7959')};
+    const colors={top:color(snapshot.colors.top,'#fdfbfb'),bottom:color(snapshot.colors.bottom,'#e4e9ec'),ink:color(snapshot.colors.ink,'#242824'),muted:color(snapshot.colors.muted,'#687074'),watermarkTop:color(snapshot.colors.watermarkTop,'#f2f0f1'),watermarkBottom:color(snapshot.colors.watermarkBottom,'#d9dfe2'),status:color(snapshot.colors.status,'#4f7959')};
     const rgb=value=>lib.rgb(...value);
     const css=value=>'rgb('+value.map(v=>Math.round(v*255)).join(',')+')';
     const mix=(a,b,t)=>a.map((v,i)=>v+(b[i]-v)*t);
@@ -83,18 +83,26 @@ async function createAdmiralApartmentPdf(snapshot,options) {
     mc.fillStyle=motifGradient;mc.fillRect(0,0,W,H);mc.globalCompositeOperation='destination-in';
     const scale=Math.min(W*.67/monogram.naturalWidth,H/monogram.naturalHeight),mw=monogram.naturalWidth*scale,mh=monogram.naturalHeight*scale;
     mc.drawImage(monogram,W-W*.67+(W*.67-mw)/2,(H-mh)/2,mw,mh);bg.globalAlpha=.24;bg.drawImage(motif,0,0);bg.globalAlpha=1;
-    function glassBand(top,height,tint,strength) {
-      const shade=bg.createLinearGradient(rx,top,rx+rw,top+height);
-      shade.addColorStop(0,css(mix(tint,[1,1,1],Math.min(1,strength+.12))));
-      shade.addColorStop(1,css(mix(tint,[1,1,1],strength)));
+    function paintBand(top,height,shade,rim) {
       bg.save();
       bg.beginPath();bg.roundRect(rx+.5,top+.5,rw-1,height-1,height/2);
       bg.shadowColor='rgba(29,63,88,.13)';bg.shadowBlur=6;bg.shadowOffsetY=2;
       bg.fillStyle=shade;bg.fill();bg.shadowColor='transparent';
-      bg.strokeStyle=css(mix(tint,[1,1,1],strength-.1));bg.lineWidth=.8;bg.stroke();bg.restore();
+      bg.strokeStyle=rim;bg.lineWidth=.8;bg.stroke();bg.restore();
     }
-    glassBand(526,44,colors.bottom,.73);
-    glassBand(actionTop,actionHeight,colors.frostedTint,.75);
+    const priceShade=bg.createLinearGradient(rx,526,rx+rw,570);
+    priceShade.addColorStop(0,css(mix(colors.bottom,[1,1,1],.85)));
+    priceShade.addColorStop(1,css(mix(colors.bottom,[1,1,1],.73)));
+    paintBand(526,44,priceShade,css(mix(colors.bottom,[1,1,1],.63)));
+    // Reproduce the navbar's 145-degree inquiry gradient inside this wide PDF pill.
+    const angle=145*Math.PI/180,dx=Math.sin(angle),dy=-Math.cos(angle);
+    const half=(rw*dx+actionHeight*dy)/2,cx=rx+rw/2,cy=actionTop+actionHeight/2;
+    const actionShade=bg.createLinearGradient(cx-dx*half,cy-dy*half,cx+dx*half,cy+dy*half);
+    const accent=color(snapshot.colors.inquiryAccent,'#145083');
+    actionShade.addColorStop(0,css(mix(accent,[51/255,157/255,232/255],.5)));
+    actionShade.addColorStop(.53,css(accent));
+    actionShade.addColorStop(1,css(mix(accent,[0,17/255,40/255],.35)));
+    paintBand(actionTop,actionHeight,actionShade,'#1c496b');
     const backgroundImage=await pdf.embedJpg(await jpeg(background,.92));page.drawImage(backgroundImage,{x:0,y:0,width:W,height:H});
     // Logo uses the same SVG paths as the card's CSS mask.
     const logoDocument=new DOMParser().parseFromString(new TextDecoder().decode(logoBytes),'image/svg+xml');
@@ -203,7 +211,7 @@ async function createAdmiralApartmentPdf(snapshot,options) {
       y+=rowHeight*Math.max(1,names.length);line(rx,y-3,rw,.25);
     }
     valueWithUnit(snapshot.price,snapshot.priceUnit,rx+rw/2,529,rw-30,31,regular,ink);
-    centered(snapshot.actionLabel,rx+rw/2,actionTop+14,15,semibold,rgb(colors.frostedText));
+    centered(snapshot.actionLabel,rx+rw/2,actionTop+14,15,semibold,lib.rgb(1,1,1));
     const actionLink=pdf.context.register(pdf.context.obj({Type:'Annot',Subtype:'Link',Rect:[rx,H-actionTop-actionHeight,rx+rw,H-actionTop],Border:[0,0,0],A:{Type:'Action',S:'URI',URI:lib.PDFString.of(snapshot.actionUrl)}}));
     page.node.addAnnot(actionLink);
     page.drawCircle({x:rx+8,y:H-653,size:2.6,color:rgb(colors.status)});text(snapshot.status,rx+18,644,13,regular,rgb(colors.status));
