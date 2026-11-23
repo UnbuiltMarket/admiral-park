@@ -15,6 +15,31 @@ function compileFunction(name) {
 }
 const script = compileFunction('createHomepageHeroVideo');
 const downloadScript = compileFunction('prepareFlightVideo');
+const advanceFraming = compileFunction('orbitApproachFraming').runInNewContext();
+
+test('SEQ_03 window advances between 24 fps pictures on 60, 120 and 240 Hz displays', () => {
+    const duration = 70 / 24;
+    for (const hz of [60, 120, 240]) {
+        let progress = 0;
+        for (let tick = 1; tick < hz * 2; tick++) {
+            const picture = Math.floor(tick * 24 / hz) / 24 / duration;
+            const next = advanceFraming(progress, picture, 1 / hz, duration);
+            assert.ok(next > progress);
+            assert.ok(Math.abs(next - tick / hz / duration) < 1e-8);
+            progress = next;
+        }
+    }
+});
+
+test('on a silent stall the SEQ_03 window stops within one picture and never rewinds', () => {
+    const duration = 70 / 24, picture = .35;
+    let progress = picture;
+    for (let i = 0; i < 80; i++) progress = advanceFraming(progress, picture, 1 / 120, duration);
+    assert.equal(progress, picture + 1 / 70);
+    assert.equal(advanceFraming(progress, picture, 5, duration), progress);
+    assert.equal(advanceFraming(progress, picture - .02, 0, duration), progress);
+    assert.equal(advanceFraming(progress, picture, .1, NaN), progress);
+});
 
 class Layer extends EventTarget {
     style = { opacity: '0' };

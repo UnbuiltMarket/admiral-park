@@ -8702,6 +8702,7 @@ export default function AdmiralHomepageStudio(
         const flightShade = root.querySelector<HTMLElement>("[data-flight-shade]")
         const normalClip = heroRoot.style.clipPath
         let flightGeometry: { width: number; height: number; x: number; y: number; w: number; h: number } | null = null
+        let landingResizeFrame = 0, skipLandingResize = false
         function paintFlight() {
             if (!flightMedia || !studioEnabled.current || currentStage !== "orbitApproach") return false
             if (!flightGeometry) {
@@ -8729,6 +8730,9 @@ export default function AdmiralHomepageStudio(
             return true
         }
         function clearFlight() {
+            cancelAnimationFrame(landingResizeFrame)
+            landingResizeFrame = 0
+            skipLandingResize = false
             flightGeometry = null
             delete heroRoot!.dataset.nativeFlight
             flightMedia?.style.removeProperty("transform")
@@ -9278,6 +9282,32 @@ export default function AdmiralHomepageStudio(
             setHeroState("loading")
             changeStage("orbitApproach")
             const generation = ++heroGeneration
+            let lastPaintAt: number | undefined, landingScheduled = false
+            function present(progress: number) {
+                if (progress === presentationProgress) return
+                presentationProgress = progress
+                applyPresentation()
+            }
+            function land() {
+                if (landingScheduled) return
+                landingScheduled = true
+                changePoster(checkpointZeroPoster)
+                const from = presentationProgress, startedAt = performance.now()
+                // A failed video can land on its still far from the final window size.
+                // Finish that visible movement before exchanging the still for the canvas.
+                const duration = Math.min(850, (1 - from) * 1450)
+                const settle = (now: number) => {
+                    if (disposed || generation !== heroGeneration || currentStage !== "orbitApproach") return
+                    if (reducedMedia.matches || skipLandingResize || now >= startedAt + duration) {
+                        present(1)
+                        void activateOrbit(0)
+                        return
+                    }
+                    present(from + (1 - from) * sequenceEase(sequenceClamp((now - startedAt) / duration)))
+                    landingResizeFrame = requestAnimationFrame(settle)
+                }
+                queueMicrotask(() => settle(performance.now()))
+            }
             // Prepare checkpoint zero and its neighbours while the last flight is playing.
             void orbit.prepare(0).catch(() => {})
             hero = createHomepageHeroVideo({
@@ -9290,19 +9320,19 @@ export default function AdmiralHomepageStudio(
                     const stateChanged = heroSnapshot.state !== snapshot.state
                     heroSnapshot = snapshot
                     if (stateChanged) setHeroState(snapshot.state)
-                    if (presentationProgress !== snapshot.progress) {
-                        presentationProgress = snapshot.progress
-                        applyPresentation()
-                    }
+                    // The player's display-refresh tick also runs between decoded
+                    // frames. Only the window uses this clock; the watchdog and
+                    // landing cues continue to use actual playback evidence.
+                    if (snapshot.state === "moving" && !connectionVideo.paused && !connectionVideo.seeking) {
+                        const now = performance.now()
+                        const elapsed = lastPaintAt === undefined ? 0 : (now - lastPaintAt) / 1000
+                        lastPaintAt = now
+                        present(orbitApproachFraming(presentationProgress, snapshot.progress,
+                            elapsed * connectionVideo.playbackRate, connectionVideo.duration))
+                    } else lastPaintAt = undefined
                     // Opening overlays are inactive on this flight. Notify subscribers only on player edges.
                     if (stateChanged) publish()
-                    if (snapshot.state === "arrival" || snapshot.state === "reduced") {
-                        changePoster(checkpointZeroPoster)
-                        queueMicrotask(() => {
-                            if (!disposed && generation === heroGeneration && currentStage === "orbitApproach")
-                                void activateOrbit(0)
-                        })
-                    }
+                    if (snapshot.state === "arrival" || snapshot.state === "reduced") land()
                 },
             })
             hero.start()
@@ -9831,7 +9861,10 @@ export default function AdmiralHomepageStudio(
             skip: () => {
                 if (connectionLanded()) startOrbitApproach()
                 else if (activeSequence === "SEQ_02" && reducedMedia.matches) void activateOrbit()
-                else hero?.skip()
+                else {
+                    if (currentStage === "orbitApproach") skipLandingResize = true
+                    hero?.skip()
+                }
             },
             resumeHero: () => {
                 if (heroSnapshot.direction < 0) hero?.reverse()
@@ -12879,6 +12912,16 @@ function sequenceClamp(n: number, min = 0, max = 1) {
 }
 function sequenceEase(n: number) {
     return n * n * (3 - 2 * n)
+}
+
+/** Advance smoothly between the 24 fps approach film's confirmed pictures.
+ * The window can lead by at most one film frame, including on a silent stall.
+ */
+function orbitApproachFraming(previous: number, confirmed: number, elapsed: number, duration: number) {
+    if (!Number.isFinite(duration) || duration <= 0) return previous
+    const frame = 1 / (24 * duration)
+    const next = previous + Math.max(0, elapsed) / duration
+    return Math.max(previous, Math.min(1, confirmed + frame, Math.max(confirmed - frame, next)))
 }
 
 /** Encoded bytes are inexpensive; decoded pixels have an explicitly bounded lifetime. */
