@@ -819,6 +819,16 @@ const homepageOrbitEntryStyles = `
 }
 @media (prefers-reduced-motion: reduce) { [data-seq3-garden-cue] { transition: none; translate: none; } }
 
+/* Framer nests the continuation cue inside the arrival caption. The caption
+   can enter during flight, but the cue only appears once scrolling can advance. */
+[data-hero-overlay="building"][data-arrival-prompt="waiting"] .admiral-scroll-cue {
+    visibility: hidden; opacity: 0;
+}
+@media (prefers-reduced-motion: no-preference) {
+    [data-hero-overlay="building"][data-arrival-prompt="ready"] .admiral-scroll-cue,
+    [data-hero-overlay="cta"][data-arrival-prompt="ready"] { transition: opacity .3s ease; }
+}
+
 [data-admiral-homepage] [data-seq3-garden] {
     position: absolute;
     /* The central roofline is one third down the SEQ_03 still. A wide
@@ -9031,6 +9041,7 @@ export default function AdmiralHomepageStudio(
                     snapshot.state === "arrival" ||
                     snapshot.state === "reduced"
                 ) {
+                    if (isVisible()) orbit?.prefetch()
                     if (heroVideoUrl) changePoster(heroEndPoster)
                     changeStage("building")
                 } else if (snapshot.state === "opening")
@@ -9144,8 +9155,8 @@ export default function AdmiralHomepageStudio(
                     previous === snapshot.state ? previous : snapshot.state
                 )
                 // SEQ_02's media clock drives the journey events independently of viewport framing.
-                // Compressed orbit downloads run from page load; decode its
-                // bounded window only near the connecting flight's handoff.
+                // The orbit downloads in compressed form. Decode its bounded
+                // window only near the connecting flight's handoff.
                 if (
                     orbit &&
                     !orbitPreparing &&
@@ -9817,31 +9828,39 @@ export default function AdmiralHomepageStudio(
                 openOrbitFromLink(orbitLocationApartment, orbitLocationGroup, true)
             else mountHero()
             if (startView !== "orbit" && !orbitLocation) {
-                let fallback = 0
+                // A cold browser can emit canplay with only a fraction of SEQ_01
+                // buffered. Give that flight first use of the connection before
+                // starting the 120-frame orbit download. Arrival also starts it.
                 let openingSettled = false
-                const warmOrbit = () => {
-                    clearTimeout(fallback)
-                    if (!disposed && isVisible()) orbit?.prefetch()
-                }
                 const afterPoster = () => {
                     if (openingSettled) return
                     openingSettled = true
                     const flight = heroVideoUrl && !reducedMedia.matches ? heroVideoRef.current : null
-                    if (!flight || flight.readyState >= HTMLMediaElement.HAVE_FUTURE_DATA) {
-                        warmOrbit()
-                        return
+                    if (!flight) {
+                        if (isVisible()) orbit?.prefetch()
+                    } else {
+                        const warmWhenBuffered = () => {
+                            if (!Number.isFinite(flight.duration) || !isVisible()) return
+                            const ranges = flight.buffered
+                            for (let i = 0; i < ranges.length; i++) {
+                                if (ranges.start(i) > flight.currentTime + 0.05 ||
+                                    ranges.end(i) < flight.duration - 0.05) continue
+                                flight.removeEventListener("progress", warmWhenBuffered)
+                                flight.removeEventListener("canplaythrough", warmWhenBuffered)
+                                orbit?.prefetch()
+                                return
+                            }
+                        }
+                        flight.addEventListener("progress", warmWhenBuffered, { signal })
+                        flight.addEventListener("canplaythrough", warmWhenBuffered, { signal })
+                        warmWhenBuffered()
                     }
-                    flight.addEventListener("canplay", warmOrbit, { once: true, signal })
-                    flight.addEventListener("error", warmOrbit, { once: true, signal })
-                    // Some mobile browsers defer video preloading until a gesture.
-                    fallback = window.setTimeout(warmOrbit, 4000)
                 }
                 if (poster!.complete) afterPoster()
                 else {
                     poster!.addEventListener("load", afterPoster, { once: true, signal })
                     poster!.addEventListener("error", afterPoster, { once: true, signal })
                 }
-                signal.addEventListener("abort", () => clearTimeout(fallback), { once: true })
             }
         }
         publish()
@@ -11090,6 +11109,18 @@ function createHomepageOverlay(Component: React.ComponentType<any>, kind: "openi
                 const continuous = motionEnabled ? channel.openingProgress?.(openingDelay) : undefined
                 const progress = Number.isFinite(continuous) ? sequenceClamp(continuous!) : channel.snapshot.progress
                 lastTiming = t
+                if (!openingKind && channel.enabled && !channel.static) {
+                    const state = channel.snapshot.state
+                    const ready = channel.stage === "building" && (state === "arrival" || state === "reduced")
+                    const prompt = ready ? "ready" : "waiting"
+                    if (element!.dataset.arrivalPrompt !== prompt) element!.dataset.arrivalPrompt = prompt
+                    if (!ready && (kind === "cta" || state === "loading" || state === "paused" || state === "error")) {
+                        stopContentFrames()
+                        if (departure) stopFade()
+                        paint(0, t, false)
+                        return
+                    }
+                }
                 const openingEnd = kind === "openingScroll" ? (t.openingMotion?.scroll.end ?? t.openingOut * .72) : kind === "openingText" ? (t.openingMotion?.text.end ?? t.openingOut) : t.openingOut
                 const phaseLimit = openingKind ? 100 : kind === "building" ? t.buildingFull : 100
                 // While moving, only the display-refresh callback paints opening
@@ -11101,6 +11132,7 @@ function createHomepageOverlay(Component: React.ComponentType<any>, kind: "openi
                 if (departure && (channel.enabled || reducedMotion.matches)) stopFade()
                 if ((kind === "building" || kind === "cta") && fromStage === "building" && channel.stage === "connection" && !reducedMotion.matches) {
                     const from = sequenceClamp(parseFloat(getComputedStyle(element!).opacity) || 0)
+                    delete element!.dataset.arrivalPrompt
                     if (from > .001) {
                         stopFade(); departure = { from, started: performance.now(), timing: t }
                         // The text stays visible through the dissolve, but its CTA stops accepting input immediately.
@@ -11109,6 +11141,8 @@ function createHomepageOverlay(Component: React.ComponentType<any>, kind: "openi
                     }
                 }
                 if (departure) return
+                if ((!channel.enabled || channel.static) && element!.hasAttribute("data-arrival-prompt"))
+                    delete element!.dataset.arrivalPrompt
                 const ramp = (from: number, to: number, position = progress) => sequenceEase(sequenceClamp((position * 100 - from) / Math.max(1, to - from)))
                 const faded = (from: number, to: number) => motionEnabled ? channel.fadeProgress?.(from, to, openingDelay) ?? progress : progress
                 const openingPhase = ramp(0, t.openingOut)
@@ -11135,6 +11169,7 @@ function createHomepageOverlay(Component: React.ComponentType<any>, kind: "openi
                 element.style.pointerEvents = original.pointerEvents; element.style.visibility = original.visibility; element.inert = original.inert
                 if (original.hidden === null) element.removeAttribute("aria-hidden"); else element.setAttribute("aria-hidden", original.hidden)
                 delete element.dataset.heroOverlay
+                delete element.dataset.arrivalPrompt
             }
         }, [])
         return <Component {...props} ref={ref} data-admiral-opening-overlay={openingKind ? "" : undefined} style={{ ...props.style, opacity: openingKind ? 1 : 0 }} />
@@ -13042,7 +13077,7 @@ function createSequenceFrames(
     }
 }
 
-/** A two-endpoint journey: scroll starts/boosts/reverses; release still completes the flight. */
+/** A forward-only flight that hands off to a decoded landing still. */
 function createHomepageHeroVideo(options: {
     video: HTMLVideoElement
     poster: HTMLImageElement
@@ -13065,6 +13100,8 @@ function createHomepageHeroVideo(options: {
     let loaded = video.getAttribute("src") === url, started = false, entered = false, entering = false
     let finishing = false, finished = false, leaving = false
     let frameRequest = 0, timeout = 0, holdTimer = 0, attempt = 0
+    const loadLimitMs = 9000
+    let lastMediaTime = 0, nudgeTimer = 0, nudged = false
     let endReady: Promise<boolean> | undefined, graphicReady: Promise<boolean> | undefined
     const length = () => Number.isFinite(video.duration) && video.duration > 0 ? video.duration : 4.041667
     const time = () => finished ? length() : video.currentTime || 0
@@ -13100,8 +13137,9 @@ function createHomepageHeroVideo(options: {
     function prepareEndPoster() {
         if (!endReady) {
             endLayer.src = options.endPoster
-            endReady = endLayer.decode().then(() => true, () => false)
+            endReady = endLayer.decode().then(() => endLayer.naturalWidth > 0, () => false)
         }
+        return endReady
     }
     function prepareGraphic() {
         if (!graphicReady && graphic && options.graphicUrl) {
@@ -13117,8 +13155,9 @@ function createHomepageHeroVideo(options: {
     }
     function stopCallbacks() {
         clearTimeout(timeout)
+        clearTimeout(nudgeTimer)
         cancelAnimationFrame(frameRequest)
-        timeout = frameRequest = 0
+        timeout = nudgeTimer = frameRequest = 0
     }
     function tick() {
         frameRequest = 0
@@ -13135,34 +13174,80 @@ function createHomepageHeroVideo(options: {
         if (!loaded && !started && !finishing && !finished && !motion.matches && !signal.aborted)
             loadVideo()
     }
-    function failed() {
-        if (signal.aborted || !started || finished || finishing) return
-        attempt++
-        stopCallbacks()
-        video.pause()
-        entering = false
-        state = "error"
-        publish()
+    function inFlight() {
+        return started && !signal.aborted && !finished && !finishing && !document.hidden &&
+            (state === "loading" || state === "moving")
+    }
+    function recoverFlight() {
+        if (inFlight()) void finish("arrival")
+    }
+    function recordProgress() {
+        if (!inFlight() || entering || video.paused || video.seeking ||
+            video.currentTime <= lastMediaTime + 0.001) return false
+        lastMediaTime = video.currentTime
+        waitForPlayback()
+        return true
+    }
+    function resumeBufferedPlayback() {
+        if (!inFlight() || nudged || motion.matches || video.seeking || video.ended || video.error || recordProgress()) return
+        const from = video.currentTime, buffered = video.buffered
+        for (let i = 0; i < buffered.length; i++) {
+            if (buffered.start(i) > from || buffered.end(i) - from < 0.25) continue
+            // Restart a stuck decoder inside bytes we already have. The seek itself
+            // is not playback progress and must not extend the landing deadline.
+            nudged = true
+            const target = from + 1 / 24
+            lastMediaTime = target
+            const version = ++attempt
+            try {
+                video.currentTime = target
+                void video.play().catch(() => { if (version === attempt) recoverFlight() })
+            } catch {
+                // An unavailable seek range can still recover naturally before the deadline.
+            }
+            return
+        }
     }
     function waitForPlayback() {
         clearTimeout(timeout)
-        timeout = window.setTimeout(failed, 9000)
+        clearTimeout(nudgeTimer)
+        const midFlight = entered && lastMediaTime > 0
+        if (midFlight && !nudged)
+            nudgeTimer = window.setTimeout(resumeBufferedPlayback, 1500)
+        timeout = window.setTimeout(() => {
+            if (!recordProgress()) recoverFlight()
+        }, midFlight ? 5000 : loadLimitMs)
     }
     function play() {
         const version = ++attempt
+        lastMediaTime = video.currentTime
         waitForPlayback()
-        void video.play().catch(() => { if (version === attempt) failed() })
+        void video.play().catch(() => { if (version === attempt) recoverFlight() })
     }
     async function finish(next: "arrival" | "reduced", instant = false) {
         if (finished || finishing || signal.aborted) return
         finishing = true
+        entering = false
         attempt++
         stopCallbacks()
+        const hasVideoEndpoint = entered && video.ended && video.readyState >= 2
         video.pause()
-        prepareEndPoster()
-        if (await endReady && !signal.aborted) {
-            await fade(endLayer, 1, instant ? 0 : 300)
+        // A failed or hung image must not turn a partial video frame into an arrival.
+        // Keep retry/skip available if neither endpoint is presentable.
+        const ready = await new Promise<boolean>((resolve) => {
+            timeout = window.setTimeout(() => resolve(false), loadLimitMs)
+            void prepareEndPoster().then(resolve)
+        })
+        if (signal.aborted) return
+        clearTimeout(timeout)
+        if (!ready && !hasVideoEndpoint) {
+            endReady = undefined
+            finishing = false
+            state = "error"
+            publish()
+            return
         }
+        if (ready) await fade(endLayer, 1, instant ? 0 : 300)
         if (signal.aborted) return
         finished = true
         finishing = false
@@ -13182,19 +13267,23 @@ function createHomepageHeroVideo(options: {
             return
         }
         if (!loaded || video.error) loadVideo()
+        prepareEndPoster()
         started = true
+        nudged = false
         state = "loading"
         publish()
         // Prime playback in the input gesture for mobile browsers.
         play()
     }
     video.addEventListener("playing", async () => {
-        if (!started || finished || finishing || signal.aborted || entering) return
-        stopCallbacks()
-        prepareEndPoster()
+        if (!started || finished || finishing || signal.aborted || entering || document.hidden ||
+            (state !== "loading" && state !== "moving")) return
+        cancelAnimationFrame(frameRequest)
         if (!entered) {
+            stopCallbacks()
             entering = true
-            const version = attempt
+            // Some engines reject the priming play promise when this deliberate pause interrupts it.
+            const version = ++attempt
             video.pause()
             await fade(video, 1, 300)
             if (signal.aborted || version !== attempt || finishing || finished) return
@@ -13207,15 +13296,16 @@ function createHomepageHeroVideo(options: {
         publish()
         frameRequest = requestAnimationFrame(tick)
     }, { signal })
+    video.addEventListener("timeupdate", recordProgress, { signal })
     video.addEventListener("waiting", () => {
-        if (!started || finished || finishing || entering || video.paused) return
-        stopCallbacks()
+        if (!started || finished || finishing || entering || video.paused ||
+            (state !== "moving" && state !== "loading")) return
+        cancelAnimationFrame(frameRequest)
         state = "loading"
         publish()
-        waitForPlayback()
     }, { signal })
     video.addEventListener("ended", () => { void finish("arrival") }, { signal })
-    video.addEventListener("error", failed, { signal })
+    video.addEventListener("error", recoverFlight, { signal })
     document.addEventListener("visibilitychange", () => {
         if (!document.hidden || !started || finished || finishing ||
             (state !== "moving" && state !== "loading")) return
