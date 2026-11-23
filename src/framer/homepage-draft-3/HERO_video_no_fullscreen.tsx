@@ -768,6 +768,27 @@ const homepageOrbitEntryStyles = `
 [data-admiral-homepage] [data-orbit-render-canvas] { visibility: hidden; }
 [data-admiral-homepage][data-homepage-stage="orbit"] [data-orbit-render-canvas][data-orbit-painted] { visibility: visible; }
 
+[data-journey-loading], [data-orbit-recovery] {
+    position: absolute; z-index: 10;
+    left: calc(var(--admiral-image-x, 0px) + var(--admiral-image-width, 100%) / 2);
+    top: calc(var(--admiral-image-y, 0px) + var(--admiral-image-height, 100%) / 2);
+    transform: translate(-50%, -50%);
+}
+[data-orbit-fullscreen-surface][data-active="true"] :is([data-journey-loading], [data-orbit-recovery]) { left: 50%; top: 50%; }
+[data-journey-loading] {
+    display: flex; align-items: center; gap: .55em; width: max-content; max-width: 90%;
+    padding: 9px 16px; border: 1px solid rgba(255,255,255,.8); border-radius: 999px;
+    color: #173c59; background: rgba(240,247,251,.96); box-shadow: 0 3px 14px rgba(28,66,95,.15);
+    font: 600 13px/1.4 Montserrat, Arial, sans-serif; pointer-events: none;
+}
+[data-journey-loading]::before {
+    content: ""; flex: none; width: .8em; height: .8em; border: 1.5px solid #aac2d3;
+    border-top-color: #235774; border-radius: 50%; animation: admiral-media-loading .85s linear infinite;
+}
+@keyframes admiral-media-loading { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { [data-journey-loading]::before { animation: none; } }
+[data-admiral-homepage][data-orbit-state="buffering"] [data-orbit-entry-notice] { visibility: hidden; }
+
 [data-orbit-entry-notice] {
     position: absolute; z-index: 4; pointer-events: none; user-select: none;
     left: var(--admiral-image-x, 0px); top: var(--admiral-image-y, 0px);
@@ -979,6 +1000,15 @@ function homepageJourneyQuery(url: URL) {
     return params.toString()
 }
 const useHomepageLayoutEffect = typeof window === "undefined" ? React.useEffect : React.useLayoutEffect
+
+function JourneyLoadingNotice({ label, kind }: { label: string; kind: "flight" | "orbit" }) {
+    const [visible, setVisible] = React.useState(false)
+    React.useEffect(() => {
+        const timer = window.setTimeout(() => setVisible(true), 220)
+        return () => window.clearTimeout(timer)
+    }, [])
+    return visible ? <span data-journey-loading={kind} role="status">{label}</span> : null
+}
 
 function OrbitEntryNotice({ mobile, failed }: { mobile: boolean; failed: boolean }) {
     const [elapsed, setElapsed] = React.useState(false)
@@ -7641,7 +7671,6 @@ export default function AdmiralHomepageStudio(
                   : heroStartPoster
     const [stage, setStage] = React.useState<HomepageStage>(previewStage)
     const [enteredOrbit, setEnteredOrbit] = React.useState(false)
-    const [loadedEntryPoster, setLoadedEntryPoster] = React.useState<string | null>(null)
     const [requestedPoster, setPosterUrl] = React.useState<string | null>(null)
     const posterUrl = requestedPoster ?? initialPoster
     const [homepageBooted, setHomepageBooted] = React.useState(false)
@@ -8512,6 +8541,7 @@ export default function AdmiralHomepageStudio(
         let hero: ReturnType<typeof createHeroSequence> | ReturnType<typeof createHomepageHeroVideo> | null = null
         let activeSequence: "SEQ_01" | "SEQ_02" | "SEQ_03" = "SEQ_01",
             connectionWarmed = false
+        let nextFilm: { url: string; media: ReturnType<typeof prepareFlightVideo> } | undefined
         let heroSnapshot: SequenceSnapshot = {
             state: previewStage === "building" ? "arrival" : "opening",
             progress: previewStage === "building" ? 1 : 0,
@@ -8931,11 +8961,8 @@ export default function AdmiralHomepageStudio(
                               setInteractionApartmentId(null)
                           publish()
                       }
-                      const loadingChanged = currentStage === "handoff" &&
-                          (previous.requiredReady !== snapshot.requiredReady ||
-                           previous.requiredTotal !== snapshot.requiredTotal)
                       const now = performance.now()
-                      if (viewChanged || loadingChanged || (showDiagnostics && now - lastUI > 150)) {
+                      if (viewChanged || (showDiagnostics && now - lastUI > 150)) {
                           lastUI = now
                           setOrbitInfo(snapshot)
                       }
@@ -8943,6 +8970,8 @@ export default function AdmiralHomepageStudio(
               })
         orbit?.setSuspended(detailOpen.current)
         function releaseConnectionPreload() {
+            nextFilm?.media.release()
+            nextFilm = undefined
             if (connectionVideo?.hasAttribute("src")) {
                 connectionVideo.removeAttribute("src")
                 connectionVideo.preload = "none"
@@ -8950,28 +8979,33 @@ export default function AdmiralHomepageStudio(
             }
             if (connectionVideoUrl) connectionWarmed = false
         }
-        // Each delivery mode warms only its own media.
-        function warmConnection() {
+        function canWarmNextFilm() {
             const connection = (
                 navigator as Navigator & {
                     connection?: { saveData?: boolean; effectiveType?: string }
                 }
             ).connection
-            if (
-                connectionWarmed ||
-                staticRenderer ||
-                reducedMedia.matches ||
-                connection?.saveData ||
-                /(^|-)2g$/.test(connection?.effectiveType || "")
-            )
-                return
+            return !staticRenderer && !reducedMedia.matches && !connection?.saveData &&
+                !/(^|-)2g$/.test(connection?.effectiveType || "")
+        }
+        function warmNextFilm(url: string) {
+            if (nextFilm?.url === url || !canWarmNextFilm()) return
+            nextFilm?.media.release()
+            nextFilm = { url, media: prepareFlightVideo(url) }
+        }
+        function takeNextFilm(url: string) {
+            if (nextFilm?.url !== url) return
+            const media = nextFilm.media
+            nextFilm = undefined
+            return media
+        }
+        // The visitor's next gesture adopts this download, even if it is still in progress.
+        function warmConnection() {
             if (connectionVideoUrl) {
-                if (heroSnapshot.state !== "arrival" || !connectionVideo) return
-                connectionWarmed = true
-                connectionVideo.preload = "auto"
-                connectionVideo.src = connectionVideoUrl
+                if (heroSnapshot.state === "arrival") warmNextFilm(connectionVideoUrl)
                 return
             }
+            if (connectionWarmed || !canWarmNextFilm()) return
             connectionWarmed = true
             let next = 0
             async function worker() {
@@ -9002,7 +9036,6 @@ export default function AdmiralHomepageStudio(
         function mountHero(atEnd = false) {
             if (disposed) return
             setEnteredOrbit(false)
-            setLoadedEntryPoster(null)
             enterToken++
             orbit?.deactivate(true)
             setOrbitGroup(null)
@@ -9169,8 +9202,10 @@ export default function AdmiralHomepageStudio(
                     void orbit.prepare(connectionVideoUrl ? 0 : undefined).catch(() => {})
                 }
                 publish()
-                if (connectionVideoUrl && (snapshot.state === "arrival" || snapshot.state === "reduced"))
+                if (connectionVideoUrl && (snapshot.state === "arrival" || snapshot.state === "reduced")) {
                     changePoster(connectionEndPoster)
+                    if (snapshot.state === "arrival") warmNextFilm(HOMEPAGE_ORBIT_APPROACH_VIDEO)
+                }
             }
             if (connectionVideoUrl && connectionVideo && heroEndLayerRef.current) {
                 heroSnapshot = { ...heroSnapshot, state: "loading", progress: 0, frame: 0 }
@@ -9179,6 +9214,7 @@ export default function AdmiralHomepageStudio(
                 hero = createHomepageHeroVideo({
                     video: connectionVideo, poster: poster!, endLayer: heroEndLayerRef.current,
                     url: connectionVideoUrl, endPoster: connectionEndPoster,
+                    preparedVideo: takeNextFilm(connectionVideoUrl),
                     startAtEnd: false, lastFrame: connectionPlaybackUrls.length - 1,
                     fadeExtension: () => fadeExtensionRef.current, onUpdate: onConnectionUpdate,
                 })
@@ -9239,6 +9275,7 @@ export default function AdmiralHomepageStudio(
             root!.dataset.activeSequence = activeSequence
             changePoster(connectionEndPoster)
             heroSnapshot = { ...heroSnapshot, state: "loading", progress: 0, frame: 0 }
+            setHeroState("loading")
             changeStage("orbitApproach")
             const generation = ++heroGeneration
             // Prepare checkpoint zero and its neighbours while the last flight is playing.
@@ -9246,6 +9283,7 @@ export default function AdmiralHomepageStudio(
             hero = createHomepageHeroVideo({
                 video: connectionVideo, poster: poster!, endLayer: heroEndLayerRef.current,
                 url: HOMEPAGE_ORBIT_APPROACH_VIDEO, endPoster: checkpointZeroPoster,
+                preparedVideo: takeNextFilm(HOMEPAGE_ORBIT_APPROACH_VIDEO),
                 startAtEnd: false, lastFrame: 1, fadeExtension: () => fadeExtensionRef.current,
                 onUpdate(snapshot) {
                     if (disposed || generation !== heroGeneration) return
@@ -9840,17 +9878,16 @@ export default function AdmiralHomepageStudio(
                         if (isVisible()) orbit?.prefetch()
                     } else {
                         const warmWhenBuffered = () => {
-                            if (!Number.isFinite(flight.duration) || !isVisible()) return
+                            if (!isVisible() || !Number.isFinite(flight.duration)) return
                             const ranges = flight.buffered
-                            for (let i = 0; i < ranges.length; i++) {
-                                if (ranges.start(i) > flight.currentTime + 0.05 ||
-                                    ranges.end(i) < flight.duration - 0.05) continue
-                                flight.removeEventListener("progress", warmWhenBuffered)
-                                flight.removeEventListener("canplaythrough", warmWhenBuffered)
-                                orbit?.prefetch()
-                                return
-                            }
+                            if (!flight.currentSrc.startsWith("blob:") &&
+                                !(ranges.length === 1 && ranges.start(0) <= .05 && ranges.end(0) >= flight.duration - .05)) return
+                            flight.removeEventListener("loadeddata", warmWhenBuffered)
+                            flight.removeEventListener("progress", warmWhenBuffered)
+                            flight.removeEventListener("canplaythrough", warmWhenBuffered)
+                            orbit?.prefetch()
                         }
+                        flight.addEventListener("loadeddata", warmWhenBuffered, { signal })
                         flight.addEventListener("progress", warmWhenBuffered, { signal })
                         flight.addEventListener("canplaythrough", warmWhenBuffered, { signal })
                         warmWhenBuffered()
@@ -10073,9 +10110,6 @@ export default function AdmiralHomepageStudio(
         if (detailsMode === "off") clearApartmentDetails()
     }, [detailsMode, clearApartmentDetails])
     const orbitVisible = !staticRenderer && stage === "orbit"
-    const entryPosterVisible = stage === "handoff" && (
-        !directOrbitEntry || (directOrbitEntry.framed && loadedEntryPoster === directOrbitEntry.poster)
-    )
     const groupControls = orbitVisible && orbitGroup ? (
         <OrbitGroupBar
             group={orbitGroup}
@@ -10104,9 +10138,6 @@ export default function AdmiralHomepageStudio(
     const gardenVisible = !!connectionVideoUrl && stage === "connection" && posterUrl === connectionEndPoster &&
         (staticRenderer || heroState === "arrival" || heroState === "reduced")
     const orbitStatic = staticRenderer && editorView === "orbit"
-    const preparationPercent = Math.round(
-        (100 * orbitInfo.requiredReady) / Math.max(1, orbitInfo.requiredTotal)
-    )
     const checkpoints = Math.round(Math.max(2, Math.min(16, checkpointCount)))
     const paused = orbitInfo.state === "paused"
     const orbitMoving = orbitInfo.state !== "checkpoint"
@@ -10345,7 +10376,6 @@ export default function AdmiralHomepageStudio(
                         key={directOrbitEntry.poster}
                         data-admiral-direct-orbit-poster=""
                         src={directOrbitEntry.framed ? directOrbitEntry.poster : undefined}
-                        onLoad={() => setLoadedEntryPoster(directOrbitEntry.poster)}
                         alt=""
                         loading="eager"
                         decoding="async"
@@ -10418,7 +10448,20 @@ export default function AdmiralHomepageStudio(
                     {!fullscreen.active && groupControls && (
                         <div data-orbit-window-group="" data-classic={String(!useStudio)}>{groupControls}</div>
                     )}
-                    {enteredOrbit && !staticRenderer && (orbitVisible || entryPosterVisible) && (
+                    {!staticRenderer && (stage === "handoff" || stage === "orbit") &&
+                        (orbitInfo.state === "buffering" || orbitInfo.state === "loading" ||
+                            (stage === "handoff" && orbitInfo.state !== "error")) && (
+                        <JourneyLoadingNotice kind="orbit" label={detailsLanguage === "hu" ? "A 3D nézet betöltése…" : "Loading the 3D view…"} />
+                    )}
+                    {!staticRenderer && (stage === "handoff" || stage === "orbit") && orbitInfo.state === "error" && (
+                        <div data-homepage-controls="" data-orbit-ignore="" data-orbit-recovery="">
+                            <button type="button" style={homepageButton}
+                                onClick={() => void (rootRef.current as (HTMLElement & { retryOrbit?: () => Promise<void> }) | null)?.retryOrbit?.()}>
+                                {detailsLanguage === "en" ? "Retry orbit" : "3D nézet újrapróbálása"}
+                            </button>
+                        </div>
+                    )}
+                    {enteredOrbit && orbitVisible && (
                         <OrbitEntryNotice
                             failed={orbitInfo.state === "error"}
                             mobile={mobilePresentation}
@@ -10574,6 +10617,10 @@ export default function AdmiralHomepageStudio(
                     onClick={() => actions.current?.startOrbitApproach()}
                 />
             </div>
+            {!staticRenderer && heroState === "loading" &&
+                (stage === "approach" || stage === "connection" || stage === "orbitApproach") && (
+                <JourneyLoadingNotice kind="flight" label={detailsLanguage === "hu" ? "A videó előkészítése…" : "Preparing the film…"} />
+            )}
             {studioSideControls && orbitInfo.state !== "error" && (
                 <div
                     data-homepage-controls=""
@@ -10678,14 +10725,6 @@ export default function AdmiralHomepageStudio(
                         >
                             Explore building
                         </button>
-                    )}
-                    {stage === "handoff" && orbitInfo.state !== "error" && (
-                        <span
-                            role="status"
-                            style={{ ...homepageButton, cursor: "default" }}
-                        >
-                            Preparing orbit {preparationPercent}%
-                        </span>
                     )}
                     {(stage === "building" ||
                         stage === "connection" || stage === "orbitApproach" ||
@@ -10842,56 +10881,6 @@ export default function AdmiralHomepageStudio(
                             onClick={() => actions.current?.skip()}
                         >
                             {detailsLanguage === "en" ? "Skip this film" : "Animáció átugrása"}
-                        </button>
-                    </div>
-                )}
-            {!staticRenderer &&
-                !showControls &&
-                orbitInfo.state === "buffering" && (
-                    <span
-                        role="status"
-                        style={{
-                            ...homepageButton,
-                            position: "absolute",
-                            bottom: 18,
-                            left: "50%",
-                            transform: "translateX(-50%)",
-                            pointerEvents: "none",
-                            zIndex: 3,
-                        }}
-                    >
-                        Preparing view…
-                    </span>
-                )}
-            {!staticRenderer &&
-                (stage === "handoff" || stage === "orbit") &&
-                orbitInfo.state === "error" && (
-                    <div
-                        data-homepage-controls=""
-                        data-orbit-ignore=""
-                        data-orbit-recovery=""
-                        style={{
-                            position: "absolute",
-                            top: "calc(var(--admiral-image-y, 0px) + var(--admiral-image-height, 100%) / 2)",
-                            left: "var(--admiral-controls-left, 50%)",
-                            transform: "translate(-50%, -50%)",
-                            zIndex: 10,
-                        }}
-                    >
-                        <button
-                            type="button"
-                            style={homepageButton}
-                            onClick={() => {
-                                void (
-                                    rootRef.current as
-                                        | (HTMLElement & {
-                                              retryOrbit?: () => Promise<void>
-                                          })
-                                        | null
-                                )?.retryOrbit?.()
-                            }}
-                        >
-                            {detailsLanguage === "en" ? "Retry orbit" : "3D nézet újrapróbálása"}
                         </button>
                     </div>
                 )}
@@ -13077,6 +13066,74 @@ function createSequenceFrames(
     }
 }
 
+// Some WebKit media backends support H.264 over HTTP but reject the same MP4
+// as a blob URL. Only select native delivery after observing that difference.
+let preferNativeFlightVideo = false
+
+/** Own the complete compressed clip until its video element is released. */
+function prepareFlightVideo(url: string) {
+    const request = new AbortController()
+    let objectUrl: string | undefined, idleTimer = 0
+    const abort = () => request.abort()
+    const totalTimer = window.setTimeout(abort, 120000)
+    const trackBytes = () => {
+        clearTimeout(idleTimer)
+        idleTimer = window.setTimeout(abort, 15000)
+    }
+    const ready = (async (): Promise<string | null> => {
+        try {
+            trackBytes()
+            const response = await fetch(url, { signal: request.signal, credentials: "omit" })
+            if (!response.ok) return null
+            // A partial range is not a self-contained movie.
+            if (response.status === 206) {
+                const range = /^bytes 0-(\d+)\/(\d+)$/i.exec(response.headers.get("content-range") || "")
+                if (!range || Number(range[1]) + 1 !== Number(range[2])) return null
+            }
+            let blob: Blob
+            if (response.body && typeof TransformStream !== "undefined") {
+                const body = response.body.pipeThrough(new TransformStream<Uint8Array, Uint8Array>({
+                    transform(chunk, output) { trackBytes(); output.enqueue(chunk) },
+                }))
+                blob = await new Response(body, { headers: { "content-type": "video/mp4" } }).blob()
+            } else if (response.body) {
+                const chunks: BlobPart[] = [], reader = response.body.getReader()
+                for (;;) {
+                    const { done, value } = await reader.read()
+                    if (done) break
+                    trackBytes()
+                    chunks.push(value as Uint8Array<ArrayBuffer>)
+                }
+                blob = new Blob(chunks, { type: "video/mp4" })
+            } else {
+                // Without a readable stream the total deadline still applies.
+                clearTimeout(idleTimer)
+                blob = await response.blob()
+            }
+            if (request.signal.aborted || !blob.size) return null
+            // Warm the HTTP cache. Attach the native source only when its
+            // controller takes ownership, so a held landing can't age the next clip.
+            if (preferNativeFlightVideo) return url
+            objectUrl = URL.createObjectURL(blob)
+            return objectUrl
+        } catch {
+            return null
+        } finally {
+            clearTimeout(idleTimer)
+            clearTimeout(totalTimer)
+            if (!objectUrl && !request.signal.aborted) request.abort()
+        }
+    })()
+    return {
+        ready,
+        release() {
+            request.abort()
+            if (objectUrl) URL.revokeObjectURL(objectUrl)
+            objectUrl = undefined
+        },
+    }
+}
+
 /** A forward-only flight that hands off to a decoded landing still. */
 function createHomepageHeroVideo(options: {
     video: HTMLVideoElement
@@ -13084,6 +13141,7 @@ function createHomepageHeroVideo(options: {
     endLayer: HTMLImageElement
     graphic?: HTMLImageElement
     url: string
+    preparedVideo?: ReturnType<typeof prepareFlightVideo>
     endPoster: string
     graphicUrl?: string
     startAtEnd: boolean
@@ -13097,14 +13155,25 @@ function createHomepageHeroVideo(options: {
     const motion = matchMedia("(prefers-reduced-motion: reduce)")
     const animations = new Map<HTMLElement, Animation>()
     let state: SequenceState = "opening"
-    let loaded = video.getAttribute("src") === url, started = false, entered = false, entering = false
+    let media = options.preparedVideo, attached: Promise<boolean> | undefined
+    let nativeDelivery = false, ownedSource: string | undefined
+    let finishNativeWait: ((ok: boolean) => void) | undefined
+    let mediaStatus: "pending" | "ready" | "failed" = "pending"
+    let started = false, entered = false
     let finishing = false, finished = false, leaving = false
-    let frameRequest = 0, timeout = 0, holdTimer = 0, attempt = 0
+    let frameRequest = 0, videoFrameRequest = 0, timeout = 0, holdTimer = 0, endTimer = 0, attempt = 0
     const loadLimitMs = 9000
-    let lastMediaTime = 0, nudgeTimer = 0, nudged = false
+    let lastMediaTime = 0, presentedTime = 0, nudgeTimer = 0, nudged = false
+    let endStatus: boolean | undefined
+    const tracksPresentedFrames = typeof video.requestVideoFrameCallback === "function"
     let endReady: Promise<boolean> | undefined, graphicReady: Promise<boolean> | undefined
-    const length = () => Number.isFinite(video.duration) && video.duration > 0 ? video.duration : 4.041667
-    const time = () => finished ? length() : video.currentTime || 0
+    let duration = 4.041667
+    const length = () => {
+        if (Number.isFinite(video.duration) && video.duration > 0) duration = video.duration
+        return duration
+    }
+    const displayedTime = () => tracksPresentedFrames && (!nativeDelivery || presentedTime > 0) ? presentedTime : video.currentTime || 0
+    const time = () => finished ? length() : displayedTime()
     const progress = () => sequenceClamp(time() / length())
     function publish() {
         if (signal.aborted) return
@@ -13115,9 +13184,9 @@ function createHomepageHeroVideo(options: {
             direction: 1,
             held: state === "loading" || state === "moving",
             decoded: video.readyState >= 2 ? 1 : 0,
-            downloaded: video.readyState >= 3 ? 1 : 0,
+            downloaded: mediaStatus === "ready" ? 1 : 0,
             time: time(),
-            playing: state === "moving" || state === "loading",
+            playing: state === "moving",
         })
     }
     // Read the in-flight opacity before interrupting a fade, e.g. a scroll during the overlay reveal.
@@ -13137,7 +13206,14 @@ function createHomepageHeroVideo(options: {
     function prepareEndPoster() {
         if (!endReady) {
             endLayer.src = options.endPoster
-            endReady = endLayer.decode().then(() => endLayer.naturalWidth > 0, () => false)
+            endReady = new Promise<boolean>((resolve) => {
+                endTimer = window.setTimeout(() => resolve(false), loadLimitMs)
+                void endLayer.decode().then(() => resolve(endLayer.naturalWidth > 0), () => resolve(false))
+            }).then(ready => {
+                clearTimeout(endTimer)
+                endStatus = ready
+                return ready
+            })
         }
         return endReady
     }
@@ -13157,7 +13233,8 @@ function createHomepageHeroVideo(options: {
         clearTimeout(timeout)
         clearTimeout(nudgeTimer)
         cancelAnimationFrame(frameRequest)
-        timeout = nudgeTimer = frameRequest = 0
+        if (videoFrameRequest) video.cancelVideoFrameCallback(videoFrameRequest)
+        timeout = nudgeTimer = frameRequest = videoFrameRequest = 0
     }
     function tick() {
         frameRequest = 0
@@ -13165,31 +13242,137 @@ function createHomepageHeroVideo(options: {
         publish()
         frameRequest = requestAnimationFrame(tick)
     }
-    function loadVideo() {
-        loaded = true
-        video.preload = "auto"
-        video.src = url
+    function waitForNativeBuffer() {
+        nativeDelivery = true
+        mediaStatus = "pending"
+        // A pending play() on a rejected blob can otherwise carry its intent
+        // onto a replacement src before that source has met its readiness gate.
+        video.pause()
+        return new Promise<boolean>(resolve => {
+            const events = ["progress", "canplay", "canplaythrough", "loadedmetadata", "loadeddata", "suspend"]
+            let idle = 0, furthest = -1
+            const done = (ok: boolean) => {
+                if (finishNativeWait !== done) return
+                finishNativeWait = undefined
+                clearTimeout(idle)
+                clearTimeout(total)
+                for (const event of events) video.removeEventListener(event, check)
+                mediaStatus = ok ? "ready" : "failed"
+                resolve(ok)
+            }
+            const total = window.setTimeout(() => done(false), 120000)
+            const check = () => {
+                const ranges = video.buffered
+                let end = 0
+                for (let i = 0; i < ranges.length; i++) {
+                    if (ranges.start(i) > end + 0.002) break
+                    end = ranges.end(i)
+                }
+                if (Number.isFinite(video.duration) && video.duration > 0 &&
+                    ((video.readyState >= 2 && end >= video.duration - 0.002) ||
+                     (ranges.length === 0 && video.readyState >= 3))) {
+                    // This path is reachable only after our independent full
+                    // file download. Some WebKit backends never expose ranges.
+                    done(true)
+                    return
+                }
+                if (end > furthest) {
+                    furthest = end
+                    clearTimeout(idle)
+                    idle = window.setTimeout(() => done(false), 15000)
+                }
+            }
+            finishNativeWait = done
+            for (const event of events) video.addEventListener(event, check)
+            video.preload = "auto"
+            ownedSource = url
+            if (video.getAttribute("src") !== url) video.src = url
+            check()
+        })
+    }
+    function prepareVideo() {
+        if (!attached) {
+            const asset = media ??= prepareFlightVideo(url)
+            attached = asset.ready.then(source => {
+                if (signal.aborted || media !== asset || finished || finishing) return false
+                mediaStatus = source ? "ready" : "failed"
+                if (!source) return false
+                if (source === url) return waitForNativeBuffer()
+                video.preload = "auto"
+                ownedSource = source
+                video.src = source
+                return true
+            })
+        }
+        return attached
+    }
+    function detachVideo() {
+        finishNativeWait?.(false)
+        if (ownedSource && video.getAttribute("src") === ownedSource) {
+            video.removeAttribute("src")
+            video.preload = "none"
+            video.load()
+        }
+        ownedSource = undefined
+        media?.release()
+        media = undefined
+        attached = undefined
+        mediaStatus = "pending"
+        nativeDelivery = false
     }
     function prepare() {
-        if (!loaded && !started && !finishing && !finished && !motion.matches && !signal.aborted)
-            loadVideo()
+        const connection = (navigator as Navigator & { connection?: { saveData?: boolean } }).connection
+        if (!started && !finishing && !finished && !motion.matches && !connection?.saveData && !signal.aborted)
+            void prepareVideo()
     }
     function inFlight() {
         return started && !signal.aborted && !finished && !finishing && !document.hidden &&
             (state === "loading" || state === "moving")
     }
     function recoverFlight() {
-        if (inFlight()) void finish("arrival")
+        if (inFlight()) {
+            if (state !== "loading") { state = "loading"; publish() }
+            void finish("arrival")
+        }
+    }
+    function mediaFailed(error?: unknown) {
+        if (signal.aborted || finishing || finished) return
+        if (!nativeDelivery && !entered && mediaStatus === "ready" &&
+            (video.error?.code === 4 || video.error?.code === 3 || (error as Error)?.name === "NotSupportedError")) {
+            attempt++
+            stopCallbacks()
+            attached = waitForNativeBuffer()
+            if (inFlight()) beginWhenReady()
+            return
+        }
+        if (finishNativeWait) finishNativeWait(false)
+        else recoverFlight()
+    }
+    function revealPlayback() {
+        if (entered) return
+        entered = true
+        if (nativeDelivery) preferNativeFlightVideo = true
+        void fade(video, 1, 300)
+        waitForPlayback()
     }
     function recordProgress() {
-        if (!inFlight() || entering || video.paused || video.seeking ||
-            video.currentTime <= lastMediaTime + 0.001) return false
-        lastMediaTime = video.currentTime
+        const displayed = displayedTime()
+        if (!inFlight() || mediaStatus !== "ready" || video.paused || video.seeking ||
+            displayed <= lastMediaTime + (state === "loading" ? 0.001 : 0.06)) return false
+        revealPlayback()
+        lastMediaTime = displayed
+        if (state === "loading") {
+            state = "moving"
+            publish()
+            if (!frameRequest) frameRequest = requestAnimationFrame(tick)
+        }
         waitForPlayback()
         return true
     }
     function resumeBufferedPlayback() {
-        if (!inFlight() || nudged || motion.matches || video.seeking || video.ended || video.error || recordProgress()) return
+        if (!inFlight() || video.ended || recordProgress()) return
+        if (state !== "loading") { state = "loading"; publish() }
+        if (nudged || motion.matches || video.seeking || video.error) return
         const from = video.currentTime, buffered = video.buffered
         for (let i = 0; i < buffered.length; i++) {
             if (buffered.start(i) > from || buffered.end(i) - from < 0.25) continue
@@ -13211,37 +13394,41 @@ function createHomepageHeroVideo(options: {
     function waitForPlayback() {
         clearTimeout(timeout)
         clearTimeout(nudgeTimer)
-        const midFlight = entered && lastMediaTime > 0
-        if (midFlight && !nudged)
-            nudgeTimer = window.setTimeout(resumeBufferedPlayback, 1500)
+        const midFlight = entered
+        if (midFlight)
+            nudgeTimer = window.setTimeout(resumeBufferedPlayback, 400)
         timeout = window.setTimeout(() => {
             if (!recordProgress()) recoverFlight()
-        }, midFlight ? 5000 : loadLimitMs)
+        }, midFlight ? 1200 : 3500)
     }
     function play() {
         const version = ++attempt
         lastMediaTime = video.currentTime
+        trackPresentation()
         waitForPlayback()
-        void video.play().catch(() => { if (version === attempt) recoverFlight() })
+        void video.play().catch((error: unknown) => {
+            if (version !== attempt || !inFlight()) return
+            if ((error as Error)?.name === "NotAllowedError") {
+                stopCallbacks()
+                state = "paused"
+                publish()
+            } else mediaFailed(error)
+        })
     }
     async function finish(next: "arrival" | "reduced", instant = false) {
         if (finished || finishing || signal.aborted) return
         finishing = true
-        entering = false
         attempt++
         stopCallbacks()
         const hasVideoEndpoint = entered && video.ended && video.readyState >= 2
         video.pause()
         // A failed or hung image must not turn a partial video frame into an arrival.
         // Keep retry/skip available if neither endpoint is presentable.
-        const ready = await new Promise<boolean>((resolve) => {
-            timeout = window.setTimeout(() => resolve(false), loadLimitMs)
-            void prepareEndPoster().then(resolve)
-        })
+        const ready = await prepareEndPoster()
         if (signal.aborted) return
-        clearTimeout(timeout)
         if (!ready && !hasVideoEndpoint) {
             endReady = undefined
+            endStatus = undefined
             finishing = false
             state = "error"
             publish()
@@ -13249,6 +13436,7 @@ function createHomepageHeroVideo(options: {
         }
         if (ready) await fade(endLayer, 1, instant ? 0 : 300)
         if (signal.aborted) return
+        if (ready) detachVideo()
         finished = true
         finishing = false
         state = motion.matches ? "reduced" : next
@@ -13266,51 +13454,63 @@ function createHomepageHeroVideo(options: {
             void finish("reduced", true)
             return
         }
-        if (!loaded || video.error) loadVideo()
-        prepareEndPoster()
+        if (mediaStatus === "failed" || (state === "error" && mediaStatus !== "ready") || video.error) {
+            detachVideo()
+            entered = false
+            presentedTime = lastMediaTime = 0
+            video.style.opacity = "0"
+        }
         started = true
         nudged = false
         state = "loading"
         publish()
-        // Prime playback in the input gesture for mobile browsers.
-        play()
+        beginWhenReady()
     }
-    video.addEventListener("playing", async () => {
-        if (!started || finished || finishing || signal.aborted || entering || document.hidden ||
-            (state !== "loading" && state !== "moving")) return
-        cancelAnimationFrame(frameRequest)
-        if (!entered) {
-            stopCallbacks()
-            entering = true
-            // Some engines reject the priming play promise when this deliberate pause interrupts it.
+    function beginWhenReady() {
+        const endpoint = prepareEndPoster()
+        const mediaReady = prepareVideo()
+        if (mediaStatus === "ready" && endStatus !== undefined) play()
+        else {
             const version = ++attempt
-            video.pause()
-            await fade(video, 1, 300)
-            if (signal.aborted || version !== attempt || finishing || finished) return
-            entered = true
-            entering = false
-            play()
-            return
+            void Promise.all([mediaReady, endpoint]).then(([ready]) => {
+                if (version !== attempt || !inFlight()) return
+                if (ready) play()
+                else recoverFlight()
+            })
         }
-        state = "moving"
-        publish()
-        frameRequest = requestAnimationFrame(tick)
+    }
+    function trackPresentation() {
+        if (!tracksPresentedFrames || videoFrameRequest) return
+        const frame: VideoFrameRequestCallback = (_now, metadata) => {
+            videoFrameRequest = 0
+            if (!inFlight()) return
+            presentedTime = metadata.mediaTime
+            recordProgress()
+            videoFrameRequest = video.requestVideoFrameCallback(frame)
+        }
+        videoFrameRequest = video.requestVideoFrameCallback(frame)
+    }
+    video.addEventListener("playing", () => {
+        if (!inFlight() || mediaStatus !== "ready") return
+        revealPlayback()
+        trackPresentation()
+        recordProgress()
     }, { signal })
     video.addEventListener("timeupdate", recordProgress, { signal })
     video.addEventListener("waiting", () => {
-        if (!started || finished || finishing || entering || video.paused ||
+        if (!started || finished || finishing || video.paused ||
             (state !== "moving" && state !== "loading")) return
         cancelAnimationFrame(frameRequest)
+        frameRequest = 0
         state = "loading"
         publish()
     }, { signal })
-    video.addEventListener("ended", () => { void finish("arrival") }, { signal })
-    video.addEventListener("error", recoverFlight, { signal })
+    video.addEventListener("ended", () => { if (entered && inFlight()) void finish("arrival") }, { signal })
+    video.addEventListener("error", () => mediaFailed(), { signal })
     document.addEventListener("visibilitychange", () => {
         if (!document.hidden || !started || finished || finishing ||
             (state !== "moving" && state !== "loading")) return
         attempt++
-        entering = false
         stopCallbacks()
         video.pause()
         state = "paused"
@@ -13366,6 +13566,7 @@ function createHomepageHeroVideo(options: {
         destroy() {
             controller.abort()
             stopCallbacks()
+            clearTimeout(endTimer)
             clearTimeout(holdTimer)
             for (const animation of animations.values()) animation.cancel()
             animations.clear()
@@ -13378,11 +13579,7 @@ function createHomepageHeroVideo(options: {
                 graphic.setAttribute("aria-hidden", "true")
                 graphic.removeAttribute("src")
             }
-            if (loaded) {
-                video.removeAttribute("src")
-                video.preload = "none"
-                video.load()
-            }
+            detachVideo()
         },
     }
 }
@@ -14647,6 +14844,7 @@ function createOrbitPlayer(options: OrbitOptions) {
         decodeFailed = new Map<number, string>(),
         refresh = new Set<number>()
     const retriedDownloads = new Set<number>()
+    const retriedDecodes = new Set<number>()
     const reducedQuery =
         typeof matchMedia === "function"
             ? matchMedia("(prefers-reduced-motion: reduce)")
@@ -14718,14 +14916,12 @@ function createOrbitPlayer(options: OrbitOptions) {
         time: number
         duration: number
         startSlope?: number
-        loadingArc?: { indices: number[]; readyCount: number }
     } | null = null
     let pendingMove: {
         start: number
         target: number
         indices: number[]
         durationMs?: number
-        deliverySample?: { time: number; ready: number }
     } | null = null
     let desired = new Set<number>(),
         required = new Set<number>(),
@@ -14858,22 +15054,46 @@ function createOrbitPlayer(options: OrbitOptions) {
         }
     }
 
+    // createImageBitmap cannot be cancelled. If this browser hangs on a decode,
+    // finish this and subsequent frames through img.decode, and close late bitmaps.
+    let bitmapDecodeAvailable = typeof createImageBitmap === "function"
+    function boundedBitmap(source: Blob | ImageBitmap, resize?: ImageBitmapOptions) {
+        const decodingBitmap = createImageBitmap(source, resize)
+        return new Promise<ImageBitmap>((resolve, reject) => {
+            let expired = false
+            const timer = setTimeout(() => {
+                expired = true
+                bitmapDecodeAvailable = false
+                reject(new Error("Bitmap decoding timed out"))
+            }, 3000)
+            decodingBitmap.then(bitmap => {
+                clearTimeout(timer)
+                if (expired || destroyed) {
+                    bitmap.close()
+                    reject(new Error("Bitmap decode no longer needed"))
+                } else resolve(bitmap)
+            }, reason => {
+                clearTimeout(timer)
+                reject(reason)
+            })
+        })
+    }
+
     async function decodeBlob(blob: Blob, width: number, limitToSource = false): Promise<OrbitBitmap> {
-        let expired = false
         nativeDecodes++
-        const operation = (async () => {
-            if (typeof createImageBitmap === "function") {
+        try {
+            if (bitmapDecodeAvailable) {
                 try {
                     // Parked images first reveal their native size. A future
                     // 960px movement file must never be enlarged to fake 1920px.
-                    const original = await createImageBitmap(blob, limitToSource ? undefined : {
+                    const original = await boundedBitmap(blob, limitToSource ? undefined : {
                         resizeWidth: width,
                         resizeQuality: "high",
                     })
                     let image = original
                     if (limitToSource && original.width > width) {
                         try {
-                            image = await createImageBitmap(original, {
+                            image = await boundedBitmap(original, {
                                 resizeWidth: width,
                                 resizeQuality: "high",
                             })
@@ -14891,6 +15111,7 @@ function createOrbitPlayer(options: OrbitOptions) {
                     /* A resized canvas also works in browsers without AVIF ImageBitmap decoding. */
                 }
             }
+            if (destroyed) throw new Error("Orbit disposed")
             const image = new Image(),
                 objectURL = URL.createObjectURL(blob)
             try {
@@ -14898,6 +15119,7 @@ function createOrbitPlayer(options: OrbitOptions) {
                 image.src = objectURL
                 await new Promise<void>((resolve, reject) => {
                     const timer = setTimeout(() => {
+                        done()
                         image.src = ""
                         reject(new Error("Image decoding timed out"))
                     }, 12000)
@@ -14948,33 +15170,10 @@ function createOrbitPlayer(options: OrbitOptions) {
                 image.src = ""
                 URL.revokeObjectURL(objectURL)
             }
-        })()
-        return await new Promise<OrbitBitmap>((resolve, reject) => {
-            const timer = setTimeout(() => {
-                expired = true
-                reject(new Error("Image decoding timed out"))
-            }, 15000)
-            operation
-                .then(
-                    (bitmap) => {
-                        clearTimeout(timer)
-                        if (expired || destroyed) {
-                            bitmap.close()
-                            if (!expired) reject(new Error("Orbit disposed"))
-                        } else resolve(bitmap)
-                    },
-                    (reason) => {
-                        clearTimeout(timer)
-                        if (!expired) reject(reason)
-                    }
-                )
-                .finally(() => {
-                    // ImageBitmap decoding cannot be cancelled. A watchdog may report
-                    // an error, but its native permit stays held until the work settles.
-                    nativeDecodes--
-                    if (!destroyed) resourcesChanged()
-                })
-        })
+        } finally {
+            nativeDecodes--
+            if (!destroyed) resourcesChanged()
+        }
     }
 
     function indicesBetween(start: number, end: number) {
@@ -15071,14 +15270,14 @@ function createOrbitPlayer(options: OrbitOptions) {
         resourcesChanged()
     }
 
-    function setRestBuffer(center: number) {
+    function setRestBuffer(center: number, entry = false) {
         const near = nearestFirst(windowIndices(center, 1), center)
         const wanted = nearestFirst(
             windowIndices(center, bufferCheckpoints),
             center
         )
         const visibleFrames = scrubPaintFrames(center)
-        setBuffer(wanted, visibleFrames, [...visibleFrames, ...near])
+        setBuffer(wanted, entry && !reduced() ? near : visibleFrames, [...visibleFrames, ...near])
     }
 
     function fail(index: number) {
@@ -15156,13 +15355,12 @@ function createOrbitPlayer(options: OrbitOptions) {
             if (failure !== undefined) fail(failure)
             else tryStartPending()
         }
-        const arc = settling?.loadingArc
-        if (arc && settling) {
-            while (arc.readyCount < arc.indices.length && frames.has(arc.indices[arc.readyCount]))
-                arc.readyCount++
-            if (arc.readyCount === arc.indices.length) settling.loadingArc = undefined
-        }
         const scrub = activeScrub()
+        if (scrub && state === "buffering") {
+            const failure = failedIndex([...required])
+            if (failure !== undefined) fail(failure)
+            else if ([...required].every(index => frames.has(index))) state = "moving"
+        }
         if (scrub && scrub.target !== position)
             requestPaint()
         notify()
@@ -15185,7 +15383,7 @@ function createOrbitPlayer(options: OrbitOptions) {
                 priority: required.has(index) ? "auto" : "low",
             } as RequestInit)
             if (!response.ok) {
-                retryable = response.status === 408 || response.status >= 500
+                retryable = response.status === 408 || response.status === 429 || response.status >= 500
                 throw new Error("HTTP " + response.status)
             }
             const blob = await response.blob()
@@ -15226,10 +15424,19 @@ function createOrbitPlayer(options: OrbitOptions) {
                 if (!frames.has(index)) residentFramesDirty = true
                 frames.get(index)?.close()
                 frames.set(index, bitmap)
+                retriedDecodes.delete(index)
             }
         } catch (reason) {
-            if (!destroyed && generation === decodeGeneration)
-                decodeFailed.set(index, String(reason))
+            if (!destroyed && generation === decodeGeneration) {
+                if (retriedDecodes.has(index)) decodeFailed.set(index, String(reason))
+                else {
+                    // A partially cached image may be unreadable. Refresh this
+                    // asset once without disturbing the current painted angle.
+                    retriedDecodes.add(index)
+                    blobs.delete(index)
+                    refresh.add(index)
+                }
+            }
         } finally {
             decoding.delete(index)
             if (!destroyed) resourcesChanged()
@@ -15295,10 +15502,10 @@ function createOrbitPlayer(options: OrbitOptions) {
             prepareReject = reject
         })
         preparationFrame = frame
-        // Enable the current camera while the rest of the compressed orbit loads.
-        // A move subsequently waits for just the frames on its chosen arc.
-        preparationRequired = scrubPaintFrames(frame)
-        setRestBuffer(frame)
+        // The first input can point either way. Decode both neighbouring arcs
+        // before exposing the picker, while the rest continues downloading.
+        preparationRequired = reduced() ? scrubPaintFrames(frame) : nearestFirst(windowIndices(frame, 1), frame)
+        setRestBuffer(frame, true)
         return preparePromise
     }
 
@@ -15406,7 +15613,7 @@ function createOrbitPlayer(options: OrbitOptions) {
             return
         }
         // Give in-flight motion priority over the optional high-resolution decode.
-        if (settling?.loadingArc || decoding.size >= 2 || nativeDecodes >= 2) return
+        if (decoding.size >= 2 || nativeDecodes >= 2) return
         inspectionDecoding = true
         try {
             const bitmap = await decodeBlob(blob, inspectionWidth, true)
@@ -15631,18 +15838,9 @@ function createOrbitPlayer(options: OrbitOptions) {
         // frame available until the requested pose and its settle arc are ready.
         const retained = from === position ? wanted
             : [...new Set([...wanted, ...indicesBetween(position, position)])]
-        // Preserve the release timing while its frames are being prepared.
-        // Only ordinary one-checkpoint turns use progressive playback. A short drag
-        // release, deep link or numbered jump keeps its existing complete-route gate.
-        const sampleDelivery = adjacent && durationSeconds === undefined && !reduced() &&
-            Number.isInteger(from) && checkpoints.includes(orbitModulo(from, total)) &&
-            Math.abs(distance) === indices.length - 1
         pendingMove = {
             start: from, target, indices,
             durationMs: durationSeconds === undefined ? undefined : durationSeconds * 1000,
-            deliverySample: sampleDelivery
-                ? { time: performance.now(), ready: indices.filter(index => frames.has(index)).length }
-                : undefined,
         }
         state = "buffering"
         setBuffer(retained, indices, [
@@ -15659,18 +15857,8 @@ function createOrbitPlayer(options: OrbitOptions) {
         )
             return
         const pending = pendingMove
-        if (failedIndex(pending.indices) !== undefined) return
-        const missing = pending.indices.findIndex(index => !frames.has(index))
-        if (missing >= 0) {
-            const sample = pending.deliverySample
-            // Hold at least one third of the actual arc in travel order. Require
-            // three newly delivered frames and headroom over the fastest eased
-            // portion (1.5 times the average angular speed).
-            if (!sample || reduced() || missing < Math.max(4, Math.ceil(pending.indices.length / 3))) return
-            const delivered = pending.indices.filter(index => frames.has(index)).length - sample.ready
-            const frameInterval = snapDuration * 1000 / (pending.indices.length - 1)
-            if (delivered < 3 || (performance.now() - sample.time) / delivered > frameInterval * .6) return
-        }
+        // Start the clock only after every frame on this route is drawable.
+        if (!framesReady(pending.indices)) return
         pendingMove = null
         pausedAt = 0
         if (reduced()) {
@@ -15680,7 +15868,6 @@ function createOrbitPlayer(options: OrbitOptions) {
         settling = {
             start: pending.start,
             target: pending.target,
-            loadingArc: missing < 0 ? undefined : { indices: pending.indices, readyCount: missing },
             time: performance.now(),
             duration: Math.abs(pending.target - pending.start) < 0.0001
                 ? 1
@@ -15710,12 +15897,12 @@ function createOrbitPlayer(options: OrbitOptions) {
             duration,
             startSlope: distance > 0 ? orbitClamp(speed * duration / (1000 * distance), 0, 3) : 0,
         }
-        if (state === "moving") state = "settling"
+        if (state === "moving" || state === "buffering") state = "settling"
     }
 
     function tickWheel(now: number) {
         const intent = wheelIntent, arc = settling
-        if (!intent || !arc || arc.loadingArc || (!intent.continuous && !intent.followThrough)) return false
+        if (!intent || !arc || (!intent.continuous && !intent.followThrough)) return false
         if ((!intent.followThrough && now - intent.lastDriveAt > ORBIT_WHEEL_RELEASE_MS) ||
             !options.continuousWheelBounds?.()) {
             endWheelFlow(now)
@@ -15753,12 +15940,17 @@ function createOrbitPlayer(options: OrbitOptions) {
                 wheelIntent = null
                 settling = null
                 startSettle(target)
+            } else if (state !== "buffering") {
+                state = "buffering"
+                const wanted = windowIndices(target, bufferCheckpoints)
+                setBuffer(wanted, indices, [...indices, ...nearestFirst(wanted, target)])
             }
             return true
         }
         // A renewed swipe earns one adjoining arc. A continuous wheel or hold
         // can keep passing checkpoints only while deliberate input is current.
         intent.followThrough = false
+        state = "moving"
         position = arc.target + direction * Math.min(travel - distance, Math.abs(target - arc.target))
         settling = { start: arc.target, target, time: now, duration: snapDuration * 1000 }
         queueInspection(target)
@@ -15776,6 +15968,7 @@ function createOrbitPlayer(options: OrbitOptions) {
         const center = nearestCheckpoint(target)
         const pair = scrubPaintFrames(target)
         const ready = framesReady(pair)
+        state = ready ? "moving" : "buffering"
         position = ready ? target : readyScrubPosition(target)
         // Keep the requested pair as a decode priority, but discard any distance
         // the available pixels could not display. A stopped pointer stays stopped.
@@ -15803,18 +15996,6 @@ function createOrbitPlayer(options: OrbitOptions) {
             const smooth = t * t * (3 - 2 * t)
                 + (motion.startSlope ?? 0) * t * (1 - t) * (1 - t)
             const proposed = motion.start + (motion.target - motion.start) * smooth
-            // If delivery unexpectedly slows, keep the painted pose and finish
-            // buffering this arc once. Never advance logical position past a hole.
-            if (motion.loadingArc && Math.abs(proposed - motion.start) > motion.loadingArc.readyCount - 1) {
-                pendingMove = {
-                    start: position, target: motion.target, indices: motion.loadingArc.indices,
-                    durationMs: Math.max(100, motion.duration * Math.abs(motion.target - position) / Math.abs(motion.target - motion.start)),
-                }
-                settling = null
-                state = "buffering"
-                resourcesChanged()
-                return
-            }
             position = proposed
             if (t >= 1) {
                 arrive(motion.target)
@@ -16515,9 +16696,9 @@ function createOrbitPlayer(options: OrbitOptions) {
                 : undefined
         const initial =
             target === undefined
-                ? scrubPaintFrames(position)
+                ? (reduced() ? scrubPaintFrames(position) : windowIndices(position, 1))
                 : indicesBetween(position, target)
-        if (target === undefined) setRestBuffer(position)
+        if (target === undefined) setRestBuffer(position, true)
         else {
             direction = Math.sign(target - position)
             pendingMove = { start: position, target, indices: initial }
@@ -16628,6 +16809,7 @@ function createOrbitPlayer(options: OrbitOptions) {
         }
         fetchFailed.clear()
         retriedDownloads.clear()
+        retriedDecodes.clear()
         decodeFailed.clear()
         error = undefined
         errorWasPaused = false
