@@ -728,3 +728,24 @@ input[aria-invalid="true"] { border-color: var(--negotiating); }
 @media (max-width: 430px) {
   .compare-swipe-hint { display: block; margin: 5px 0 0; color: var(--muted); font-size: 11px; line-height: 1.4; }
 }
+
+/* The apartment number and price lead the mobile scan. Measurements and labels
+   stay secondary while retaining enough size to read on the smallest phones. */
+@container apartment-list (max-width: 600px) {
+  .mobile-filter-button > span:not(.filter-toggle-icon) { font-size: 14px; font-weight: 600; }
+  .filters .range-field output { font-size: 14px; }
+  .checkbox-label, .favorites-hint, .reset-button, .filter-chip, .data-note { font-size: 12px; }
+  .result-count strong { font-size: 20px; }
+  .unit-mobile-meta, .unit-room-count, .unit-identification .unit-status { font-size: 12px; }
+  .cell-interior .area-number, .outdoor-value { font-size: clamp(16px, 4.6cqw, 18px); }
+  .price-amount { font-weight: 600; font-variant-numeric: tabular-nums; }
+}
+
+@media (max-width: 760px), (pointer: coarse) and (max-height: 450px) {
+  .compare-dialog .dialog-head h2 { font-weight: 500; }
+  .compare-dialog .eyebrow, .media-heading .eyebrow { font-size: 10px; letter-spacing: .09em; }
+  .compare-dialog .compare-swipe-hint, .compare-table tbody th { font-size: 12px; }
+  .compare-table thead th:first-child { font-size: 11px; }
+  .media-heading h2 { font-size: 22px; font-weight: 500; }
+  .media-description, .media-tabs button, .media-footer > p { font-size: 12px; }
+}

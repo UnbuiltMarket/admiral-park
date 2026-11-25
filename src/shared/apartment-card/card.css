@@ -712,3 +712,27 @@ input[aria-invalid="true"] { border-color: var(--negotiating); }
   #detail-dialog .detail-panel-nav, #detail-dialog .detail-shell[data-panel="rooms"] .detail-panel-nav { top: 46px; }
   #detail-dialog .detail-drawing-toolbar .detail-unit-meta { margin-top: 34px; }
 }
+
+/* Give the apartment number and price clear priority over labels while
+   keeping long room names and amounts comfortable to read on a phone. */
+@media (max-width: 600px), (pointer: coarse) and (max-height: 450px) {
+  #detail-dialog { --detail-meta-label-size: 10px; --detail-meta-value-size: 12px; }
+  #detail-dialog .detail-metrics dt { font-size: 11px; line-height: 1.25; }
+  #detail-dialog .detail-id-metric .detail-apartment-number { font-size: 1.15em; font-weight: 650; }
+  #detail-dialog .detail-price .price-value { font-variant-numeric: tabular-nums; }
+  #detail-dialog .detail-panel-nav button { font-size: 11px; font-weight: 550; }
+  #detail-dialog .detail-footer .footer-pill { font-size: 11px; }
+  #detail-dialog .detail-orbit-link { font-size: 12px; }
+  #detail-dialog .detail-illustration-note { font-size: 10px; line-height: 1.35; }
+  #detail-dialog .detail-rooms > h3 { font-size: 15px; }
+  #detail-dialog .detail-rooms .room-name { font-size: 12px; line-height: 1.3; }
+  #detail-dialog .detail-rooms .room-area { font-size: 11px; }
+  #detail-dialog .detail-rooms .room-number { font-size: 10px; }
+  .media-heading .eyebrow { font-size: 10px; letter-spacing: .09em; }
+  .media-heading h2 { font-size: 22px; font-weight: 500; }
+  .media-description, .media-tabs button, .media-footer > p { font-size: 12px; }
+}
+
+@media (max-width: 600px) and (orientation: portrait) {
+  #detail-dialog .detail-rooms .room-page { --room-column-width: 165px; }
+}

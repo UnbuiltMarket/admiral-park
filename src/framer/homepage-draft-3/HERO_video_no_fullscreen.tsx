@@ -755,6 +755,10 @@ const homepageMobileOrbitStyles = `
 [data-admiral-homepage] [data-orbit-studio][data-mobile="true"] > :is([data-orbit-filters], [data-orbit-group]) { max-width: 100%; }
 [data-admiral-homepage] [data-orbit-studio][data-mobile="true"][data-orbit-glass-tone="paper"] > [data-orbit-filters][data-presentation]
     :is([data-orbit-filter-status], [data-orbit-range-toggle], [data-orbit-filter-reset]) { min-height: 44px; }
+[data-admiral-homepage] [data-orbit-studio][data-mobile="true"][data-orbit-glass-tone="paper"] > [data-orbit-filters][data-presentation]
+    :is([data-orbit-filter-status], [data-orbit-range-toggle]) { font-size: 11px; font-weight: 600; }
+[data-admiral-homepage] [data-orbit-studio][data-mobile="true"][data-orbit-glass-tone="paper"] [data-orbit-housing]
+    :is(.orbit-studio-status, .orbit-studio-mobile-metrics dt) { font-size: 11px; line-height: 1.35; }
 [data-admiral-homepage] [data-orbit-studio][data-mobile="true"][data-orbit-glass-tone="paper"] [data-orbit-housing] .orbit-studio-mobile-summary {
     display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr) auto; min-height: 0;
 }
@@ -764,7 +768,17 @@ const homepageMobileOrbitStyles = `
 [data-admiral-homepage] [data-orbit-studio][data-mobile="true"][data-orbit-glass-tone="paper"] [data-orbit-housing] .orbit-studio-mobile-plan-button {
     width: 100%; height: 100%; max-height: 100%;
 }
-[data-admiral-homepage] [data-orbit-studio][data-mobile="true"][data-orbit-glass-tone="paper"] [data-orbit-housing] .orbit-studio-primary { min-height: 44px; }
+[data-admiral-homepage] [data-orbit-studio][data-mobile="true"][data-orbit-glass-tone="paper"] [data-orbit-housing] .orbit-studio-primary {
+    min-height: 44px; font-size: 12px; font-weight: 600;
+}
+[data-admiral-homepage] [data-orbit-fullscreen-details][data-compact="true"][data-orbit-glass-tone] .orbit-fullscreen-stats dt {
+    font-size: 10px; line-height: 1.3;
+}
+[data-admiral-homepage] [data-orbit-fullscreen-details][data-compact="true"][data-orbit-glass-tone] [data-orbit-filters][data-presentation]
+    :is([data-orbit-filter-status], [data-orbit-range-toggle]),
+[data-admiral-homepage] [data-orbit-fullscreen-details][data-compact="true"][data-orbit-glass-tone] .orbit-fullscreen-detail {
+    font-size: 11px; font-weight: 600;
+}
 @media (orientation: portrait) {
     [data-admiral-homepage] [data-orbit-studio][data-mobile="true"][data-orbit-glass-tone="paper"] [data-orbit-housing] {
         align-self: start; height: 100%; max-height: calc((100cqw + 2 * var(--studio-phone-gutter)) * 1010 / 1920 + 252px);
@@ -1000,17 +1014,30 @@ const homepageOrbitEntryStyles = `
 @media (min-width: 1440px) {
     [data-admiral-homepage] [data-seq3-garden] { gap: 23px; }
 }
-@media (max-width: 640px) {
+@media (max-width: 640px), (max-width: 767px) and (pointer: coarse) {
     [data-admiral-homepage] [data-seq3-garden] {
-        gap: 10px;
+        gap: 8px;
     }
-    [data-admiral-homepage] [data-seq3-garden] h2 { font-size: clamp(22px, 7vw, 40px); line-height: 1.25; }
-    [data-admiral-homepage] [data-seq3-garden] p { font-size: clamp(14px, 4vw, 18px); line-height: 1.4; }
+    [data-admiral-homepage] [data-seq3-garden] h2 {
+        font-size: clamp(22px, 6vw, 27px); line-height: 1.2; letter-spacing: .01em;
+        text-wrap: balance; text-underline-offset: 4px; text-decoration-thickness: 1px;
+    }
+    [data-admiral-homepage] [data-seq3-garden] p {
+        width: min(100%, 34ch); font-size: 14px; font-weight: 400; line-height: 1.4; letter-spacing: .01em;
+    }
 }
 @media (orientation: landscape) and (max-height: 700px) {
     [data-admiral-homepage] [data-seq3-garden] { gap: 8px; }
     [data-admiral-homepage] [data-seq3-garden] h2 { font-size: clamp(22px, 6vh, 40px); line-height: 1.25; }
     [data-admiral-homepage] [data-seq3-garden] p { font-size: clamp(14px, 2.8vh, 18px); line-height: 1.35; }
+}
+@media (orientation: landscape) and (max-height: 600px) and (pointer: coarse) {
+    [data-admiral-homepage] [data-seq3-garden] { gap: 6px; }
+    [data-admiral-homepage] [data-seq3-garden] h2 {
+        font-size: clamp(19px, 5.4vh, 24px); line-height: 1.2; letter-spacing: .01em;
+        text-underline-offset: 4px; text-decoration-thickness: 1px;
+    }
+    [data-admiral-homepage] [data-seq3-garden] p { font-size: 13px; font-weight: 400; letter-spacing: .01em; }
 }
 @media (prefers-reduced-motion: reduce) {
     [data-admiral-homepage] [data-seq3-garden][data-visible] {

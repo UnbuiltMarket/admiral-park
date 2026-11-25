@@ -92,7 +92,7 @@ for (const [index, id] of linkRows.entries()) {
         width: "1fr",
         height: "44px",
         "$control__variant": "L3F5hWlyJ",
-        "$control__XSbTnrhXC": 19,
+        "$control__XSbTnrhXC": 15,
         "$control__fxVoGXxWM": blue,
         "$control__WJh8ZMmaD": [{ action: "SET_VARIANT", controls: { variant: closed } }],
         ...(index === 0 ? { "$control__lb6Os26Xe": "Kezdőlap" } : {}),
@@ -148,3 +148,179 @@ addOnce("CustomCodeNode", tree.root.id, "Admiral Park phone menu viewport", {
 // The existing favorites component owns the inquiry field in the React form.
 const replacedSnippet = tree.getNodesOfTypes("CustomCodeNode").find(node => node.name === "Admiral Park inquiry name fields")
 if (replacedSnippet) tree.remove(replacedSnippet.id)
+
+// Both phone drawers reuse the same labels, with a separate treatment for the CTA.
+const mobileMenuLabels = ["Kezdőlap", "3D kereső", "Lakáslista", "Bemutatkozás", "Aktuális"]
+for (const menuVariant of [open, "otenexeuQ"]) {
+    for (const [index, instance] of linkInstances.entries()) {
+        tree.patch(`${menuVariant}${instance}`, {
+            "$control__lb6Os26Xe": mobileMenuLabels[index],
+            "$control__XSbTnrhXC": 15,
+            "$control__fxVoGXxWM": blue,
+        })
+    }
+}
+
+// The homepage's Phone replica also serves widths below 1440px. Scope its
+// typographic and fitting changes to phone viewports and touch landscape.
+for (const [id, name] of [
+    ["U2WFFcOoa", "SEQ02 copy"],
+    ["xowzGt9gR", "SEQ02 title"],
+    ["AWRuc5Wvg", "SEQ02 introduction"],
+]) {
+    for (const target of [id, `RnA329eK1${id}`]) tree.patch(target, { name })
+}
+
+// The notice had only a 1200px canvas. Give its existing document a phone
+// layout so it can render at the intended reading size on a narrow screen.
+const privacy = tree.get("kepPPkXui")
+const privacyPhoneId = privacy.$breakpoints.find(breakpoint => breakpoint.name === "Phone")?.id
+    ?? tree.createVariant("AF0ivQ9ev", "admiral-privacy-phone", {
+        gesture: null,
+        name: "Phone",
+        left: "1240px",
+        width: "390px",
+        height: "780px",
+    }).id
+tree.patch(`${privacyPhoneId}BQaPZibOe`, { padding: "84px 22px 52px 22px" })
+tree.patch(`${privacyPhoneId}a9wxflcMb`, { name: "Adatkezelési tájékoztató szövege" })
+
+const mobileTypography = `<style>
+@media (max-width: 809px), (pointer: coarse) and (max-width: 1000px) and (max-height: 550px) {
+  :is([data-framer-name="AP - MOBILE HEADER - open"], [data-framer-name="MOBILE_LG_OPEN"]) [data-framer-name="Link"] p {
+    --framer-font-size: 15px !important;
+    --framer-text-color: #123c59 !important;
+    font-size: 15px !important;
+    color: #123c59 !important;
+    line-height: 1.3 !important;
+    text-transform: none !important;
+  }
+
+  [data-framer-name="SEQ01"] [data-framer-name="Handover date glass"] {
+    width: fit-content !important;
+    max-width: calc(100vw - 32px) !important;
+    padding: 6px 12px !important;
+  }
+  [data-framer-name="Handover date glass"] [data-framer-component-type="RichTextContainer"] {
+    flex: 0 1 auto !important;
+    width: auto !important;
+  }
+  [data-framer-name="Handover date glass"] :is(h3, h3 span) {
+    --framer-font-size: 12px !important;
+    font-size: 12px !important;
+    line-height: 1.35 !important;
+  }
+
+  [data-framer-name="SEQ02"] {
+    box-sizing: border-box !important;
+    inset-inline: 0 !important;
+    width: 100% !important;
+    padding: 50px clamp(18px, 5.2vw, 26px) clamp(78px, 18svh, 155px) !important;
+  }
+  [data-framer-name="SEQ02 copy"] {
+    width: min(100%, 435px) !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    gap: 12px !important;
+  }
+  [data-framer-name="SEQ02"] :is([data-framer-name="SEQ02 title"], [data-framer-name="SEQ02 introduction"]) {
+    width: 100% !important;
+    min-width: 0 !important;
+    height: auto !important;
+  }
+  [data-framer-name="SEQ02 title"] :is(h3, h3 span) {
+    --framer-font-size: clamp(25px, 7vw, 32px) !important;
+    font-size: var(--framer-font-size) !important;
+    line-height: 1.13 !important;
+    letter-spacing: -.025em !important;
+    overflow-wrap: normal !important;
+  }
+  [data-framer-name="SEQ02 title"] h3 > span { display: block; }
+  [data-framer-name="SEQ02 title"] h3 > br { display: none; }
+  [data-framer-name="SEQ02 title"] h3 > br + span {
+    --framer-font-size: clamp(12px, 3.5vw, 15px) !important;
+    --framer-font-weight: 600 !important;
+    margin-top: 8px;
+    font-weight: 600 !important;
+    line-height: 1.3 !important;
+    letter-spacing: .04em !important;
+  }
+  [data-framer-name="SEQ02 introduction"] :is(h3, h3 span) {
+    --framer-font-size: 14px !important;
+    --framer-font-weight: 400 !important;
+    font-size: 14px !important;
+    font-weight: 400 !important;
+    line-height: 1.5 !important;
+    overflow-wrap: normal !important;
+  }
+  :is([data-framer-name="SEQ02 title"], [data-framer-name="SEQ02 introduction"]) h3,
+  [data-admiral-homepage] [data-seq3-garden] :is(h2, p) {
+    text-shadow: 0 1px 3px rgba(8, 28, 45, .8), 0 2px 12px rgba(8, 28, 45, .38) !important;
+  }
+  [data-framer-name="SEQ02 scroll cue"] :is(h3, h3 span) {
+    --framer-font-size: 12px !important;
+    font-size: 12px !important;
+    line-height: 1.35 !important;
+  }
+
+  :is([data-framer-name="location-heading"] [data-framer-name="location-title"], [data-framer-name="garden-title"], [data-framer-name="Műszaki adatok · H2"]) :is(h2, h2 span) {
+    --framer-font-size: clamp(34px, 9.1vw, 43px) !important;
+    font-size: var(--framer-font-size) !important;
+    line-height: 1.08 !important;
+  }
+  [data-framer-name="opening-copy"] [data-framer-name="opening-title"] :is(h1, h1 span) {
+    --framer-font-size: clamp(44px, 12.2vw, 50px) !important;
+    font-size: var(--framer-font-size) !important;
+  }
+  [data-framer-name="Galéria · címsor"] [data-framer-name="Galéria"] :is(h2, h2 span) {
+    --framer-font-size: clamp(35px, 10vw, 42px) !important;
+    font-size: var(--framer-font-size) !important;
+    line-height: 1.08 !important;
+  }
+  [data-framer-name="Balatonfüred a magasból · kép"] [data-framer-name="Cím"] :is(h3, h3 span) {
+    --framer-font-size: clamp(24px, 6.8vw, 28px) !important;
+    font-size: var(--framer-font-size) !important;
+  }
+  :is([data-framer-name="relax-title"], [data-framer-name="play-title"], [data-framer-name="fitness-title"], [data-framer-name="climate-title"], [data-framer-name="shading-title"], [data-framer-name="choice-title"]) :is(h3, h3 span) {
+    --framer-font-size: 21px !important;
+    font-size: 21px !important;
+    line-height: 1.2 !important;
+  }
+  [data-framer-name="details-title"] :is(h3, h3 span) { --framer-font-size: 25px !important; font-size: 25px !important; }
+  [data-framer-name="closing-title"] :is(h2, h2 span) {
+    --framer-font-size: clamp(30px, 8.8vw, 36px) !important;
+    font-size: var(--framer-font-size) !important;
+    line-height: 1.12 !important;
+  }
+  [data-framer-name="agent-name"] :is(h3, h3 span) { --framer-font-size: 23px !important; font-size: 23px !important; }
+  [data-framer-name="form-title"] :is(h2, h2 span) { --framer-font-size: 26px !important; font-size: 26px !important; }
+  [data-framer-name="location-copy"] [data-framer-name="location-title"] :is(h2, h2 span) {
+    --framer-font-size: 25px !important;
+    font-size: 25px !important;
+  }
+  [data-framer-name="Friss hírek és újdonságok"] :is(h1, h1 span) {
+    --framer-font-size: clamp(34px, 9.3vw, 42px) !important;
+    font-size: var(--framer-font-size) !important;
+  }
+  [data-framer-name="Adatkezelési tájékoztató szövege"] :is(p, li, a) { overflow-wrap: anywhere; }
+  [data-framer-name="Adatkezelési tájékoztató szövege"] :is(p:first-child, p:first-child span) {
+    --framer-font-size: clamp(27px, 7.5vw, 34px) !important;
+    font-size: var(--framer-font-size) !important;
+    line-height: 1.12 !important;
+  }
+}
+@media (pointer: coarse) and (max-width: 1000px) and (max-height: 550px) and (orientation: landscape) {
+  [data-framer-name="SEQ02"] { padding-block: 45px 52px !important; }
+  [data-framer-name="SEQ02 copy"] { width: min(78%, 435px) !important; gap: 8px !important; }
+  [data-framer-name="SEQ02 title"] :is(h3, h3 span) { --framer-font-size: clamp(22px, 6.7svh, 28px) !important; }
+  [data-framer-name="SEQ02 introduction"] :is(h3, h3 span) { font-size: 13px !important; line-height: 1.35 !important; }
+}
+</style>`
+const typographyPageIds = ["Phxhru9uu", "kbkbxs570", "ZmD0CLV3Z", "A8W8FsOjk", "XLriEYHai", "kepPPkXui"]
+const typographySnippet = addOnce("CustomCodeNode", tree.root.id, "Admiral Park mobile typography", {
+    pageIds: typographyPageIds,
+    placement: "headEnd",
+    loadMode: "once",
+    code: mobileTypography,
+})
+tree.patch(typographySnippet.id, { code: mobileTypography, pageIds: typographyPageIds })
