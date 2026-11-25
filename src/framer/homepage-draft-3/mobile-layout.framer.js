@@ -145,58 +145,6 @@ addOnce("CustomCodeNode", tree.root.id, "Admiral Park phone menu viewport", {
 </style>`,
 })
 
-// Framer’s native form element does not accept ariaLabel as a canvas property.
-const inquiryCode = `<script>
-(() => {
-  const names = { 'Vezetéknév': 'family-name', 'Keresztnév': 'given-name' };
-  const apartment = new URLSearchParams(location.search).get('apartment')?.trim().toUpperCase() || '';
-  const selected = /^[A-Z][0-9]{3}[A-Z]?$/.test(apartment) ? apartment : '';
-  function setup() {
-    let namesReady = true;
-    for (const [name, autofill] of Object.entries(names)) {
-      const fields = document.querySelectorAll('form input[name="' + name + '"]');
-      if (!fields.length) namesReady = false;
-      fields.forEach((input) => {
-        input.setAttribute('aria-label', name);
-        input.setAttribute('autocomplete', autofill);
-      });
-    }
-    const groups = document.querySelectorAll('form [data-admiral-form-favourites]');
-    groups.forEach((favorites) => {
-      const previous = favorites.parentElement.querySelector('[data-admiral-inquiry-apartment]');
-      if (!selected) { previous?.remove(); return; }
-      if (previous?.querySelector('input')?.value === selected) return;
-      const label = document.createElement('p');
-      label.dataset.admiralInquiryApartment = '';
-      label.style.cssText = 'margin:0;color:#123c59;font:600 14px/1.45 Montserrat,Arial,sans-serif';
-      label.textContent = 'Kiválasztott lakás: ' + selected;
-      const input = document.createElement('input');
-      input.type = 'hidden';
-      input.name = 'Kiválasztott lakás';
-      input.value = selected;
-      label.append(input);
-      if (previous) previous.replaceWith(label);
-      else favorites.after(label);
-    });
-    if (selected) document.querySelectorAll('a[href]').forEach((link) => {
-      const url = new URL(link.href, location.href);
-      if (url.origin !== location.origin || url.pathname !== location.pathname || url.hash !== '#visszahivas') return;
-      if (url.searchParams.get('apartment') === selected) return;
-      url.searchParams.set('apartment', selected);
-      link.href = url.href;
-    });
-    return namesReady && (!selected || groups.length > 0);
-  }
-  if (setup()) return;
-  const observer = new MutationObserver(() => { if (setup()) observer.disconnect(); });
-  observer.observe(document.body, { childList: true, subtree: true });
-  window.setTimeout(() => observer.disconnect(), 8000);
-})();
-</script>`
-const inquirySnippet = addOnce("CustomCodeNode", tree.root.id, "Admiral Park inquiry name fields", {
-    pageIds: ["XLriEYHai"],
-    placement: "bodyEnd",
-    loadMode: "always",
-    code: inquiryCode,
-})
-tree.patch(inquirySnippet.id, { code: inquiryCode })
+// The existing favorites component owns the inquiry field in the React form.
+const replacedSnippet = tree.getNodesOfTypes("CustomCodeNode").find(node => node.name === "Admiral Park inquiry name fields")
+if (replacedSnippet) tree.remove(replacedSnippet.id)
