@@ -122,10 +122,16 @@ test('refreshing detail data joins colours by apartment ID and preserves every o
 test('refreshing orbit data preserves the ID mapping even when the canonical apartment order changes', async () => {
     const fixture = await mkdtemp(join(tmpdir(), 'admiral-mask-data-'));
     try {
-        await Promise.all([mkdir(join(fixture, 'scripts')), mkdir(join(fixture, 'data'))]);
+        await Promise.all([
+            mkdir(join(fixture, 'scripts')),
+            mkdir(join(fixture, 'data')),
+            mkdir(join(fixture, 'assets/apartment-list'), { recursive: true }),
+        ]);
         await Promise.all([
             cp(new URL('scripts/sync-orbit-apartments.mjs', root), join(fixture, 'scripts/sync-orbit-apartments.mjs')),
             cp(new URL('scripts/apartment-mask-colors.mjs', root), join(fixture, 'scripts/apartment-mask-colors.mjs')),
+            cp(new URL('scripts/published-floorplan.mjs', root), join(fixture, 'scripts/published-floorplan.mjs')),
+            cp(new URL('assets/apartment-list/media-manifest.json', root), join(fixture, 'assets/apartment-list/media-manifest.json')),
             cp(new URL('data/apartment-mask-colors.json', root), join(fixture, 'data/apartment-mask-colors.json')),
         ]);
         const source = structuredClone(orbit);

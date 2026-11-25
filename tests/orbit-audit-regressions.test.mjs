@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import vm from 'node:vm';
 import { ts, inlineCore } from '../scripts/tooling.mjs';
+import { FROSTED_BUTTON_CSS } from '../src/shared/ui/frosted-button.js';
 
 const root = new URL('../', import.meta.url);
 const source = await readFile(new URL('src/framer/OrbitApartmentData.source.tsx', root), 'utf8');
@@ -47,8 +48,16 @@ test('orbitdata corridor retains only the control bounds and direct pointer appr
 
 test('all homepage source fragments are embedded verbatim, including replacement-token literals',async()=>{
     const generated=await readFile(new URL('src/framer/AdmiralHomepageTrial.tsx',root),'utf8');
+    const filterPills = await readFile(new URL('src/shared/ui/orbit-filter-pills.css', root), 'utf8');
+    const inquirySelector = '[data-orbit-studio][data-mobile] .orbit-studio-primary.admiral-frosted-button[data-orbit-inquiry]';
+    const inquiryStyles = FROSTED_BUTTON_CSS.replaceAll('.admiral-frosted-button', inquirySelector);
     for(const file of ['OrbitStoryOverlays.source.tsx','OrbitApartmentData.source.tsx','OrbitApartmentFilters.source.tsx','OrbitApartmentStudio.source.tsx','OrbitFullscreen.source.tsx','ApartmentDetails.source.tsx']){
-        const fragment=await readFile(new URL('src/framer/'+file,root),'utf8');assert.ok(generated.includes(fragment),file+' is inserted without interpreting $ replacement tokens');
+        const source = await readFile(new URL('src/framer/'+file, root), 'utf8');
+        const fragment = source
+            .replace('/* @ORBIT_FILTER_PILLS_INSERT */', () => filterPills.trimEnd())
+            .replace('const orbitFrostedButtonStyles = "" // @FROSTED_BUTTON_STYLES_INSERT',
+                () => 'const orbitFrostedButtonStyles = ' + JSON.stringify(inquiryStyles));
+        assert.ok(generated.includes(fragment), file+' is inserted without interpreting $ replacement tokens');
     }
     for(const file of ['hero-sequence.ts','orbit-player.ts','orbit-apartment-picker.ts','orbit-apartment-filters.ts']){
         const fragment=inlineCore(await readFile(new URL('src/core/'+file,root),'utf8'));assert.ok(generated.includes(fragment),file+' is inserted verbatim after removing exports');

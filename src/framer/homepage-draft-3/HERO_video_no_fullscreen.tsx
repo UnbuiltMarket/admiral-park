@@ -767,6 +767,18 @@ const homepageOrbitEntryStyles = `
    in the same stage change so the glass underneath never shows through. */
 [data-admiral-homepage] [data-orbit-render-canvas] { visibility: hidden; }
 [data-admiral-homepage][data-homepage-stage="orbit"] [data-orbit-render-canvas][data-orbit-painted] { visibility: visible; }
+[data-orbit-image-fallback] { visibility: hidden; }
+[data-homepage-stage="orbit"] [data-orbit-image-fallback][src] { visibility: visible; }
+[data-orbit-image-only] [data-orbit-render-canvas] { opacity: 0; }
+[data-orbit-image-only][data-homepage-stage="orbit"] [data-orbit-render-canvas] { visibility: visible; }
+[data-orbit-image-pending] [data-orbit-mask-overlay] { visibility: hidden; }
+[data-orbit-dom-scene], [data-orbit-dom-overlays] { visibility: hidden; pointer-events: none; overflow: hidden; }
+[data-homepage-stage="orbit"][data-orbit-beauty-surface="image"] [data-orbit-dom-scene],
+[data-homepage-stage="orbit"][data-orbit-highlight-surface="image"]:not([data-orbit-image-pending]) [data-orbit-dom-overlays] { visibility: visible; }
+[data-orbit-beauty-surface="image"] [data-orbit-render-canvas],
+[data-orbit-highlight-surface="image"] [data-orbit-mask-overlay] { opacity: 0 !important; }
+[data-orbit-dom-scene] > img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: inherit; }
+[data-orbit-dom-highlight] { position: absolute; pointer-events: none; }
 
 [data-journey-loading], [data-orbit-recovery] {
     position: absolute; z-index: 10;
@@ -5248,6 +5260,16 @@ const orbitBlueStudioStyles = `
     [data-orbit-studio][data-layout="workspace"] [data-orbit-detail-bar] .orbit-studio-areas dd { font-size: clamp(14px,3cqw,18px); }
     [data-orbit-studio][data-layout="workspace"] [data-orbit-detail-bar] .orbit-studio-areas > div { padding-inline: clamp(4px,1cqw,8px); }
 }
+@container orbit-apartment-strip (max-width: 520px) {
+    [data-orbit-studio][data-layout="workspace"] [data-orbit-detail-bar] .orbit-studio-areas {
+        display: grid; grid-template-columns: repeat(2, minmax(max-content, 1fr)); row-gap: 5px;
+    }
+    [data-orbit-studio][data-layout="workspace"] [data-orbit-detail-bar] .orbit-studio-areas > div:nth-child(odd) {
+        padding-inline-start: 0; border-inline-start: 0;
+    }
+    [data-orbit-studio][data-layout="workspace"] [data-orbit-detail-bar] .orbit-studio-areas dt { margin-bottom: 1px; }
+    [data-orbit-studio][data-layout="workspace"] [data-orbit-detail-bar] .orbit-studio-areas dd { line-height: 1.1; }
+}
 [data-orbit-studio][data-layout="workspace"] [data-orbit-plan-bar] {
     grid-area: 1 / 2 / 3 / 3; border: 0;
     border-radius: 0 0 var(--housing-radius) 0; box-shadow: none; background: transparent;
@@ -9196,10 +9218,6 @@ export default function AdmiralHomepageStudio(
         }
         function startConnection() {
             if (disposed || currentStage !== "building") return
-            if (reducedMedia.matches) {
-                void activateOrbit()
-                return
-            }
             enterToken++
             destroyHero()
             clearApartmentDetails()
@@ -9888,7 +9906,6 @@ export default function AdmiralHomepageStudio(
             closeOrbitGroup,
             skip: () => {
                 if (connectionLanded()) startOrbitApproach()
-                else if (activeSequence === "SEQ_02" && reducedMedia.matches) void activateOrbit()
                 else {
                     if (currentStage === "orbitApproach") skipLandingResize = true
                     hero?.skip()
@@ -10487,6 +10504,9 @@ export default function AdmiralHomepageStudio(
                     )}
                     style={fullscreen.planeStyle}
                 >
+                    <img data-orbit-image-fallback="" alt="" aria-hidden="true" draggable={false}
+                        decoding="async" style={{ ...posterStyle, zIndex: 1, ...(fullscreen.active
+                            ? { inset: 0, width: "100%", height: "100%", borderRadius: 0 } : {}) }} />
                     <canvas
                         ref={orbitCanvasRef}
                         data-orbit-render-canvas=""
@@ -10524,6 +10544,12 @@ export default function AdmiralHomepageStudio(
                             clipPath: fullscreen.active ? "none" : imageClip,
                         }}
                     />
+                    <span data-orbit-dom-scene="" aria-hidden="true"
+                        style={{ ...posterStyle, zIndex: 2, ...(fullscreen.active
+                            ? { inset: 0, width: "100%", height: "100%", borderRadius: 0 } : {}) }} />
+                    <span data-orbit-dom-overlays="" aria-hidden="true"
+                        style={{ ...posterStyle, zIndex: 3, ...(fullscreen.active
+                            ? { inset: 0, width: "100%", height: "100%", borderRadius: 0 } : {}) }} />
                     {!fullscreen.active && groupControls && (
                         <div data-orbit-window-group="" data-classic={String(!useStudio)}>{groupControls}</div>
                     )}
@@ -10698,7 +10724,9 @@ export default function AdmiralHomepageStudio(
             </div>
             {!staticRenderer && heroState === "loading" &&
                 (stage === "approach" || stage === "connection" || stage === "orbitApproach") && (
-                <JourneyLoadingNotice kind="flight" label={detailsLanguage === "hu" ? "A videó előkészítése…" : "Preparing the film…"} />
+                <JourneyLoadingNotice kind="flight" label={reduced
+                    ? detailsLanguage === "hu" ? "A kép betöltése…" : "Loading the image…"
+                    : detailsLanguage === "hu" ? "A videó előkészítése…" : "Preparing the film…"} />
             )}
             {studioSideControls && orbitInfo.state !== "error" && (
                 <div
@@ -13540,6 +13568,9 @@ function createHomepageHeroVideo(options: {
         if (signal.aborted || finished || finishing || document.hidden ||
             state === "moving" || state === "loading") return
         if (motion.matches) {
+            started = true
+            state = "loading"
+            publish()
             void finish("reduced", true)
             return
         }
@@ -13608,14 +13639,16 @@ function createHomepageHeroVideo(options: {
     motion.addEventListener("change", () => {
         if (motion.matches) {
             for (const animation of animations.values()) animation.finish()
-            if (!finished) void finish("reduced", true)
-            else if (!leaving) {
+            if (started && !finished) void finish("reduced", true)
+            else if (finished && !leaving) {
                 clearTimeout(holdTimer)
                 void revealGraphic()
             }
         } else if (poster.complete) prepare()
     }, { signal })
-    if (options.startAtEnd || motion.matches)
+    // Keep the opening chapter readable until the visitor advances. start()
+    // already reveals the decoded landing still without playing in reduced motion.
+    if (options.startAtEnd)
         void finish(motion.matches ? "reduced" : "arrival", true)
     else {
         poster.addEventListener("load", prepare, { signal })
@@ -14875,6 +14908,34 @@ function orbitControlCoversPoint(root: HTMLElement, x: number, y: number, select
     })
 }
 
+let orbitReadbackDrawing: boolean | undefined
+function orbitDrawingContext(surface: HTMLCanvasElement, alpha = true) {
+    // Large accelerated buffers can be blank on some WebKit graphics backends,
+    // even though drawImage succeeds. Probe once before acquiring any live contexts.
+    if (orbitReadbackDrawing === undefined) {
+        const probe = document.createElement("canvas")
+        probe.width = 864
+        probe.height = 454
+        probe.style.cssText = "position:fixed;left:0;top:0;width:10px;height:10px;opacity:.01;pointer-events:none"
+        try {
+            document.body?.appendChild(probe)
+            const drawing = probe.getContext("2d")
+            if (!drawing) throw new Error("Missing drawing context")
+            drawing.fillStyle = "#13579b"
+            drawing.fillRect(430, 225, 4, 4)
+            const pixel = drawing.getImageData(432, 227, 1, 1).data
+            orbitReadbackDrawing = pixel[3] < 250 || Math.abs(pixel[2] - 155) > 8 ||
+                Math.abs(pixel[0] - 19) > 8 || Math.abs(pixel[1] - 87) > 8
+        } catch {
+            orbitReadbackDrawing = true
+        } finally {
+            probe.remove()
+            probe.width = probe.height = 0
+        }
+    }
+    return surface.getContext("2d", { alpha, willReadFrequently: orbitReadbackDrawing })
+}
+
 function createOrbitPlayer(options: OrbitOptions) {
     const { root, canvas } = options
     const urls = [...options.urls],
@@ -14922,8 +14983,15 @@ function createOrbitPlayer(options: OrbitOptions) {
     const checkpointFadeMs = 1000 * orbitClamp(options.checkpointFadeSeconds ?? 0, 0, 0.3)
     const focalX = orbitClamp(options.focalX ?? 0.5, 0, 1),
         focalY = orbitClamp(options.focalY ?? 0.5, 0, 1)
-    const context = canvas.getContext("2d", { alpha: false })
+    const context = orbitDrawingContext(canvas, false)
+    const fallbackImage = root.querySelector<HTMLImageElement>("[data-orbit-image-fallback]")
+    const imageScene = orbitReadbackDrawing ? root.querySelector<HTMLElement>("[data-orbit-dom-scene]") : null
     const cancellation = new AbortController()
+    root.dataset.orbitCanvasMode = orbitReadbackDrawing ? "readback" : "default"
+    root.dataset.orbitBeautySurface = imageScene ? "image" : "canvas"
+    let imageOnly = !context
+    let fallbackSource: Blob | string | null = null
+    let fallbackObjectUrl = ""
     const blobs = new Map<number, Blob>(),
         frames = new Map<number, OrbitBitmap>()
     const fetching = new Set<number>(),
@@ -15144,7 +15212,7 @@ function createOrbitPlayer(options: OrbitOptions) {
 
     // createImageBitmap cannot be cancelled. If this browser hangs on a decode,
     // finish this and subsequent frames through img.decode, and close late bitmaps.
-    let bitmapDecodeAvailable = typeof createImageBitmap === "function"
+    let bitmapDecodeAvailable = !imageScene && typeof createImageBitmap === "function"
     function boundedBitmap(source: Blob | ImageBitmap, resize?: ImageBitmapOptions) {
         const decodingBitmap = createImageBitmap(source, resize)
         return new Promise<ImageBitmap>((resolve, reject) => {
@@ -15202,6 +15270,11 @@ function createOrbitPlayer(options: OrbitOptions) {
             if (destroyed) throw new Error("Orbit disposed")
             const image = new Image(),
                 objectURL = URL.createObjectURL(blob)
+            let retainedImage = false
+            const releaseImage = () => {
+                if (!image.isConnected) image.removeAttribute("src")
+                URL.revokeObjectURL(objectURL)
+            }
             try {
                 image.decoding = "async"
                 image.src = objectURL
@@ -15234,6 +15307,15 @@ function createOrbitPlayer(options: OrbitOptions) {
                         }
                     )
                 })
+                // Safari can decode the AVIF and display an ordinary image while
+                // its canvas compositor still produces a blank building. Reuse
+                // that decoded element itself throughout the bounded frame cache.
+                if (imageScene) {
+                    retainedImage = true
+                    image.alt = ""
+                    image.draggable = false
+                    return { image, width: image.naturalWidth, height: image.naturalHeight, close: releaseImage }
+                }
                 const surface = document.createElement("canvas")
                 surface.width = Math.min(width, image.naturalWidth)
                 surface.height = Math.max(
@@ -15243,8 +15325,11 @@ function createOrbitPlayer(options: OrbitOptions) {
                             image.naturalWidth
                     )
                 )
-                const drawing = surface.getContext("2d", { alpha: false })
-                if (!drawing) throw new Error("Canvas decoding is unavailable")
+                const drawing = orbitDrawingContext(surface, false)
+                if (!drawing) {
+                    retainedImage = true
+                    return { image, width: image.naturalWidth, height: image.naturalHeight, close: releaseImage }
+                }
                 drawing.drawImage(image, 0, 0, surface.width, surface.height)
                 return {
                     image: surface,
@@ -15255,8 +15340,7 @@ function createOrbitPlayer(options: OrbitOptions) {
                     },
                 }
             } finally {
-                image.src = ""
-                URL.revokeObjectURL(objectURL)
+                if (!retainedImage) releaseImage()
             }
         } finally {
             nativeDecodes--
@@ -15574,7 +15658,7 @@ function createOrbitPlayer(options: OrbitOptions) {
         if (destroyed) return Promise.reject(new Error("Orbit disposed"))
         if (prepared) return Promise.resolve()
         if (preparePromise) return preparePromise
-        if (!total || !context) {
+        if (!total || (!context && !fallbackImage)) {
             state = "error"
             error = !total
                 ? "No orbit frames were provided."
@@ -15746,8 +15830,47 @@ function createOrbitPlayer(options: OrbitOptions) {
         )
     }
 
+    function clearFallback() {
+        fallbackImage?.removeAttribute("src")
+        if (fallbackObjectUrl) URL.revokeObjectURL(fallbackObjectUrl)
+        fallbackObjectUrl = ""
+        fallbackSource = null
+        root.removeAttribute("data-orbit-image-pending")
+    }
+
+    function showFallback(frame: number) {
+        if (!fallbackImage) return
+        // Use the exact pose and the same downloaded bytes as the player.
+        const source = inspectionBlobs.get(frame) ?? blobs.get(frame) ?? urls[frame]
+        if (!source) return
+        if (fallbackSource === source) {
+            if (imageOnly && (!fallbackImage.complete || !fallbackImage.naturalWidth))
+                root.setAttribute("data-orbit-image-pending", "")
+            return
+        }
+        const previousUrl = fallbackObjectUrl
+        fallbackSource = source
+        fallbackObjectUrl = typeof source === "string" ? "" : URL.createObjectURL(source)
+        if (imageOnly) root.setAttribute("data-orbit-image-pending", "")
+        fallbackImage.src = typeof source === "string" ? source : fallbackObjectUrl
+        if (previousUrl) URL.revokeObjectURL(previousUrl)
+    }
+
+    function useImageFallback() {
+        imageOnly = true
+        lastPaint = ""
+        if (!active || destroyed) return
+        root.setAttribute("data-orbit-image-only", "")
+        showFallback(frameAt())
+    }
+
     function paint() {
         const frame = frameAt()
+        if (!active || destroyed) return
+        if ((!context || imageOnly) && !imageScene) {
+            useImageFallback()
+            return
+        }
         let from = frame,
             to = frame,
             frameMix = 0
@@ -15771,7 +15894,35 @@ function createOrbitPlayer(options: OrbitOptions) {
         }
         const bitmap = frames.get(from),
             next = frameMix > 0 ? frames.get(to) : undefined
-        if (!context || !bitmap || !active || destroyed) return
+        if (!bitmap) return
+        const mix = inspection && inspectionFrame === frame
+            ? checkpointFadeMs === 0 || reduced() ? 1
+                : orbitClamp((performance.now() - qualityStartedAt) / checkpointFadeMs, 0, 1)
+            : 0
+        if (imageScene) {
+            // Mount previously decoded elements. Setting a fresh src every
+            // refresh would start another asynchronous image decode on Safari.
+            const layers: HTMLImageElement[] = []
+            const add = (value: OrbitBitmap, alpha: number) => {
+                const image = value.image as HTMLImageElement
+                image.style.opacity = String(alpha)
+                layers.push(image)
+            }
+            if (mix < 1) {
+                add(bitmap, 1)
+                if (next) add(next, frameMix)
+            }
+            if (inspection && mix > 0) add(inspection, mix)
+            if (layers.length !== imageScene.children.length || layers.some((node, i) => imageScene.children[i] !== node))
+                imageScene.replaceChildren(...layers)
+            imageScene.dataset.frame = String(frame)
+            setData("orbitFrameFrom", String(from))
+            setData("orbitFrameTo", String(to))
+            setData("orbitFrameMix", frameMix.toFixed(4))
+            canvas.setAttribute("data-orbit-painted", "")
+            return
+        }
+        if (!context) return
         const requestedBounds = options.renderBounds?.()
         const bounds =
             requestedBounds &&
@@ -15816,12 +15967,6 @@ function createOrbitPlayer(options: OrbitOptions) {
             canvas.height = height
             lastPaint = ""
         }
-        const mix =
-            inspection && inspectionFrame === frame
-                ? checkpointFadeMs === 0 || reduced()
-                    ? 1
-                    : orbitClamp((performance.now() - qualityStartedAt) / checkpointFadeMs, 0, 1)
-                : 0
         const signature = [
             from,
             to,
@@ -15832,17 +15977,22 @@ function createOrbitPlayer(options: OrbitOptions) {
             mix.toFixed(4),
         ].join("|")
         if (signature === lastPaint) return
-        context.globalAlpha = 1
-        drawImage(bitmap)
-        if (next) {
-            context.globalAlpha = frameMix
-            drawImage(next)
+        try {
             context.globalAlpha = 1
-        }
-        if (inspection && mix > 0 && inspectionFrame === frame) {
-            context.globalAlpha = mix
-            drawImage(inspection)
-            context.globalAlpha = 1
+            drawImage(bitmap)
+            if (next) {
+                context.globalAlpha = frameMix
+                drawImage(next)
+                context.globalAlpha = 1
+            }
+            if (inspection && mix > 0 && inspectionFrame === frame) {
+                context.globalAlpha = mix
+                drawImage(inspection)
+                context.globalAlpha = 1
+            }
+        } catch {
+            useImageFallback()
+            return
         }
         setData("orbitFrameFrom", String(from))
         setData("orbitFrameTo", String(to))
@@ -16840,6 +16990,10 @@ function createOrbitPlayer(options: OrbitOptions) {
         activation++
         active = false
         canvas.removeAttribute("data-orbit-painted")
+        imageScene?.replaceChildren()
+        if (imageScene) delete imageScene.dataset.frame
+        clearFallback()
+        root.removeAttribute("data-orbit-image-only")
         automaticPause = false
         wheelIntent = null
         wheelGesture = null
@@ -16940,6 +17094,20 @@ function createOrbitPlayer(options: OrbitOptions) {
         }
     }
 
+    fallbackImage?.addEventListener("load", () => {
+        if (!active || !imageOnly || !fallbackImage.complete || !fallbackImage.naturalWidth) return
+        root.removeAttribute("data-orbit-image-pending")
+        root.dispatchEvent(new Event("admiral:orbit-image-ready"))
+    }, { signal: cancellation.signal })
+    canvas.addEventListener("contextlost", () => { if (!imageScene) useImageFallback() }, { signal: cancellation.signal })
+    canvas.addEventListener("contextrestored", () => {
+        imageOnly = !context
+        lastPaint = ""
+        root.removeAttribute("data-orbit-image-only")
+        root.removeAttribute("data-orbit-image-pending")
+        paint()
+        root.dispatchEvent(new Event("admiral:orbit-image-ready"))
+    }, { signal: cancellation.signal })
     const resizeObserver =
         typeof ResizeObserver === "function"
             ? new ResizeObserver(() => {
@@ -17682,7 +17850,7 @@ function createOrbitApartmentLighting(options: {
         }
         if (tintPatch.width < part.width) tintPatch.width = part.width
         if (tintPatch.height < part.height) tintPatch.height = part.height
-        const context = tintPatch.getContext("2d")
+        const context = orbitDrawingContext(tintPatch)
         if (!context) return null
         const { x, y, width, height } = part
         context.globalCompositeOperation = "source-over"
@@ -17733,7 +17901,7 @@ function createOrbitApartmentLighting(options: {
             crop = document.createElement("canvas")
             crop.width = rect.width
             crop.height = rect.height
-            const drawing = crop.getContext("2d")
+            const drawing = orbitDrawingContext(crop)
             if (!drawing) { clearCrop(); return null }
             for (const { apartment, opacity, tint } of entries) {
                 drawing.globalAlpha = opacity
@@ -17905,7 +18073,7 @@ function createOrbitSceneLighting(options: {
         if (!tinted) tinted = document.createElement("canvas")
         tinted.width = w
         tinted.height = h
-        const ctx = tinted.getContext("2d")
+        const ctx = orbitDrawingContext(tinted)
         if (!ctx) return null
         const peak = Math.max(1, ...rgb)
         ctx.drawImage(image, 0, h * 2, w, h, 0, 0, w, h)
@@ -17945,7 +18113,7 @@ function createOrbitSceneLighting(options: {
         if (!surface) surface = document.createElement("canvas")
         surface.width = rect.width * scale
         surface.height = rect.height * scale
-        const ctx = surface.getContext("2d")
+        const ctx = orbitDrawingContext(surface)
         if (!ctx) return null
         for (const { entry, patch } of entries) {
             const source = !entry.sold && entry.tintRGB ? tintBank(image, entry.tintRGB) ?? image : image
@@ -17982,14 +18150,82 @@ function createOrbitSceneLighting(options: {
     }
 }
 
+/** Present a compact fill or lighting patch as a native image on affected
+ * Safari renderers. Resizing or fading reuses the already encoded pixels. */
+function createOrbitHighlightImage(host: HTMLElement, kind: "fill" | "light") {
+    type Patch = { canvas: HTMLCanvasElement; key: string; rect: OrbitMaskRect; frame: string; ids: string; opacity: number }
+    let wanted: Patch | null = null, shown: HTMLImageElement | null = null
+    let shownKey = "", objectUrl = "", failedKey = "", encoding = false
+    function clear() {
+        shown?.remove()
+        shown = null
+        shownKey = ""
+        if (objectUrl) URL.revokeObjectURL(objectUrl)
+        objectUrl = ""
+    }
+    function place() {
+        if (!shown || !wanted) return
+        const { rect, frame, ids, opacity } = wanted
+        Object.assign(shown.style, { left: rect.x + "%", top: rect.y + "%", width: rect.width + "%",
+            height: rect.height + "%", opacity: String(opacity), zIndex: kind === "light" ? "2" : "1" })
+        shown.dataset.frame = frame
+        shown.dataset.apartments = ids
+        shown.dataset.ready = "true"
+    }
+    async function encode() {
+        const patch = wanted
+        if (encoding || !patch || patch.key === failedKey || patch.key === shownKey) return
+        encoding = true
+        let url = ""
+        try {
+            const blob = await new Promise<Blob | null>(resolve => patch.canvas.toBlob(resolve, "image/png"))
+            if (wanted?.key !== patch.key) return
+            if (!blob) throw new Error("Missing highlight image")
+            const next = new Image()
+            next.alt = ""
+            next.draggable = false
+            next.dataset.orbitDomHighlight = kind
+            url = URL.createObjectURL(blob)
+            next.src = url
+            await next.decode()
+            if (wanted?.key !== patch.key) return
+            clear()
+            shown = next
+            shownKey = patch.key
+            objectUrl = url
+            url = ""
+            place()
+            host.appendChild(next)
+        } catch {
+            if (wanted?.key === patch.key) failedKey = patch.key
+        } finally {
+            if (url) URL.revokeObjectURL(url)
+            encoding = false
+            if (wanted && wanted.key !== patch.key) void encode()
+        }
+    }
+    return (next: Patch | null) => {
+        if (wanted?.key !== next?.key) failedKey = ""
+        wanted = next
+        if (!next || next.key !== shownKey) clear()
+        if (next && next.key === shownKey) place()
+        else if (next) void encode()
+    }
+}
+
 function createOrbitApartmentPicker(options: OrbitApartmentPickerOptions) {
     const filteredWindowOpacity = 0.85
     const filteredSolidRatio = 0.5
     const { root, canvas } = options,
         urls = [...options.urls],
         palette = [...options.palette]
-    const context = canvas.getContext("2d"),
+    const context = orbitDrawingContext(canvas),
         cancellation = new AbortController()
+    const imageHost = orbitReadbackDrawing ? root.querySelector<HTMLElement>("[data-orbit-dom-overlays]") : null
+    const fillImage = imageHost && createOrbitHighlightImage(imageHost, "fill")
+    const lightImage = imageHost && createOrbitHighlightImage(imageHost, "light")
+    root.dataset.orbitHighlightSurface = imageHost ? "image" : "canvas"
+    let overlayLost = false
     const blobs = new Map<number, Blob>(),
         masks = new Map<number, OrbitMaskIndex>(),
         failures = new Map<number, string>()
@@ -18077,7 +18313,7 @@ function createOrbitApartmentPicker(options: OrbitApartmentPickerOptions) {
         return (
             !destroyed &&
             !document.hidden &&
-            !!context &&
+            !root.hasAttribute("data-orbit-image-pending") &&
             view.enabled &&
             !view.moving &&
             !view.suspended &&
@@ -18403,7 +18639,7 @@ function createOrbitApartmentPicker(options: OrbitApartmentPickerOptions) {
         const surface = document.createElement("canvas")
         surface.width = right - left + 1
         surface.height = bottom - top + 1
-        const drawing = surface.getContext("2d")
+        const drawing = orbitDrawingContext(surface)
         if (!drawing) return null
         const image = drawing.createImageData(surface.width, surface.height)
         const out = image.data, pixels = mask.pixels
@@ -18563,23 +18799,42 @@ function createOrbitApartmentPicker(options: OrbitApartmentPickerOptions) {
             light?.id || "",
             light?.opacity.toFixed(3) || "",
         ].join("|")
-        if (signature !== paintKey && context) {
-            if (canvas.width !== width || canvas.height !== height) {
+        if (signature !== paintKey && (imageHost || (context && !overlayLost))) {
+            if (!imageHost && (canvas.width !== width || canvas.height !== height)) {
                 canvas.width = width
                 canvas.height = height
             }
-            context.clearRect(0, 0, canvas.width, canvas.height)
             const layer = mask
                 ? makeTexture(mask, styles, textureSignature)
                 : null
-            if ((layer || light) && mask) {
-                const rect = orbitMaskCoverRect(
+            const rect = mask ? orbitMaskCoverRect(
                     mask.width,
                     mask.height,
                     view.viewport,
                     view.focalX,
                     view.focalY
-                )
+                ) : null
+            if (imageHost && mask && rect) {
+                // Both the building and these patches are positioned within
+                // the same clipped viewport, including rotated phone views.
+                const frame = String(root.dataset.orbitFrame ?? "")
+                const ids = [...new Set([...highlighted, ...(hovered ? [hovered] : [])])].join(",")
+                const relative = (x: number, y: number, w: number, h: number): OrbitMaskRect => ({
+                    x: 100 * (rect.x - view.viewport.x + x * rect.width / mask.width) / view.viewport.width,
+                    y: 100 * (rect.y - view.viewport.y + y * rect.height / mask.height) / view.viewport.height,
+                    width: 100 * w * rect.width / mask.width / view.viewport.width,
+                    height: 100 * h * rect.height / mask.height / view.viewport.height,
+                })
+                fillImage?.(layer ? { canvas: layer.canvas, key: textureSignature, frame, ids, opacity: 1,
+                    rect: relative(layer.x, layer.y, layer.canvas.width, layer.canvas.height) } : null)
+                lightImage?.(light ? { canvas: light.canvas, key: checkpoint + ":" + light.id, frame, ids,
+                    opacity: light.opacity, rect: relative(light.rect.x, light.rect.y, light.rect.width, light.rect.height) } : null)
+            } else if (imageHost) {
+                fillImage?.(null)
+                lightImage?.(null)
+            } else if (context) {
+                context.clearRect(0, 0, canvas.width, canvas.height)
+                if ((layer || light) && mask && rect) {
                 context.save()
                 context.scale(width / view.width, height / view.height)
                 context.beginPath()
@@ -18604,6 +18859,7 @@ function createOrbitApartmentPicker(options: OrbitApartmentPickerOptions) {
                         light.rect.height * rect.height / mask.height)
                 }
                 context.restore()
+                }
             }
             paintKey = signature
         }
@@ -18830,6 +19086,16 @@ function createOrbitApartmentPicker(options: OrbitApartmentPickerOptions) {
         refresh()
     }
 
+    canvas.addEventListener("contextlost", () => {
+        overlayLost = true
+        refresh()
+    }, { signal: cancellation.signal })
+    canvas.addEventListener("contextrestored", () => {
+        overlayLost = false
+        paintKey = ""
+        refresh()
+    }, { signal: cancellation.signal })
+    root.addEventListener("admiral:orbit-image-ready", refresh, { signal: cancellation.signal })
     window.addEventListener("pointermove", onPointerMove, {
         passive: true,
         capture: true,
@@ -18909,6 +19175,8 @@ function createOrbitApartmentPicker(options: OrbitApartmentPickerOptions) {
             touchDown = null
             down = latestPoint = null
             lighting.destroy()
+            fillImage?.(null)
+            lightImage?.(null)
             clearTexture()
             colorCache.clear()
             masks.clear()
