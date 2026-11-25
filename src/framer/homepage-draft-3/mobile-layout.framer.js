@@ -123,6 +123,15 @@ tree.patch("v:Fu5o297Jv:0:1", {
     linkStylePreset: "CAgf18CWt",
 })
 
+const inquiryRoute = "/contact-page-draft#visszahivas"
+for (const [pageId, componentId] of [["kbkbxs570", "lpTXCEEr5"], ["Phxhru9uu", "Pcq4F2KgH"]]) {
+    tree.patch(componentId, { "$control__inquiryUrl": inquiryRoute })
+    for (const breakpoint of tree.get(pageId).$breakpoints ?? []) {
+        const replica = tree.get(`${breakpoint.id}${componentId}`)
+        if (replica) tree.patch(replica.id, { "$control__inquiryUrl": inquiryRoute })
+    }
+}
+
 addOnce("CustomCodeNode", tree.root.id, "Admiral Park phone menu viewport", {
     pageIds: ["Phxhru9uu", "kbkbxs570", "ZmD0CLV3Z", "A8W8FsOjk", "XLriEYHai"],
     placement: "headEnd",
@@ -136,11 +145,7 @@ addOnce("CustomCodeNode", tree.root.id, "Admiral Park phone menu viewport", {
 })
 
 // Framer’s native form element does not accept ariaLabel as a canvas property.
-addOnce("CustomCodeNode", tree.root.id, "Admiral Park inquiry name fields", {
-    pageIds: ["XLriEYHai"],
-    placement: "bodyEnd",
-    loadMode: "always",
-    code: `<script>
+const inquiryCode = `<script>
 (() => {
   const names = { 'Vezetéknév': 'family-name', 'Keresztnév': 'given-name' };
   for (const [name, autofill] of Object.entries(names)) {
@@ -149,6 +154,35 @@ addOnce("CustomCodeNode", tree.root.id, "Admiral Park inquiry name fields", {
       input.setAttribute('autocomplete', autofill);
     });
   }
+  const apartment = new URLSearchParams(location.search).get('apartment')?.trim().toUpperCase() || '';
+  const selected = /^[A-Z][0-9]{3}[A-Z]?$/.test(apartment) ? apartment : '';
+  const favorites = document.querySelector('form [data-admiral-form-favourites]');
+  if (favorites && selected) {
+    const label = document.createElement('p');
+    label.dataset.admiralInquiryApartment = '';
+    label.style.cssText = 'margin:0;color:#123c59;font:600 14px/1.45 Montserrat,Arial,sans-serif';
+    label.textContent = 'Kiválasztott lakás: ' + selected;
+    const input = document.createElement('input');
+    input.type = 'hidden';
+    input.name = 'Kiválasztott lakás';
+    input.value = selected;
+    label.append(input);
+    const previous = favorites.parentElement.querySelector('[data-admiral-inquiry-apartment]');
+    if (previous) previous.replaceWith(label);
+    else favorites.after(label);
+  }
+  if (selected) document.querySelectorAll('a[href]').forEach((link) => {
+    const url = new URL(link.href, location.href);
+    if (url.origin !== location.origin || url.pathname !== location.pathname || url.hash !== '#visszahivas') return;
+    url.searchParams.set('apartment', selected);
+    link.href = url.href;
+  });
 })();
-</script>`,
+</script>`
+const inquirySnippet = addOnce("CustomCodeNode", tree.root.id, "Admiral Park inquiry name fields", {
+    pageIds: ["XLriEYHai"],
+    placement: "bodyEnd",
+    loadMode: "always",
+    code: inquiryCode,
 })
+tree.patch(inquirySnippet.id, { code: inquiryCode })
