@@ -2096,10 +2096,32 @@
       ]
     },
     {
+      "path": "assets/floorplans/types/A/plan.webp",
+      "bytes": 180346,
+      "sha256": "8f3339de76c92c0df569b7670cba80c6305048258e451bae75232db6430c6829",
+      "role": "floorplan-compatibility",
+      "type": "A",
+      "dimensions": [
+        1500,
+        2000
+      ]
+    },
+    {
       "path": "assets/floorplans/types/B/plan.avif",
       "bytes": 44505,
       "sha256": "813a0325939a112fdc25afded3b2ae48c8b1f1bea4f3e6e88aebcc3c1f93ef45",
       "role": "floorplan",
+      "type": "B",
+      "dimensions": [
+        1500,
+        2000
+      ]
+    },
+    {
+      "path": "assets/floorplans/types/B/plan.webp",
+      "bytes": 182748,
+      "sha256": "3070b80ffb7dc6236507f5f382671e40c960a91a6210042d45fb959972c7b3ac",
+      "role": "floorplan-compatibility",
       "type": "B",
       "dimensions": [
         1500,
@@ -2118,10 +2140,32 @@
       ]
     },
     {
+      "path": "assets/floorplans/types/C/plan.webp",
+      "bytes": 128408,
+      "sha256": "3a20e39787a943eeba59a99ec59598a59451d56cba6df5fc5d709e79d4fb027d",
+      "role": "floorplan-compatibility",
+      "type": "C",
+      "dimensions": [
+        1130,
+        1600
+      ]
+    },
+    {
       "path": "assets/floorplans/types/D/plan.avif",
       "bytes": 28498,
       "sha256": "43e015ff8740d5cadc6785f0260226f05466ca0e366f89e66a6173722b02170d",
       "role": "floorplan",
+      "type": "D",
+      "dimensions": [
+        1046,
+        1600
+      ]
+    },
+    {
+      "path": "assets/floorplans/types/D/plan.webp",
+      "bytes": 126194,
+      "sha256": "b5775aca28af3b2b6d37e53da881b8d0f482eddecaed32ceb8f0a5c0d1877ec3",
+      "role": "floorplan-compatibility",
       "type": "D",
       "dimensions": [
         1046,
@@ -2140,10 +2184,32 @@
       ]
     },
     {
+      "path": "assets/floorplans/types/E/plan.webp",
+      "bytes": 112160,
+      "sha256": "b2d8299f8900459987dec41ca897a59a06e1fb78ae039f3dea65eff46b83ee87",
+      "role": "floorplan-compatibility",
+      "type": "E",
+      "dimensions": [
+        889,
+        1600
+      ]
+    },
+    {
       "path": "assets/floorplans/types/E1/plan.avif",
       "bytes": 24562,
       "sha256": "0e2f39dfed3516b1d6fe1363ecf6274b46164260bc15d15ae83d4cb6e595bbc7",
       "role": "floorplan",
+      "type": "E1",
+      "dimensions": [
+        916,
+        1600
+      ]
+    },
+    {
+      "path": "assets/floorplans/types/E1/plan.webp",
+      "bytes": 97230,
+      "sha256": "412ef7b0443296793c436e27eff600cdc5e9c9dff552a7ee938f14df3be633ba",
+      "role": "floorplan-compatibility",
       "type": "E1",
       "dimensions": [
         916,
@@ -2162,10 +2228,32 @@
       ]
     },
     {
+      "path": "assets/floorplans/types/E2/plan.webp",
+      "bytes": 102266,
+      "sha256": "bb5669b226fcdc5bd7b1ff273295395aa2a0e0b786186e61cafe6d9d98f0aef0",
+      "role": "floorplan-compatibility",
+      "type": "E2",
+      "dimensions": [
+        907,
+        1600
+      ]
+    },
+    {
       "path": "assets/floorplans/types/F/plan.avif",
       "bytes": 26754,
       "sha256": "8ef90901e5ffc468cb697ba5e5cc996c2d0e417df30cef6cbdcec1215330a2cd",
       "role": "floorplan",
+      "type": "F",
+      "dimensions": [
+        812,
+        1600
+      ]
+    },
+    {
+      "path": "assets/floorplans/types/F/plan.webp",
+      "bytes": 107414,
+      "sha256": "68d562883edee104034fa691563dd636fc16d018b3ec1010cae9992211c033dd",
+      "role": "floorplan-compatibility",
       "type": "F",
       "dimensions": [
         812,
@@ -2184,10 +2272,32 @@
       ]
     },
     {
+      "path": "assets/floorplans/types/F1/plan.webp",
+      "bytes": 108188,
+      "sha256": "953872f4bc14d0786046baed3d335e4279394eceeb127baeee6a30decc7c098c",
+      "role": "floorplan-compatibility",
+      "type": "F1",
+      "dimensions": [
+        816,
+        1600
+      ]
+    },
+    {
       "path": "assets/floorplans/types/F2/plan.avif",
       "bytes": 28429,
       "sha256": "9750eafdfbf38f88533dc3e63d548fca71ff23b5e2bd988f64aac5bd637bdcd2",
       "role": "floorplan",
+      "type": "F2",
+      "dimensions": [
+        807,
+        1600
+      ]
+    },
+    {
+      "path": "assets/floorplans/types/F2/plan.webp",
+      "bytes": 115112,
+      "sha256": "58493f5a2d34c5f42515330a50c5450b2330b3ea3147d5b6da4ec2fd04a83a95",
+      "role": "floorplan-compatibility",
       "type": "F2",
       "dimensions": [
         807,
