@@ -167,9 +167,13 @@ def screenshot(reference):
 def verified_wheel(point,delta,predicate,label):
     """Prove the page advances on a delivered event. Record the input source."""
     for method in ('SafariDriver','DOM'):
-        qa.js("document.querySelector('#qa-wheel-trace').content='[]'")
         if method=='SafariDriver':
             qa.call('DELETE','/session/'+qa.session+'/actions')
+            # SafariDriver sends a real reverse scroll at (0,0) on release.
+            # Separate that automation artifact from the user's next gesture.
+            time.sleep(.45)
+        qa.js("document.querySelector('#qa-wheel-trace').content='[]'")
+        if method=='SafariDriver':
             qa.mouse_at(*point);qa.wheel(delta,point)
         else:
             qa.js("""const [x,y,dy]=arguments;document.elementFromPoint(x,y).dispatchEvent(new WheelEvent('wheel',
