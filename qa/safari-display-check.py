@@ -49,7 +49,7 @@ def colors(file, rect):
             base=start+(height-cy-1 if h>0 else cy)*stride
             for cx in range(x1,x2):
                 offset=base+cx*(bpp//8);count[data[offset:offset+3]]+=1
-        return {'size':os.path.getsize(file),'sample':[x1,y1,x2,y2],'colors':len(count),'dominant':round(count.most_common(1)[0][1]/sum(count.values()),3) if count else None}
+        return {'size':os.path.getsize(file),'sample':[x1,y1,x2,y2],'colors':len(count),'dominant':round(count.most_common(1)[0][1]/sum(count.values()),3) if count else None,'bgr':count.most_common(1)[0][0].hex() if count else None}
 
 
 def inspect():

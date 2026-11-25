@@ -140,7 +140,29 @@ def screenshot(reference):
         control=capture('control-orbit',sid,'#qa-reference-img')
     finally:qa.js("document.querySelector('#qa-reference-img')?.remove()")
     if good({k:v for k,v in control.items() if k!='element'}):raise AssertionError('The app rendered flat while an independent HTML checkpoint was visible in the same window capture')
-    raise AssertionError('Inconclusive screen verification: both the app and known HTML checkpoint were flat in the available captures')
+    # This hosted window capture is blind even to a known opaque HTML image.
+    # Use a calibrated screenshot of the complete hero (all sibling layers and
+    # their z-order), including a negative control over the exact same region.
+    def hero_capture(label):
+        bounds=qa.js("""const v=r.querySelector('[data-orbit-render-canvas]').getBoundingClientRect(),b=r.getBoundingClientRect();
+        return [(v.x-b.x+v.width*.2)/b.width,(v.y-b.y+v.height*.2)/b.height,v.width*.6/b.width,v.height*.6/b.height]""")
+        node=qa.command('/element',{'using':'css selector','value':qa.ROOT})
+        ref=node['element-6066-11e4-a52e-4f735466cecf']
+        file='safari-'+label+'-hero.png'
+        with open(file,'wb') as out:out.write(base64.b64decode(qa.call('GET','/session/'+qa.session+'/element/'+ref+'/screenshot')))
+        return colors(file,bounds)
+    if not good({'scene':actual.get('element',{'colors':0,'dominant':1})}):raise AssertionError('The actual orbit scene snapshot is also blank')
+    page=hero_capture('repaired')
+    qa.js("""const b=r.querySelector('[data-orbit-render-canvas]').getBoundingClientRect();const n=document.createElement('div');
+      n.id='qa-solid-test';n.style.cssText='position:fixed;z-index:2147483647;pointer-events:none;background:#ff00ff;';
+      Object.assign(n.style,{left:b.x+'px',top:b.y+'px',width:b.width+'px',height:b.height+'px'});r.append(n)""")
+    try:
+        time.sleep(.2)
+        patch=hero_capture('solid-control')
+    finally:qa.js("document.querySelector('#qa-solid-test')?.remove()")
+    qa.emit('calibrated_composite_capture',{'page':page,'control':patch,'window':'unavailable; independent HTML image also flat'})
+    if not good({'page':page}) or patch['dominant']<.98 or patch['bgr']!='ff00ff':
+        raise AssertionError('Full component screenshot could not verify the rendered scene and its overlaid solid control')
 
 def run():
     for _ in range(25):
