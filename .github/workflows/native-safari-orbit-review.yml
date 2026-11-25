@@ -7,6 +7,7 @@ on:
       - qa/native-safari-orbit.py
       - qa/safari-followup.py
       - qa/safari-normal-motion.py
+      - qa/safari-display-check.py
 permissions:
   contents: read
 jobs:
@@ -21,6 +22,7 @@ jobs:
         run: |
           curl --fail --silent --show-error --retry 4 --retry-all-errors "$SOURCE_BASE/native-safari-orbit.py" -o "$RUNNER_TEMP/qa.py"
           curl --fail --silent --show-error --retry 4 --retry-all-errors "$SOURCE_BASE/safari-normal-motion.py" -o "$RUNNER_TEMP/normal.py"
+          curl --fail --silent --show-error --retry 4 --retry-all-errors "$SOURCE_BASE/safari-display-check.py" -o "$RUNNER_TEMP/display.py"
       - name: Enable animations for this ephemeral test user
         run: |
           defaults write com.apple.universalaccess reduceMotion -bool false || true

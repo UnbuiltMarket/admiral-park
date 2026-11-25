@@ -2,6 +2,7 @@
 import json
 import time
 import qa
+import display
 
 
 ORIGIN="https://admiralpark.hu"
@@ -84,6 +85,7 @@ def css_and_pixels():
         backing:[source.width,source.height],rect:[b.x,b.y,b.width,b.height],opacity:cs.opacity,visibility:cs.visibility,
         painted:source.getAttribute('data-orbit-painted'),connected:source.isConnected};
       try {const sourceCtx=source.getContext('2d');
+        item.lost=sourceCtx.isContextLost?.();item.options=sourceCtx.getContextAttributes?.();
         const rgba=sourceCtx.getImageData(0,0,source.width,source.height).data;
         item.direct=stats(rgba,23);
       }catch(e){item.directError=String(e);}
@@ -138,6 +140,7 @@ def main():
             qa.emit('B204_compositor',css_and_pixels())
             qa.next_camera();qa.parked(15);qa.next_camera();qa.parked(30);qa.hover('C304',.65286458,.26980198)
             p=css_and_pixels();qa.emit('C304_compositor',p)
+            display.inspect()
             for name in ['beauty','lights']:
                 evidence=p[name].get('direct') or p[name].get('sample')
                 if not evidence or not evidence['nontransparentPixels'] or (name=='beauty' and evidence['colorCount']<30):
