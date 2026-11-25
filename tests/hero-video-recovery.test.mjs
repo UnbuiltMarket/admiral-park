@@ -81,6 +81,7 @@ function flight(t, options = {}) {
     const controller = createPlayer({
         video, poster: new Layer(), endLayer, url: 'flight.mp4', endPoster: 'landing.avif',
         lastFrame: 63, startAtEnd: false, fadeExtension: () => 0, preparedVideo: options.prepared,
+        resumeWhenVisible: options.resumeWhenVisible,
         onUpdate: snapshot => snapshots.push(snapshot),
     });
     t.after(() => controller.destroy());
@@ -218,6 +219,37 @@ test('a moving media clock cannot conceal a frozen presented picture', async t =
     await f.advance(800);
     assert.equal(f.state(), 'arrival');
     assert.equal(f.endLayer.style.opacity, '1');
+});
+
+test('a phone flight keeps its still visible until the first picture is presented', async t => {
+    const f = flight(t, {frames:true});
+    await f.start();
+    assert.equal(f.video.style.opacity, '0');
+    f.move(.25);
+    assert.equal(f.video.style.opacity, '0');
+    f.present(0);
+    assert.equal(f.video.style.opacity, '1');
+    f.present(.25);
+    assert.equal(f.state(), 'moving');
+});
+
+test('returning to the phone tab resumes at the interrupted picture', async t => {
+    const f = flight(t, {frames:true, resumeWhenVisible:true});
+    await f.start();
+    f.move(1.2);
+    f.present(1.2);
+    f.doc.hidden = true;
+    f.doc.dispatchEvent(new Event('visibilitychange'));
+    assert.equal(f.state(), 'paused');
+    assert.equal(f.video.paused, true);
+    await f.advance(12000);
+    assert.equal(f.video.currentTime, 1.2);
+    f.doc.hidden = false;
+    f.doc.dispatchEvent(new Event('visibilitychange'));
+    assert.equal(f.video.playCalls, 2);
+    f.move(1.6);
+    f.present(1.6);
+    assert.equal(f.state(), 'moving');
 });
 
 test('leaving during a pending transfer cancels its ownership and ignores late completion', async t => {

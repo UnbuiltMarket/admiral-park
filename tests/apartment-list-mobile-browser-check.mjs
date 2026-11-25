@@ -50,7 +50,7 @@ try{
     const m=await list.evaluate(host=>{
       const r=host.shadowRoot,row=r.querySelector('[data-unit="A001"]'),style=e=>getComputedStyle(e),rect=e=>e.getBoundingClientRect().toJSON();
       const id=row.querySelector('.unit-id-line'),status=row.querySelector('.unit-status'),rooms=row.querySelector('.unit-room-count'),primary=[row.querySelector('.cell-interior'),row.querySelector('.cell-balcony'),row.querySelector('.cell-garden')];
-      return {width:innerWidth,pageWidth:document.documentElement.scrollWidth,filter:rect(r.querySelector('.filter-header')),filterControl:rect(r.querySelector('#mobile-filters')),id:rect(id),status:rect(status),statusText:status.textContent,rooms:{rect:rect(rooms),size:parseFloat(style(rooms).fontSize),weight:style(rooms).fontWeight},areas:primary.filter(e=>style(e).display!=='none').map(e=>({rect:rect(e),size:parseFloat(style(e.querySelector('.area-number')||e.querySelector('.outdoor-value')).fontSize)})),oldRooms:style(row.querySelector('.cell-rooms')).display,statusDisplay:style(status).display,statusCounts:[...r.querySelectorAll('.apartment-row')].map(e=>e.querySelectorAll('.status-pill').length),location:style(row.querySelector('.cell-location')).display,emptyGarden:style(row.querySelector('.cell-garden')).display,oldType:style(row.querySelector('.cell-type')).display,row:rect(row),primaryTexts:primary.map(e=>e.textContent.trim()),plan:rect(row.querySelector('.unit-media')),meta:rect(row.querySelector('.unit-mobile-meta'))};
+      return {width:innerWidth,pageWidth:document.documentElement.scrollWidth,filter:rect(r.querySelector('.filter-header')),filterControl:rect(r.querySelector('#mobile-filters')),id:rect(id),status:rect(status),statusText:status.textContent,rooms:{rect:rect(rooms),size:parseFloat(style(rooms).fontSize),weight:style(rooms).fontWeight},areas:primary.filter(e=>style(e).display!=='none').map(e=>({rect:rect(e),size:parseFloat(style(e.querySelector('.area-number')||e.querySelector('.outdoor-value')).fontSize)})),oldRooms:style(row.querySelector('.cell-rooms')).display,statusDisplay:style(status).display,statusCounts:[...r.querySelectorAll('.apartment-row')].map(e=>e.querySelectorAll('.status-pill').length),location:style(row.querySelector('.cell-location')).display,emptyGarden:style(r.querySelector('[data-unit="A101"] .cell-garden')).display,oldType:style(row.querySelector('.cell-type')).display,row:rect(row),primaryTexts:primary.map(e=>e.textContent.trim()),plan:rect(row.querySelector('.unit-media')),meta:rect(row.querySelector('.unit-mobile-meta'))};
     });
     measurements.push(m);
     check('No horizontal overflow at '+width,m.pageWidth<=width+1,m);
@@ -58,7 +58,7 @@ try{
     check('Sorting stays inside hidden filters at '+width,!(await list.locator('#sort').isVisible()));
     check('Availability is directly below apartment number at '+width,m.status.top>=m.id.bottom-1&&m.status.top-m.id.bottom<8&&Math.abs(m.status.left-m.id.left)<1,m);
     check('Mobile status appears once at '+width,m.statusText==='Elérhető'&&m.statusDisplay!=='none'&&m.statusCounts.every(count=>count===1)&&m.location==='none',m);
-    check('Known areas share the primary row and absent garden stays omitted at '+width,m.areas.length===2&&m.emptyGarden==='none'&&Math.max(...m.areas.map(e=>e.rect.top))-Math.min(...m.areas.map(e=>e.rect.top))<=1,m.areas);
+    check('A001 keeps all three known areas in one row and A101 omits its absent garden at '+width,m.areas.length===3&&m.emptyGarden==='none'&&Math.max(...m.areas.map(e=>e.rect.top))-Math.min(...m.areas.map(e=>e.rect.top))<=1,m.areas);
     check('Rooms are small secondary metadata at '+width,m.rooms.size<=11&&m.areas.every(e=>e.size>=m.rooms.size+7)&&m.oldRooms==='none',m);
     check('Mobile gross-price heading is absent at '+width,await list.locator('[data-unit="A001"] .cell-price').evaluate(e=>getComputedStyle(e,'::before').display==='none'));
     check('Identity metadata fits alongside floorplan at '+width,m.meta.right<=width&&m.meta.bottom<=m.plan.bottom+1,m);
@@ -66,6 +66,8 @@ try{
     await list.locator('#mobile-filters').click();
     check('Filter disclosure announces expanded state at '+width,await list.locator('#mobile-filters').getAttribute('aria-expanded')==='true');
     check('Sorting is visible in expanded filters at '+width,await list.locator('#mobile-sort-slot #sort').isVisible());
+    check('Search and filter fields use text large enough to avoid iOS input zoom at '+width,
+      await list.locator('#search, #status, #sort').evaluateAll(fields=>fields.every(field=>parseFloat(getComputedStyle(field).fontSize)>=16)));
     if(width===390)await page.screenshot({path:fileURLToPath(new URL('framer-list-390-filters-open.png',out))});
     await list.locator('#sort').selectOption('price-asc');
     const visibleIds=await list.locator('[data-unit]').evaluateAll(rows=>rows.map(row=>row.dataset.unit));

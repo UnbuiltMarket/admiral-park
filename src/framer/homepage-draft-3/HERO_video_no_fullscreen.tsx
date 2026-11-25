@@ -741,8 +741,88 @@ const homepageButton: React.CSSProperties = {
     cursor: "pointer",
 }
 const homepageMobileOrbitStyles = `
+[data-admiral-homepage] [data-orbit-entry-notice]:has([data-embedded-touch]) {
+    box-sizing: border-box; place-items: end center; padding-bottom: 8px;
+}
+[data-admiral-homepage] [data-orbit-entry-label][data-embedded-touch] {
+    max-width: calc(100% - 108px); padding: 5px 10px; font-size: 11px;
+}
+[data-admiral-homepage] [data-orbit-studio][data-mobile="true"][data-orbit-glass-tone="paper"] {
+    --studio-orbit-scale: 1;
+    top: max(58px, calc(env(safe-area-inset-top, 0px) + 48px));
+    padding-inline: max(var(--studio-phone-gutter), env(safe-area-inset-left, 0px)) max(var(--studio-phone-gutter), env(safe-area-inset-right, 0px));
+}
+[data-admiral-homepage] [data-orbit-studio][data-mobile="true"] > :is([data-orbit-filters], [data-orbit-group]) { max-width: 100%; }
+[data-admiral-homepage] [data-orbit-studio][data-mobile="true"][data-orbit-glass-tone="paper"] > [data-orbit-filters][data-presentation]
+    :is([data-orbit-filter-status], [data-orbit-range-toggle], [data-orbit-filter-reset]) { min-height: 44px; }
+[data-admiral-homepage] [data-orbit-studio][data-mobile="true"][data-orbit-glass-tone="paper"] [data-orbit-housing] .orbit-studio-mobile-summary {
+    display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr) auto; min-height: 0;
+}
+[data-admiral-homepage] [data-orbit-studio][data-mobile="true"][data-orbit-glass-tone="paper"] [data-orbit-housing] .orbit-studio-mobile-metrics {
+    min-height: 0; align-content: start; overflow-y: auto; overscroll-behavior-y: auto; touch-action: pan-y;
+}
+[data-admiral-homepage] [data-orbit-studio][data-mobile="true"][data-orbit-glass-tone="paper"] [data-orbit-housing] .orbit-studio-mobile-plan-button {
+    width: 100%; height: 100%; max-height: 100%;
+}
+[data-admiral-homepage] [data-orbit-studio][data-mobile="true"][data-orbit-glass-tone="paper"] [data-orbit-housing] .orbit-studio-primary { min-height: 44px; }
+@media (orientation: portrait) {
+    [data-admiral-homepage] [data-orbit-studio][data-mobile="true"][data-orbit-glass-tone="paper"] [data-orbit-housing] {
+        align-self: start; height: 100%; max-height: calc((100cqw + 2 * var(--studio-phone-gutter)) * 1010 / 1920 + 252px);
+    }
+    [data-admiral-homepage] [data-orbit-studio][data-mobile="true"][data-orbit-glass-tone="paper"] [data-orbit-housing] .orbit-studio-mobile-panel {
+        grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
+    }
+    [data-admiral-homepage] [data-orbit-studio][data-mobile="true"][data-orbit-glass-tone="paper"] [data-orbit-housing] .orbit-studio-mobile-summary {
+        justify-content: flex-start; gap: 8px;
+    }
+    [data-admiral-homepage] [data-orbit-studio][data-mobile="true"][data-orbit-glass-tone="paper"] [data-orbit-housing] .orbit-studio-mobile-identity {
+        flex: 0 0 auto; min-height: 44px; gap: 4px; padding-bottom: 6px;
+    }
+    [data-admiral-homepage] [data-orbit-studio][data-mobile="true"][data-orbit-glass-tone="paper"] [data-orbit-housing] .orbit-studio-mobile-metrics { gap: 6px; }
+    [data-admiral-homepage] [data-orbit-studio][data-mobile="true"][data-orbit-glass-tone="paper"] [data-orbit-housing] .orbit-studio-price { padding-block: 6px; }
+    [data-admiral-homepage] [data-orbit-studio][data-mobile="true"][data-orbit-glass-tone="paper"] [data-orbit-housing] .orbit-studio-mobile-actions .orbit-studio-bottom { gap: 5px; }
+}
+@media (orientation: landscape) and (max-height: 480px) {
+    [data-admiral-homepage] [data-orbit-studio][data-mobile="true"][data-orbit-glass-tone="paper"] {
+        padding-bottom: max(8px, env(safe-area-inset-bottom, 0px));
+    }
+    [data-admiral-homepage] [data-orbit-studio][data-mobile="true"][data-orbit-glass-tone="paper"] > [data-orbit-filters][data-presentation] {
+        display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); align-items: center; gap: 5px;
+    }
+    [data-admiral-homepage] [data-orbit-studio][data-mobile="true"][data-orbit-glass-tone="paper"] > [data-orbit-filters][data-presentation] [data-orbit-filter-row] {
+        padding: 0; border-bottom: 0;
+    }
+    [data-admiral-homepage] [data-orbit-studio][data-mobile="true"][data-orbit-glass-tone="paper"] > [data-orbit-filters][data-presentation] [data-orbit-filter-ranges] {
+        margin: 0;
+    }
+    [data-admiral-homepage] [data-orbit-studio][data-mobile="true"][data-orbit-glass-tone="paper"] [data-orbit-housing] .orbit-studio-mobile-summary {
+        justify-content: flex-start; gap: 5px;
+    }
+    [data-admiral-homepage] [data-orbit-studio][data-mobile="true"][data-orbit-glass-tone="paper"] [data-orbit-housing] .orbit-studio-mobile-panel {
+        grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+    }
+    [data-admiral-homepage] [data-orbit-studio][data-mobile="true"][data-orbit-glass-tone="paper"] [data-orbit-housing] .orbit-studio-mobile-identity {
+        flex: 0 0 auto; padding-bottom: 4px; gap: 2px;
+    }
+    [data-admiral-homepage] [data-orbit-studio][data-mobile="true"][data-orbit-glass-tone="paper"] [data-orbit-housing] .orbit-studio-mobile-metrics {
+        grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 3px 6px;
+    }
+    [data-admiral-homepage] [data-orbit-studio][data-mobile="true"] [data-orbit-housing] .orbit-studio-mobile-metrics > div {
+        grid-column: auto; display: block;
+    }
+    [data-admiral-homepage] [data-orbit-studio][data-mobile="true"] [data-orbit-housing] .orbit-studio-mobile-metrics dt {
+        margin-left: 0; text-align: left;
+    }
+    [data-admiral-homepage] [data-orbit-studio][data-mobile="true"][data-orbit-glass-tone="paper"] [data-orbit-housing] .orbit-studio-price { padding-block: 4px; }
+    [data-admiral-homepage] [data-orbit-studio][data-mobile="true"][data-orbit-glass-tone="paper"] [data-orbit-housing] .orbit-studio-mobile-actions .orbit-studio-bottom { gap: 4px; }
+}
+@media (pointer: coarse) and (min-width: 810px) and (max-height: 480px) and (orientation: landscape) {
+    [data-admiral-homepage] [data-orbit-studio][data-mobile="true"][data-orbit-glass-tone="paper"] {
+        top: max(84px, calc(env(safe-area-inset-top, 0px) + 48px));
+    }
+}
 [data-admiral-homepage] button[data-orbit-fullscreen-open] { position:absolute; z-index:4; left:calc(var(--admiral-image-x, 0px) + var(--admiral-image-width, 100%) - 6px); top:calc(var(--admiral-image-y, 0px) + var(--admiral-image-height, 100%) - 6px); transform:translate(-100%,-100%); display:grid; place-items:center; width:44px; height:44px; min-height:44px; padding:0; appearance:none; border:0; border-radius:50%; background:transparent; color:#242824; cursor:pointer; touch-action:manipulation; -webkit-tap-highlight-color:transparent; }
-[data-admiral-homepage] button[data-orbit-fullscreen-open]::before { content:""; position:absolute; inset:6px; border:1px solid rgba(255,255,255,.12); border-radius:50%; background:linear-gradient(145deg,rgba(255,255,255,.52),rgba(255,255,255,.10) 60%,rgba(255,255,255,.28)); -webkit-backdrop-filter:blur(12px) saturate(145%); backdrop-filter:blur(12px) saturate(145%); box-shadow:inset 0 1px 1px rgba(255,255,255,.18),inset 0 -1px 0 rgba(24,59,67,.08),0 3px 10px rgba(20,32,24,.10); transition:background .18s,box-shadow .18s; }
+[data-admiral-homepage] button[data-orbit-fullscreen-open]::before { content:""; position:absolute; inset:6px; border:1px solid rgba(255,255,255,.72); border-radius:50%; background:linear-gradient(145deg,rgba(255,255,255,.94),rgba(222,239,244,.83)); -webkit-backdrop-filter:blur(12px) saturate(145%); backdrop-filter:blur(12px) saturate(145%); box-shadow:inset 0 1px 1px rgba(255,255,255,.18),inset 0 -1px 0 rgba(24,59,67,.08),0 3px 10px rgba(20,32,24,.22); transition:background .18s,box-shadow .18s; }
 [data-admiral-homepage] button[data-orbit-fullscreen-open] svg { position:relative; width:15px; height:15px; }
 [data-admiral-homepage] button[data-orbit-fullscreen-open]:focus-visible { outline:2px solid #242824; outline-offset:3px; }
 [data-admiral-homepage] button[data-orbit-fullscreen-open]:active::before { background:rgba(255,255,255,.30); box-shadow:inset 0 1px 3px rgba(24,59,67,.14),0 1px 4px rgba(20,32,24,.12); }
@@ -1013,6 +1093,14 @@ function homepageJourneyQuery(url: URL) {
 }
 const useHomepageLayoutEffect = typeof window === "undefined" ? React.useEffect : React.useLayoutEffect
 
+function homepagePortraitFocalOffset(sequence: "SEQ_01" | "SEQ_02" | "SEQ_03", progress: number) {
+    if (sequence === "SEQ_01") return 12 - 6 * sequenceEase(sequenceClamp((progress - .45) / .55))
+    if (sequence === "SEQ_02") return progress < .5
+        ? 6 - 11 * sequenceEase(sequenceClamp(progress * 2))
+        : -5 + 5 * sequenceEase(sequenceClamp((progress - .5) * 2))
+    return 0
+}
+
 function JourneyLoadingNotice({ label, kind }: { label: string; kind: "flight" | "orbit" }) {
     const [visible, setVisible] = React.useState(false)
     React.useEffect(() => {
@@ -1022,13 +1110,24 @@ function JourneyLoadingNotice({ label, kind }: { label: string; kind: "flight" |
     return visible ? <span data-journey-loading={kind} role="status">{label}</span> : null
 }
 
-function OrbitEntryNotice({ mobile, failed }: { mobile: boolean; failed: boolean }) {
+function OrbitEntryNotice({ mobile, embeddedTouch, failed, language }: {
+    mobile: boolean
+    embeddedTouch: boolean
+    failed: boolean
+    language: "hu" | "en"
+}) {
     const [elapsed, setElapsed] = React.useState(false)
     if (elapsed || failed) return null
+    const prompt = language === "hu"
+        ? embeddedTouch ? "Húzza oldalra a forgatáshoz, felfelé a továbblépéshez."
+          : mobile ? "Húzza el az ujját a forgatáshoz" : "Görgessen a forgatáshoz"
+        : embeddedTouch ? "Swipe sideways to rotate, up to continue."
+          : mobile ? "Swipe to rotate" : "Scroll to rotate"
     return (
         <div data-orbit-entry-notice="">
-            <span data-orbit-entry-label="" role="status" lang="hu" onAnimationEnd={() => setElapsed(true)}>
-                {mobile ? "Húzza el az ujját a forgatáshoz" : "Görgessen a forgatáshoz"}
+            <span data-orbit-entry-label="" data-embedded-touch={embeddedTouch ? "" : undefined}
+                role="status" lang={language} onAnimationEnd={() => setElapsed(true)}>
+                {prompt}
             </span>
         </div>
     )
@@ -2431,7 +2530,8 @@ function orbitApartmentPlan(
     record: OrbitApartmentRecord,
     dataset: OrbitApartmentDataset,
     base: string,
-    size: "thumbnail" | "preview"
+    size: "thumbnail" | "preview",
+    preferWebp = false
 ): OrbitApartmentPlan | null {
     const source = record.media?.floorplan
     const thumbnail = size === "thumbnail"
@@ -2451,8 +2551,11 @@ function orbitApartmentPlan(
         (dimensions.height * viewBox.height)
     // A thumbnail alias to the full sheet still needs the drawing's crop.
     const croppedThumbnail = !!thumbnail && thumbnail !== full
+    const displayUrl = preferWebp
+        ? url.replace(/(\/floorplans\/types\/[a-z0-9]+\/)plan\.avif(?=$|[?#])/i, "$1full.webp")
+        : url
     return {
-        url,
+        url: displayUrl,
         isThumbnail: croppedThumbnail,
         aspect,
         viewBox: croppedThumbnail ? { x: 0, y: 0, width: 1, height: 1 } : viewBox,
@@ -4588,6 +4691,7 @@ interface OrbitApartmentStudioProps {
     apartment: OrbitApartmentRecord | null
     onSelect: (id: string) => void
     assetBase: string
+    preferWebpPlan: boolean
     detailsUrl: string
     inquiryUrl: string
     onViewport: (element: HTMLDivElement | null) => void
@@ -5796,6 +5900,7 @@ function OrbitApartmentStudio(
         apartment: currentApartment,
         onSelect,
         assetBase,
+        preferWebpPlan,
         detailsUrl,
         inquiryUrl,
         onViewport,
@@ -5854,7 +5959,7 @@ function OrbitApartmentStudio(
     })
     const previewPlan =
         (active || arriving) && apartment && dataset
-            ? orbitApartmentPlan(apartment, dataset, assetBase, "thumbnail")
+            ? orbitApartmentPlan(apartment, dataset, assetBase, "thumbnail", preferWebpPlan)
             : null
     const previewImage = useOrbitPreviewImage(previewPlan?.url, active || arriving, !!previewPlan?.isThumbnail)
     // Large orbit panels can refine to a dedicated preview on a stable selection.
@@ -7018,6 +7123,7 @@ interface OrbitFullscreenDetailsProps {
     apartment: OrbitApartmentRecord | null
     dataset?: OrbitApartmentDataset | null
     assetBase: string
+    preferWebpPlan: boolean
     language: "hu" | "en"
     onOpenDetails: () => void
     moving: boolean
@@ -7097,6 +7203,7 @@ function OrbitFullscreenDetails({
     apartment: currentApartment,
     dataset = null,
     assetBase,
+    preferWebpPlan,
     language,
     onOpenDetails,
     moving,
@@ -7158,7 +7265,8 @@ function OrbitFullscreenDetails({
                   apartment,
                   dataset,
                   assetBase,
-                  "thumbnail"
+                  "thumbnail",
+                  preferWebpPlan
               )
             : null
     const floorplanSource =
@@ -7801,7 +7909,7 @@ export default function AdmiralHomepageStudio(
                     )))
     )
     useWarmOrbitFloorplans(apartmentData.dataset, apartmentAssetBase,
-        !staticRenderer && hostVisible && stage === "orbit" &&
+        !staticRenderer && !useWebp && hostVisible && stage === "orbit" &&
         orbitInfo.state === "checkpoint" && !orbitInfo.suspended)
     const filterDataset = React.useMemo(() => {
         const dataset = apartmentData.dataset
@@ -7906,8 +8014,8 @@ export default function AdmiralHomepageStudio(
     ])
     const stripPlan = React.useMemo(() =>
         !useStudio && selectedApartment && apartmentData.dataset
-            ? orbitApartmentPlan(selectedApartment, apartmentData.dataset, apartmentAssetBase, "thumbnail")
-            : null, [useStudio, selectedApartment, apartmentData.dataset, apartmentAssetBase])
+            ? orbitApartmentPlan(selectedApartment, apartmentData.dataset, apartmentAssetBase, "thumbnail", useWebp)
+            : null, [useStudio, selectedApartment, apartmentData.dataset, apartmentAssetBase, useWebp])
     const selectedApartmentDetails = React.useMemo<ApartmentDetailsData | null>(
         () =>
             selectedApartment
@@ -8644,6 +8752,8 @@ export default function AdmiralHomepageStudio(
             root.clientWidth <= 767 ||
             (window.matchMedia("(pointer: coarse)").matches &&
                 Math.min(root.clientWidth, root.clientHeight) <= 767)
+        let portraitFlight = phone && root.clientWidth < root.clientHeight
+        let appliedFlightFocal: number | undefined
         const reducedMedia = window.matchMedia(
             "(prefers-reduced-motion: reduce)"
         )
@@ -8727,6 +8837,13 @@ export default function AdmiralHomepageStudio(
                 : null
         }
         function publish() {
+            const flightFocal = portraitFlight && heroVideoUrl
+                ? Math.max(0, Math.min(100, focalX + homepagePortraitFocalOffset(activeSequence, heroSnapshot.progress)))
+                : focalX
+            if (appliedFlightFocal !== flightFocal) {
+                appliedFlightFocal = flightFocal
+                heroRoot!.style.setProperty("--admiral-flight-focal-x", `${flightFocal}%`)
+            }
             homepageChannels.set(root!, {
                 snapshot: heroSnapshot,
                 departureProgress: (durationSeconds, delaySeconds = 0) => activeSequence === "SEQ_01" ? hero?.departureProgress(durationSeconds, delaySeconds) ?? 0 : 1,
@@ -8973,6 +9090,8 @@ export default function AdmiralHomepageStudio(
                           ? studioInputBounds()
                           : null,
                   allowsPageScroll: () => studioEnabled.current && !fullscreen.geometryRef.current,
+                  allowsVerticalTouchScroll: () => studioEnabled.current &&
+                      pickerLatest.current.mobilePresentation && !fullscreen.geometryRef.current,
                   snapDuration,
                   frameBlend: frameBlend / 100,
                   checkpointFadeSeconds,
@@ -9150,6 +9269,7 @@ export default function AdmiralHomepageStudio(
                     video, poster: poster!, endLayer, graphic,
                     url: heroVideoUrl, endPoster: heroEndPoster, graphicUrl: HOMEPAGE_HERO_INFOGRAPHIC,
                     startAtEnd: atEnd, lastFrame: heroUrls.length - 1,
+                    resumeWhenVisible: phone,
                     fadeExtension: () => fadeExtensionRef.current,
                     onUpdate,
                 })
@@ -9226,6 +9346,7 @@ export default function AdmiralHomepageStudio(
             activeSequence = "SEQ_02"
             root!.dataset.activeSequence = activeSequence
             changePoster(heroEndPoster)
+            if (connectionVideoUrl) heroSnapshot = { ...heroSnapshot, state: "loading", progress: 0, frame: 0 }
             changeStage("connection")
             const generation = ++heroGeneration
             let completed = false,
@@ -9257,7 +9378,6 @@ export default function AdmiralHomepageStudio(
                 }
             }
             if (connectionVideoUrl && connectionVideo && heroEndLayerRef.current) {
-                heroSnapshot = { ...heroSnapshot, state: "loading", progress: 0, frame: 0 }
                 heroCanvas!.style.opacity = "0"
                 poster!.style.opacity = "1"
                 hero = createHomepageHeroVideo({
@@ -9265,6 +9385,7 @@ export default function AdmiralHomepageStudio(
                     url: connectionVideoUrl, endPoster: connectionEndPoster,
                     preparedVideo: takeNextFilm(connectionVideoUrl),
                     startAtEnd: false, lastFrame: connectionPlaybackUrls.length - 1,
+                    resumeWhenVisible: phone,
                     fadeExtension: () => fadeExtensionRef.current, onUpdate: onConnectionUpdate,
                 })
                 hero.start()
@@ -9360,6 +9481,7 @@ export default function AdmiralHomepageStudio(
                 url: HOMEPAGE_ORBIT_APPROACH_VIDEO, endPoster: checkpointZeroPoster,
                 preparedVideo: takeNextFilm(HOMEPAGE_ORBIT_APPROACH_VIDEO),
                 startAtEnd: false, lastFrame: 1, fadeExtension: () => fadeExtensionRef.current,
+                resumeWhenVisible: phone,
                 onUpdate(snapshot) {
                     if (disposed || generation !== heroGeneration) return
                     const stateChanged = heroSnapshot.state !== snapshot.state
@@ -9924,6 +10046,7 @@ export default function AdmiralHomepageStudio(
             if (!disposed) {
                 invalidateOrbitLayout()
                 flightGeometry = null
+                portraitFlight = phone && root.clientWidth < root.clientHeight
                 applyPresentation()
                 hero?.redraw()
                 orbit?.redraw()
@@ -10007,6 +10130,7 @@ export default function AdmiralHomepageStudio(
             abort.abort()
             presentationResize.disconnect()
             clearFlight()
+            heroRoot.style.removeProperty("--admiral-flight-focal-x")
             delete root.dataset.orbitPrepaint
             delete root.dataset.orbitArriving
             refreshPresentation.current = () => {}
@@ -10274,7 +10398,7 @@ export default function AdmiralHomepageStudio(
             : 94
     const studioControls =
         useStudio && (stage === "orbit" || stage === "handoff")
-    const studioSideControls = useStudio && orbitVisible && !fullscreen.active && (!mobilePresentation || showControls)
+    const studioSideControls = useStudio && orbitVisible && !fullscreen.active
     const showLegacyControls = !staticRenderer && showControls && !fullscreen.active &&
         (stage !== "orbit" || !useStudio)
     const stepFromSide = (heading: number) => {
@@ -10297,6 +10421,8 @@ export default function AdmiralHomepageStudio(
         objectPosition: `${focalX}% ${focalY}%`,
         pointerEvents: "none",
     }
+    const flightFocal = `var(--admiral-flight-focal-x, ${focalX}%) ${focalY}%`
+    const flightPosterStyle = { ...posterStyle, objectPosition: flightFocal }
     return (
         <HomepageFadeContext.Provider value={fadeExtra}>
         <div
@@ -10378,6 +10504,7 @@ export default function AdmiralHomepageStudio(
                     apartment={selectedApartment ?? arrivalApartment}
                     onSelect={setSelectedApartmentId}
                     assetBase={apartmentAssetBase}
+                    preferWebpPlan={useWebp}
                     detailsUrl={detailPageUrl}
                     inquiryUrl={inquiryUrl}
                     onViewport={setStudioViewport}
@@ -10397,7 +10524,7 @@ export default function AdmiralHomepageStudio(
                     backgroundImage: heroVideoUrl && !directOrbitEntry && posterUrl === heroStartPoster &&
                         (stage === "opening" || stage === "approach") ? `url("${HOMEPAGE_HERO_PREVIEW}")` : undefined,
                     backgroundSize: "cover",
-                    backgroundPosition: `${focalX}% ${focalY}%`,
+                    backgroundPosition: flightFocal,
                     pointerEvents:
                         stage === "orbit" || stage === "handoff"
                             ? "none"
@@ -10415,7 +10542,7 @@ export default function AdmiralHomepageStudio(
                     {...{ fetchpriority: "high" }}
                     crossOrigin="anonymous"
                     draggable={false}
-                    style={posterStyle}
+                    style={flightPosterStyle}
                 />
                 {heroVideoUrl && !staticRenderer && (
                     <video
@@ -10425,25 +10552,25 @@ export default function AdmiralHomepageStudio(
                         muted
                         playsInline
                         preload="none"
-                        style={{ ...posterStyle, opacity: 0 }}
+                        style={{ ...flightPosterStyle, opacity: 0 }}
                     />
                 )}
                 {connectionVideoUrl && !staticRenderer && (
                     <video ref={connectionVideoRef} data-admiral-connection-video=""
                         data-admiral-orbit-approach-video={stage === "orbitApproach" ? "" : undefined}
                         aria-hidden="true" muted playsInline preload="none"
-                        style={{ ...posterStyle, opacity: 0 }} />
+                        style={{ ...flightPosterStyle, opacity: 0 }} />
                 )}
                 {heroVideoUrl && !staticRenderer && (
                     <img ref={heroEndLayerRef} alt="" aria-hidden="true" draggable={false}
-                        crossOrigin="anonymous" decoding="async" style={{ ...posterStyle, opacity: 0 }} />
+                        crossOrigin="anonymous" decoding="async" style={{ ...flightPosterStyle, opacity: 0 }} />
                 )}
                 {heroVideoUrl && (!staticRenderer || editorView === "building") && (
                     <img ref={heroInfographicRef}
                         src={staticRenderer ? HOMEPAGE_HERO_INFOGRAPHIC : undefined}
                         alt="Az A, B és C épület elhelyezkedése az Aranyhíd sétány mentén."
                         aria-hidden={staticRenderer ? undefined : true} draggable={false}
-                        decoding="async" style={{ ...posterStyle, opacity: staticRenderer ? 1 : 0 }} />
+                        decoding="async" style={{ ...flightPosterStyle, opacity: staticRenderer ? 1 : 0 }} />
                 )}
                 </div>
                 <canvas
@@ -10520,9 +10647,8 @@ export default function AdmiralHomepageStudio(
                             width: fullscreen.active ? "100%" : "var(--admiral-image-width, 100%)",
                             height: fullscreen.active ? "100%" : "var(--admiral-image-height, 100%)",
                             zIndex: 2,
-                            touchAction: fullscreen.active
-                                ? "none"
-                                : "pan-y pinch-zoom",
+                            touchAction: fullscreen.active ? "none"
+                                : mobilePresentation && useStudio ? "pan-y pinch-zoom" : "pinch-zoom",
                             pointerEvents: orbitVisible ? "auto" : "none",
                             borderRadius: fullscreen.active ? 0 : frameRadius,
                         }}
@@ -10570,6 +10696,8 @@ export default function AdmiralHomepageStudio(
                         <OrbitEntryNotice
                             failed={orbitInfo.state === "error"}
                             mobile={mobilePresentation}
+                            embeddedTouch={mobilePresentation && useStudio && !fullscreen.active}
+                            language={detailsLanguage}
                         />
                     )}
                     {maskFailed && fullscreen.active && (
@@ -10598,6 +10726,7 @@ export default function AdmiralHomepageStudio(
                             apartment={selectedApartment}
                             dataset={apartmentData.dataset}
                             assetBase={apartmentAssetBase}
+                            preferWebpPlan={useWebp}
                             language={detailsLanguage}
                             filters={filterResult.filters}
                             filterBounds={filterBounds}
@@ -13262,6 +13391,7 @@ function createHomepageHeroVideo(options: {
     endPoster: string
     graphicUrl?: string
     startAtEnd: boolean
+    resumeWhenVisible?: boolean
     lastFrame: number
     fadeExtension: () => number
     onUpdate: (snapshot: SequenceSnapshot) => void
@@ -13276,7 +13406,7 @@ function createHomepageHeroVideo(options: {
     let nativeDelivery = false, ownedSource: string | undefined
     let finishNativeWait: ((ok: boolean) => void) | undefined
     let mediaStatus: "pending" | "ready" | "failed" = "pending"
-    let started = false, entered = false
+    let started = false, entered = false, resumeAfterVisibility = false
     let finishing = false, finished = false, leaving = false
     let frameRequest = 0, videoFrameRequest = 0, timeout = 0, holdTimer = 0, endTimer = 0, attempt = 0
     const loadLimitMs = 9000
@@ -13474,7 +13604,7 @@ function createHomepageHeroVideo(options: {
     }
     function recordProgress() {
         const displayed = displayedTime()
-        if (!inFlight() || mediaStatus !== "ready" || video.paused || video.seeking ||
+        if (!inFlight() || mediaStatus !== "ready" || (tracksPresentedFrames && !entered) || video.paused || video.seeking ||
             displayed <= lastMediaTime + (state === "loading" ? 0.001 : 0.06)) return false
         revealPlayback()
         lastMediaTime = displayed
@@ -13605,6 +13735,7 @@ function createHomepageHeroVideo(options: {
             videoFrameRequest = 0
             if (!inFlight()) return
             presentedTime = metadata.mediaTime
+            if (mediaStatus === "ready" && !video.paused && !video.seeking) revealPlayback()
             recordProgress()
             videoFrameRequest = video.requestVideoFrameCallback(frame)
         }
@@ -13612,7 +13743,7 @@ function createHomepageHeroVideo(options: {
     }
     video.addEventListener("playing", () => {
         if (!inFlight() || mediaStatus !== "ready") return
-        revealPlayback()
+        if (!tracksPresentedFrames) revealPlayback()
         trackPresentation()
         recordProgress()
     }, { signal })
@@ -13628,8 +13759,16 @@ function createHomepageHeroVideo(options: {
     video.addEventListener("ended", () => { if (entered && inFlight()) void finish("arrival") }, { signal })
     video.addEventListener("error", () => mediaFailed(), { signal })
     document.addEventListener("visibilitychange", () => {
-        if (!document.hidden || !started || finished || finishing ||
+        if (!document.hidden) {
+            if (resumeAfterVisibility) {
+                resumeAfterVisibility = false
+                start()
+            }
+            return
+        }
+        if (!started || finished || finishing ||
             (state !== "moving" && state !== "loading")) return
+        resumeAfterVisibility = !!options.resumeWhenVisible
         attempt++
         stopCallbacks()
         video.pause()
@@ -14755,6 +14894,8 @@ interface OrbitOptions {
     continuousWheelBounds?: () => DOMRect | null
     /** The embedded studio shares the document with the sections below it. */
     allowsPageScroll?: () => boolean
+    /** Embedded phone swipes reserve the vertical axis for the document. */
+    allowsVerticalTouchScroll?: () => boolean
     /** Desktop image-width drags needed for a complete orbit. */
     dragTurnWidths?: number
     /** Desktop drag speed cap, independent of wheel and phone checkpoint moves. */
@@ -15005,7 +15146,6 @@ function createOrbitPlayer(options: OrbitOptions) {
         typeof matchMedia === "function"
             ? matchMedia("(prefers-reduced-motion: reduce)")
             : null
-    const originalTouchAction = canvas.style.touchAction
     let destroyed = false,
         started = false,
         prepared = false,
@@ -16700,17 +16840,25 @@ function createOrbitPlayer(options: OrbitOptions) {
         )
             return
         const touch = event.touches[0]
+        if (touch.identifier !== drag.id) return
         const point = inputPoint(touch.clientX, touch.clientY)
         const dx = point.x - drag.x,
             dy = point.y - drag.y
-        // A non-passive touch listener also reaches Framer sibling hit layers;
-        // changing the canvas touch-action alone cannot prevent their page pan.
-        if (event.cancelable) event.preventDefault()
-        if (!drag.moved && Math.max(Math.abs(dx), Math.abs(dy)) < ORBIT_TOUCH_GESTURE_THRESHOLD) return
+        const verticalScroll = options.allowsVerticalTouchScroll?.()
+        const horizontal = Math.abs(dx) > Math.abs(dy)
+        if (!verticalScroll && event.cancelable) event.preventDefault()
+        if (!drag.moved) {
+            if (Math.max(Math.abs(dx), Math.abs(dy)) < ORBIT_TOUCH_GESTURE_THRESHOLD) return
+            if (verticalScroll && !horizontal) {
+                releaseDrag()
+                return
+            }
+        }
+        if (verticalScroll && event.cancelable) event.preventDefault()
         drag.moved = true
         lastInputAt = performance.now()
         if (drag.triggered) return
-        const delta = Math.abs(dx) >= Math.abs(dy) ? -dx : -dy
+        const delta = verticalScroll || horizontal ? -dx : -dy
         drag.triggered = true
         go(Math.sign(delta))
     }
@@ -16965,7 +17113,6 @@ function createOrbitPlayer(options: OrbitOptions) {
         }
         if (destroyed || token !== activation) return
         active = true
-        canvas.style.touchAction = "pinch-zoom"
         // Do not interpret the approach's remaining wheel momentum as an orbit move.
         lastWheelAt = performance.now()
         wheelLatched = true
@@ -17006,7 +17153,6 @@ function createOrbitPlayer(options: OrbitOptions) {
         if (raf) cancelAnimationFrame(raf)
         raf = 0
         dropInspection()
-        canvas.style.touchAction = originalTouchAction
         error = undefined
         if (releaseDecoded) {
             // The opening sequence must not share memory with an invisible orbit
