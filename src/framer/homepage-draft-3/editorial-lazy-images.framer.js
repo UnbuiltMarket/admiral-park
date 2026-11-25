@@ -26,9 +26,10 @@
 
     const report = []
     const childName = "Lazy editorial image"
+    const staticPhotoFrame = { lightboxEffect: null, cursor: "default", htmlTag: "div" }
     for (const { id, slug, position, naturalMobile } of photos) {
         const frame = tree.get(id)
-        tree.patch(id, { layout: "stack", stackDirection: "vertical", ...(naturalMobile ? { lightboxEffect: null } : {}) })
+        tree.patch(id, { layout: "stack", stackDirection: "vertical", ...(naturalMobile ? staticPhotoFrame : {}) })
         const attributes = {
             name: childName,
             position: "relative",
@@ -49,7 +50,7 @@
             throw new Error(`Missing ${slug} image instance or phone replica`)
         if (naturalMobile) {
             tree.patch(phoneChild, { height: "auto", $control__position: "50% 50%", $control__natural: true })
-            tree.patch(`${mobile}${id}`, { height: "auto", lightboxEffect: null, fill: null })
+            tree.patch(`${mobile}${id}`, { ...staticPhotoFrame, height: "auto", fill: null })
         }
         tree.patch(id, { fill: null })
         if (!naturalMobile && tree.get(`${mobile}${id}`)?.fill) tree.patch(`${mobile}${id}`, { fill: null })

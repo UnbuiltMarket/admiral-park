@@ -144,24 +144,23 @@
                 event.stopPropagation()
                 restore = true
                 const button = dialog.querySelector(closer)
-                button?.click()
-                // Some Framer variants implement Tap through their keyboard handler.
-                setTimeout(() => {
-                    if (!button?.isConnected || openPanel()?.querySelector(closer) !== button) return
-                    for (const type of ["keydown", "keyup"]) {
-                        button.dispatchEvent(new KeyboardEvent(type, { key: "Enter", bubbles: true }))
-                    }
-                }, 100)
+                button?.focus({ preventScroll: true })
+                // Trigger the same keyboard activation as the visible close control.
+                for (const type of ["keydown", "keyup"]) {
+                    button?.dispatchEvent(new KeyboardEvent(type, {
+                        key: "Enter", code: "Enter", bubbles: true, cancelable: true,
+                    }))
+                }
                 return
             }
             if (event.key !== "Tab") return
             const items = [...dialog.querySelectorAll(controls)].filter(node => node.tabIndex >= 0 && rendered(node))
             if (!items.length) return
             const active = items.indexOf(document.activeElement)
-            if (!event.shiftKey && active !== -1 && active !== items.length - 1) return
-            if (event.shiftKey && active > 0) return
+            const next = active === -1 ? (event.shiftKey ? items.length - 1 : 0)
+                : (active + (event.shiftKey ? -1 : 1) + items.length) % items.length
             event.preventDefault()
-            items[event.shiftKey ? items.length - 1 : 0].focus({ preventScroll: true })
+            items[next].focus()
         }, true)
 
         new MutationObserver(schedule).observe(document.documentElement, {
@@ -175,7 +174,7 @@
     const pageIds = [home, "kbkbxs570", "ZmD0CLV3Z", "A8W8FsOjk", "XLriEYHai", "kepPPkXui"]
     const name = "Admiral Park keyboard navigation"
     const code = `<style>
-[data-framer-name="Header || Appear"]:focus-within { opacity: 1 !important; transform: none !important; }
+[data-framer-name="Header || Appear"]:focus-within { opacity: 1 !important; transform: translateX(-50%) !important; }
 [data-framer-name="Header || Appear"] :is(a, button, [role="button"]):focus-visible {
   outline: 2px solid #16679f !important;
   outline-offset: 3px;
