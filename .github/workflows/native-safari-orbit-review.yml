@@ -5,6 +5,7 @@ on:
     paths:
       - .github/workflows/native-safari-orbit-review.yml
       - qa/native-safari-orbit.py
+      - qa/safari-followup.py
 permissions:
   contents: read
 jobs:
@@ -15,8 +16,10 @@ jobs:
     steps:
       - name: Fetch the diagnostic from this exact commit
         env:
-          SOURCE_URL: https://raw.githubusercontent.com/${{ github.repository }}/${{ github.sha }}/qa/native-safari-orbit.py
-        run: curl --fail --silent --show-error --retry 4 --retry-all-errors "$SOURCE_URL" -o "$RUNNER_TEMP/native-safari-orbit.py"
+          SOURCE_BASE: https://raw.githubusercontent.com/${{ github.repository }}/${{ github.sha }}/qa
+        run: |
+          curl --fail --silent --show-error --retry 4 --retry-all-errors "$SOURCE_BASE/native-safari-orbit.py" -o "$RUNNER_TEMP/qa.py"
+          curl --fail --silent --show-error --retry 4 --retry-all-errors "$SOURCE_BASE/safari-followup.py" -o "$RUNNER_TEMP/followup.py"
       - name: Exercise the published homepage in Apple Safari
         shell: bash
         run: |
@@ -29,7 +32,7 @@ jobs:
           driver_pid=$!
           trap 'kill "$driver_pid" 2>/dev/null || true' EXIT
           cd "$RUNNER_TEMP"
-          python3 -u native-safari-orbit.py 2>&1 | tee orbit-qa.log
+          python3 -u followup.py 2>&1 | tee orbit-qa.log
       - name: Keep the Safari observations
         if: always()
         uses: actions/upload-artifact@v4
