@@ -4,12 +4,22 @@ import vm from 'node:vm';
 import {readFile} from 'node:fs/promises';
 
 const runtime=await readFile(new URL('../src/shared/apartment-card/card-runtime.js',import.meta.url),'utf8');
+const pdfRuntime=await readFile(new URL('../src/shared/apartment-card/pdf-export.js',import.meta.url),'utf8');
 const buttonRuntime=(await readFile(new URL('../src/shared/ui/frosted-button.js',import.meta.url),'utf8')).replace(/^export /gm,'');
 const apartments=[
   {id:'A001',building:'A',apartmentType:'B',floor:0,rooms:2,areaInterior:51.2,areaTerrace:8,areaGarden:12,price:75000000,status:'available',roomList:[{name:'Nappali',area:30,planNumber:1}],media:{floorplan:{original:'assets/plan.png'}}},
   {id:'C303',building:'C',apartmentType:'D',floor:3,rooms:3,areaInterior:82,areaTerrace:23,areaGarden:0,price:125000000,status:'sold',roomList:[{name:'Szoba',area:20,planNumber:1}],media:{floorplan:{original:'assets/plan-d.png'}}},
 ];
 const dataset={schemaVersion:'1.0',apartments,roomLayouts:{B:{markers:[{number:1,name:'Nappali',x:.5,y:.5}]}}};
+
+test('PDF floorplans keep a concrete image MIME type for blob decoding',()=>{
+  const type=vm.runInNewContext(pdfRuntime+'\nadmiralPdfImageType;');
+  assert.equal(type('image/avif','https://assets.admiral.test/plan.avif'),'image/avif');
+  assert.equal(type(' IMAGE/PNG ; charset=binary','https://assets.admiral.test/plan.avif'),'image/png');
+  assert.equal(type('application/octet-stream','https://assets.admiral.test/plan.WEBP?rev=4'),'image/webp');
+  assert.equal(type('image/*','https://assets.admiral.test/plan.avif#crop'),'image/avif');
+  assert.equal(type('','https://assets.admiral.test/image?name=plan.avif'),'');
+});
 
 function fixture({exporter=async()=>new Blob(['pdf'],{type:'application/pdf'}),fetcher,inquiryUrl='',theme={}}={}){
   const elements=new Map(),downloads=[],snapshots=[],urls=[],revoked=[],listeners=new Map();

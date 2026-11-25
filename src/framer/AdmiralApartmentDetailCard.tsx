@@ -149,23 +149,40 @@ async function loadAdmiralPdfTools(): Promise<any> {
         throw error;
     }
 }
+function admiralPdfImageType(contentType: any, url: any): any {
+    const declared: any = contentType.split(';', 1)[0].trim().toLowerCase();
+    if (/^image\/[a-z\d][a-z\d.+-]*$/.test(declared))
+        return declared;
+    const extension: any = url.split(/[?#]/, 1)[0].split('.').pop().toLowerCase();
+    const types: any = ({ avif: 'image/avif', webp: 'image/webp', png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', gif: 'image/gif', svg: 'image/svg+xml' } as any);
+    return (Object as any).hasOwn(types, extension) ? types[extension] : '';
+}
 async function createAdmiralApartmentPdf(snapshot: any, options: any): Promise<any> {
     const { signal }: any = options;
     const check: any = (): any => { if (signal.aborted)
         throw new DOMException('Export cancelled', 'AbortError'); };
     const resources: any = ([] as any), canvases: any = ([] as any);
     const canvas: any = (width: any, height: any): any => { const c: any = (document as any).createElement('canvas'); c.width = width; c.height = height; canvases.push(c); return c; };
-    async function bytes(url: any): Promise<any> {
+    async function fetchAsset(url: any): Promise<any> {
         if (!url)
             throw new Error('Missing PDF asset');
         const response: any = await fetch(url, ({ signal, credentials: 'omit' } as any));
         if (!response.ok)
             throw new Error('PDF asset unavailable: ' + response.status);
-        return new Uint8Array(await response.arrayBuffer());
+        return response;
     }
-    async function image(content: any, type: any): Promise<any> {
+    async function bytes(url: any): Promise<any> {
+        return new Uint8Array(await (await fetchAsset(url)).arrayBuffer());
+    }
+    async function planBlob(url: any): Promise<any> {
+        const response: any = await fetchAsset(url);
+        const blob: any = await response.blob();
+        const type: any = admiralPdfImageType(blob.type, response.url || url);
+        return blob.type === type ? blob : blob.slice(0, blob.size, type);
+    }
+    async function image(content: any, type: any = ''): Promise<any> {
         check();
-        const url: any = URL.createObjectURL(new Blob(([content] as any), ({ type } as any)));
+        const url: any = URL.createObjectURL(type ? new Blob(([content] as any), ({ type } as any)) : content);
         resources.push(url);
         const img: any = new Image();
         img.src = url;
@@ -181,9 +198,9 @@ async function createAdmiralApartmentPdf(snapshot: any, options: any): Promise<a
         return new Uint8Array(await blob.arrayBuffer());
     }
     try {
-        const [{ pdf: lib, fontkit }, regularBytes, semiboldBytes, planBytes, logoBytes, monogramBytes]: any = await Promise.all(([
+        const [{ pdf: lib, fontkit }, regularBytes, semiboldBytes, floorplan, logoBytes, monogramBytes]: any = await Promise.all(([
             loadAdmiralPdfTools(), bytes(snapshot.fontRegular), bytes(snapshot.fontSemibold),
-            snapshot.imageUrl ? bytes(snapshot.imageUrl) : null, bytes(snapshot.logoUrl), bytes(snapshot.monogramUrl),
+            snapshot.imageUrl ? planBlob(snapshot.imageUrl) : null, bytes(snapshot.logoUrl), bytes(snapshot.monogramUrl),
         ] as any));
         check();
         const pdf: any = await lib.PDFDocument.create();
@@ -322,8 +339,8 @@ async function createAdmiralApartmentPdf(snapshot: any, options: any): Promise<a
         const overview: any = snapshot.overview;
         const legendSpace: any = overview ? 74 + overview.legend.length * 14 : 0;
         const frame: any = ({ x: 40, top: 74, width: 558, height: 541 - legendSpace } as any);
-        if (planBytes) {
-            const img: any = await image(planBytes, 'image/*'), v: any = snapshot.viewBox, iw: any = img.naturalWidth, ih: any = img.naturalHeight;
+        if (floorplan) {
+            const img: any = await image(floorplan), v: any = snapshot.viewBox, iw: any = img.naturalWidth, ih: any = img.naturalHeight;
             const sx: any = iw * v.x, sy: any = ih * v.y, sw: any = iw * v.width, sh: any = ih * v.height;
             if (!(sw > 0 && sh > 0 && iw > 0 && ih > 0))
                 throw new Error('Invalid floorplan dimensions');

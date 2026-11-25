@@ -20,19 +20,36 @@ async function loadAdmiralPdfTools() {
   try{return await promise;}catch(error){if(window[key]===promise)delete window[key];throw error;}
 }
 
+function admiralPdfImageType(contentType,url) {
+  const declared=contentType.split(';',1)[0].trim().toLowerCase();
+  if(/^image\/[a-z\d][a-z\d.+-]*$/.test(declared))return declared;
+  const extension=url.split(/[?#]/,1)[0].split('.').pop().toLowerCase();
+  const types={avif:'image/avif',webp:'image/webp',png:'image/png',jpg:'image/jpeg',jpeg:'image/jpeg',gif:'image/gif',svg:'image/svg+xml'};
+  return Object.hasOwn(types,extension)?types[extension]:'';
+}
+
 async function createAdmiralApartmentPdf(snapshot,options) {
   const {signal}=options;
   const check=()=>{if(signal.aborted)throw new DOMException('Export cancelled','AbortError');};
   const resources=[],canvases=[];
   const canvas=(width,height)=>{const c=document.createElement('canvas');c.width=width;c.height=height;canvases.push(c);return c;};
-  async function bytes(url){
+  async function fetchAsset(url){
     if(!url)throw new Error('Missing PDF asset');
     const response=await fetch(url,{signal,credentials:'omit'});
     if(!response.ok)throw new Error('PDF asset unavailable: '+response.status);
-    return new Uint8Array(await response.arrayBuffer());
+    return response;
   }
-  async function image(content,type){
-    check();const url=URL.createObjectURL(new Blob([content],{type}));resources.push(url);
+  async function bytes(url){
+    return new Uint8Array(await (await fetchAsset(url)).arrayBuffer());
+  }
+  async function planBlob(url){
+    const response=await fetchAsset(url);
+    const blob=await response.blob();
+    const type=admiralPdfImageType(blob.type,response.url||url);
+    return blob.type===type?blob:blob.slice(0,blob.size,type);
+  }
+  async function image(content,type=''){
+    check();const url=URL.createObjectURL(type?new Blob([content],{type}):content);resources.push(url);
     const img=new Image();img.src=url;await img.decode();check();return img;
   }
   async function jpeg(c,quality){
@@ -41,9 +58,9 @@ async function createAdmiralApartmentPdf(snapshot,options) {
     check();return new Uint8Array(await blob.arrayBuffer());
   }
   try{
-    const [{pdf:lib,fontkit},regularBytes,semiboldBytes,planBytes,logoBytes,monogramBytes]=await Promise.all([
+    const [{pdf:lib,fontkit},regularBytes,semiboldBytes,floorplan,logoBytes,monogramBytes]=await Promise.all([
       loadAdmiralPdfTools(),bytes(snapshot.fontRegular),bytes(snapshot.fontSemibold),
-      snapshot.imageUrl?bytes(snapshot.imageUrl):null,bytes(snapshot.logoUrl),bytes(snapshot.monogramUrl),
+      snapshot.imageUrl?planBlob(snapshot.imageUrl):null,bytes(snapshot.logoUrl),bytes(snapshot.monogramUrl),
     ]);
     check();
     const pdf=await lib.PDFDocument.create();pdf.registerFontkit(fontkit);
@@ -136,8 +153,8 @@ async function createAdmiralApartmentPdf(snapshot,options) {
     const overview=snapshot.overview;
     const legendSpace=overview?74+overview.legend.length*14:0;
     const frame={x:40,top:74,width:558,height:541-legendSpace};
-    if(planBytes){
-      const img=await image(planBytes,'image/*'),v=snapshot.viewBox,iw=img.naturalWidth,ih=img.naturalHeight;
+    if(floorplan){
+      const img=await image(floorplan),v=snapshot.viewBox,iw=img.naturalWidth,ih=img.naturalHeight;
       const sx=iw*v.x,sy=ih*v.y,sw=iw*v.width,sh=ih*v.height;
       if(!(sw>0&&sh>0&&iw>0&&ih>0))throw new Error('Invalid floorplan dimensions');
       const scale=Math.min(frame.width/sw,frame.height/sh),pw=sw*scale,ph=sh*scale,px=frame.x+(frame.width-pw)/2,pt=frame.top+(frame.height-ph)/2;
