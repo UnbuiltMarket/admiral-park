@@ -70,15 +70,26 @@ def metrics():
 
 
 def css_and_pixels():
-    return qa.js("""const result={};for(const [name,sel] of [['beauty','[data-orbit-render-canvas]'],['lights','[data-orbit-mask-overlay]']]){
-    const source=r.querySelector(sel);
-    try {const test=document.createElement('canvas');test.width=240;test.height=126;const context=test.getContext('2d');context.drawImage(source,0,0,240,126);
-      const rgba=context.getImageData(0,0,240,126).data,colors=new Set();let opaque=0;
-      for(let i=0;i<rgba.length;i+=4){if(rgba[i+3]){opaque++;colors.add((rgba[i]<<16)|(rgba[i+1]<<8)|rgba[i+2]);}}
-      const b=source.getBoundingClientRect();const cs=getComputedStyle(source);
-      result[name]={colorCount:colors.size,nontransparentPixels:opaque,samplePixels:240*126,rect:[b.x,b.y,b.width,b.height],opacity:cs.opacity,visibility:cs.visibility};
-    }catch(e){result[name]={error:String(e)}}
-    }return result;""")
+    return qa.js("""const result={};const scratch=document.createElement('canvas');
+    scratch.width=240;scratch.height=126;scratch.style.cssText='position:fixed;left:-600px;pointer-events:none';
+    document.body.append(scratch);
+    const ctx=scratch.getContext('2d',{willReadFrequently:true});
+    function stats(a,stride=1){let colors=new Set(),opaque=0,peak=0,total=0;
+      for(let i=0;i<a.length;i+=4*stride){total++;if(a[i+3]){opaque++;peak=Math.max(peak,a[i+3]);colors.add(a[i]*65536+a[i+1]*256+a[i+2]);}}
+      return {colorCount:colors.size,nontransparentPixels:opaque,maxAlpha:peak,samplePixels:total};}
+    try {ctx.fillStyle='rgb(221,40,120)';ctx.fillRect(0,0,40,30);
+      result.control=[...ctx.getImageData(5,5,1,1).data];}catch(e){result.control=String(e);}
+    for(const [name,sel] of [['beauty','[data-orbit-render-canvas]'],['lights','[data-orbit-mask-overlay]']]){
+      const source=r.querySelector(sel),b=source.getBoundingClientRect(),cs=getComputedStyle(source),item=result[name]={
+        backing:[source.width,source.height],rect:[b.x,b.y,b.width,b.height],opacity:cs.opacity,visibility:cs.visibility,
+        painted:source.getAttribute('data-orbit-painted'),connected:source.isConnected};
+      try {const sourceCtx=source.getContext('2d');
+        const rgba=sourceCtx.getImageData(0,0,source.width,source.height).data;
+        item.direct=stats(rgba,23);
+      }catch(e){item.directError=String(e);}
+      try{ctx.clearRect(0,0,240,126);ctx.drawImage(source,0,0,240,126);item.sample=stats(ctx.getImageData(0,0,240,126).data);}
+      catch(e){item.copyError=String(e);}
+    } scratch.remove();return result;""")
 
 
 def main():
@@ -127,8 +138,10 @@ def main():
             qa.emit('B204_compositor',css_and_pixels())
             qa.next_camera();qa.parked(15);qa.next_camera();qa.parked(30);qa.hover('C304',.65286458,.26980198)
             p=css_and_pixels();qa.emit('C304_compositor',p)
-            if p['beauty'].get('colorCount',0)<30 or not p['lights'].get('nontransparentPixels'):
-                failures.append("canvas pixel readback lacks building or lighting")
+            for name in ['beauty','lights']:
+                evidence=p[name].get('direct') or p[name].get('sample')
+                if not evidence or not evidence['nontransparentPixels'] or (name=='beauty' and evidence['colorCount']<30):
+                    failures.append(name+" pixel verification inconclusive or blank; inspect control and backing sizes")
         except Exception as e:failures.append("orbit: "+str(e))
     finally:qa.call('DELETE','/session/'+qa.session)
     qa.emit('failures',failures);return int(bool(failures))
