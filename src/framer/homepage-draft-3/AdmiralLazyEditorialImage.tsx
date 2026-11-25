@@ -1,5 +1,5 @@
 import * as React from "react"
-import { addPropertyControls, ControlType } from "framer"
+import { addPropertyControls, ControlType, RenderTarget } from "framer"
 
 const photos = {
     promenade: {
@@ -49,11 +49,35 @@ export default function AdmiralLazyEditorialImage({
     const resized = [512, 1024, 2048, 4096].filter(size => size < width).map(size => `${variant(size)} ${size}w`)
     const srcSet = [...resized, `${url}?width=${width}&height=${height} ${width}w`].join(", ")
     const zoomable = photo === "promenade"
+    const [nearViewport, setNearViewport] = React.useState(false)
     const [open, setOpen] = React.useState(false)
+    const imageRef = React.useRef<HTMLImageElement>(null)
     const dialog = React.useRef<HTMLDialogElement>(null)
     const trigger = React.useRef<HTMLButtonElement>(null)
     const closeButton = React.useRef<HTMLButtonElement>(null)
-    const boxSize = { width: "100%", height: natural ? "auto" : "100%" }
+    const fill = { width: "100%", height: "100%" }
+    const naturalFrame: React.CSSProperties | undefined = natural
+        ? { width: "100%", height: "auto", position: "relative", aspectRatio: `${width} / ${height}` }
+        : undefined
+    const loadImage = nearViewport || RenderTarget.current() === RenderTarget.canvas
+
+    React.useEffect(() => {
+        const element = imageRef.current
+        if (loadImage || !element) return
+        if (typeof IntersectionObserver === "undefined") {
+            setNearViewport(true)
+            return
+        }
+        // Leave media URLs out of the initial markup so the page optimizer
+        // cannot request these photographs before the visitor reaches them.
+        const watcher = new IntersectionObserver(entries => {
+            if (!entries.some(entry => entry.isIntersecting)) return
+            watcher.disconnect()
+            setNearViewport(true)
+        }, { rootMargin: "500px 0px" })
+        watcher.observe(element)
+        return () => watcher.disconnect()
+    }, [loadImage])
 
     React.useEffect(() => {
         const element = dialog.current
@@ -63,10 +87,11 @@ export default function AdmiralLazyEditorialImage({
     }, [open])
 
     const image = <img
+        ref={imageRef}
         data-admiral-editorial-image={photo}
-        src={variant(1024)}
-        srcSet={srcSet}
-        sizes={sizes}
+        src={loadImage ? variant(1024) : undefined}
+        srcSet={loadImage ? srcSet : undefined}
+        sizes={loadImage ? sizes : undefined}
         width={width}
         height={height}
         alt={alt}
@@ -74,19 +99,20 @@ export default function AdmiralLazyEditorialImage({
         decoding="async"
         {...{ fetchpriority: "low" }}
         draggable={false}
-        style={{ ...(zoomable ? {} : style), ...boxSize, display: "block", borderRadius: "inherit", objectFit: "cover", objectPosition: position }}
+        style={{ ...(zoomable || natural ? {} : style), ...fill, display: "block", borderRadius: "inherit", objectFit: "cover", objectPosition: position,
+            ...(!zoomable && natural ? { position: "absolute", inset: 0 } as const : {}), visibility: loadImage ? undefined : "hidden" }}
     />
 
-    if (!zoomable) return image
+    if (!zoomable) return natural ? <div style={{ ...style, ...naturalFrame, borderRadius: "inherit" }}>{image}</div> : image
 
-    return <div style={{ ...style, ...boxSize, borderRadius: "inherit" }}>
+    return <div style={{ ...style, ...fill, ...naturalFrame, borderRadius: "inherit" }}>
         <button
             type="button"
             ref={trigger}
             aria-haspopup="dialog"
             aria-label="A kert látványtervének nagyítása"
             onClick={() => setOpen(true)}
-            style={{ ...boxSize, display: "block", padding: 0, border: 0, background: "none", borderRadius: "inherit", cursor: "zoom-in" }}
+            style={{ ...fill, ...(natural ? { position: "absolute", inset: 0 } : {}), display: "block", padding: 0, border: 0, background: "none", borderRadius: "inherit", cursor: "zoom-in" }}
         >{image}</button>
         {open && <dialog
             ref={dialog}
