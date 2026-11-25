@@ -192,7 +192,7 @@ function previewButton(a,item) {
   let image = "";
   if (item.thumbnail) {
     const placement = cropped ? `position:absolute;left:${-100 * view.x / view.width}%;top:${-100 * view.y / view.height}%;width:${100 / view.width}%;height:${100 / view.height}%;max-width:none` : "";
-    image = `<img src="${esc(item.thumbnail)}" style="${placement}" alt="" loading="lazy" decoding="async" data-thumbnail>`;
+    image = `<img src="${esc(item.thumbnail)}" data-floorplan-fallback="${esc(floorplanFallbackUrl(item.thumbnail))}" style="${placement}" alt="" loading="lazy" decoding="async" data-thumbnail>`;
     if (cropped) {
       // Fit the drawing inside the thumbnail using the full sheet's known crop.
       const aspect = dims.width * view.width / (dims.height * view.height);
@@ -379,6 +379,8 @@ function showMedia(index) {
   mediaView.scale=1;mediaView.x=0;mediaView.y=0;mediaView.drag=null;
   const current=mediaView.entries[mediaView.index],token=++mediaSequence,dialog=$('media-dialog');mediaView.token=token;
   const image=dialog.querySelector('.media-image'),status=dialog.querySelector('.media-load-status');
+  image.dataset.floorplanFallback=floorplanFallbackUrl(current.full)||'';
+  delete image.dataset.floorplanFallbackUsed;
   dialog.dataset.loading='true';dialog.dataset.error='false';
   dialog.querySelector('#media-title').textContent=current.name;
   dialog.querySelector('.media-description').textContent=current.label;
@@ -394,6 +396,7 @@ function showMedia(index) {
   };
   image.onerror=()=>{
     if(!mediaView||token!==mediaView.token)return;
+    if(swapToFloorplanFallback(image))return;
     dialog.dataset.loading='false';dialog.dataset.error='true';dialog.querySelector('.media-stage').setAttribute('aria-busy','false');
     status.innerHTML=`<p>A nagy méretű rajz most nem tölthető be.</p><div><button class="button-secondary" data-media-retry>Újrapróbálom</button><a class="button-secondary" href="${esc(current.full)}" target="_blank" rel="noopener">Kép megnyitása új lapon ${svg('arrow')}</a></div>`;
   };
@@ -504,6 +507,7 @@ $('sort').addEventListener('change',e=>{state.sort=e.target.value;render();},eve
 root.addEventListener('error',event=>{
   const image=event.target;
   if (image.matches?.('img[data-thumbnail]')) {
+    if (swapToFloorplanFallback(image)) return;
     image.hidden = true;
     const crop = image.closest('[data-plan-crop]');
     if (crop) crop.hidden = true;

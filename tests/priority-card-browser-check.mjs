@@ -8,7 +8,8 @@ const root=new URL('../',import.meta.url),out=new URL('tmp/priority-card-check/'
 const require=createRequire(import.meta.url),{chromium}=require(process.env.PLAYWRIGHT_MODULE_PATH||'playwright');
 const data=JSON.parse(await read('data/apartment-details.json'));
 const buttonRuntime=(await read('src/shared/ui/frosted-button.js')).replace(/^export /gm,'');
-const runtime=buttonRuntime+'\n'+await read('src/shared/apartment-card/card-runtime.js'),css=await read('src/shared/apartment-card/card.css')+'\n'+FROSTED_BUTTON_CSS.replaceAll('.admiral-frosted-button', '#detail-dialog .inquiry-button.admiral-frosted-button'),shell=await read('src/shared/apartment-card/card-shell.html');
+const floorplanRuntime=(await read('src/shared/ui/floorplan.js')).replace(/^export /gm,'');
+const runtime=buttonRuntime+'\n'+floorplanRuntime+'\n'+await read('src/shared/apartment-card/card-runtime.js'),css=await read('src/shared/apartment-card/card.css')+'\n'+FROSTED_BUTTON_CSS.replaceAll('.admiral-frosted-button', '#detail-dialog .inquiry-button.admiral-frosted-button'),shell=await read('src/shared/apartment-card/card-shell.html');
 // This fixture loads the card first, so its shared button module is already in scope.
 const listRuntime=(await read('src/shared/apartment-list/app.js')).replace('export function mountApartmentList','function mountApartmentList');
 await mkdir(out,{recursive:true});

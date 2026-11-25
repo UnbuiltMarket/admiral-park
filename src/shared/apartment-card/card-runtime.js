@@ -165,7 +165,9 @@ function validPlanMarkers(layout) {
 }
 function initializeDetailImages(dialog) {
   dialog.querySelectorAll('img[data-detail-image][src]').forEach(image=>{
-    detailImageState(image,image.complete?(image.naturalWidth?'ready':'error'):'loading');
+    if (!image.complete) detailImageState(image,'loading');
+    else if (image.naturalWidth) detailImageState(image,'ready');
+    else if (!swapToFloorplanFallback(image)) detailImageState(image,'error');
   });
 }
 function detailPlanUrl(a) {
@@ -181,7 +183,7 @@ function detailPlan(a) {
   const imageWidth=dimensions.width||dimensions[0]||1500,imageHeight=dimensions.height||dimensions[1]||2000;
   const surface=`left:${-view.x/view.width*100}%;top:${-view.y/view.height*100}%;width:${100/view.width}%;height:${100/view.height}%`;
   const markers=validPlanMarkers(layout);
-  return `<section class="detail-plan" data-document-panel="plan" id="detail-document-plan" role="tabpanel" aria-labelledby="detail-document-plan-tab"><div class="detail-plan-stage" data-detail-image-stage="plan" data-image-state="loading" aria-busy="true">${detailImageFeedback('plan')}<div class="detail-plan-canvas" style="--plan-aspect:${imageWidth*view.width/(imageHeight*view.height)};aspect-ratio:${imageWidth*view.width}/${imageHeight*view.height}"><div class="detail-plan-surface" style="${surface}"><img class="detail-plan-image" data-detail-image="plan" data-image-url="${esc(url)}" src="${esc(url)}" alt="${esc(a.apartmentType||a.id)} típus számozott alaprajza" decoding="async"><div class="detail-plan-markers" aria-label="A típusterv helyiségei">${markers.map(marker=>`<button type="button" class="room-marker" data-plan-room="${marker.number}" style="left:${marker.x*100}%;top:${marker.y*100}%" aria-label="${marker.number}. ${esc(roomLabel(marker.name))}" aria-pressed="false">${marker.number}</button>`).join('')}</div></div></div></div></section>`;
+  return `<section class="detail-plan" data-document-panel="plan" id="detail-document-plan" role="tabpanel" aria-labelledby="detail-document-plan-tab"><div class="detail-plan-stage" data-detail-image-stage="plan" data-image-state="loading" aria-busy="true">${detailImageFeedback('plan')}<div class="detail-plan-canvas" style="--plan-aspect:${imageWidth*view.width/(imageHeight*view.height)};aspect-ratio:${imageWidth*view.width}/${imageHeight*view.height}"><div class="detail-plan-surface" style="${surface}"><img class="detail-plan-image" data-detail-image="plan" data-image-url="${esc(url)}" data-floorplan-fallback="${esc(floorplanFallbackUrl(url))}" src="${esc(url)}" alt="${esc(a.apartmentType||a.id)} típus számozott alaprajza" decoding="async"><div class="detail-plan-markers" aria-label="A típusterv helyiségei">${markers.map(marker=>`<button type="button" class="room-marker" data-plan-room="${marker.number}" style="left:${marker.x*100}%;top:${marker.y*100}%" aria-label="${marker.number}. ${esc(roomLabel(marker.name))}" aria-pressed="false">${marker.number}</button>`).join('')}</div></div></div></div></section>`;
 }
 // Display-only joins for the shared illustrative plans. The source room rows
 // and their actual apartment areas remain unchanged; inferred joins are never
@@ -385,7 +387,7 @@ function startDetailImage(kind,retry=false) {
   if(!['plan','floor'].includes(kind))return;
   const image=$('detail-dialog').querySelector(`img[data-detail-image="${kind}"]`);if(!image||!image.dataset.imageUrl)return;
   detailImageState(image,'loading');
-  let url=image.dataset.imageUrl;
+  let url=image.dataset.floorplanFallbackUsed==='true'?image.dataset.floorplanFallback:image.dataset.imageUrl;
   if(retry){const fresh=new URL(url);fresh.searchParams.set('admiral-retry',String(Date.now()));url=fresh.href;image.removeAttribute('src');}
   image.src=url;
 }
@@ -468,6 +470,8 @@ function showMedia(index) {
   mediaView.scale=1;mediaView.x=0;mediaView.y=0;mediaView.drag=null;
   const current=mediaView.entries[mediaView.index],token=++mediaSequence,dialog=$('media-dialog');mediaView.token=token;
   const image=dialog.querySelector('.media-image'),status=dialog.querySelector('.media-load-status');
+  image.dataset.floorplanFallback=floorplanFallbackUrl(current.full)||'';
+  delete image.dataset.floorplanFallbackUsed;
   dialog.dataset.loading='true';dialog.dataset.error='false';
   dialog.querySelector('#media-title').textContent=current.name;
   dialog.querySelector('.media-description').textContent=current.label;
@@ -483,6 +487,7 @@ function showMedia(index) {
   };
   image.onerror=()=>{
     if(!mediaView||token!==mediaView.token)return;
+    if(swapToFloorplanFallback(image))return;
     dialog.dataset.loading='false';dialog.dataset.error='true';dialog.querySelector('.media-stage').setAttribute('aria-busy','false');
     status.innerHTML=`<p>A nagy méretű rajz most nem tölthető be.</p><div><button class="button-secondary" data-media-retry>Újrapróbálom</button><a class="button-secondary" href="${esc(current.full)}" target="_blank" rel="noopener">Kép megnyitása új lapon ${svg('arrow')}</a></div>`;
   };
@@ -559,12 +564,13 @@ async function downloadDatasheet(id,trigger) {
   const view=layout?.viewBox||{x:0,y:0,width:1,height:1};
   const validView=[view.x,view.y,view.width,view.height].every(hasNumber)&&view.x>=0&&view.y>=0&&view.width>0&&view.height>0&&view.x+view.width<=1.001&&view.y+view.height<=1.001;
   const pageUrl=apartmentLink(a.id),inquiryUrl=safeUrl(config.inquiryUrl),actionUrl=new URL(inquiryUrl||pageUrl);if(inquiryUrl)actionUrl.searchParams.set('apartment',a.id);
+  const imageUrl=floor?.full||detailPlanUrl(a);
   const snapshot={
     id:String(a.id),date:new Date(),colors,
     metrics:[{label:'Lakásszám',value:String(a.id)},metric('Beltér',a.areaInterior),metric('Erkély',a.areaTerrace),...(a.areaGarden>0?[metric('Kert',a.areaGarden)]:[])],
     meta:[a.apartmentType?`${a.apartmentType} típus`:null,`${a.building} épület`,floorText(a),a.orientation?`${a.orientation} tájolás`:null].filter(Boolean).join(' · '),
     documentLabel:floor?'Szintrajz':'Alaprajz',
-    imageUrl:floor?.full||detailPlanUrl(a),
+    imageUrl,imageFallbackUrl:floorplanFallbackUrl(imageUrl),
     viewBox:floor||!validView?{x:0,y:0,width:1,height:1}:{x:view.x,y:view.y,width:view.width,height:view.height},
     markers:floor?[]:markers.map(marker=>({number:marker.number,x:marker.x,y:marker.y})),
     roomRows,layoutLabel:typeof a.layoutLabel==='string'?a.layoutLabel.replace(/hálószoba/giu,'szoba'):hasNumber(a.rooms)?`${number.format(a.rooms)} szoba`:'',
@@ -726,7 +732,7 @@ root.addEventListener('keydown',event=>{
 },events);
 root.addEventListener('error',event=>{
   const image=event.target;
-  if(image.matches?.('img[data-detail-image]'))detailImageState(image,'error');
+  if(image.matches?.('img[data-detail-image]')&&!swapToFloorplanFallback(image))detailImageState(image,'error');
   if(image.matches?.('img[data-thumbnail]')){image.hidden=true;const fallback=image.parentElement.querySelector('.preview-unavailable');if(fallback)fallback.hidden=false;}
 },{...events,capture:true});
 root.addEventListener('load',event=>{if(event.target.matches?.('img[data-detail-image]'))detailImageState(event.target,'ready');},{...events,capture:true});

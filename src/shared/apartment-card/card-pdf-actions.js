@@ -56,12 +56,13 @@ async function downloadDatasheet(id,trigger) {
   const view=layout?.viewBox||{x:0,y:0,width:1,height:1};
   const validView=[view.x,view.y,view.width,view.height].every(hasNumber)&&view.x>=0&&view.y>=0&&view.width>0&&view.height>0&&view.x+view.width<=1.001&&view.y+view.height<=1.001;
   const pageUrl=apartmentLink(a.id),inquiryUrl=safeUrl(config.inquiryUrl),actionUrl=new URL(inquiryUrl||pageUrl);if(inquiryUrl)actionUrl.searchParams.set('apartment',a.id);
+  const imageUrl=floor?.full||detailPlanUrl(a);
   const snapshot={
     id:String(a.id),date:new Date(),colors,
     metrics:[{label:'Lakásszám',value:String(a.id)},metric('Beltér',a.areaInterior),metric('Erkély',a.areaTerrace),...(a.areaGarden>0?[metric('Kert',a.areaGarden)]:[])],
     meta:[a.apartmentType?`${a.apartmentType} típus`:null,`${a.building} épület`,floorText(a),a.orientation?`${a.orientation} tájolás`:null].filter(Boolean).join(' · '),
     documentLabel:floor?'Szintrajz':'Alaprajz',
-    imageUrl:floor?.full||detailPlanUrl(a),
+    imageUrl,imageFallbackUrl:floorplanFallbackUrl(imageUrl),
     viewBox:floor||!validView?{x:0,y:0,width:1,height:1}:{x:view.x,y:view.y,width:view.width,height:view.height},
     markers:floor?[]:markers.map(marker=>({number:marker.number,x:marker.x,y:marker.y})),
     roomRows,layoutLabel:typeof a.layoutLabel==='string'?a.layoutLabel.replace(/hálószoba/giu,'szoba'):hasNumber(a.rooms)?`${number.format(a.rooms)} szoba`:'',

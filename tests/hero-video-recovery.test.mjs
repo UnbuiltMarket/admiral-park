@@ -67,7 +67,7 @@ function flight(t, options = {}) {
     const endLayer = new Layer(), requests = [], releases = [], doc = new EventTarget();
     const fetchVideo = (url) => {
         requests.push(url);
-        return {ready: options.bytes ?? Promise.resolve('blob:film'), release() { releases.push(url); }};
+        return {ready: options.bytesByUrl ? Promise.resolve(options.bytesByUrl[url]) : options.bytes ?? Promise.resolve('blob:film'), release() { releases.push(url); }};
     };
     const snapshots = [];
     const createPlayer = script.runInNewContext({
@@ -79,7 +79,7 @@ function flight(t, options = {}) {
         prepareFlightVideo: fetchVideo,
     });
     const controller = createPlayer({
-        video, poster: new Layer(), endLayer, url: 'flight.mp4', endPoster: 'landing.avif',
+        video, poster: new Layer(), endLayer, url: 'flight.mp4', fallbackUrl: options.fallbackUrl, endPoster: 'landing.avif',
         lastFrame: 63, startAtEnd: false, fadeExtension: () => 0, preparedVideo: options.prepared,
         resumeWhenVisible: options.resumeWhenVisible,
         onUpdate: snapshot => snapshots.push(snapshot),
@@ -95,6 +95,26 @@ function flight(t, options = {}) {
         async advance(ms) { t.mock.timers.tick(ms); await setImmediate(); },
     };
 }
+
+test('a failed lightweight flight uses the original file before falling back to a still', async t => {
+    const f = flight(t, { fallbackUrl: 'original.mp4', bytesByUrl: {'flight.mp4': null, 'original.mp4': 'blob:original'} });
+    await f.start();
+    assert.deepEqual(f.requests, ['flight.mp4', 'original.mp4']);
+    assert.deepEqual(f.releases, ['flight.mp4']);
+    assert.equal(f.video.src, 'blob:original');
+    assert.equal(f.video.playCalls, 1);
+});
+
+test('a browser rejecting the mobile blob uses the original native media URL', async t => {
+    const f = flight(t, { frames: true, fallbackUrl: 'original.mp4', bytesByUrl: {'flight.mp4': 'blob:phone', 'original.mp4': 'blob:original'} });
+    await f.start();
+    f.video.error = {code: 4};
+    f.event('error');
+    await setImmediate();
+    assert.deepEqual(f.requests, ['flight.mp4', 'original.mp4']);
+    assert.equal(f.video.src, 'original.mp4');
+    assert.equal(f.video.playCalls, 2);
+});
 
 test('one buffered seek resumes a stalled decoder and the film reaches its real end', async t => {
     const f = flight(t);

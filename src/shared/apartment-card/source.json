@@ -5,8 +5,8 @@
   "updated": "2026-11-25",
   "canonicalSources": {
     "card-runtime.js": {
-      "sha256": "8a8a4c87444898c7434fb6830fad83960e4c59109c3daeb655dcbb20546df3b6",
-      "bytes": 66330
+      "sha256": "d0062deb112a6daf29e6f6c17bd174aed7bf5ab4fb19d2022a863ca04b7814d9",
+      "bytes": 66846
     },
     "card.css": {
       "sha256": "45146b4ff965f33f1b2e02ac246b773cb8abb9444665a43a0951809c55e5caf9",
@@ -17,16 +17,20 @@
       "bytes": 250
     },
     "pdf-export.js": {
-      "sha256": "4b5723f23685e6ffac255b4294e1cd6d879cd03e3644fb27e89e9469c2c6b670",
-      "bytes": 17651
+      "sha256": "28cb5822966a82458ace88daf7d0b4c5d07467f837d710669a482d989698e017",
+      "bytes": 17886
     },
     "card-pdf-actions.js": {
-      "sha256": "bcfc8cd76a1cda2ba55aa6dd5545c873e69264c9dede005c079f78b8cf78c4ec",
-      "bytes": 8069
+      "sha256": "42936211cb4b88c4bfe39fda5d71e9075ee3c6618eda3341f6545799dfe31f6b",
+      "bytes": 8135
     },
     "../ui/frosted-button.js": {
       "sha256": "2461efcce3579cf83bcf5d6852aec3d5a5a5c5db9a48d1fb22e2a9f6dd1ad117",
       "bytes": 6361
+    },
+    "../ui/floorplan.js": {
+      "sha256": "5b7ce97c68ff8f936fac1dee06307e60aed2638f26591e815484ff6d53a9f668",
+      "bytes": 1043
     }
   },
   "framerWrapper": "src/framer/OrbitApartmentCard.source.tsx",

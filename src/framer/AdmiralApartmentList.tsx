@@ -120,6 +120,29 @@ function renderFrostedButton({ label = 'Érdeklődöm', href, className = '', at
     const serialized: any = (Object as any).entries(props).map(([name, value]: any): any => value === true && !/^(?:aria-|data-)/i.test(name) ? ' ' + name : ' ' + name + '="' + escapeFrostedButton(value) + '"').join('');
     return '<' + tag + ' class="admiral-frosted-button' + (className ? ' ' + escapeFrostedButton(className) : '') + '"' + serialized + '>' + escapeFrostedButton(label) + '</' + tag + '>';
 }
+// The WebP companion is encoded from the same AVIF sheet, so the room crop
+// and marker coordinates apply to both formats.
+function floorplanFallbackUrl(source: any): any {
+    if (typeof source !== 'string' || !/^https?:\/\//i.test(source))
+        return null;
+    const url: any = new URL(source);
+    if (!/\/floorplans\/types\/[a-z0-9]+\/plan\.avif$/i.test(url.pathname))
+        return null;
+    url.pathname = url.pathname.replace(/plan\.avif$/i, 'plan.webp');
+    if (url.hostname === 'raw.githubusercontent.com') {
+        const assetRevision: any = '2d2cd2bbb70ad70cae23bfd4c423384ab6cfcde2';
+        url.pathname = url.pathname.replace(/^\/UnbuiltMarket\/admiral-park\/main\/assets\/apartment-list\//, `/UnbuiltMarket/admiral-park/${assetRevision}/assets/apartment-list/`);
+    }
+    return url.href;
+}
+function swapToFloorplanFallback(image: any): any {
+    const fallback: any = image.dataset.floorplanFallback;
+    if (!fallback || image.dataset.floorplanFallbackUsed === 'true')
+        return false;
+    image.dataset.floorplanFallbackUsed = 'true';
+    image.src = fallback;
+    return true;
+}
 /* ADMIRAL_FONT_LOADER_START */
 function ensureAdmiralFont(folder: any): any {
     if (typeof (window as any) === 'undefined' || !(window as any).FontFace || !(document as any).fonts || !folder)
@@ -383,7 +406,7 @@ function mountApartmentList(root: any = (document as any), config: any = ({} as 
         let image: any = "";
         if (item.thumbnail) {
             const placement: any = cropped ? `position:absolute;left:${-100 * view.x / view.width}%;top:${-100 * view.y / view.height}%;width:${100 / view.width}%;height:${100 / view.height}%;max-width:none` : "";
-            image = `<img src="${esc(item.thumbnail)}" style="${placement}" alt="" loading="lazy" decoding="async" data-thumbnail>`;
+            image = `<img src="${esc(item.thumbnail)}" data-floorplan-fallback="${esc(floorplanFallbackUrl(item.thumbnail))}" style="${placement}" alt="" loading="lazy" decoding="async" data-thumbnail>`;
             if (cropped) {
                 // Fit the drawing inside the thumbnail using the full sheet's known crop.
                 const aspect: any = dims.width * view.width / (dims.height * view.height);
@@ -673,6 +696,8 @@ function mountApartmentList(root: any = (document as any), config: any = ({} as 
         const current: any = mediaView.entries[mediaView.index], token: any = ++mediaSequence, dialog: any = $('media-dialog');
         mediaView.token = token;
         const image: any = dialog.querySelector('.media-image'), status: any = dialog.querySelector('.media-load-status');
+        image.dataset.floorplanFallback = floorplanFallbackUrl(current.full) || '';
+        delete image.dataset.floorplanFallbackUsed;
         dialog.dataset.loading = 'true';
         dialog.dataset.error = 'false';
         dialog.querySelector('#media-title').textContent = current.name;
@@ -694,6 +719,8 @@ function mountApartmentList(root: any = (document as any), config: any = ({} as 
         };
         image.onerror = (): any => {
             if (!mediaView || token !== mediaView.token)
+                return;
+            if (swapToFloorplanFallback(image))
                 return;
             dialog.dataset.loading = 'false';
             dialog.dataset.error = 'true';
@@ -904,6 +931,8 @@ function mountApartmentList(root: any = (document as any), config: any = ({} as 
     root.addEventListener('error', (event: any): any => {
         const image: any = event.target;
         if (image.matches?.('img[data-thumbnail]')) {
+            if (swapToFloorplanFallback(image))
+                return;
             image.hidden = true;
             const crop: any = image.closest('[data-plan-crop]');
             if (crop)

@@ -4,7 +4,7 @@ import type { ComponentType } from "react"
 import { addPropertyControls, ControlType, useIsStaticRenderer } from "framer"
 // Project-local Framer import; the MCP single-file checker cannot resolve sibling files.
 // @ts-ignore -- the existing sibling file is resolved by Framer at runtime.
-import AdmiralApartmentDetailCard, { normalizeAdmiralFavorites, toggleAdmiralFavorite } from "./AdmiralApartmentDetailCard.tsx"
+import AdmiralApartmentDetailCard, { floorplanFallbackUrl, normalizeAdmiralFavorites, toggleAdmiralFavorite } from "./AdmiralApartmentDetailCard.tsx"
 
 // @ts-ignore -- the Framer single-file checker does not resolve project-local modules.
 import { admiralPalette } from "./AdmiralPalette.tsx"
@@ -498,6 +498,7 @@ const HOMEPAGE_HERO_INFOGRAPHIC = "https://framerusercontent.com/images/vRuUWre5
 const HOMEPAGE_CONNECTION_VIDEO = "https://framerusercontent.com/assets/BfO7rinv7Ci9Naw3GW01EFAvHi0.mp4"
 const HOMEPAGE_CONNECTION_END = "https://framerusercontent.com/images/uYMWXjUcDBc351olR2N5bRso.avif"
 const HOMEPAGE_ORBIT_APPROACH_VIDEO = "https://framerusercontent.com/assets/N02rcgZxOCN9LfVxWZtmoNOx2ws.mp4"
+const HOMEPAGE_MOBILE_VIDEO_BASE = "https://raw.githubusercontent.com/UnbuiltMarket/admiral-park/9732c7ca8b8f9d8080af85619b6881c0d19ffadd/assets/videos/homepage"
 const ORBIT_CHECKPOINT_ASSETS = "https://raw.githubusercontent.com/UnbuiltMarket/admiral-park/bfb2349cf8af7e6ae3f1c665ca67c984b82cf024/assets"
 const HOMEPAGE_CONNECTION_VERSION = "426c29f22325"
 const ORBIT_INTERACTION_ASSETS = "https://raw.githubusercontent.com/UnbuiltMarket/admiral-park/f59c616abb28bf6b24a4481137d992ea2ee1e1df/assets/orbit-interaction-v1"
@@ -2578,9 +2579,7 @@ function orbitApartmentPlan(
         (dimensions.height * viewBox.height)
     // A thumbnail alias to the full sheet still needs the drawing's crop.
     const croppedThumbnail = !!thumbnail && thumbnail !== full
-    const displayUrl = preferWebp
-        ? url.replace(/(\/floorplans\/types\/[a-z0-9]+\/)plan\.avif(?=$|[?#])/i, "$1full.webp")
-        : url
+    const displayUrl = preferWebp ? floorplanFallbackUrl(url) || url : url
     return {
         url: displayUrl,
         isThumbnail: croppedThumbnail,
@@ -2695,6 +2694,7 @@ function useOrbitPreviewImage(
     delayMs = isThumbnail || (url && compactOrbitPlan.test(url)) ? 32 : 160
 ): string | null {
     const requested = enabled && url ? url : null
+    const fallback = floorplanFallbackUrl(requested)
     const [ready, setReady] = React.useState<string | null>(null)
     React.useEffect(() => {
         if (!requested) {
@@ -2708,25 +2708,22 @@ function useOrbitPreviewImage(
         let active = true
         setReady(null)
         const timer = setTimeout(() => {
-            requestOrbitPreviewImage(requested).then(
-                () => {
-                    if (active) setReady(requested)
-                },
-                () => {
-                    if (active) setReady(null)
-                }
-            )
+            requestOrbitPreviewImage(requested)
+                .then(() => requested, (error) => {
+                    if (!active || !fallback) throw error
+                    return requestOrbitPreviewImage(fallback).then(() => fallback)
+                })
+                .then((decoded) => { if (active) setReady(decoded) })
+                .catch(() => { if (active) setReady(null) })
         }, delayMs)
         return () => {
             active = false
             clearTimeout(timer)
         }
-    }, [requested, delayMs])
+    }, [requested, fallback, delayMs])
     // Do not show an old apartment's floorplan during the effect's next tick.
-    return requested &&
-        (ready === requested || orbitPreviewImageReady.has(requested))
-        ? requested
-        : null
+    if (requested && (ready === requested || orbitPreviewImageReady.has(requested))) return requested
+    return ready === fallback ? fallback : null
 }
 
 // The cache shares work between instances, but a stalled network or response-body
@@ -8779,6 +8776,11 @@ export default function AdmiralHomepageStudio(
             root.clientWidth <= 767 ||
             (window.matchMedia("(pointer: coarse)").matches &&
                 Math.min(root.clientWidth, root.clientHeight) <= 767)
+        const flightSource = (sequence: "01" | "02" | "03", desktop: string) =>
+            phone && desktop ? `${HOMEPAGE_MOBILE_VIDEO_BASE}/seq-${sequence}/flight-mobile-v1.mp4` : desktop
+        const openingFlight = flightSource("01", heroVideoUrl)
+        const connectionFlight = flightSource("02", connectionVideoUrl)
+        const approachFlight = flightSource("03", HOMEPAGE_ORBIT_APPROACH_VIDEO)
         let portraitFlight = phone && root.clientWidth < root.clientHeight
         let appliedFlightFocal: number | undefined
         const reducedMedia = window.matchMedia(
@@ -9190,7 +9192,7 @@ export default function AdmiralHomepageStudio(
         function warmNextFilm(url: string) {
             if (nextFilm?.url === url || !canWarmNextFilm()) return
             nextFilm?.media.release()
-            nextFilm = { url, media: prepareFlightVideo(url) }
+            nextFilm = { url, media: prepareFlightVideo(url, "low") }
         }
         function takeNextFilm(url: string) {
             if (nextFilm?.url !== url) return
@@ -9201,7 +9203,7 @@ export default function AdmiralHomepageStudio(
         // The visitor's next gesture adopts this download, even if it is still in progress.
         function warmConnection() {
             if (connectionVideoUrl) {
-                if (heroSnapshot.state === "arrival") warmNextFilm(connectionVideoUrl)
+                if (heroSnapshot.state === "arrival") warmNextFilm(connectionFlight)
                 return
             }
             if (connectionWarmed || !canWarmNextFilm()) return
@@ -9273,7 +9275,6 @@ export default function AdmiralHomepageStudio(
                     snapshot.state === "arrival" ||
                     snapshot.state === "reduced"
                 ) {
-                    if (isVisible()) orbit?.prefetch()
                     if (heroVideoUrl) changePoster(heroEndPoster)
                     changeStage("building")
                 } else if (snapshot.state === "opening")
@@ -9294,7 +9295,8 @@ export default function AdmiralHomepageStudio(
                 poster!.style.opacity = "1"
                 hero = createHomepageHeroVideo({
                     video, poster: poster!, endLayer, graphic,
-                    url: heroVideoUrl, endPoster: heroEndPoster, graphicUrl: HOMEPAGE_HERO_INFOGRAPHIC,
+                    url: openingFlight, fallbackUrl: heroVideoUrl,
+                    endPoster: heroEndPoster, graphicUrl: HOMEPAGE_HERO_INFOGRAPHIC,
                     startAtEnd: atEnd, lastFrame: heroUrls.length - 1,
                     resumeWhenVisible: phone,
                     fadeExtension: () => fadeExtensionRef.current,
@@ -9338,6 +9340,8 @@ export default function AdmiralHomepageStudio(
             if (currentStage !== "orbit") setEnteredOrbit(true)
             presentationProgress = 1
             changeStage("handoff")
+            const checkpoint = frame * checkpointCount / orbitUrls.length
+            if (Number.isInteger(checkpoint)) maskPickerRef.current?.warm(checkpoint)
             try {
                 await orbit.activate(frame, restoration)
                 if (disposed || token !== enterToken) return
@@ -9385,8 +9389,7 @@ export default function AdmiralHomepageStudio(
                     previous === snapshot.state ? previous : snapshot.state
                 )
                 // SEQ_02's media clock drives the journey events independently of viewport framing.
-                // The orbit downloads in compressed form. Decode its bounded
-                // window only near the connecting flight's handoff.
+                // Warm the entry angle once the connecting flight is settling.
                 if (
                     orbit &&
                     !orbitPreparing &&
@@ -9401,7 +9404,7 @@ export default function AdmiralHomepageStudio(
                 publish()
                 if (connectionVideoUrl && (snapshot.state === "arrival" || snapshot.state === "reduced")) {
                     changePoster(connectionEndPoster)
-                    if (snapshot.state === "arrival") warmNextFilm(HOMEPAGE_ORBIT_APPROACH_VIDEO)
+                    if (snapshot.state === "arrival") warmNextFilm(approachFlight)
                 }
             }
             if (connectionVideoUrl && connectionVideo && heroEndLayerRef.current) {
@@ -9409,8 +9412,8 @@ export default function AdmiralHomepageStudio(
                 poster!.style.opacity = "1"
                 hero = createHomepageHeroVideo({
                     video: connectionVideo, poster: poster!, endLayer: heroEndLayerRef.current,
-                    url: connectionVideoUrl, endPoster: connectionEndPoster,
-                    preparedVideo: takeNextFilm(connectionVideoUrl),
+                    url: connectionFlight, fallbackUrl: connectionVideoUrl, endPoster: connectionEndPoster,
+                    preparedVideo: takeNextFilm(connectionFlight),
                     startAtEnd: false, lastFrame: connectionPlaybackUrls.length - 1,
                     resumeWhenVisible: phone,
                     fadeExtension: () => fadeExtensionRef.current, onUpdate: onConnectionUpdate,
@@ -9501,12 +9504,12 @@ export default function AdmiralHomepageStudio(
                 }
                 queueMicrotask(() => settle(performance.now()))
             }
-            // Prepare checkpoint zero and its neighbours while the last flight is playing.
+            // Prepare the matching checkpoint still while the last flight is playing.
             void orbit.prepare(0).catch(() => {})
             hero = createHomepageHeroVideo({
                 video: connectionVideo, poster: poster!, endLayer: heroEndLayerRef.current,
-                url: HOMEPAGE_ORBIT_APPROACH_VIDEO, endPoster: checkpointZeroPoster,
-                preparedVideo: takeNextFilm(HOMEPAGE_ORBIT_APPROACH_VIDEO),
+                url: approachFlight, fallbackUrl: HOMEPAGE_ORBIT_APPROACH_VIDEO, endPoster: checkpointZeroPoster,
+                preparedVideo: takeNextFilm(approachFlight),
                 startAtEnd: false, lastFrame: 1, fadeExtension: () => fadeExtensionRef.current,
                 resumeWhenVisible: phone,
                 onUpdate(snapshot) {
@@ -10104,40 +10107,6 @@ export default function AdmiralHomepageStudio(
             } else if (startView === "orbit" || orbitLocation)
                 openOrbitFromLink(orbitLocationApartment, orbitLocationGroup, true)
             else mountHero()
-            if (!restore && startView !== "orbit" && !orbitLocation) {
-                // A cold browser can emit canplay with only a fraction of SEQ_01
-                // buffered. Give that flight first use of the connection before
-                // starting the 120-frame orbit download. Arrival also starts it.
-                let openingSettled = false
-                const afterPoster = () => {
-                    if (openingSettled) return
-                    openingSettled = true
-                    const flight = heroVideoUrl && !reducedMedia.matches ? heroVideoRef.current : null
-                    if (!flight) {
-                        if (isVisible()) orbit?.prefetch()
-                    } else {
-                        const warmWhenBuffered = () => {
-                            if (!isVisible() || !Number.isFinite(flight.duration)) return
-                            const ranges = flight.buffered
-                            if (!flight.currentSrc.startsWith("blob:") &&
-                                !(ranges.length === 1 && ranges.start(0) <= .05 && ranges.end(0) >= flight.duration - .05)) return
-                            flight.removeEventListener("loadeddata", warmWhenBuffered)
-                            flight.removeEventListener("progress", warmWhenBuffered)
-                            flight.removeEventListener("canplaythrough", warmWhenBuffered)
-                            orbit?.prefetch()
-                        }
-                        flight.addEventListener("loadeddata", warmWhenBuffered, { signal })
-                        flight.addEventListener("progress", warmWhenBuffered, { signal })
-                        flight.addEventListener("canplaythrough", warmWhenBuffered, { signal })
-                        warmWhenBuffered()
-                    }
-                }
-                if (poster!.complete) afterPoster()
-                else {
-                    poster!.addEventListener("load", afterPoster, { once: true, signal })
-                    poster!.addEventListener("error", afterPoster, { once: true, signal })
-                }
-            }
         }
         publish()
         return () => {
@@ -13344,7 +13313,7 @@ function createSequenceFrames(
 let preferNativeFlightVideo = false
 
 /** Own the complete compressed clip until its video element is released. */
-function prepareFlightVideo(url: string) {
+function prepareFlightVideo(url: string, priority: "high" | "low" = "high") {
     const request = new AbortController()
     let objectUrl: string | undefined, idleTimer = 0
     const abort = () => request.abort()
@@ -13356,7 +13325,7 @@ function prepareFlightVideo(url: string) {
     const ready = (async (): Promise<string | null> => {
         try {
             trackBytes()
-            const response = await fetch(url, { signal: request.signal, credentials: "omit" })
+            const response = await fetch(url, { signal: request.signal, credentials: "omit", priority } as RequestInit)
             if (!response.ok) return null
             // A partial range is not a self-contained movie.
             if (response.status === 206) {
@@ -13414,6 +13383,7 @@ function createHomepageHeroVideo(options: {
     endLayer: HTMLImageElement
     graphic?: HTMLImageElement
     url: string
+    fallbackUrl?: string
     preparedVideo?: ReturnType<typeof prepareFlightVideo>
     endPoster: string
     graphicUrl?: string
@@ -13430,6 +13400,7 @@ function createHomepageHeroVideo(options: {
     const animations = new Map<HTMLElement, Animation>()
     let state: SequenceState = "opening"
     let media = options.preparedVideo, attached: Promise<boolean> | undefined
+    let mediaUrl = url
     let nativeDelivery = false, ownedSource: string | undefined
     let finishNativeWait: ((ok: boolean) => void) | undefined
     let mediaStatus: "pending" | "ready" | "failed" = "pending"
@@ -13559,19 +13530,47 @@ function createHomepageHeroVideo(options: {
             finishNativeWait = done
             for (const event of events) video.addEventListener(event, check)
             video.preload = "auto"
-            ownedSource = url
-            if (video.getAttribute("src") !== url) video.src = url
+            ownedSource = mediaUrl
+            if (video.getAttribute("src") !== mediaUrl) video.src = mediaUrl
             check()
+        })
+    }
+    function useNativeDelivery() {
+        const original = options.fallbackUrl
+        if (!original || original === mediaUrl) return waitForNativeBuffer()
+        // A binary asset host may send octet-stream. Use the original media
+        // URL for browsers that reject MP4 blob playback and need native HTTP.
+        mediaStatus = "pending"
+        video.pause()
+        media?.release()
+        mediaUrl = original
+        const asset = media = prepareFlightVideo(original)
+        return asset.ready.then(source => {
+            if (signal.aborted || media !== asset || finished || finishing) return false
+            if (source) return waitForNativeBuffer()
+            mediaStatus = "failed"
+            return false
         })
     }
     function prepareVideo() {
         if (!attached) {
-            const asset = media ??= prepareFlightVideo(url)
-            attached = asset.ready.then(source => {
+            if (preferNativeFlightVideo && options.fallbackUrl && options.fallbackUrl !== mediaUrl) {
+                media?.release()
+                media = undefined
+                mediaUrl = options.fallbackUrl
+            }
+            let asset = media ??= prepareFlightVideo(mediaUrl)
+            attached = asset.ready.then(async source => {
+                if (!source && !signal.aborted && media === asset && !finished && !finishing && options.fallbackUrl && options.fallbackUrl !== mediaUrl) {
+                    asset.release()
+                    mediaUrl = options.fallbackUrl
+                    asset = media = prepareFlightVideo(mediaUrl)
+                    source = await asset.ready
+                }
                 if (signal.aborted || media !== asset || finished || finishing) return false
                 mediaStatus = source ? "ready" : "failed"
                 if (!source) return false
-                if (source === url) return waitForNativeBuffer()
+                if (source === mediaUrl) return useNativeDelivery()
                 video.preload = "auto"
                 ownedSource = source
                 video.src = source
@@ -13590,6 +13589,7 @@ function createHomepageHeroVideo(options: {
         ownedSource = undefined
         media?.release()
         media = undefined
+        mediaUrl = url
         attached = undefined
         mediaStatus = "pending"
         nativeDelivery = false
@@ -13615,7 +13615,7 @@ function createHomepageHeroVideo(options: {
             (video.error?.code === 4 || video.error?.code === 3 || (error as Error)?.name === "NotSupportedError")) {
             attempt++
             stopCallbacks()
-            attached = waitForNativeBuffer()
+            attached = useNativeDelivery()
             if (inFlight()) beginWhenReady()
             return
         }
@@ -15174,7 +15174,6 @@ function createOrbitPlayer(options: OrbitOptions) {
             ? matchMedia("(prefers-reduced-motion: reduce)")
             : null
     let destroyed = false,
-        started = false,
         prepared = false,
         preparing = false,
         active = false,
@@ -15609,14 +15608,14 @@ function createOrbitPlayer(options: OrbitOptions) {
         resourcesChanged()
     }
 
-    function setRestBuffer(center: number, entry = false) {
+    function setRestBuffer(center: number) {
         const near = nearestFirst(windowIndices(center, 1), center)
         const wanted = nearestFirst(
             windowIndices(center, bufferCheckpoints),
             center
         )
         const visibleFrames = scrubPaintFrames(center)
-        setBuffer(wanted, entry && !reduced() ? near : visibleFrames, [...visibleFrames, ...near])
+        setBuffer(wanted, visibleFrames, [...visibleFrames, ...near])
     }
 
     function fail(index: number) {
@@ -15719,7 +15718,7 @@ function createOrbitPlayer(options: OrbitOptions) {
                 mode: "cors",
                 credentials: "omit",
                 cache: refresh.has(index) ? "reload" : "force-cache",
-                priority: required.has(index) ? "auto" : "low",
+                priority: required.has(index) ? "high" : "low",
             } as RequestInit)
             if (!response.ok) {
                 retryable = response.status === 408 || response.status === 429 || response.status >= 500
@@ -15783,16 +15782,11 @@ function createOrbitPlayer(options: OrbitOptions) {
     }
 
     function pump() {
-        if (destroyed || !started) return
-        const downloadLimit = prepared || preparing ? 4 : 2
-        if (blobs.size < total && fetching.size < downloadLimit) {
-            const all = nearestFirst(urls.map((_, index) => index), position)
-            const downloads = new Set([...required, ...priority, ...all])
-            for (const index of downloads) {
-                if (fetching.size >= downloadLimit) break
-                if (!blobs.has(index) && !fetching.has(index) && !fetchFailed.has(index))
-                    void fetchFrame(index)
-            }
+        if (destroyed || (!prepared && !preparing)) return
+        for (const index of new Set([...required, ...priority])) {
+            if (fetching.size >= 4) break
+            if (!blobs.has(index) && !fetching.has(index) && !fetchFailed.has(index))
+                void fetchFrame(index)
         }
         if (inspectionTarget >= 0) void prepareInspection()
         const allowed = prepared ? priority : preparationRequired
@@ -15814,13 +15808,6 @@ function createOrbitPlayer(options: OrbitOptions) {
         notify()
     }
 
-    /** Download the complete compressed orbit without allocating decoded frames. */
-    function prefetch(): void {
-        if (destroyed || started || !total) return
-        started = true
-        pump()
-    }
-
     function prepare(frame = startFrame): Promise<void> {
         if (destroyed) return Promise.reject(new Error("Orbit disposed"))
         if (prepared) return Promise.resolve()
@@ -15833,7 +15820,7 @@ function createOrbitPlayer(options: OrbitOptions) {
             notify()
             return Promise.reject(new Error(error))
         }
-        started = preparing = true
+        preparing = true
         state = "loading"
         error = undefined
         preparePromise = new Promise<void>((resolve, reject) => {
@@ -15841,10 +15828,10 @@ function createOrbitPlayer(options: OrbitOptions) {
             prepareReject = reject
         })
         preparationFrame = frame
-        // The first input can point either way. Decode both neighbouring arcs
-        // before exposing the picker, while the rest continues downloading.
-        preparationRequired = reduced() ? scrubPaintFrames(frame) : nearestFirst(windowIndices(frame, 1), frame)
-        setRestBuffer(frame, true)
+        // Display and pick the entry view before loading movement frames.
+        // Each turn still waits for its complete route before animating.
+        preparationRequired = scrubPaintFrames(frame)
+        setBuffer(preparationRequired, preparationRequired)
         return preparePromise
     }
 
@@ -17114,9 +17101,9 @@ function createOrbitPlayer(options: OrbitOptions) {
                 : undefined
         const initial =
             target === undefined
-                ? (reduced() ? scrubPaintFrames(position) : windowIndices(position, 1))
+                ? scrubPaintFrames(position)
                 : indicesBetween(position, target)
-        if (target === undefined) setRestBuffer(position, true)
+        if (target === undefined) setBuffer(initial, initial)
         else {
             direction = Math.sign(target - position)
             pendingMove = { start: position, target, indices: initial }
@@ -17348,7 +17335,6 @@ function createOrbitPlayer(options: OrbitOptions) {
     notify()
 
     return {
-        prefetch,
         prepare,
         activate,
         deactivate,
@@ -18424,7 +18410,6 @@ function createOrbitApartmentPicker(options: OrbitApartmentPickerOptions) {
     const controls =
         "nav,header,a,button,input,textarea,select,option,[contenteditable]:not([contenteditable='false']),[role='button'],[role='link'],[role='dialog']:not([data-orbit-fullscreen-surface]),[data-orbit-ignore]"
     let destroyed = false,
-        begun = false,
         decodingIndex = -1,
         frame = 0,
         hovered: string | null = null,
@@ -18619,19 +18604,7 @@ function createOrbitApartmentPicker(options: OrbitApartmentPickerOptions) {
         }
     }
 
-    function priority() {
-        const anchor = currentCheckpoint >= 0 ? currentCheckpoint : 0
-        return [
-            ...new Set([
-                anchor,
-                (anchor + 1) % urls.length,
-                (anchor - 1 + urls.length) % urls.length,
-                ...urls.map((_, index) => index),
-            ]),
-        ]
-    }
-
-    async function fetchMask(index: number) {
+    async function fetchMask(index: number, priority: "high" | "low") {
         fetching.add(index)
         const generation = generations.get(index) ?? 0,
             valid = () =>
@@ -18645,8 +18618,8 @@ function createOrbitApartmentPicker(options: OrbitApartmentPickerOptions) {
             const response = await fetch(urls[index], {
                 signal: controller.signal,
                 credentials: "omit",
-                cache,
-            })
+                cache, priority,
+            } as RequestInit)
             if (!response.ok)
                 throw new Error(
                     "Mask download failed (" + response.status + ")"
@@ -18719,21 +18692,25 @@ function createOrbitApartmentPicker(options: OrbitApartmentPickerOptions) {
         }
     }
 
+    function needsMask(index: number) {
+        return !!urls[index] && !blobs.has(index) && !fetching.has(index) && !failures.has(index)
+    }
+
+    function warm(checkpoint: number) {
+        if (!destroyed && needsMask(checkpoint)) void fetchMask(checkpoint, "high")
+    }
+
     function pump() {
-        if (destroyed || !begun || !urls.length) return
-        for (const index of priority()) {
-            if (fetching.size >= 2) break
-            if (
-                !blobs.has(index) &&
-                !fetching.has(index) &&
-                !failures.has(index)
-            )
-                void fetchMask(index)
+        if (destroyed || currentCheckpoint < 0 || !urls.length) return
+        const target = currentCheckpoint
+        warm(target)
+        // Save a slot for the new current mask when the visitor turns.
+        if (masks.has(target) && fetching.size === 0) {
+            const next = [(target + 1) % urls.length, (target - 1 + urls.length) % urls.length].find(needsMask)
+            if (next !== undefined) void fetchMask(next, "low")
         }
         if (decodingIndex !== -1) return
-        const target = currentCheckpoint
         if (
-            target >= 0 &&
             blobs.has(target) &&
             !masks.has(target) &&
             !decoding.has(target) &&
@@ -18892,10 +18869,7 @@ function createOrbitApartmentPicker(options: OrbitApartmentPickerOptions) {
             clearTexture()
             paintKey = ""
         }
-        if (ready) {
-            begun = true
-            pump()
-        }
+        if (ready) pump()
         if (!ready) {
             touchDown = null
             down = null
@@ -19298,6 +19272,7 @@ function createOrbitApartmentPicker(options: OrbitApartmentPickerOptions) {
     refresh()
     return {
         refresh,
+        warm,
         setHighlightStyle,
         retry(checkpoint?: number) {
             if (destroyed) return

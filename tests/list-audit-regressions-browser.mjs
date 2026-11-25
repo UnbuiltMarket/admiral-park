@@ -5,8 +5,8 @@ import {FROSTED_BUTTON_CSS} from '../src/shared/ui/frosted-button.js';
 
 // Mount authored sources directly, so this catches regressions before generation.
 const root=new URL('../',import.meta.url),read=file=>readFile(new URL(file,root),'utf8');
-const [listRuntime,listCss,shell,json,buttonRuntime]=await Promise.all(['src/shared/apartment-list/app.js','src/shared/apartment-list/styles.css','src/shared/apartment-list/shell.html','data/apartment-details.json','src/shared/ui/frosted-button.js'].map(read));
-const runtime=buttonRuntime.replace(/^export /gm,'')+'\n'+listRuntime,css=listCss+'\n'+FROSTED_BUTTON_CSS;
+const [listRuntime,listCss,shell,json,buttonRuntime,floorplanRuntime]=await Promise.all(['src/shared/apartment-list/app.js','src/shared/apartment-list/styles.css','src/shared/apartment-list/shell.html','data/apartment-details.json','src/shared/ui/frosted-button.js','src/shared/ui/floorplan.js'].map(read));
+const runtime=(buttonRuntime+'\n'+floorplanRuntime).replace(/^export /gm,'')+'\n'+listRuntime,css=listCss+'\n'+FROSTED_BUTTON_CSS;
 const dataset=JSON.parse(json),require=createRequire(import.meta.url);
 dataset.apartments.find(a=>a.id==='A001').status='under_negotiation';
 dataset.apartments.find(a=>a.id==='A002').areaGarden=12;

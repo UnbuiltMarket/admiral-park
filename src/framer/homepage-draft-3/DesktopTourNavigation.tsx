@@ -319,7 +319,7 @@ export function withDesktopTourNavigation(Component: ComponentType<any>): Compon
                 }
                 const page = pathname.replace(/\/+$/, "")
                 const isIntroduction = page === "/bemutato-draft"
-                const keepOpen = page === "/homepage-draft-3" || isIntroduction
+                const keepOpen = page === "" || page === "/homepage-draft-3" || isIntroduction
                 nav.toggleAttribute("data-tour-wide-open", keepOpen)
                 const stage = hero?.dataset.homepageStage || ""
                 const nextZone = keepOpen ? "expanded"

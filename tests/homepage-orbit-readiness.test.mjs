@@ -93,6 +93,7 @@ test('a failed graphics probe displays the decoded image at the current camera e
     const initial = f.scene.children[0];
     f.surface.dispatchEvent(new Event('contextlost'));
     f.player.go(1);
+    await setImmediate();
     await f.tick(1200);
     assert.notEqual(f.scene.children[0], initial);
     assert.equal(f.scene.dataset.frame, '15');
@@ -112,17 +113,19 @@ test('canvas loss on a healthy renderer reveals a camera image until restoration
     assert.equal(f.poster.src, '');
 });
 
-test('orbit entry waits for both adjacent arcs, including across the 119 → 0 seam', async t => {
+test('orbit entry paints the checkpoint without waiting for the adjacent arc across the 119 → 0 seam', async t => {
     const f = fixture(t, { blocked: 111 });
     assert.equal(f.root.dataset.orbitCanvasMode, 'default');
-    const entering = f.player.activate(0);
-    await setImmediate();
-    assert.equal(f.player.snapshot().state, 'loading');
-    assert.equal(f.player.snapshot().requiredTotal, 31);
-    assert.equal(f.player.snapshot().requiredReady, 30);
-    f.release();
-    await entering;
+    await f.player.activate(0);
+    assert.equal(f.player.snapshot().state, 'checkpoint');
+    assert.equal(f.player.snapshot().requiredTotal, 1);
+    assert.equal(f.fetches[0][0], 0);
     f.player.go(-1);
+    await setImmediate();
+    assert.equal(f.player.snapshot().state, 'buffering');
+    assert.equal(f.player.snapshot().frame, 0);
+    f.release();
+    await setImmediate();
     assert.equal(f.player.snapshot().state, 'settling');
     await f.tick(1200);
     assert.equal(f.player.snapshot().frame, 105);
@@ -133,6 +136,7 @@ test('an unfinished next arc stays at the checkpoint; the 1.2 second turn begins
     const f = fixture(t, { blocked: 25 });
     await f.player.activate(0);
     f.player.go(1);
+    await setImmediate();
     await f.tick(1200);
     assert.equal(f.player.snapshot().frame, 15);
     f.player.go(1);
@@ -146,28 +150,32 @@ test('an unfinished next arc stays at the checkpoint; the 1.2 second turn begins
     assert.equal(f.player.snapshot().position, 22.5);
     await f.tick(600);
     assert.equal(f.player.snapshot().frame, 30);
-    assert.equal(f.player.snapshot().downloaded, 120);
+    assert.ok(f.player.snapshot().downloaded < 120);
+    assert.equal(f.fetches.some(([index]) => index === 60), false);
 });
 
-test('two hung native decoders fall back to HTML images and close late bitmaps', async t => {
+test('a hung entry decoder falls back to HTML images without waiting for extra decoders', async t => {
     const f = fixture(t, { hangingBitmap: true });
     const entering = f.player.activate(0);
     await setImmediate();
-    assert.equal(f.triedBitmaps, 2);
+    assert.equal(f.triedBitmaps, 1);
     await f.tick(3000);
     await entering;
     assert.equal(f.player.snapshot().state, 'checkpoint');
-    assert.equal(f.triedBitmaps, 2);
-    assert.equal(f.htmlDecodes, 31);
+    await setImmediate();
+    await f.tick(3000);
+    assert.equal(f.triedBitmaps, 1);
+    assert.ok(f.htmlDecodes >= 1);
     f.release();
     await setImmediate();
-    assert.equal(f.lateClosed.length, 2);
+    assert.equal(f.lateClosed.length, 1);
 });
 
 test('a corrupt frame gets one fresh download, and retry resumes the pending complete route', async t => {
     const f = fixture(t, { corrupt: 25 });
     await f.player.activate(0);
     f.player.go(1);
+    await setImmediate();
     await f.tick(1200);
     f.player.go(1);
     await setImmediate();

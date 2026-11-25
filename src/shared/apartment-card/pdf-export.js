@@ -52,6 +52,14 @@ async function createAdmiralApartmentPdf(snapshot,options) {
     check();const url=URL.createObjectURL(type?new Blob([content],{type}):content);resources.push(url);
     const img=new Image();img.src=url;await img.decode();check();return img;
   }
+  async function planImage(primary,fallback){
+    try{return await image(await planBlob(primary));}
+    catch(error){
+      check();
+      if(!fallback)throw error;
+      return image(await planBlob(fallback));
+    }
+  }
   async function jpeg(c,quality){
     const blob=await new Promise(resolve=>c.toBlob(resolve,'image/jpeg',quality));
     if(!blob)throw new Error('Image compression failed');
@@ -60,7 +68,7 @@ async function createAdmiralApartmentPdf(snapshot,options) {
   try{
     const [{pdf:lib,fontkit},regularBytes,semiboldBytes,floorplan,logoBytes,monogramBytes]=await Promise.all([
       loadAdmiralPdfTools(),bytes(snapshot.fontRegular),bytes(snapshot.fontSemibold),
-      snapshot.imageUrl?planBlob(snapshot.imageUrl):null,bytes(snapshot.logoUrl),bytes(snapshot.monogramUrl),
+      snapshot.imageUrl?planImage(snapshot.imageUrl,snapshot.imageFallbackUrl):null,bytes(snapshot.logoUrl),bytes(snapshot.monogramUrl),
     ]);
     check();
     const pdf=await lib.PDFDocument.create();pdf.registerFontkit(fontkit);
@@ -154,7 +162,7 @@ async function createAdmiralApartmentPdf(snapshot,options) {
     const legendSpace=overview?74+overview.legend.length*14:0;
     const frame={x:40,top:74,width:558,height:541-legendSpace};
     if(floorplan){
-      const img=await image(floorplan),v=snapshot.viewBox,iw=img.naturalWidth,ih=img.naturalHeight;
+      const img=floorplan,v=snapshot.viewBox,iw=img.naturalWidth,ih=img.naturalHeight;
       const sx=iw*v.x,sy=ih*v.y,sw=iw*v.width,sh=ih*v.height;
       if(!(sw>0&&sh>0&&iw>0&&ih>0))throw new Error('Invalid floorplan dimensions');
       const scale=Math.min(frame.width/sw,frame.height/sh),pw=sw*scale,ph=sh*scale,px=frame.x+(frame.width-pw)/2,pt=frame.top+(frame.height-ph)/2;

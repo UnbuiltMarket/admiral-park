@@ -54,7 +54,7 @@ for (const id of [closed, open, navbar, logo, links]) {
 tree.patch(closed, { height: "56px", stackAlignment: "center" })
 tree.patch(`${closed}${navbar}`, { padding: "3px 4px 3px 7px", gap: null })
 tree.patch(`${closed}${logo}`, {
-    link: { href: "/homepage-draft-3", openInNewTab: false },
+    link: { href: tree.get("Phxhru9uu").path, openInNewTab: false },
     onTap: null,
     width: "44px",
     height: "44px",

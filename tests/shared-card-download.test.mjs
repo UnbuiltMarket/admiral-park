@@ -2,12 +2,14 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import vm from 'node:vm';
 import {readFile} from 'node:fs/promises';
+import {floorplanFallbackUrl} from '../src/shared/ui/floorplan.js';
 
 const runtime=await readFile(new URL('../src/shared/apartment-card/card-runtime.js',import.meta.url),'utf8');
 const pdfRuntime=await readFile(new URL('../src/shared/apartment-card/pdf-export.js',import.meta.url),'utf8');
 const buttonRuntime=(await readFile(new URL('../src/shared/ui/frosted-button.js',import.meta.url),'utf8')).replace(/^export /gm,'');
+const floorplanRuntime=(await readFile(new URL('../src/shared/ui/floorplan.js',import.meta.url),'utf8')).replace(/^export /gm,'');
 const apartments=[
-  {id:'A001',building:'A',apartmentType:'B',floor:0,rooms:2,areaInterior:51.2,areaTerrace:8,areaGarden:12,price:75000000,status:'available',roomList:[{name:'Nappali',area:30,planNumber:1}],media:{floorplan:{original:'assets/plan.png'}}},
+  {id:'A001',building:'A',apartmentType:'B',floor:0,rooms:2,areaInterior:51.2,areaTerrace:8,areaGarden:12,price:75000000,status:'available',roomList:[{name:'Nappali',area:30,planNumber:1}],media:{floorplan:{original:'assets/floorplans/types/B/plan.avif'}}},
   {id:'C303',building:'C',apartmentType:'D',floor:3,rooms:3,areaInterior:82,areaTerrace:23,areaGarden:0,price:125000000,status:'sold',roomList:[{name:'Szoba',area:20,planNumber:1}],media:{floorplan:{original:'assets/plan-d.png'}}},
 ];
 const dataset={schemaVersion:'1.0',apartments,roomLayouts:{B:{markers:[{number:1,name:'Nappali',x:.5,y:.5}]}}};
@@ -19,6 +21,13 @@ test('PDF floorplans keep a concrete image MIME type for blob decoding',()=>{
   assert.equal(type('application/octet-stream','https://assets.admiral.test/plan.WEBP?rev=4'),'image/webp');
   assert.equal(type('image/*','https://assets.admiral.test/plan.avif#crop'),'image/avif');
   assert.equal(type('','https://assets.admiral.test/image?name=plan.avif'),'');
+});
+
+test('only the current canonical AVIF plan gets a geometry-matched WebP companion',()=>{
+  const publicPlan='https://raw.githubusercontent.com/UnbuiltMarket/admiral-park/main/assets/apartment-list/floorplans/types/B/plan.avif';
+  assert.match(floorplanFallbackUrl(publicPlan), /^https:\/\/raw\.githubusercontent\.com\/UnbuiltMarket\/admiral-park\/[0-9a-f]{40}\/assets\/apartment-list\/floorplans\/types\/B\/plan\.webp$/);
+  assert.equal(floorplanFallbackUrl('https://assets.admiral.test/floorplans/types/E1/plan.avif?refresh=1'),'https://assets.admiral.test/floorplans/types/E1/plan.webp?refresh=1');
+  assert.equal(floorplanFallbackUrl('https://assets.admiral.test/floor-layouts/00/full.webp'),null);
 });
 
 function fixture({exporter=async()=>new Blob(['pdf'],{type:'application/pdf'}),fetcher,inquiryUrl='',theme={}}={}){
@@ -44,7 +53,7 @@ function fixture({exporter=async()=>new Blob(['pdf'],{type:'application/pdf'}),f
     fetch:async(...args)=>{fetches++;if(fetcher)return fetcher(...args);throw new Error('Unexpected JSON request');},
     createAdmiralApartmentPdf:async(snapshot,options)=>{snapshots.push(snapshot);return exporter(snapshot,options);}};
   const root={host:{},querySelector(selector){return elements.get(selector.slice(1))||null;},addEventListener(){}};
-  vm.runInNewContext(buttonRuntime+'\n'+runtime+'\nthis.mount=mountOrbitApartmentCardRuntime;',context);
+  vm.runInNewContext(buttonRuntime+'\n'+floorplanRuntime+'\n'+runtime+'\nthis.mount=mountOrbitApartmentCardRuntime;',context);
   const controller=context.mount(root,{dataset:fetcher?undefined:dataset,dataUrl:'https://admiral.test/apartments.json',assetBaseUrl:'https://assets.admiral.test/',pageUrl:'https://admiral.test/?search=old',inquiryUrl});
   const trigger=()=>{
     const attrs=new Map(),label={textContent:'Adatlap'};
@@ -80,6 +89,8 @@ test('a download requested during initialization shares the in-flight data reque
   assert.equal(f.fetches,1);release();
   assert.equal((await pending).status,'downloaded');assert.equal(f.fetches,1);
   assert.equal(f.snapshots[0].metrics[3].label,'Kert');
+  assert.equal(f.snapshots[0].imageUrl,'https://assets.admiral.test/floorplans/types/B/plan.avif');
+  assert.equal(f.snapshots[0].imageFallbackUrl,'https://assets.admiral.test/floorplans/types/B/plan.webp');
   f.controller.dispose();
 });
 

@@ -10,7 +10,8 @@ const root=new URL('../',import.meta.url),out=new URL('tmp/card-audit-fixes/',ro
 const mediaRoot=process.env.APARTMENT_MEDIA_ROOT||fileURLToPath(new URL('assets/apartment-list/',root));
 const [cardRuntime,cardStyles,shell,data]=await Promise.all(['src/shared/apartment-card/card-runtime.js','src/shared/apartment-card/card.css','src/shared/apartment-card/card-shell.html','data/apartment-details.json'].map(file=>readFile(new URL(file,root),'utf8')));
 const buttonRuntime=(await readFile(new URL('../src/shared/ui/frosted-button.js',import.meta.url),'utf8')).replace(/^export /gm,'');
-const runtime=buttonRuntime+'\n'+cardRuntime,styles=cardStyles+'\n'+FROSTED_BUTTON_CSS.replaceAll('.admiral-frosted-button', '#detail-dialog .inquiry-button.admiral-frosted-button');
+const floorplanRuntime=(await readFile(new URL('../src/shared/ui/floorplan.js',import.meta.url),'utf8')).replace(/^export /gm,'');
+const runtime=buttonRuntime+'\n'+floorplanRuntime+'\n'+cardRuntime,styles=cardStyles+'\n'+FROSTED_BUTTON_CSS.replaceAll('.admiral-frosted-button', '#detail-dialog .inquiry-button.admiral-frosted-button');
 const browser=await chromium.launch({headless:true,channel:process.env.PLAYWRIGHT_CHANNEL||'chrome'});
 const checks=[],errors=[];await mkdir(out,{recursive:true});
 const check=(message,value)=>{assert.ok(value,message);checks.push(message);};

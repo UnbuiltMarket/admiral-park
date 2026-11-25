@@ -117,6 +117,29 @@ function renderFrostedButton({ label = 'Érdeklődöm', href, className = '', at
     const serialized: any = (Object as any).entries(props).map(([name, value]: any): any => value === true && !/^(?:aria-|data-)/i.test(name) ? ' ' + name : ' ' + name + '="' + escapeFrostedButton(value) + '"').join('');
     return '<' + tag + ' class="admiral-frosted-button' + (className ? ' ' + escapeFrostedButton(className) : '') + '"' + serialized + '>' + escapeFrostedButton(label) + '</' + tag + '>';
 }
+// The WebP companion is encoded from the same AVIF sheet, so the room crop
+// and marker coordinates apply to both formats.
+function floorplanFallbackUrl(source: any): any {
+    if (typeof source !== 'string' || !/^https?:\/\//i.test(source))
+        return null;
+    const url: any = new URL(source);
+    if (!/\/floorplans\/types\/[a-z0-9]+\/plan\.avif$/i.test(url.pathname))
+        return null;
+    url.pathname = url.pathname.replace(/plan\.avif$/i, 'plan.webp');
+    if (url.hostname === 'raw.githubusercontent.com') {
+        const assetRevision: any = '2d2cd2bbb70ad70cae23bfd4c423384ab6cfcde2';
+        url.pathname = url.pathname.replace(/^\/UnbuiltMarket\/admiral-park\/main\/assets\/apartment-list\//, `/UnbuiltMarket/admiral-park/${assetRevision}/assets/apartment-list/`);
+    }
+    return url.href;
+}
+function swapToFloorplanFallback(image: any): any {
+    const fallback: any = image.dataset.floorplanFallback;
+    if (!fallback || image.dataset.floorplanFallbackUsed === 'true')
+        return false;
+    image.dataset.floorplanFallbackUsed = 'true';
+    image.src = fallback;
+    return true;
+}
 // Export-only renderer. Inlined into the shared Framer card, never mounted as UI.
 // Libraries and print fonts load on demand; apartment data is never uploaded.
 async function loadAdmiralPdfTools(): Promise<any> {
@@ -190,6 +213,17 @@ async function createAdmiralApartmentPdf(snapshot: any, options: any): Promise<a
         check();
         return img;
     }
+    async function planImage(primary: any, fallback: any): Promise<any> {
+        try {
+            return await image(await planBlob(primary));
+        }
+        catch (error: any) {
+            check();
+            if (!fallback)
+                throw error;
+            return image(await planBlob(fallback));
+        }
+    }
     async function jpeg(c: any, quality: any): Promise<any> {
         const blob: any = await new Promise((resolve: any): any => c.toBlob(resolve, 'image/jpeg', quality));
         if (!blob)
@@ -200,7 +234,7 @@ async function createAdmiralApartmentPdf(snapshot: any, options: any): Promise<a
     try {
         const [{ pdf: lib, fontkit }, regularBytes, semiboldBytes, floorplan, logoBytes, monogramBytes]: any = await Promise.all(([
             loadAdmiralPdfTools(), bytes(snapshot.fontRegular), bytes(snapshot.fontSemibold),
-            snapshot.imageUrl ? planBlob(snapshot.imageUrl) : null, bytes(snapshot.logoUrl), bytes(snapshot.monogramUrl),
+            snapshot.imageUrl ? planImage(snapshot.imageUrl, snapshot.imageFallbackUrl) : null, bytes(snapshot.logoUrl), bytes(snapshot.monogramUrl),
         ] as any));
         check();
         const pdf: any = await lib.PDFDocument.create();
@@ -340,7 +374,7 @@ async function createAdmiralApartmentPdf(snapshot: any, options: any): Promise<a
         const legendSpace: any = overview ? 74 + overview.legend.length * 14 : 0;
         const frame: any = ({ x: 40, top: 74, width: 558, height: 541 - legendSpace } as any);
         if (floorplan) {
-            const img: any = await image(floorplan), v: any = snapshot.viewBox, iw: any = img.naturalWidth, ih: any = img.naturalHeight;
+            const img: any = floorplan, v: any = snapshot.viewBox, iw: any = img.naturalWidth, ih: any = img.naturalHeight;
             const sx: any = iw * v.x, sy: any = ih * v.y, sw: any = iw * v.width, sh: any = ih * v.height;
             if (!(sw > 0 && sh > 0 && iw > 0 && ih > 0))
                 throw new Error('Invalid floorplan dimensions');
@@ -710,7 +744,12 @@ function mountOrbitApartmentCardRuntime(root: any = (document as any), config: a
     }
     function initializeDetailImages(dialog: any): any {
         dialog.querySelectorAll('img[data-detail-image][src]').forEach((image: any): any => {
-            detailImageState(image, image.complete ? (image.naturalWidth ? 'ready' : 'error') : 'loading');
+            if (!image.complete)
+                detailImageState(image, 'loading');
+            else if (image.naturalWidth)
+                detailImageState(image, 'ready');
+            else if (!swapToFloorplanFallback(image))
+                detailImageState(image, 'error');
         });
     }
     function detailPlanUrl(a: any): any {
@@ -727,7 +766,7 @@ function mountOrbitApartmentCardRuntime(root: any = (document as any), config: a
         const imageWidth: any = dimensions.width || dimensions[0] || 1500, imageHeight: any = dimensions.height || dimensions[1] || 2000;
         const surface: any = `left:${-view.x / view.width * 100}%;top:${-view.y / view.height * 100}%;width:${100 / view.width}%;height:${100 / view.height}%`;
         const markers: any = validPlanMarkers(layout);
-        return `<section class="detail-plan" data-document-panel="plan" id="detail-document-plan" role="tabpanel" aria-labelledby="detail-document-plan-tab"><div class="detail-plan-stage" data-detail-image-stage="plan" data-image-state="loading" aria-busy="true">${detailImageFeedback('plan')}<div class="detail-plan-canvas" style="--plan-aspect:${imageWidth * view.width / (imageHeight * view.height)};aspect-ratio:${imageWidth * view.width}/${imageHeight * view.height}"><div class="detail-plan-surface" style="${surface}"><img class="detail-plan-image" data-detail-image="plan" data-image-url="${esc(url)}" src="${esc(url)}" alt="${esc(a.apartmentType || a.id)} típus számozott alaprajza" decoding="async"><div class="detail-plan-markers" aria-label="A típusterv helyiségei">${markers.map((marker: any): any => `<button type="button" class="room-marker" data-plan-room="${marker.number}" style="left:${marker.x * 100}%;top:${marker.y * 100}%" aria-label="${marker.number}. ${esc(roomLabel(marker.name))}" aria-pressed="false">${marker.number}</button>`).join('')}</div></div></div></div></section>`;
+        return `<section class="detail-plan" data-document-panel="plan" id="detail-document-plan" role="tabpanel" aria-labelledby="detail-document-plan-tab"><div class="detail-plan-stage" data-detail-image-stage="plan" data-image-state="loading" aria-busy="true">${detailImageFeedback('plan')}<div class="detail-plan-canvas" style="--plan-aspect:${imageWidth * view.width / (imageHeight * view.height)};aspect-ratio:${imageWidth * view.width}/${imageHeight * view.height}"><div class="detail-plan-surface" style="${surface}"><img class="detail-plan-image" data-detail-image="plan" data-image-url="${esc(url)}" data-floorplan-fallback="${esc(floorplanFallbackUrl(url))}" src="${esc(url)}" alt="${esc(a.apartmentType || a.id)} típus számozott alaprajza" decoding="async"><div class="detail-plan-markers" aria-label="A típusterv helyiségei">${markers.map((marker: any): any => `<button type="button" class="room-marker" data-plan-room="${marker.number}" style="left:${marker.x * 100}%;top:${marker.y * 100}%" aria-label="${marker.number}. ${esc(roomLabel(marker.name))}" aria-pressed="false">${marker.number}</button>`).join('')}</div></div></div></div></section>`;
     }
     // Display-only joins for the shared illustrative plans. The source room rows
     // and their actual apartment areas remain unchanged; inferred joins are never
@@ -970,7 +1009,7 @@ function mountOrbitApartmentCardRuntime(root: any = (document as any), config: a
         if (!image || !image.dataset.imageUrl)
             return;
         detailImageState(image, 'loading');
-        let url: any = image.dataset.imageUrl;
+        let url: any = image.dataset.floorplanFallbackUsed === 'true' ? image.dataset.floorplanFallback : image.dataset.imageUrl;
         if (retry) {
             const fresh: any = new URL(url);
             fresh.searchParams.set('admiral-retry', String(Date.now()));
@@ -1092,6 +1131,8 @@ function mountOrbitApartmentCardRuntime(root: any = (document as any), config: a
         const current: any = mediaView.entries[mediaView.index], token: any = ++mediaSequence, dialog: any = $('media-dialog');
         mediaView.token = token;
         const image: any = dialog.querySelector('.media-image'), status: any = dialog.querySelector('.media-load-status');
+        image.dataset.floorplanFallback = floorplanFallbackUrl(current.full) || '';
+        delete image.dataset.floorplanFallbackUsed;
         dialog.dataset.loading = 'true';
         dialog.dataset.error = 'false';
         dialog.querySelector('#media-title').textContent = current.name;
@@ -1113,6 +1154,8 @@ function mountOrbitApartmentCardRuntime(root: any = (document as any), config: a
         };
         image.onerror = (): any => {
             if (!mediaView || token !== mediaView.token)
+                return;
+            if (swapToFloorplanFallback(image))
                 return;
             dialog.dataset.loading = 'false';
             dialog.dataset.error = 'true';
@@ -1222,12 +1265,13 @@ function mountOrbitApartmentCardRuntime(root: any = (document as any), config: a
                 const pageUrl: any = apartmentLink(a.id), inquiryUrl: any = safeUrl(config.inquiryUrl), actionUrl: any = new URL(inquiryUrl || pageUrl);
                 if (inquiryUrl)
                     actionUrl.searchParams.set('apartment', a.id);
+                const imageUrl: any = floor?.full || detailPlanUrl(a);
                 const snapshot: any = ({
                     id: String(a.id), date: new Date(), colors,
                     metrics: ([({ label: 'Lakásszám', value: String(a.id) } as any), metric('Beltér', a.areaInterior), metric('Erkély', a.areaTerrace), ...(a.areaGarden > 0 ? ([metric('Kert', a.areaGarden)] as any) : ([] as any))] as any),
                     meta: ([a.apartmentType ? `${a.apartmentType} típus` : null, `${a.building} épület`, floorText(a), a.orientation ? `${a.orientation} tájolás` : null] as any).filter(Boolean).join(' · '),
                     documentLabel: floor ? 'Szintrajz' : 'Alaprajz',
-                    imageUrl: floor?.full || detailPlanUrl(a),
+                    imageUrl, imageFallbackUrl: floorplanFallbackUrl(imageUrl),
                     viewBox: floor || !validView ? ({ x: 0, y: 0, width: 1, height: 1 } as any) : ({ x: view.x, y: view.y, width: view.width, height: view.height } as any),
                     markers: floor ? ([] as any) : markers.map((marker: any): any => (({ number: marker.number, x: marker.x, y: marker.y } as any))),
                     roomRows, layoutLabel: typeof a.layoutLabel === 'string' ? a.layoutLabel.replace(/hálószoba/giu, 'szoba') : hasNumber(a.rooms) ? `${number.format(a.rooms)} szoba` : '',
@@ -1532,7 +1576,7 @@ function mountOrbitApartmentCardRuntime(root: any = (document as any), config: a
     }, events);
     root.addEventListener('error', (event: any): any => {
         const image: any = event.target;
-        if (image.matches?.('img[data-detail-image]'))
+        if (image.matches?.('img[data-detail-image]') && !swapToFloorplanFallback(image))
             detailImageState(image, 'error');
         if (image.matches?.('img[data-thumbnail]')) {
             image.hidden = true;

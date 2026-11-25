@@ -7,15 +7,16 @@ import {FROSTED_BUTTON_CSS} from '../src/shared/ui/frosted-button.js';
 const root=new URL('../',import.meta.url);
 const read=path=>readFile(new URL(path,root),'utf8');
 export async function buildApartmentList() {
- const [source,js,css,shell,controls,button]=await Promise.all([
+ const [source,js,css,shell,controls,button,floorplan]=await Promise.all([
   read('src/framer/AdmiralApartmentList.source.tsx'),read('src/shared/apartment-list/app.js'),
   read('src/shared/apartment-list/styles.css'),read('src/shared/apartment-list/shell.html'),
   read('src/shared/apartment-list/controls.source.tsx'),
   read('src/shared/ui/frosted-button.js'),
+  read('src/shared/ui/floorplan.js'),
  ]);
  if(/detail-dialog|function detailPlan\b|function detailRooms\b/.test(js+shell+css))throw Error('The list must delegate apartment details to the shared card.');
  if(/INITIAL_JSON|"provenance"|originalFileName/.test(source))throw Error('The list must fetch public JSON instead of embedding private source data.');
- const runtime=inlineApartmentCardRuntime(button.replace(/^export /gm,'')+'\n'+js.replace('export function mountApartmentList','function mountApartmentList'));
+ const runtime=inlineApartmentCardRuntime([button,floorplan,js].join('\n').replace(/^export /gm,''));
  const output=source.replace('// @APARTMENT_LIST_INSERT',()=>`const STYLES = ${JSON.stringify(css+'\n'+FROSTED_BUTTON_CSS)}\nconst SHELL = ${JSON.stringify(shell)}\n\n${runtime}`).replace('// @APARTMENT_LIST_CONTROLS_INSERT',()=>controls.trimEnd()).trimEnd()+'\n';
  compileTS(output,'AdmiralApartmentList.tsx');
  await writeFile(new URL('src/framer/AdmiralApartmentList.tsx',root),output);
