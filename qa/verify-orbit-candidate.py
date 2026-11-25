@@ -164,6 +164,28 @@ def screenshot(reference):
     if not good({'page':page}) or patch['dominant']<.98 or patch['bgr']!='ff00ff':
         raise AssertionError('Full component screenshot could not verify the rendered scene and its overlaid solid control')
 
+def verified_wheel(point,delta,predicate,label):
+    """Compare two native input paths before using a calibrated DOM wheel."""
+    for method in ('SafariDriver','Quartz','DOM'):
+        qa.js("document.querySelector('#qa-wheel-trace').content='[]'")
+        if method=='SafariDriver':
+            qa.mouse_at(*point);qa.wheel(delta,point)
+        elif method=='Quartz':
+            screen=qa.js("return [screenX+(outerWidth-innerWidth)/2+arguments[0],screenY+outerHeight-innerHeight+arguments[1]]",*point)
+            sent=subprocess.run(['./post-wheel',str(screen[0]),str(screen[1]),str(delta)],text=True,capture_output=True,timeout=10)
+            qa.emit('quartz_backend',[sent.returncode,sent.stdout.strip(),screen])
+        else:
+            qa.js("""const [x,y,dy]=arguments;document.elementFromPoint(x,y).dispatchEvent(new WheelEvent('wheel',
+                       {clientX:x,clientY:y,deltaY:dy,bubbles:true,cancelable:true}))""",*point,delta)
+        try:qa.wait(label,predicate,3);progress=True
+        except TimeoutError:progress=False
+        trace=qa.js("return JSON.parse(document.querySelector('#qa-wheel-trace').content)")
+        qa.emit('wheel_delivery',{'label':label,'method':method,'progress':progress,'events':trace})
+        if progress:return
+        if any(e.get('dy') and not e.get('blocked') and not e.get('chain') for e in trace):
+            raise AssertionError((label,'Delivered unblocked wheel failed to move the journey',method,trace))
+    raise AssertionError((label,'No input method advanced'))
+
 def run():
     for _ in range(25):
         try:
@@ -187,26 +209,21 @@ def run():
         qa.emit('reduced',reduced)
         assert reduced==(os.environ.get('REDUCE')=='true')
         qa.js("const s=document.createElement('script');s.textContent=arguments[0];document.head.append(s);s.remove()",MONITOR)
-        wheel_errors=[]
-        qa.js("""const events=[];r._wheelTrace=events;
+        wheel_monitor="""const meta=document.createElement('meta');meta.id='qa-wheel-trace';meta.content='[]';document.head.append(meta);
             for(const phase of [true,false])window.addEventListener('wheel',e=>{
+              const events=JSON.parse(meta.content),r=document.querySelector('[data-admiral-homepage][data-homepage-nav-active=true]');
               const t=e.target,chain=[];for(let p=t;p&&p!==document.body;p=p.parentElement){const s=getComputedStyle(p);
                if(/(auto|scroll)/.test(s.overflowY)&&p.scrollHeight>p.clientHeight+1)chain.push([p.tagName,p.className,p.scrollTop,p.clientHeight,p.scrollHeight]);}
-              events.push({phase,stage:r.dataset.homepageStage,x:e.clientX,y:e.clientY,dy:e.deltaY,dx:e.deltaX,
+              events.push({phase,trusted:e.isTrusted,stage:r.dataset.homepageStage,x:e.clientX,y:e.clientY,dy:e.deltaY,dx:e.deltaX,
                 mode:e.deltaMode,blocked:t.closest?.("nav,header,a,button,input,textarea,select,[role='button'],[role='link'],[data-orbit-ignore],[data-homepage-controls]")?.outerHTML.slice(0,250),
-                target:t.outerHTML.slice(0,180),cancelable:e.cancelable,prevented:e.defaultPrevented,chain});},phase);""")
+                target:t.outerHTML.slice(0,180),cancelable:e.cancelable,prevented:e.defaultPrevented,chain});
+              meta.content=JSON.stringify(events.slice(-8));},phase);"""
+        qa.js("const s=document.createElement('script');s.textContent='(()=>{'+arguments[0]+'})()';document.head.append(s);s.remove()",wheel_monitor)
         for label,predicate in [('SEQ_01',"return r?.dataset.homepageStage==='building'"),('SEQ_02',"return r?.querySelector('[data-seq3-garden-cue]')?.dataset.visible==='true'"),('SEQ_03',"return r?.dataset.homepageStage==='orbit'&&r.dataset.orbitState==='checkpoint'")]:
             time.sleep(.9)
-            before=qa.js("r._wheelTrace.length=0;return [r.dataset.homepageStage,r.dataset.activeSequence].join('/')")
+            before=qa.js("return [r.dataset.homepageStage,r.dataset.activeSequence].join('/')")
             point=qa.js("return [Math.floor(innerWidth*.52), Math.floor(innerHeight*.48)]")
-            qa.mouse_at(*point)
-            qa.wheel(point=point)
-            try:qa.wait('wheel took effect',f"return [r.dataset.homepageStage,r.dataset.activeSequence].join('/')!=='{before}'",5)
-            except TimeoutError:
-                traces=qa.js("return r._wheelTrace")
-                qa.emit('ignored_wheel',[label,traces,qa.state()])
-                if any(e.get('dy') and not e.get('blocked') for e in traces):wheel_errors.append(label)
-                key()
+            verified_wheel(point,180,f"return [r.dataset.homepageStage,r.dataset.activeSequence].join('/')!=='{before}'",label)
             qa.wait(label,predicate,65);qa.emit('arrival',[label,qa.state()])
         films=metrics().get('flights',{})
         qa.emit('instrumented_videos',films)
@@ -226,12 +243,17 @@ def run():
             screen_error=error
             qa.emit('screen_verification_error',str(error))
         if not reduced:
-            qa.drag();qa.orbit_wheel();qa.trackpad_trace()
+            qa.drag()
+            x,y,w,h=qa.image_rect();point=(round(x+w*.52),round(y+h*.42))
+            camera=int(qa.state()['camera'])
+            for delta,frame in [(160,(camera+15)%120),(-160,camera)]:
+                time.sleep(.85)
+                verified_wheel(point,delta,f"return r.dataset.orbitState==='checkpoint' && Number(r.dataset.orbitFrame)==={frame}",'orbit wheel '+str(delta))
+            qa.trackpad_trace()
             qa.wait('full orbit cache','return +r.dataset.orbitDownloaded===120',45)
             qa.inspect_edges()
             assert qa.js("""const b=r.querySelector('[data-orbit-detail-bar]'),box=b.getBoundingClientRect();
             return [...b.querySelectorAll('[data-orbit-apartment-metric]')].every(e=>{const z=e.getBoundingClientRect();return z.left>=box.left-1&&z.right<=box.right+1&&z.bottom<=box.bottom+1})""")
         if screen_error:raise screen_error
-        assert not wheel_errors,('No chapter advance from a delivered wheel event',wheel_errors)
     finally:qa.call('DELETE','/session/'+qa.session)
 if __name__=='__main__':run()
