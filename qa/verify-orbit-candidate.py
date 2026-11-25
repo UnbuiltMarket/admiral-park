@@ -177,9 +177,8 @@ def run():
         qa.command('/url',{'url':qa.SITE})
         qa.wait('opening',"return r?.dataset.homepageStage==='opening'&&r.dataset.homepageBooted==='true'")
         qa.emit('tested_url',qa.js('return location.href'))
-        logos=qa.wait('visible header logo',"""const links=[...document.querySelectorAll('a[href]')].filter(a=>{
-            const b=a.getBoundingClientRect();return b.width>0&&b.height>0&&b.top>=0&&b.top<90&&
-              b.left<innerWidth*.3&&a.querySelector('svg,img,[data-framer-name]')&&!a.innerText.trim()});
+        logos=qa.wait('visible header logo',"""const links=[...document.querySelectorAll('a[data-framer-name="Logo"][href]')].filter(a=>{
+            const b=a.getBoundingClientRect();return b.width>0&&b.height>0&&b.top>=0&&b.top<90&&b.left<innerWidth*.3});
             return links.length&&links.map(a=>a.pathname)""")
         qa.emit('logo_routes',logos)
         assert all(path=='/homepage-draft-3' for path in logos),logos
