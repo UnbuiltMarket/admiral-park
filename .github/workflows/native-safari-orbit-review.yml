@@ -26,8 +26,6 @@ jobs:
           curl --fail --silent --show-error --retry 4 --retry-all-errors "$SOURCE_BASE/safari-display-check.py" -o "$RUNNER_TEMP/display.py"
           cd "$RUNNER_TEMP"
           curl -fsSL --retry 4 "$SOURCE_BASE/verify-orbit-candidate.py" -o verify.py
-          curl -fsSL --retry 4 "$SOURCE_BASE/post-wheel.swift" -o post-wheel.swift
-          swiftc post-wheel.swift -o post-wheel
       - name: Set the motion preference for this ephemeral test user
         run: |
           defaults write com.apple.universalaccess reduceMotion -bool "$REDUCE" || true

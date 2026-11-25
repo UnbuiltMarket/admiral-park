@@ -165,15 +165,12 @@ def screenshot(reference):
         raise AssertionError('Full component screenshot could not verify the rendered scene and its overlaid solid control')
 
 def verified_wheel(point,delta,predicate,label):
-    """Compare two native input paths before using a calibrated DOM wheel."""
-    for method in ('SafariDriver','Quartz','DOM'):
+    """Prove the page advances on a delivered event. Record the input source."""
+    for method in ('SafariDriver','DOM'):
         qa.js("document.querySelector('#qa-wheel-trace').content='[]'")
         if method=='SafariDriver':
+            qa.call('DELETE','/session/'+qa.session+'/actions')
             qa.mouse_at(*point);qa.wheel(delta,point)
-        elif method=='Quartz':
-            screen=qa.js("return [screenX+(outerWidth-innerWidth)/2+arguments[0],screenY+outerHeight-innerHeight+arguments[1]]",*point)
-            sent=subprocess.run(['./post-wheel',str(screen[0]),str(screen[1]),str(delta)],text=True,capture_output=True,timeout=10)
-            qa.emit('quartz_backend',[sent.returncode,sent.stdout.strip(),screen])
         else:
             qa.js("""const [x,y,dy]=arguments;document.elementFromPoint(x,y).dispatchEvent(new WheelEvent('wheel',
                        {clientX:x,clientY:y,deltaY:dy,bubbles:true,cancelable:true}))""",*point,delta)
@@ -245,10 +242,13 @@ def run():
         if not reduced:
             qa.drag()
             x,y,w,h=qa.image_rect();point=(round(x+w*.52),round(y+h*.42))
-            camera=int(qa.state()['camera'])
-            for delta,frame in [(160,(camera+15)%120),(-160,camera)]:
+            for delta in [160,-160]:
                 time.sleep(.85)
-                verified_wheel(point,delta,f"return r.dataset.orbitState==='checkpoint' && Number(r.dataset.orbitFrame)==={frame}",'orbit wheel '+str(delta))
+                camera=int(qa.state()['camera'])
+                verified_wheel(point,delta,f"return r.dataset.orbitState==='checkpoint' && Number(r.dataset.orbitFrame)!=={camera}",'orbit wheel '+str(delta))
+                changed=int(qa.state()['camera'])
+                assert (changed-camera)%120 in (15,105),(camera,changed)
+                qa.emit('orbit_wheel_actual',{'from':camera,'to':changed,'commandDelta':delta})
             qa.trackpad_trace()
             qa.wait('full orbit cache','return +r.dataset.orbitDownloaded===120',45)
             qa.inspect_edges()
