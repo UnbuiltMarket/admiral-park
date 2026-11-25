@@ -63,6 +63,7 @@ tree.patch(`${closed}${logo}`, {
 })
 tree.patch(`${closed}aRgWhLeCB`, { width: "112px", height: "44px" })
 const opener = addMenuButton("Admiral mobile menu", "Menü", open, closed, { position: "relative" })
+tree.patch(opener.id, { fill: "rgba(244,250,253,0.94)" })
 tree.move(opener.id, `${closed}${navbar}`, 3)
 
 tree.patch(open, { stackDistribution: "center", padding: "4px" })
@@ -148,35 +149,48 @@ addOnce("CustomCodeNode", tree.root.id, "Admiral Park phone menu viewport", {
 const inquiryCode = `<script>
 (() => {
   const names = { 'Vezetéknév': 'family-name', 'Keresztnév': 'given-name' };
-  for (const [name, autofill] of Object.entries(names)) {
-    document.querySelectorAll('form input[name="' + name + '"]').forEach((input) => {
-      input.setAttribute('aria-label', name);
-      input.setAttribute('autocomplete', autofill);
-    });
-  }
   const apartment = new URLSearchParams(location.search).get('apartment')?.trim().toUpperCase() || '';
   const selected = /^[A-Z][0-9]{3}[A-Z]?$/.test(apartment) ? apartment : '';
-  const favorites = document.querySelector('form [data-admiral-form-favourites]');
-  if (favorites && selected) {
-    const label = document.createElement('p');
-    label.dataset.admiralInquiryApartment = '';
-    label.style.cssText = 'margin:0;color:#123c59;font:600 14px/1.45 Montserrat,Arial,sans-serif';
-    label.textContent = 'Kiválasztott lakás: ' + selected;
-    const input = document.createElement('input');
-    input.type = 'hidden';
-    input.name = 'Kiválasztott lakás';
-    input.value = selected;
-    label.append(input);
-    const previous = favorites.parentElement.querySelector('[data-admiral-inquiry-apartment]');
-    if (previous) previous.replaceWith(label);
-    else favorites.after(label);
+  function setup() {
+    let namesReady = true;
+    for (const [name, autofill] of Object.entries(names)) {
+      const fields = document.querySelectorAll('form input[name="' + name + '"]');
+      if (!fields.length) namesReady = false;
+      fields.forEach((input) => {
+        input.setAttribute('aria-label', name);
+        input.setAttribute('autocomplete', autofill);
+      });
+    }
+    const groups = document.querySelectorAll('form [data-admiral-form-favourites]');
+    groups.forEach((favorites) => {
+      const previous = favorites.parentElement.querySelector('[data-admiral-inquiry-apartment]');
+      if (!selected) { previous?.remove(); return; }
+      if (previous?.querySelector('input')?.value === selected) return;
+      const label = document.createElement('p');
+      label.dataset.admiralInquiryApartment = '';
+      label.style.cssText = 'margin:0;color:#123c59;font:600 14px/1.45 Montserrat,Arial,sans-serif';
+      label.textContent = 'Kiválasztott lakás: ' + selected;
+      const input = document.createElement('input');
+      input.type = 'hidden';
+      input.name = 'Kiválasztott lakás';
+      input.value = selected;
+      label.append(input);
+      if (previous) previous.replaceWith(label);
+      else favorites.after(label);
+    });
+    if (selected) document.querySelectorAll('a[href]').forEach((link) => {
+      const url = new URL(link.href, location.href);
+      if (url.origin !== location.origin || url.pathname !== location.pathname || url.hash !== '#visszahivas') return;
+      if (url.searchParams.get('apartment') === selected) return;
+      url.searchParams.set('apartment', selected);
+      link.href = url.href;
+    });
+    return namesReady && (!selected || groups.length > 0);
   }
-  if (selected) document.querySelectorAll('a[href]').forEach((link) => {
-    const url = new URL(link.href, location.href);
-    if (url.origin !== location.origin || url.pathname !== location.pathname || url.hash !== '#visszahivas') return;
-    url.searchParams.set('apartment', selected);
-    link.href = url.href;
-  });
+  if (setup()) return;
+  const observer = new MutationObserver(() => { if (setup()) observer.disconnect(); });
+  observer.observe(document.body, { childList: true, subtree: true });
+  window.setTimeout(() => observer.disconnect(), 8000);
 })();
 </script>`
 const inquirySnippet = addOnce("CustomCodeNode", tree.root.id, "Admiral Park inquiry name fields", {
