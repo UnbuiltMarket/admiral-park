@@ -23,37 +23,26 @@ jobs:
         reduce: ["false", "true"]
     env:
       REDUCE: ${{ matrix.reduce }}
+      REVIEW_URL: https://admiralpark.hu/homepage-draft-3
     runs-on: macos-26
     timeout-minutes: 12
     steps:
       - name: Fetch the diagnostic from this exact commit
         env:
           SOURCE_BASE: https://raw.githubusercontent.com/${{ github.repository }}/${{ github.sha }}/qa
-          CODE_BASE: https://raw.githubusercontent.com/${{ github.repository }}/${{ github.sha }}/src/framer/homepage-draft-3
         run: |
           curl --fail --silent --show-error --retry 4 --retry-all-errors "$SOURCE_BASE/native-safari-orbit.py" -o "$RUNNER_TEMP/qa.py"
           curl --fail --silent --show-error --retry 4 --retry-all-errors "$SOURCE_BASE/safari-normal-motion.py" -o "$RUNNER_TEMP/normal.py"
           curl --fail --silent --show-error --retry 4 --retry-all-errors "$SOURCE_BASE/safari-display-check.py" -o "$RUNNER_TEMP/display.py"
           cd "$RUNNER_TEMP"
           curl -fsSL --retry 4 "$SOURCE_BASE/verify-orbit-candidate.py" -o verify.py
-          mkdir fixture
-          cd fixture
-          curl -fsSL --retry 4 "$SOURCE_BASE/build-orbit-candidate.cjs" -o build.cjs
-          curl -fsSL --retry 4 "$SOURCE_BASE/orbit-candidate-props.json" -o props.json
-          for file in AdmiralPalette AdmiralScrollCue AdmiralApartmentDetailCard HERO_video_no_fullscreen; do
-            curl -fsSL --retry 4 "$CODE_BASE/$file.tsx" -o "$file.tsx"
-          done
-          curl -fsSL --retry 4 https://cdn.jsdelivr.net/npm/typescript@5.9.3/lib/typescript.js -o typescript.cjs
-          curl -fsSL --retry 4 https://cdn.jsdelivr.net/npm/react@18.3.1/umd/react.production.min.js -o react.js
-          curl -fsSL --retry 4 https://cdn.jsdelivr.net/npm/react-dom@18.3.1/umd/react-dom.production.min.js -o react-dom.js
-          node build.cjs
       - name: Set the motion preference for this ephemeral test user
         run: |
           defaults write com.apple.universalaccess reduceMotion -bool "$REDUCE" || true
           defaults write com.apple.Accessibility ReduceMotionEnabled -bool "$REDUCE" || true
           defaults write -g reduceMotion -bool "$REDUCE" || true
           /usr/bin/osascript -l JavaScript -e 'ObjC.import("AppKit"); $.NSDistributedNotificationCenter.defaultCenter.postNotificationNameObject("com.apple.accessibility.api", null); console.log("AppKit reduce motion: " + $.NSWorkspace.sharedWorkspace.accessibilityDisplayShouldReduceMotion)' || true
-      - name: Exercise the candidate component and production media in Apple Safari
+      - name: Exercise the published Admiral Park homepage in Apple Safari
         shell: bash
         run: |
           set -euo pipefail
@@ -65,9 +54,6 @@ jobs:
           driver_pid=$!
           trap 'kill "$driver_pid" 2>/dev/null || true' EXIT
           cd "$RUNNER_TEMP"
-          python3 -m http.server 8081 --bind 127.0.0.1 --directory fixture > fixture.log 2>&1 &
-          server_pid=$!
-          trap 'kill "$driver_pid" "$server_pid" 2>/dev/null || true' EXIT
           python3 -u verify.py 2>&1 | tee orbit-qa.log
       - name: Keep the Safari observations
         if: always()

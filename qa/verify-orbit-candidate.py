@@ -6,7 +6,7 @@ import qa
 from normal import key, MONITOR, metrics
 from display import colors
 
-qa.SITE=os.environ.get('REVIEW_URL','http://127.0.0.1:8081')
+qa.SITE=os.environ.get('REVIEW_URL',qa.SITE)
 points=[('B204',.42474,.28663),('B301',.07682,.17673),('C304',.65286,.26980),('B301',.85755,.29752),
         ('B301',.29609,.41832),('A301',.83672,.34208),('A301',.29089,.38960),('A301',.39922,.04307)]
 
@@ -174,19 +174,28 @@ def run():
     qa.session=created['sessionId'];qa.emit('mac',created['capabilities'])
     try:
         qa.command('/window/rect',{'width':1440,'height':900})
-        qa.command('/url',{'url':qa.SITE+'/'})
+        qa.command('/url',{'url':qa.SITE})
         qa.wait('opening',"return r?.dataset.homepageStage==='opening'&&r.dataset.homepageBooted==='true'")
+        qa.emit('tested_url',qa.js('return location.href'))
+        logos=qa.wait('visible header logo',"""const links=[...document.querySelectorAll('a[href]')].filter(a=>{
+            const b=a.getBoundingClientRect();return b.width>0&&b.height>0&&b.top>=0&&b.top<90&&
+              b.left<innerWidth*.3&&a.querySelector('svg,img,[data-framer-name]')&&!a.innerText.trim()});
+            return links.length&&links.map(a=>a.pathname)""")
+        qa.emit('logo_routes',logos)
+        assert all(path=='/homepage-draft-3' for path in logos),logos
         qa.js("performance.setResourceTimingBufferSize(5000)")
         reduced=qa.js("return matchMedia('(prefers-reduced-motion: reduce)').matches")
         qa.emit('reduced',reduced)
         assert reduced==(os.environ.get('REDUCE')=='true')
         qa.js("const s=document.createElement('script');s.textContent=arguments[0];document.head.append(s);s.remove()",MONITOR)
         for label,predicate in [('SEQ_01',"return r?.dataset.homepageStage==='building'"),('SEQ_02',"return r?.querySelector('[data-seq3-garden-cue]')?.dataset.visible==='true'"),('SEQ_03',"return r?.dataset.homepageStage==='orbit'&&r.dataset.orbitState==='checkpoint'")]:
-            time.sleep(.85);key();qa.wait(label,predicate,40);qa.emit('arrival',[label,qa.state()])
+            time.sleep(.85);qa.wheel();qa.wait(label,predicate,65);qa.emit('arrival',[label,qa.state()])
         films=metrics().get('flights',{})
         qa.emit('instrumented_videos',films)
         if reduced:
             assert not any(v.get('playing') for v in films.values())
+            flights=qa.js(r"""return performance.getEntriesByType('resource').map(e=>e.name).filter(s=>/\.mp4\b/i.test(s))""")
+            assert not flights,flights
         else:
             assert all(films.get(k,{}).get('max',0)>1 for k in ('SEQ_01','SEQ_02','SEQ_03')),films
         qa.parked(0);time.sleep(5.5)
@@ -199,7 +208,7 @@ def run():
             screen_error=error
             qa.emit('screen_verification_error',str(error))
         if not reduced:
-            qa.drag();qa.trackpad_trace()
+            qa.drag();qa.orbit_wheel();qa.trackpad_trace()
             qa.wait('full orbit cache','return +r.dataset.orbitDownloaded===120',45)
             qa.inspect_edges()
             assert qa.js("""const b=r.querySelector('[data-orbit-detail-bar]'),box=b.getBoundingClientRect();
