@@ -500,7 +500,7 @@ const HOMEPAGE_CONNECTION_END = "https://framerusercontent.com/images/uYMWXjUcDB
 const HOMEPAGE_ORBIT_APPROACH_VIDEO = "https://framerusercontent.com/assets/N02rcgZxOCN9LfVxWZtmoNOx2ws.mp4"
 const ORBIT_CHECKPOINT_ASSETS = "https://raw.githubusercontent.com/UnbuiltMarket/admiral-park/bfb2349cf8af7e6ae3f1c665ca67c984b82cf024/assets"
 const HOMEPAGE_CONNECTION_VERSION = "426c29f22325"
-const HOMEPAGE_ORBIT_V05 = "https://raw.githubusercontent.com/UnbuiltMarket/admiral-park/6be37e13fbb610cc41e3aa37fe9a6b28df828afb/assets/orbit-v05"
+const ORBIT_INTERACTION_ASSETS = "https://raw.githubusercontent.com/UnbuiltMarket/admiral-park/f59c616abb28bf6b24a4481137d992ea2ee1e1df/assets/orbit-interaction-v1"
 const ORBIT_RENDER_ASSETS = "https://raw.githubusercontent.com/UnbuiltMarket/admiral-park/a3ff5a346f501a0d2af5b4466c2d2f95b30a3fb0/assets"
 const ORBIT_WEBP_BASE = ORBIT_RENDER_ASSETS + "/orbit-compat-v06"
 // A local 2 × 2 AVIF tests the browser's actual image decoder once per page.
@@ -525,12 +525,12 @@ function orbitImageFormat(): Promise<OrbitImageFormat> {
 function orbitWebpFrame(folder: "movement" | "light" | "sold", frame: number) {
     return ORBIT_WEBP_BASE + "/" + folder + "/" + String(frame).padStart(4, "0") + ".webp"
 }
-function homepageOrbitV05Asset(folder: "light" | "sold" | "masks", frame: number) {
-    return HOMEPAGE_ORBIT_V05 + "/" + folder + "/" + String(frame).padStart(4,"0") + (folder === "masks" ? ".png" : ".avif")
+function orbitInteractionAsset(camera: number, suffix: string) {
+    return ORBIT_INTERACTION_ASSETS + "/" + String(camera * 15).padStart(4, "0") + suffix
 }
 const HOMEPAGE_ORBIT_MOVEMENT = Array.from({length:120}, (_,frame) =>
     ORBIT_RENDER_ASSETS + "/orbit-v06/movement/" + String(frame).padStart(4,"0") + ".avif")
-const HOMEPAGE_V05_MASKS = Array.from({length:8}, (_,view)=>homepageOrbitV05Asset("masks",view*15))
+const HOMEPAGE_PACKED_MASKS = Array.from({ length: 8 }, (_, camera) => orbitInteractionAsset(camera, ".bin"))
 const HOMEPAGE_ASSETS =
     "https://raw.githubusercontent.com/UnbuiltMarket/admiral-park/main/assets"
 const HOMEPAGE_EXTENDED_FADE_STYLES = "[data-admiral-fullscreen-fades] [data-orbitdata-divider] { transition: opacity var(--admiral-fade-panel,740ms) ease; }\n[data-admiral-fullscreen-fades] [data-orbit-filters] { transition: opacity var(--admiral-fade-panel,740ms) ease; }\n[data-admiral-fullscreen-fades] [data-orbit-studio] { transition: opacity var(--admiral-fade-shell,900ms) ease, visibility 0s linear var(--admiral-fade-shell,900ms); }\n[data-admiral-fullscreen-fades] [data-orbit-studio] [data-orbitdata-transition] { transition: opacity var(--admiral-fade-record,680ms) ease; }\n[data-admiral-fullscreen-fades] [data-orbit-fullscreen-details] .orbit-fullscreen-bar { transition: opacity var(--admiral-fade-panel,740ms) ease; }\n[data-admiral-fullscreen-fades] [data-orbit-fullscreen-details] [data-orbitdata-transition] { transition: opacity var(--admiral-fade-record,680ms) ease; }\n[data-admiral-fullscreen-fades] [data-apartment-details] { transition: opacity var(--admiral-fade-panel,740ms) ease, transform var(--admiral-fade-panel,740ms) ease, visibility 0s linear var(--admiral-fade-panel,740ms); }\n[data-admiral-fullscreen-fades] [data-apartment-details] .admiral-details-grid { transition: opacity var(--admiral-fade-panel,740ms) ease; }\n[data-admiral-fullscreen-fades] [data-apartment-details] .admiral-details-plan-image { transition: opacity var(--admiral-fade-plan,660ms) ease; }\n[data-admiral-fullscreen-fades] [data-apartment-details] .admiral-details-grid [data-orbitdata-transition] { transition: opacity var(--admiral-fade-record,680ms) ease; }\n[data-admiral-fullscreen-fades] [data-apartment-details] .admiral-details-summary { transition: opacity var(--admiral-fade-panel,740ms) ease; }\n[data-admiral-fullscreen-fades] [data-apartment-details] .admiral-details-plan { transition: opacity var(--admiral-fade-panel,740ms) ease; }\n[data-admiral-fullscreen-fades] [data-orbit-studio][data-active=\"true\"], [data-admiral-fullscreen-fades] [data-apartment-details][data-details-shell-visible=\"true\"] { transition-delay: 0s; }\n@media (prefers-reduced-motion:reduce) { [data-admiral-fullscreen-fades] [data-orbitdata-divider], [data-admiral-fullscreen-fades] [data-orbit-filters], [data-admiral-fullscreen-fades] [data-orbit-studio], [data-admiral-fullscreen-fades] [data-orbit-studio] [data-orbitdata-transition], [data-admiral-fullscreen-fades] [data-orbit-fullscreen-details] .orbit-fullscreen-bar, [data-admiral-fullscreen-fades] [data-orbit-fullscreen-details] [data-orbitdata-transition], [data-admiral-fullscreen-fades] [data-apartment-details], [data-admiral-fullscreen-fades] [data-apartment-details] .admiral-details-grid, [data-admiral-fullscreen-fades] [data-apartment-details] .admiral-details-plan-image, [data-admiral-fullscreen-fades] [data-apartment-details] .admiral-details-grid [data-orbitdata-transition], [data-admiral-fullscreen-fades] [data-apartment-details] .admiral-details-summary, [data-admiral-fullscreen-fades] [data-apartment-details] .admiral-details-plan { transition:none !important; } [data-admiral-fullscreen-fades] [data-orbit-studio] .orbit-studio-status[data-status=\"available\"] .orbit-studio-status-dot::after { animation:none !important; } }"
@@ -5193,11 +5193,11 @@ const orbitBlueStudioStyles = `
 [data-orbit-housing]::after { border: 1px solid ${admiralPalette.lightGlassRim}; box-shadow: ${admiralPalette.lightGlassShadow}; z-index: 1; }
 [data-orbit-studio][data-layout="workspace"] [data-orbit-housing] {
     /* Keep the existing camera width and use the former inter-card gaps inside the housing. */
-    --housing-image: calc((100% - var(--workspace-rail) - var(--workspace-gap)) * 2 * var(--studio-orbit-scale) / (1 + var(--studio-orbit-scale)));
+    --housing-image: var(--workspace-camera-width);
     --housing-summary: calc(var(--workspace-summary) + var(--workspace-row-gap));
     display: grid; grid-area: 3 / 1 / 6 / -1; gap: 0;
     grid-template-columns: var(--housing-image) minmax(0,1fr);
-    grid-template-rows: auto var(--housing-summary);
+    grid-template-rows: var(--workspace-camera-height) var(--housing-summary);
     margin-inline-start: calc((100% - var(--workspace-rail) - var(--workspace-gap)) * (1 - var(--studio-orbit-scale)) / 2);
 }
 [data-orbit-studio][data-layout="workspace"] [data-orbit-housing]::before {
@@ -5298,8 +5298,12 @@ const orbitWorkspaceStyles = `
     --studio-orbit-scale: .94;
     --workspace-max: 1600px;
     --workspace-rail: clamp(264px, 25vw, 380px);
-    --workspace-content-height: calc(var(--studio-host-height,100dvh) - var(--workspace-top) - var(--workspace-bottom) - var(--workspace-toolbar) - var(--workspace-row-gap) - var(--workspace-summary));
+    /* A tall portrait drawing must never determine the height of the camera or detail strip. */
+    --workspace-content-height: max(0px, calc(min(var(--studio-host-height,100dvh), 100dvh) - var(--workspace-top) - var(--workspace-bottom) - var(--workspace-toolbar) - var(--workspace-row-gap) - var(--workspace-summary)));
     --workspace-image-limit: calc(var(--workspace-content-height) * 1920 / 1010 / var(--studio-orbit-scale));
+    --workspace-width: min(calc(var(--studio-host-width,100vw) - 2 * var(--workspace-edge)), var(--workspace-max), calc(var(--workspace-image-limit) + var(--workspace-rail) + var(--workspace-gap)));
+    --workspace-camera-width: max(0px, calc((var(--workspace-width) - var(--workspace-rail) - var(--workspace-gap)) * var(--studio-orbit-scale)));
+    --workspace-camera-height: calc(var(--workspace-camera-width) * 1010 / 1920);
     --workspace-ink: #183139;
     --workspace-muted: #536b74;
     --workspace-rule: rgba(43, 72, 82, .16);
@@ -5308,13 +5312,13 @@ const orbitWorkspaceStyles = `
     --workspace-shadow: 0 7px 18px rgba(9, 44, 92, 0.22), 0 2px 5px rgba(13, 62, 125, 0.14);
     --workspace-button: linear-gradient(145deg, rgba(255,255,255,.91), rgba(255,255,255,.24) 56%, rgba(255,255,255,.66)), #dce8ed;
     inset: var(--workspace-top) 0 var(--workspace-bottom);
-    width: min(calc(100% - 2 * var(--workspace-edge)), var(--workspace-max), calc(var(--workspace-image-limit) + var(--workspace-rail) + var(--workspace-gap)));
-    height: max-content;
+    width: var(--workspace-width);
+    height: calc(var(--workspace-toolbar) + var(--workspace-camera-height) + var(--workspace-row-gap) + var(--workspace-summary));
     margin: 0 auto;
     padding: 0;
     display: grid;
     grid-template-columns: minmax(0,1fr) var(--workspace-rail);
-    grid-template-rows: var(--workspace-toolbar) 0 auto var(--workspace-row-gap) var(--workspace-summary);
+    grid-template-rows: var(--workspace-toolbar) 0 var(--workspace-camera-height) var(--workspace-row-gap) var(--workspace-summary);
     column-gap: var(--workspace-gap);
     row-gap: 0;
     color: var(--workspace-ink);
@@ -5385,7 +5389,15 @@ const orbitWorkspaceStyles = `
     padding: 0; margin: 0; border: 0; border-radius: 0; background: transparent; box-shadow: none;
     font: inherit; font-size: 14px; line-height: 1.7; color: #364b58; text-overflow: ellipsis;
 }
-[data-orbit-studio] [data-orbit-list-filters] .orbit-list-field select { padding-right: 3px; cursor: pointer; }
+[data-orbit-studio] [data-orbit-list-filters] .orbit-list-field select {
+    appearance: none; -webkit-appearance: none; padding-inline-end: 18px; cursor: pointer;
+    background-image: linear-gradient(45deg, transparent 41%, currentColor 43% 59%, transparent 61%),
+        linear-gradient(-45deg, transparent 41%, currentColor 43% 59%, transparent 61%);
+    background-size: 5px 5px; background-position: right 6px center, right 2px center; background-repeat: no-repeat;
+}
+@media (forced-colors: active) {
+    [data-orbit-studio] [data-orbit-list-filters] .orbit-list-field select { appearance: auto; -webkit-appearance: auto; background-image: none; }
+}
 [data-orbit-list-filters] input::placeholder { color: #7a8992; opacity: 1; }
 [data-orbit-list-filters] .orbit-list-feedback {
     grid-column: 1; grid-row: 2; display: flex; align-items: center; flex-wrap: wrap; gap: 7px 12px; min-width: 0;
@@ -5508,11 +5520,11 @@ const orbitWorkspaceStyles = `
 [data-orbit-studio][data-layout="workspace"] .orbit-studio-areas dd { color: var(--workspace-ink); font-size: clamp(15px,1.35vw,22px); font-weight: 600; font-variant-numeric: tabular-nums; }
 [data-orbit-studio][data-layout="workspace"] .orbit-studio-areas small { display: inline; font-size: 9px; margin: 0 0 0 3px; }
 [data-orbit-studio][data-layout="workspace"] .orbit-studio-plan-workspace {
-    grid-column: 2; grid-row: 3 / 6; align-self: stretch; z-index: 3; contain: size; display: flex; flex-direction: column;
+    grid-column: 2; grid-row: 3 / 6; align-self: stretch; z-index: 3; display: grid; grid-template-rows: minmax(0,1fr) auto;
     padding: var(--workspace-plan-inset); padding-bottom: 6px;
 }
-[data-orbit-studio][data-layout="workspace"] .orbit-studio-plan-content { display: flex; flex: 1 1 0; min-height: 0; }
-[data-orbit-studio][data-layout="workspace"] .orbit-studio-plan-section { flex: 1 1 0; min-height: 0; }
+[data-orbit-studio][data-layout="workspace"] .orbit-studio-plan-content { display: grid; grid-template-rows: minmax(0,1fr); min-height: 0; }
+[data-orbit-studio][data-layout="workspace"] .orbit-studio-plan-section { position: relative; min-height: 0; height: auto; }
 [data-orbit-studio][data-layout="workspace"] [data-orbit-plan-footer] {
     flex: 0 0 auto; padding: 0; margin: 0 calc(6px - var(--workspace-plan-inset));
     border: 0; min-width: 0;
@@ -5527,7 +5539,7 @@ const orbitWorkspaceStyles = `
     [data-orbit-studio][data-layout="workspace"] [data-orbit-plan-actions] [data-orbit-favorite]:hover { color: #154a7d; }
 }
 [data-orbit-studio][data-layout="workspace"] .orbit-studio-plan-stage {
-    flex: 1 1 0; height: auto; overflow: hidden;
+    position: absolute; inset: 0; height: auto; overflow: hidden;
     border: 0; border-radius: 0; background: transparent; box-shadow: none;
 }
 [data-orbit-studio][data-layout="workspace"] .orbit-studio-plan-crop { max-width: 97%; max-height: 97%; }
@@ -7619,13 +7631,17 @@ export default function AdmiralHomepageStudio(
         })
     }, [useWebp])
     const checkpointZeroPoster = defaultCheckpointUrls[0]
-    const checkpointInspectionUrls = React.useMemo(() => {
-        if (checkpointCount !== 8) return []
-        const sources = useGitHubAssets && !sharpCheckpointUrls.length ? defaultCheckpointUrls : sharpCheckpointUrls
-        return Array.from({length:8}, (_,index)=> typeof sources[index] === "string" ? sources[index].trim() : "")
-    }, [useGitHubAssets, defaultCheckpointUrls, sharpCheckpointUrls, checkpointCount])
+    // Framer supplies a fresh array on viewport changes, even when every URL is identical.
+    // Only the eight actual camera URLs can change the player's media.
+    const inspectionKey = checkpointCount === 8 && sharpCheckpointUrls.length
+        ? JSON.stringify(Array.from({ length: 8 }, (_, i) => typeof sharpCheckpointUrls[i] === "string" ? sharpCheckpointUrls[i].trim() : ""))
+        : ""
+    const checkpointInspectionUrls = React.useMemo<readonly string[]>(() => {
+        if (inspectionKey) return JSON.parse(inspectionKey)
+        return useGitHubAssets && checkpointCount === 8 ? defaultCheckpointUrls : HOMEPAGE_EMPTY_CHECKPOINT_URLS
+    }, [inspectionKey, useGitHubAssets, checkpointCount, defaultCheckpointUrls])
     const maskUrls = React.useMemo(() => useGitHubAssets
-        ? HOMEPAGE_V05_MASKS : maskBaseUrl.trim() ? homepageUrls(maskBaseUrl, HOMEPAGE_MASK_NAMES) : [],
+        ? HOMEPAGE_PACKED_MASKS : maskBaseUrl.trim() ? homepageUrls(maskBaseUrl, HOMEPAGE_MASK_NAMES) : [],
         [useGitHubAssets, maskBaseUrl])
     const orbitStartIndex = Math.round(
         Math.max(
@@ -7679,10 +7695,12 @@ export default function AdmiralHomepageStudio(
         framed: boolean
     } | null>(null)
     const apartmentOrbitAvailable = maskPicking && checkpointCount === 8 && maskUrls.length === 8
+    const initializedEntry = React.useRef<string | null>(null)
     useHomepageLayoutEffect(() => {
         if (staticRenderer) return
         const url = new URL(window.location.href)
-        if (url.hash.toLowerCase() === homepageOrbitHash) {
+        if (url.hash.toLowerCase() === homepageOrbitHash && initializedEntry.current !== url.href) {
+            initializedEntry.current = url.href
             const group = apartmentOrbitAvailable ? homepageOrbitGroup(url) : null
             const id = homepageOrbitApartment(url)
             const frame = group ? bestOrbitGroupFrame(group.ids) ?? orbitStartIndex
@@ -7903,6 +7921,14 @@ export default function AdmiralHomepageStudio(
         typeof createOrbitApartmentPicker
     > | null>(null)
     const actions = React.useRef<HomepageActions | null>(null)
+    const interruptedOrbit = React.useRef<{
+        location: string
+        startView: typeof startView
+        start: number
+        frameCount: number
+        cameraCount: number
+        view: OrbitSnapshot
+    } | null>(null)
     useHomepageLayoutEffect(() => {
         const image = posterRef.current
         if (!heroVideoUrl || !image || image.complete || image.getAttribute("src") !== heroStartPoster ||
@@ -8109,6 +8135,7 @@ export default function AdmiralHomepageStudio(
             root,
             canvas,
             urls: maskUrls,
+            preparedMasks: useGitHubAssets,
             palette: HOMEPAGE_MASK_PALETTE,
             lightingEnabled: apartmentLighting,
             lightingAtlasUrl: apartmentLightingAtlas,
@@ -8221,11 +8248,11 @@ export default function AdmiralHomepageStudio(
             retry = () => picker.retry(),
             observer = new ResizeObserver(refresh)
         const status = new MutationObserver(() =>
-            setMaskFailed(root.dataset.orbitMaskState === "error")
+            setMaskFailed(root.dataset.orbitMaskState === "error" || root.dataset.orbitLightingState === "error")
         )
         status.observe(root, {
             attributes: true,
-            attributeFilter: ["data-orbit-mask-state"],
+            attributeFilter: ["data-orbit-mask-state", "data-orbit-lighting-state"],
         })
         root.addEventListener("admiral:orbit-filter-change", refresh)
         root.addEventListener("admiral:orbit-mask-retry", retry)
@@ -9129,8 +9156,8 @@ export default function AdmiralHomepageStudio(
             })
         }
         let requestedOrbitFrame = orbitStartIndex
-        async function activateOrbit(frame = orbitStartIndex) {
-            if (disposed || !orbit || !isVisible()) return
+        async function activateOrbit(frame = orbitStartIndex, restoration?: OrbitRestoration) {
+            if (disposed || !orbit || (!restoration && !isVisible())) return
             requestedOrbitFrame = frame
             const token = ++enterToken
             // Keep the decoded landing still on top until the orbit paints its first frame.
@@ -9143,7 +9170,7 @@ export default function AdmiralHomepageStudio(
             presentationProgress = 1
             changeStage("handoff")
             try {
-                await orbit.activate(frame)
+                await orbit.activate(frame, restoration)
                 if (disposed || token !== enterToken) return
                 if (holdLanding) {
                     destroyHero()
@@ -9375,6 +9402,7 @@ export default function AdmiralHomepageStudio(
         let orbitLocation = entryUrl.hash.toLowerCase() === homepageOrbitHash
         let orbitLocationApartment = homepageOrbitApartment(entryUrl)
         let orbitLocationGroup = homepageOrbitGroup(entryUrl)
+        const orbitLocationKey = () => JSON.stringify([journeyPath, orbitLocation, orbitLocationApartment, orbitGroupKey(orbitLocationGroup)])
         function closeOrbitGroup() {
             orbitLocationGroup = null
             setOrbitGroup(null)
@@ -9895,10 +9923,21 @@ export default function AdmiralHomepageStudio(
             changeStage(previewStage)
             changePoster(initialPoster)
         } else {
-            if (startView === "orbit" || orbitLocation)
+            const previous = interruptedOrbit.current
+            interruptedOrbit.current = null
+            const restore = previous && previous.location === orbitLocationKey() && previous.startView === startView &&
+                previous.start === orbitStartIndex && previous.cameraCount === cameraCount &&
+                previous.frameCount === orbitUrls.length ? previous.view : null
+            if (restore) {
+                const target = restore.target ?? (restore.state === "moving" || restore.state === "buffering"
+                    ? Math.round(Math.round(restore.position * cameraCount / orbitUrls.length) * orbitUrls.length / cameraCount)
+                    : undefined)
+                setDirectOrbitEntry({ poster: parkedPoster(restore.frame), framed: true })
+                void activateOrbit(restore.frame, { position: restore.position, target, paused: restore.userPaused, direction: restore.direction })
+            } else if (startView === "orbit" || orbitLocation)
                 openOrbitFromLink(orbitLocationApartment, orbitLocationGroup, true)
             else mountHero()
-            if (startView !== "orbit" && !orbitLocation) {
+            if (!restore && startView !== "orbit" && !orbitLocation) {
                 // A cold browser can emit canplay with only a fraction of SEQ_01
                 // buffered. Give that flight first use of the connection before
                 // starting the 120-frame orbit download. Arrival also starts it.
@@ -9937,7 +9976,14 @@ export default function AdmiralHomepageStudio(
         return () => {
             disposed = true
             enterToken++
-            clearApartmentDetails()
+            if (currentStage === "orbit" && orbit) {
+                interruptedOrbit.current = {
+                    location: orbitLocationKey(), start: orbitStartIndex, startView,
+                    frameCount: orbitUrls.length, cameraCount, view: orbit.snapshot(),
+                }
+            } else {
+                clearApartmentDetails()
+            }
             destroyHero()
             releaseConnectionPreload()
             orbit?.destroy()
@@ -10211,7 +10257,7 @@ export default function AdmiralHomepageStudio(
             : 94
     const studioControls =
         useStudio && (stage === "orbit" || stage === "handoff")
-    const studioSideControls = useStudio && orbitVisible && showControls && !fullscreen.active
+    const studioSideControls = useStudio && orbitVisible && !fullscreen.active && (!mobilePresentation || showControls)
     const showLegacyControls = !staticRenderer && showControls && !fullscreen.active &&
         (stage !== "orbit" || !useStudio)
     const stepFromSide = (heading: number) => {
@@ -11972,7 +12018,7 @@ addPropertyControls(AdmiralHomepageStudio, {
         type: ControlType.Boolean,
         title: "Tour controls",
         defaultValue: true,
-        description: "Shows the approach controls and the two side arrows on the Studio orbit.",
+        description: "Shows the approach controls and optional phone arrows. Desktop Studio always has two camera arrows.",
     },
     showViewpoints: {
         type: ControlType.Boolean,
@@ -14760,8 +14806,7 @@ function sampleOrbitWheel(
         !gesture ||
         heading !== gesture.heading ||
         horizontal !== gesture.horizontal ||
-        gap > ORBIT_WHEEL_RELEASE_MS ||
-        (gap >= ORBIT_WHEEL_GESTURE_GAP_MS && !gesture.discrete)
+        gap > ORBIT_WHEEL_RELEASE_MS
     ) {
         return {
             gesture: {
@@ -14791,7 +14836,7 @@ function sampleOrbitWheel(
     // pulses, without promoting a closely spaced trackpad envelope to a wheel.
     gesture.densePulses = gap <= 36 ? gesture.densePulses + 1 : Math.max(0, gesture.densePulses - 1)
     if (gesture.densePulses >= 3) gesture.sparsePulses = 0
-    else if (gap >= 46 && strength >= Math.max(18, gesture.lastStrength * .92))
+    else if (gap >= 46 && strength >= Math.max(18, gesture.lastStrength * .92) && strength <= gesture.lastStrength * 1.08)
         gesture.sparsePulses++
     gesture.discrete ||= discreteUnits || gesture.sparsePulses >= 2
 
@@ -16257,7 +16302,11 @@ function createOrbitPlayer(options: OrbitOptions) {
         const canFlow = !!wheelBounds && !reduced()
         const intent = canFlow && (settling || pendingMove) ? wheelIntent : null
         const now = performance.now()
-        const freshGesture = now - lastWheelAt >= ORBIT_WHEEL_GESTURE_GAP_MS
+        // A single Safari trackpad envelope can be delivered in batches over 180 ms apart.
+        // Use the event's acquisition time for its shape; drive the animation on the paint clock.
+        const acquiredAt = event.timeStamp > 0 ? event.timeStamp : now
+        const gap = canFlow && wheelGesture ? acquiredAt - wheelGesture.lastAt : now - lastWheelAt
+        const freshGesture = canFlow && wheelGesture ? gap > ORBIT_WHEEL_RELEASE_MS : gap >= ORBIT_WHEEL_GESTURE_GAP_MS
         const horizontal = (canFlow && !wheelCoasting && (intent || !freshGesture) ? wheelGesture?.horizontal : undefined)
             ?? (Math.abs(event.deltaX) > Math.abs(event.deltaY))
         const raw = (horizontal ? event.deltaX : event.deltaY) * scale
@@ -16282,11 +16331,12 @@ function createOrbitPlayer(options: OrbitOptions) {
             }
             const afterMomentum = wheelCoasting
             wheelCoasting = false
-            if (wheelGesture && heading !== wheelGesture.heading && (!freshGesture || intent) && !afterMomentum)
+            const reversedAfterPause = !!wheelGesture && heading !== wheelGesture.heading && gap >= ORBIT_WHEEL_GESTURE_GAP_MS && !intent
+            if (wheelGesture && heading !== wheelGesture.heading && !reversedAfterPause && (!freshGesture || intent) && !afterMomentum)
                 return
-            const sample = sampleOrbitWheel(afterMomentum ? null : wheelGesture, now, heading, horizontal, strength, event.deltaMode !== 0)
+            const sample = sampleOrbitWheel(afterMomentum ? null : wheelGesture, acquiredAt, heading, horizontal, strength, event.deltaMode !== 0)
             wheelGesture = sample.gesture
-            newSwipe = freshGesture || afterMomentum || sample.renewed
+            newSwipe = freshGesture || reversedAfterPause || afterMomentum || sample.renewed
 
             if (intent) {
                 if (heading !== direction) return
@@ -17027,6 +17077,7 @@ interface OrbitApartmentPickerOptions {
     root: HTMLElement
     canvas: HTMLCanvasElement
     urls: readonly string[]
+    preparedMasks?: boolean
     /** Actual exported mask RGB values; these may differ from the source object colours. */
     palette: readonly {
         id: string
@@ -17064,7 +17115,104 @@ interface OrbitMaskIndex {
     maxX: Uint32Array
     minY: Uint32Array
     maxY: Uint32Array
+    lighting?: OrbitWindowAtlas
 }
+interface OrbitWindowAtlas {
+    tileSize: number
+    padding: number
+    columns: number
+    slots: number
+    patches: Map<string, { first: number; coordinates: Uint8Array }>
+}
+
+/** Unpack calibrated IDs directly from file bytes. No image decoder or canvas colour conversion. */
+function readOrbitMaskPacket(buffer: ArrayBuffer, ids: readonly string[]): OrbitMaskIndex {
+    const data = new DataView(buffer)
+    if (data.byteLength < 14 || data.getUint32(0) !== 0x41504d31) throw new Error("Invalid orbit mask packet")
+    const width = data.getUint16(4, true), height = data.getUint16(6, true), entries = data.getUint8(8)
+    const tileSize = data.getUint8(9), columns = data.getUint8(10), padding = data.getUint8(11), slots = data.getUint16(12, true)
+    if (width !== 1920 || height !== 1010 || !entries || entries > ids.length ||
+        tileSize !== 32 || columns !== 20 || padding !== 2 || !slots || slots > 4096)
+        throw new Error("Invalid orbit mask geometry")
+    const pixels = new Uint8Array(width * height)
+    const minX = new Uint32Array(ids.length + 1).fill(width), minY = new Uint32Array(ids.length + 1).fill(height)
+    const maxX = new Uint32Array(ids.length + 1), maxY = new Uint32Array(ids.length + 1)
+    const patches: OrbitWindowAtlas["patches"] = new Map()
+    let offset = 14, slot = 0
+    for (let i = 0; i < entries; i++) {
+        const id = String.fromCharCode(...new Uint8Array(buffer, offset, 4))
+        const index = ids.indexOf(id) + 1, runs = data.getUint32(offset + 4, true)
+        offset += 8
+        if (!index || patches.has(id) || !runs || offset + runs * 6 + 2 > data.byteLength)
+            throw new Error("Invalid apartment mask entry")
+        for (let run = 0; run < runs; run++, offset += 6) {
+            const y = data.getUint16(offset, true), x = data.getUint16(offset + 2, true), length = data.getUint16(offset + 4, true)
+            if (y >= height || !length || x + length > width) throw new Error("Invalid apartment mask run")
+            pixels.fill(index, y * width + x, y * width + x + length)
+            minX[index] = Math.min(minX[index], x)
+            maxX[index] = Math.max(maxX[index], x + length - 1)
+            minY[index] = Math.min(minY[index], y)
+            maxY[index] = Math.max(maxY[index], y)
+        }
+        const count = data.getUint16(offset, true)
+        offset += 2
+        const coordinates = new Uint8Array(buffer, offset, count * 2)
+        for (let p = 0; p < coordinates.length; p += 2)
+            if (coordinates[p] * tileSize >= width || coordinates[p + 1] * tileSize >= height) throw new Error("Invalid orbit light tile")
+        patches.set(id, { first: slot, coordinates })
+        slot += count
+        offset += coordinates.length
+    }
+    if (slot !== slots || offset !== data.byteLength) throw new Error("Incomplete orbit mask packet")
+    return { width, height, pixels, minX, maxX, minY, maxY, lighting: { tileSize, padding, columns, slots, patches } }
+}
+
+/** The native image path has an explicit lifecycle even if a platform decoder never calls back. */
+function loadOrbitOverlayImage(blob: Blob, signal: AbortSignal): Promise<HTMLImageElement> {
+    return new Promise((resolve, reject) => {
+        if (signal.aborted) { reject(new Error("Orbit image cancelled")); return }
+        const image = new Image(), url = URL.createObjectURL(blob)
+        function settle(error?: Error) {
+            clearTimeout(timer)
+            signal.removeEventListener("abort", cancel)
+            image.onload = image.onerror = null
+            URL.revokeObjectURL(url)
+            if (error) { image.removeAttribute("src"); reject(error) }
+            else resolve(image)
+        }
+        const cancel = () => settle(new Error("Orbit image cancelled"))
+        const timer = setTimeout(() => settle(new Error("Orbit image decoding timed out")), 12000)
+        signal.addEventListener("abort", cancel, { once: true })
+        image.decoding = "async"
+        image.onload = () => settle()
+        image.onerror = () => settle(new Error("Orbit image decoding failed"))
+        image.src = url
+    })
+}
+/** Preserve unconverted colours for custom PNG masks. A stuck bitmap decoder yields to a native image. */
+async function loadCustomOrbitMask(blob: Blob, signal: AbortSignal): Promise<HTMLImageElement | ImageBitmap> {
+    if (typeof createImageBitmap === "function" && !signal.aborted) {
+        const bitmap = await new Promise<ImageBitmap | null>(resolve => {
+            let finished = false
+            function complete(result: ImageBitmap | null) {
+                if (finished) { result?.close(); return }
+                finished = true
+                clearTimeout(timer)
+                signal.removeEventListener("abort", cancel)
+                resolve(result)
+            }
+            const cancel = () => complete(null)
+            const timer = setTimeout(cancel, 2500)
+            signal.addEventListener("abort", cancel, { once: true })
+            Promise.resolve().then(() => createImageBitmap(blob, {
+                premultiplyAlpha: "none", colorSpaceConversion: "none",
+            })).then(complete, cancel)
+        })
+        if (bitmap) return bitmap
+    }
+    return loadOrbitOverlayImage(blob, signal)
+}
+
 interface OrbitApartmentPickerSnapshot {
     state: "off" | "moving" | "loading" | "ready" | "error"
     checkpoint: number
@@ -17361,7 +17509,7 @@ function createOrbitApartmentLighting(options: {
     repaint: () => void
 }) {
     let active = false, destroyed = false, loading = false, failed = false
-    let phone = false, selectedAtlasUrl = options.atlasUrl
+    let phone = false, selectedAtlasUrl = options.atlasUrl, refreshDownload = false
     let metadata: OrbitLightingData | null = null
     let generation = 0, fadeFrame = 0, fadeStarted = 0, cropId = "", cropKey = ""
     let data: OrbitLightingData | null = null, blob: Blob | null = null
@@ -17446,6 +17594,8 @@ function createOrbitApartmentLighting(options: {
         if (!active || destroyed || loading || failed || atlas) return
         loading = true
         const token = ++generation, controller = new AbortController()
+        const cache = refreshDownload ? "reload" : "force-cache"
+        refreshDownload = false
         request = controller
         const valid = () => !destroyed && active && generation === token
         const timer = setTimeout(() => controller.abort(), 15000)
@@ -17454,7 +17604,7 @@ function createOrbitApartmentLighting(options: {
             if (!data) {
                 if (!metadata) {
                     const response = await fetch(options.dataUrl, {
-                        signal: controller.signal, credentials: "omit", cache: "force-cache",
+                        signal: controller.signal, credentials: "omit", cache,
                     })
                     if (!response.ok) throw new Error("Apartment lighting metadata unavailable")
                     const result = await response.json() as OrbitLightingData
@@ -17469,7 +17619,7 @@ function createOrbitApartmentLighting(options: {
             }
             if (!blob) {
                 const response = await fetch(selectedAtlasUrl, {
-                    signal: controller.signal, credentials: "omit", cache: "force-cache",
+                    signal: controller.signal, credentials: "omit", cache,
                 })
                 if (!response.ok) throw new Error("Apartment lighting image unavailable")
                 const result = await response.blob()
@@ -17477,20 +17627,7 @@ function createOrbitApartmentLighting(options: {
                 if (!valid()) return
                 blob = result
             }
-            let decoded: ImageBitmap | HTMLImageElement | null = null
-            if (typeof createImageBitmap === "function") {
-                try { decoded = await createImageBitmap(blob) } catch { /* Native image fallback below. */ }
-            }
-            if (!valid()) { closeImage(decoded); return }
-            if (!decoded) {
-                const image = new Image(), url = URL.createObjectURL(blob)
-                image.decoding = "async"
-                image.src = url
-                try {
-                    await image.decode()
-                    decoded = image
-                } finally { URL.revokeObjectURL(url) }
-            }
+            const decoded = await loadOrbitOverlayImage(blob, controller.signal)
             if (!valid()) { closeImage(decoded); return }
             if (decoded.width !== data!.atlasWidth || decoded.height !== data!.atlasHeight) {
                 closeImage(decoded)
@@ -17625,7 +17762,14 @@ function createOrbitApartmentLighting(options: {
     state("off")
     return {
         sync, texture,
-        retry() { failed = false; if (active) void load() },
+        retry() {
+            if (!failed) return
+            failed = false
+            blob = data = metadata = null
+            apartments.clear()
+            refreshDownload = true
+            if (active) void load()
+        },
         destroy() {
             if (destroyed) return
             destroyed = true
@@ -17638,194 +17782,104 @@ function createOrbitApartmentLighting(options: {
 }
 
 
-/** Keep sparse window pixels for recent cameras. Full lighting images are temporary. */
+/** The mask packet locates transparent, pre-rendered window tiles. Browser canvas pixels are never read. */
 function createOrbitSceneLighting(options: {
     root: HTMLElement
-    ids: readonly string[]
     enabled: boolean
     repaint: () => void
 }) {
-    interface WindowPatch {
-        samples: Uint32Array
-        left: number
-        top: number
-        right: number
-        bottom: number
-    }
-    interface PreparedLighting {
-        patches: Map<string, WindowPatch>
-        sourceMask: WeakSet<OrbitMaskIndex>
-        width: number
-        height: number
-        bytes: number
-    }
-    // The mask/palette belong to this picker. Weak membership lets its ID-map
-    // cache evict masks independently and prevents reuse after a fresh decode.
-    const recent = new Map<string, PreparedLighting>()
-    let patches = new Map<string, WindowPatch>()
-    let activeMask: OrbitMaskIndex | null = null
-    let frame = -1, phone = false, width = 0, height = 0
-    let request: AbortController | null = null
-    let failed = false, destroyed = false
-    let currentKey = ""
-    let surface: HTMLCanvasElement | null = null
+    const { root } = options
+    interface LoadedAtlas { image: HTMLImageElement; bytes: number }
+    const recent = new Map<string, LoadedAtlas>()
+    let mask: OrbitMaskIndex | null = null, checkpoint = -1, phone = false
+    let atlas: LoadedAtlas | null = null, request: AbortController | null = null
+    let retrying = false, failed = false, destroyed = false
+    let surface: HTMLCanvasElement | null = null, tinted: HTMLCanvasElement | null = null
+    let tintKey = "", drawKey = ""
     type Texture = { canvas: HTMLCanvasElement; id: string; ids: string[]; rect: OrbitMaskRect; opacity: number }
     let drawn: Texture | null = null
 
     function clearTexture() {
-        currentKey = ""
+        drawKey = ""
         drawn = null
         if (surface) surface.width = surface.height = 0
         surface = null
-        options.root.dataset.orbitLightingCropBytes = "0"
-        options.root.dataset.orbitLightingApartment = ""
-        options.root.dataset.orbitLightingGroupCount = "0"
+        root.dataset.orbitLightingCropBytes = "0"
+        root.dataset.orbitLightingApartment = ""
+        root.dataset.orbitLightingGroupCount = "0"
     }
     function release() {
         request?.abort()
         request = null
-        patches = new Map()
+        atlas = null
+        failed = retrying = false
         clearTexture()
-        activeMask = null
-        failed = false
-        frame = -1
-        options.root.dataset.orbitLightingState = "off"
-        options.root.dataset.orbitLightingError = ""
-        options.root.dataset.orbitLightingDecoded = "0"
-        options.root.dataset.orbitLightingBytes = "0"
+        if (tinted) tinted.width = tinted.height = 0
+        tinted = null
+        tintKey = ""
+        root.dataset.orbitLightingState = "off"
+        root.dataset.orbitLightingError = ""
+        root.dataset.orbitLightingDecoded = "0"
+        root.dataset.orbitLightingBytes = "0"
     }
-
-    async function pixels(folder: "light" | "sold", camera: number, w: number, h: number, signal: AbortSignal) {
-        const format = await orbitImageFormat()
-        const url = format === "webp" ? orbitWebpFrame(folder, camera) : homepageOrbitV05Asset(folder, camera)
-        const response = await fetch(url, {
-            signal, credentials: "omit", cache: "force-cache"
-        })
-        if (!response.ok) throw new Error("Orbit light render unavailable")
-        const blob = await response.blob()
-        let image: ImageBitmap | HTMLImageElement | undefined
-        let canvas: HTMLCanvasElement | undefined
-        let objectUrl: string | undefined
-        try {
-            if (signal.aborted) throw new Error("Cancelled")
-            if (typeof createImageBitmap === "function") {
-                try { image = await createImageBitmap(blob) } catch { /* Use the image decoder on older Safari. */ }
-            }
-            if (signal.aborted) throw new Error("Cancelled")
-            if (!image) {
-                const img = new Image()
-                objectUrl = URL.createObjectURL(blob)
-                image = img
-                img.src = objectUrl
-                await img.decode()
-            }
-            if (signal.aborted) throw new Error("Cancelled")
-            if (Math.abs(image.width / image.height - w / h) > .005)
-                throw new Error("Orbit light render has a different aspect ratio")
-            canvas = document.createElement("canvas")
-            canvas.width = w
-            canvas.height = h
-            const ctx = canvas.getContext("2d", {willReadFrequently:true})
-            if (!ctx) throw new Error("Orbit light drawing surface unavailable")
-            ctx.drawImage(image, 0, 0, w, h)
-            return ctx.getImageData(0, 0, w, h).data
-        } finally {
-            if (image && "close" in image) image.close()
-            else if (image instanceof HTMLImageElement) image.src = ""
-            if (objectUrl) URL.revokeObjectURL(objectUrl)
-            if (canvas) canvas.width = canvas.height = 0
-        }
+    function show(result: LoadedAtlas) {
+        atlas = result
+        root.dataset.orbitLightingState = "ready"
+        root.dataset.orbitLightingError = ""
+        root.dataset.orbitLightingDecoded = "1"
+        root.dataset.orbitLightingVariant = phone ? "phone" : "desktop"
+        root.dataset.orbitLightingBytes = String(result.bytes)
     }
-
-    function showPrepared(entry: PreparedLighting) {
-        patches = entry.patches
-        width = entry.width
-        height = entry.height
-        options.root.dataset.orbitLightingState = "ready"
-        options.root.dataset.orbitLightingDecoded = "1"
-        options.root.dataset.orbitLightingVariant = phone ? "phone" : "desktop"
-        options.root.dataset.orbitLightingBytes = String(entry.bytes)
-    }
-
     async function load() {
-        if (!activeMask || request || failed || destroyed) return
-        const mask = activeMask
-        const camera = frame
+        const layout = mask?.lighting
+        if (!layout || request || failed || destroyed) return
+        const variant = phone ? "-phone" : "", key = checkpoint + variant
+        const cached = recent.get(key)
+        if (cached) {
+            recent.delete(key)
+            recent.set(key, cached)
+            show(cached)
+            return
+        }
         const controller = new AbortController()
         request = controller
-        const until = window.setTimeout(() => controller.abort(), 18000)
-        options.root.dataset.orbitLightingState = "loading"
+        const timer = setTimeout(() => controller.abort(), 15000)
+        root.dataset.orbitLightingState = "loading"
         try {
-            const w = Math.min(mask.width, phone ? 960 : 1920)
-            const h = Math.max(1,Math.round(w * mask.height / mask.width))
-            // Sequential reads cap transient decoder memory; network response bytes remain in the browser cache.
-            const native = await pixels("light", camera, w, h, controller.signal)
-            const red = await pixels("sold", camera, w, h, controller.signal)
-            if (controller.signal.aborted || request !== controller) return
-            const owner = new Uint8Array(w * h), alpha = new Uint8Array(w * h)
-            const count = new Uint32Array(options.ids.length + 1)
-            const minX = new Uint16Array(count.length).fill(w), minY = new Uint16Array(count.length).fill(h)
-            const maxX = new Uint16Array(count.length), maxY = new Uint16Array(count.length)
-            const sampleX = new Uint16Array(w)
-            for (let x = 0; x < w; x++) sampleX[x] = Math.min(mask.width - 1, Math.floor((x + .5) * mask.width / w))
-            const isCurrent = () => !controller.signal.aborted && request === controller
-            const measured = await processOrbitPixelRows(h, isCurrent, (first, end) => {
-                for (let y = first; y < end; y++) {
-                    const row = Math.min(mask.height - 1, Math.floor((y + .5) * mask.height / h)) * mask.width
-                    for (let x = 0; x < w; x++) {
-                        const id = mask.pixels[row + sampleX[x]]
-                        if (!id) continue
-                        const px = y * w + x, c = px * 4
-                        // Keep only pixels that gain red chroma, excluding foreground trees and unlit facade.
-                        const change = red[c] - native[c] - .65 * (red[c+1] - native[c+1]) - .35 * (red[c+2] - native[c+2])
-                        if (change <= 8) continue
-                        owner[px] = id
-                        alpha[px] = Math.min(255, Math.round((change - 8) * 12))
-                        count[id]++
-                        minX[id] = Math.min(minX[id],x); minY[id] = Math.min(minY[id],y)
-                        maxX[id] = Math.max(maxX[id],x); maxY[id] = Math.max(maxY[id],y)
-                    }
-                }
+            const response = await fetch(orbitInteractionAsset(checkpoint, variant + ".webp"), {
+                signal: controller.signal, credentials: "omit", cache: retrying ? "reload" : "force-cache",
             })
-            if (!measured || !isCurrent()) throw new Error("Orbit lighting preparation cancelled")
-            const packed = Array.from(count, n => new Uint32Array(n * 3))
-            const offsets = new Uint32Array(count.length)
-            const sampled = await processOrbitPixelRows(h, isCurrent, (first, end) => {
-                for (let px = first * w; px < end * w; px++) {
-                    const id = owner[px]
-                    if (!id) continue
-                    const c = px*4, out = offsets[id], dst = packed[id]
-                    dst[out] = px
-                    dst[out+1] = (native[c]<<24) | (native[c+1]<<16) | (native[c+2]<<8) | alpha[px]
-                    dst[out+2] = (red[c]<<24) | (red[c+1]<<16) | (red[c+2]<<8)
-                    offsets[id] += 3
-                }
-            })
-            if (!sampled || !isCurrent()) throw new Error("Orbit lighting preparation cancelled")
-            let bytes = 0
-            count.forEach((n,id) => {
-                if (!n || !id) return
-                patches.set(options.ids[id-1], { samples:packed[id], left:minX[id], top:minY[id], right:maxX[id]+1, bottom:maxY[id]+1 })
-                bytes += packed[id].byteLength
-            })
-            const entry = { patches, sourceMask: new WeakSet([mask]), width: w, height: h, bytes }
-            showPrepared(entry)
-            // Two views at most, with at most 2 MiB per desktop view and 512 KiB
-            // per phone view. An unusually large patch stays active only.
-            if (bytes <= (phone ? 512 * 1024 : 2 * 1024 * 1024)) {
-                const key = camera + (phone ? "-phone" : "-desktop")
-                recent.delete(key)
-                recent.set(key, entry)
-                if (recent.size > 2) recent.delete(recent.keys().next().value!)
+            if (!response.ok) throw new Error("Orbit window lighting is unavailable")
+            const blob = await response.blob()
+            if (!blob.size || blob.size > 4194304) throw new Error("Invalid orbit lighting file")
+            const image = await loadOrbitOverlayImage(blob, controller.signal)
+            if (request !== controller || destroyed) { image.removeAttribute("src"); return }
+            const stride = (layout.tileSize + 2 * layout.padding) * (phone ? .5 : 1)
+            if (image.naturalWidth !== layout.columns * stride ||
+                image.naturalHeight !== 3 * Math.ceil(layout.slots / layout.columns) * stride) {
+                image.removeAttribute("src")
+                throw new Error("Orbit lighting and mask dimensions do not match")
             }
-        } catch (error) {
+            const result = { image, bytes: image.naturalWidth * image.naturalHeight * 4 }
+            recent.set(key, result)
+            // Bound retained decoded pixels. A single large view can remain active on its own.
+            let bytes = 0
+            for (const entry of recent.values()) bytes += entry.bytes
+            while (recent.size > 1 && (recent.size > 2 || bytes > (phone ? 4 : 16) * 1024 * 1024)) {
+                const [oldKey, old] = recent.entries().next().value!
+                old.image.removeAttribute("src")
+                recent.delete(oldKey)
+                bytes -= old.bytes
+            }
+            show(result)
+        } catch (reason) {
             if (request === controller && !destroyed) {
                 failed = true
-                options.root.dataset.orbitLightingState = "error"
-                options.root.dataset.orbitLightingError = String(error)
+                root.dataset.orbitLightingState = "error"
+                root.dataset.orbitLightingError = String(reason)
             }
         } finally {
-            clearTimeout(until)
+            clearTimeout(timer)
             if (request === controller) {
                 request = null
                 if (!destroyed) options.repaint()
@@ -17833,72 +17887,99 @@ function createOrbitSceneLighting(options: {
         }
     }
 
-    function sync(view: OrbitApartmentPickerView | null, mask?: OrbitMaskIndex) {
-        const next = view && mask && options.enabled ? view.checkpoint * 15 : -1
+    function sync(view: OrbitApartmentPickerView | null, nextMask?: OrbitMaskIndex) {
+        const next = view && options.enabled && nextMask?.lighting ? view.checkpoint : -1
         const nextPhone = !!view?.mobile
-        if (frame === next && (frame < 0 || (mask === activeMask && phone === nextPhone))) return
+        if (next === checkpoint && (next < 0 || (mask === nextMask && nextPhone === phone))) return
         release()
-        if (next < 0 || !mask || destroyed) return
-        frame = next
+        checkpoint = next
         phone = nextPhone
-        activeMask = mask
-        const key = frame + (phone ? "-phone" : "-desktop")
-        const cached = recent.get(key)
-        if (cached?.sourceMask.has(mask)) {
-            recent.delete(key)
-            recent.set(key, cached)
-            showPrepared(cached)
-            return
-        }
-        void load()
+        mask = next >= 0 ? nextMask! : null
+        if (mask) void load()
+    }
+
+    function tintBank(image: HTMLImageElement, rgb: [number, number, number]) {
+        const key = rgb.join(",")
+        if (tinted && tintKey === key) return tinted
+        const w = image.naturalWidth, h = image.naturalHeight / 3
+        if (!tinted) tinted = document.createElement("canvas")
+        tinted.width = w
+        tinted.height = h
+        const ctx = tinted.getContext("2d")
+        if (!ctx) return null
+        const peak = Math.max(1, ...rgb)
+        ctx.drawImage(image, 0, h * 2, w, h, 0, 0, w, h)
+        ctx.globalCompositeOperation = "multiply"
+        ctx.fillStyle = "rgb(" + rgb.map(c => Math.round(255 * (.12 + .88 * c / peak))).join(",") + ")"
+        ctx.fillRect(0, 0, w, h)
+        ctx.globalCompositeOperation = "destination-in"
+        ctx.drawImage(image, 0, 0, w, h, 0, 0, w, h)
+        ctx.globalCompositeOperation = "source-over"
+        tintKey = key
+        return tinted
     }
 
     function texture(requests: readonly OrbitLightingRequest[]): Texture | null {
-        if (!activeMask || !patches.size) return null
-        const selected = requests.flatMap(entry => {
-            const patch = patches.get(entry.id)
-            return patch && entry.opacity > 0 ? [{ entry, patch }] : []
+        const layout = mask?.lighting
+        if (!mask || !layout || !atlas) return null
+        const entries = requests.flatMap(entry => {
+            const patch = layout.patches.get(entry.id)
+            return patch?.coordinates.length && entry.opacity > 0 ? [{ entry, patch }] : []
         })
-        if (!selected.length) { if (drawn) clearTexture(); return null }
-        const key = selected.map(({entry:e}) => [e.id,e.opacity,e.sold,e.tint].join(":")).join(",")
-        if (key === currentKey) return drawn
-        const left = Math.min(...selected.map(s=>s.patch.left)), top = Math.min(...selected.map(s=>s.patch.top))
-        const dx = Math.max(...selected.map(s=>s.patch.right)) - left, dy = Math.max(...selected.map(s=>s.patch.bottom)) - top
-        if (!surface) surface = document.createElement("canvas")
-        if (surface.width !== dx || surface.height !== dy) { surface.width = dx; surface.height = dy }
-        const ctx = surface.getContext("2d")
-        if (!ctx) return null
-        const img = ctx.createImageData(dx,dy)
-        for (const {entry,patch} of selected) {
-            const rgb = !entry.sold && entry.tintRGB
-            const peak = rgb ? Math.max(1,...rgb) : 1
-            const samples = patch.samples
-            for (let i = 0; i < samples.length; i+=3) {
-                const px=samples[i], c=((Math.floor(px/width)-top)*dx + px%width-left)*4
-                const warm=samples[i+1], pixel=entry.sold ? samples[i+2] : warm
-                const r=pixel>>>24, g=(pixel>>>16)&255, b=(pixel>>>8)&255
-                if (rgb) {
-                    const intensity = Math.max(r,g,b)
-                    img.data[c] = intensity * (.12 + .88 * rgb[0]/peak)
-                    img.data[c+1] = intensity * (.12 + .88 * rgb[1]/peak)
-                    img.data[c+2] = intensity * (.12 + .88 * rgb[2]/peak)
-                } else {
-                    img.data[c]=r; img.data[c+1]=g; img.data[c+2]=b
-                }
-                img.data[c+3] = (warm & 255) * entry.opacity
+        if (!entries.length) { if (drawn) clearTexture(); return null }
+        const key = entries.map(({entry}) => [entry.id, entry.sold, entry.tint, entry.opacity].join(":")).join(",")
+        if (key === drawKey) return drawn
+        const image = atlas.image, scale = phone ? .5 : 1
+        const tile = layout.tileSize, stride = (tile + 2 * layout.padding) * scale
+        let left = mask.width, right = 0, top = mask.height, bottom = 0
+        for (const {patch} of entries) {
+            const xy = patch.coordinates
+            for (let p = 0; p < xy.length; p += 2) {
+                const x = xy[p] * tile, y = xy[p + 1] * tile
+                left = Math.min(left, x); top = Math.min(top, y)
+                right = Math.max(right, Math.min(mask.width, x + tile))
+                bottom = Math.max(bottom, Math.min(mask.height, y + tile))
             }
         }
-        ctx.putImageData(img,0,0)
-        const sx = activeMask.width/width, sy = activeMask.height/height
-        const ids=selected.map(s=>s.entry.id)
-        currentKey=key
-        drawn={canvas:surface,id:key,ids,rect:{x:left*sx,y:top*sy,width:dx*sx,height:dy*sy},opacity:1}
-        options.root.dataset.orbitLightingApartment=ids.join(",")
-        options.root.dataset.orbitLightingGroupCount=String(ids.length)
-        options.root.dataset.orbitLightingCropBytes=String(dx*dy*4)
+        const rect = { x: left, y: top, width: right - left, height: bottom - top }
+        if (!surface) surface = document.createElement("canvas")
+        surface.width = rect.width * scale
+        surface.height = rect.height * scale
+        const ctx = surface.getContext("2d")
+        if (!ctx) return null
+        for (const { entry, patch } of entries) {
+            const source = !entry.sold && entry.tintRGB ? tintBank(image, entry.tintRGB) ?? image : image
+            const bankY = entry.sold ? image.naturalHeight / 3 : 0
+            ctx.globalAlpha = entry.opacity
+            for (let p = 0; p < patch.coordinates.length; p += 2) {
+                const slot = patch.first + p / 2
+                const sx = (slot % layout.columns) * stride + layout.padding * scale
+                const sy = bankY + Math.floor(slot / layout.columns) * stride + layout.padding * scale
+                const x = patch.coordinates[p] * tile, y = patch.coordinates[p + 1] * tile
+                const w = Math.min(tile, mask.width - x) * scale, h = Math.min(tile, mask.height - y) * scale
+                ctx.drawImage(source, sx, sy, w, h, (x - left) * scale, (y - top) * scale, w, h)
+            }
+        }
+        ctx.globalAlpha = 1
+        const ids = entries.map(({entry}) => entry.id)
+        drawKey = key
+        drawn = { canvas: surface, id: key, ids, rect, opacity: 1 }
+        root.dataset.orbitLightingApartment = ids.join(",")
+        root.dataset.orbitLightingGroupCount = String(ids.length)
+        root.dataset.orbitLightingCropBytes = String(surface.width * surface.height * 4)
         return drawn
     }
-    return {sync,texture,retry(){if(failed){failed=false;void load()}},destroy(){destroyed=true;release();recent.clear()}}
+    return {
+        sync, texture,
+        retry() { if (failed) { failed = false; retrying = true; void load() } },
+        destroy() {
+            destroyed = true
+            release()
+            mask = null
+            for (const item of recent.values()) item.image.removeAttribute("src")
+            recent.clear()
+        },
+    }
 }
 
 function createOrbitApartmentPicker(options: OrbitApartmentPickerOptions) {
@@ -17946,7 +18027,7 @@ function createOrbitApartmentPicker(options: OrbitApartmentPickerOptions) {
         textureKey = "",
         paintKey = ""
     const lighting = options.sceneLighting ? createOrbitSceneLighting({
-        root, ids, enabled: !!options.lightingEnabled,
+        root, enabled: !!options.lightingEnabled,
         repaint: () => { paintKey = ""; refresh() },
     }) : createOrbitApartmentLighting({
         root,
@@ -18187,106 +18268,38 @@ function createOrbitApartmentPicker(options: OrbitApartmentPickerOptions) {
     async function decodeMask(index: number) {
         decoding.add(index)
         decodingIndex = index
-        const generation = generations.get(index) ?? 0,
-            valid = () =>
-                !destroyed && (generations.get(index) ?? 0) === generation
-        let image: ImageBitmap | HTMLImageElement | null = null,
-            objectURL = ""
+        const generation = generations.get(index) ?? 0
+        const valid = () => !destroyed && (generations.get(index) ?? 0) === generation
+        const isCurrent = () => valid() && currentCheckpoint === index
+        let image: ImageBitmap | HTMLImageElement | null = null
         let surface: HTMLCanvasElement | null = null
-        let expired = false
-        // Native ImageBitmap work cannot be cancelled; keep its one decode permit
-        // until it settles, but stop presenting the view as indefinitely loading.
-        const watchdog = setTimeout(() => {
-            expired = true
-            if (valid()) {
-                failures.set(index, "Mask decoding timed out")
-                refresh()
-            }
-        }, 15000)
         try {
             const blob = blobs.get(index)
             if (!blob) return
-            if (typeof createImageBitmap === "function") {
-                try {
-                    image = await createImageBitmap(blob, {
-                        premultiplyAlpha: "none",
-                        colorSpaceConversion: "none",
-                    })
-                } catch {
-                    /* Native PNG Image decoding is also available in older browsers. */
-                }
+            let mask: OrbitMaskIndex | null
+            if (options.preparedMasks) {
+                mask = readOrbitMaskPacket(await blob.arrayBuffer(), ids)
+            } else {
+                image = await loadCustomOrbitMask(blob, cancellation.signal)
+                if (!isCurrent()) return
+                const { width, height } = image
+                if (!width || !height || width * height > 16777216) throw new Error("Invalid apartment mask dimensions")
+                surface = document.createElement("canvas")
+                surface.width = width
+                surface.height = height
+                const drawing = surface.getContext("2d", { willReadFrequently: true })
+                if (!drawing) throw new Error("Mask decoding canvas is unavailable")
+                drawing.drawImage(image, 0, 0)
+                mask = await buildOrbitMaskIndex(drawing.getImageData(0, 0, width, height).data, width, height, palette, isCurrent)
             }
-            if (!valid() || expired) return
-            if (!image) {
-                const fallback = new Image()
-                objectURL = URL.createObjectURL(blob)
-                fallback.decoding = "async"
-                fallback.src = objectURL
-                image = fallback
-                await new Promise<void>((resolve, reject) => {
-                    const timer = setTimeout(() => {
-                        fallback.src = ""
-                        reject(new Error("Mask decoding timed out"))
-                    }, 12000)
-                    const abort = () => {
-                        clearTimeout(timer)
-                        fallback.src = ""
-                        reject(new Error("Mask picker disposed"))
-                    }
-                    cancellation.signal.addEventListener("abort", abort, {
-                        once: true,
-                    })
-                    const done = () => {
-                        clearTimeout(timer)
-                        cancellation.signal.removeEventListener("abort", abort)
-                    }
-                    fallback.decode().then(
-                        () => {
-                            done()
-                            resolve()
-                        },
-                        (reason) => {
-                            done()
-                            reject(reason)
-                        }
-                    )
-                })
-            }
-            if (!valid() || expired) return
-            const width = image.width,
-                height = image.height
-            if (!width || !height || width * height > 16777216)
-                throw new Error("Invalid apartment mask dimensions")
-            surface = document.createElement("canvas")
-            surface.width = width
-            surface.height = height
-            const drawing = surface.getContext("2d", {
-                willReadFrequently: true,
-            })
-            if (!drawing) throw new Error("Mask decoding canvas is unavailable")
-            drawing.drawImage(image, 0, 0)
-            const rgba = drawing.getImageData(0, 0, width, height).data
-            const isCurrent = () => valid() && !expired && currentCheckpoint === index
-            const mask = await buildOrbitMaskIndex(rgba, width, height, palette, isCurrent)
             if (!mask || !isCurrent()) return
-            if (!mask.minX.some(x => x < width))
-                throw new Error(
-                    "Mask colours do not match the apartment palette"
-                )
-            if (valid() && !expired) storeMask(index, mask)
+            if (!mask.minX.some(x => x < mask.width)) throw new Error("Mask colours do not match the apartment palette")
+            storeMask(index, mask)
         } catch (reason) {
-            if (valid())
-                failures.set(
-                    index,
-                    reason instanceof Error
-                        ? reason.message
-                        : "Mask decoding failed"
-                )
+            if (valid()) failures.set(index, reason instanceof Error ? reason.message : "Mask decoding failed")
         } finally {
-            clearTimeout(watchdog)
             if (image && "close" in image) image.close()
-            else if (image instanceof HTMLImageElement) image.src = ""
-            if (objectURL) URL.revokeObjectURL(objectURL)
+            else if (image instanceof HTMLImageElement) image.removeAttribute("src")
             if (surface) surface.width = surface.height = 0
             decoding.delete(index)
             decodingIndex = -1
