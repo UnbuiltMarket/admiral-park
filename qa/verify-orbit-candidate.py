@@ -187,8 +187,27 @@ def run():
         qa.emit('reduced',reduced)
         assert reduced==(os.environ.get('REDUCE')=='true')
         qa.js("const s=document.createElement('script');s.textContent=arguments[0];document.head.append(s);s.remove()",MONITOR)
+        wheel_errors=[]
+        qa.js("""const events=[];r._wheelTrace=events;
+            for(const phase of [true,false])window.addEventListener('wheel',e=>{
+              const t=e.target,chain=[];for(let p=t;p&&p!==document.body;p=p.parentElement){const s=getComputedStyle(p);
+               if(/(auto|scroll)/.test(s.overflowY)&&p.scrollHeight>p.clientHeight+1)chain.push([p.tagName,p.className,p.scrollTop,p.clientHeight,p.scrollHeight]);}
+              events.push({phase,stage:r.dataset.homepageStage,x:e.clientX,y:e.clientY,dy:e.deltaY,dx:e.deltaX,
+                mode:e.deltaMode,blocked:t.closest?.("nav,header,a,button,input,textarea,select,[role='button'],[role='link'],[data-orbit-ignore],[data-homepage-controls]")?.outerHTML.slice(0,250),
+                target:t.outerHTML.slice(0,180),cancelable:e.cancelable,prevented:e.defaultPrevented,chain});},phase);""")
         for label,predicate in [('SEQ_01',"return r?.dataset.homepageStage==='building'"),('SEQ_02',"return r?.querySelector('[data-seq3-garden-cue]')?.dataset.visible==='true'"),('SEQ_03',"return r?.dataset.homepageStage==='orbit'&&r.dataset.orbitState==='checkpoint'")]:
-            time.sleep(.85);qa.wheel();qa.wait(label,predicate,65);qa.emit('arrival',[label,qa.state()])
+            time.sleep(.9)
+            before=qa.js("r._wheelTrace.length=0;return [r.dataset.homepageStage,r.dataset.activeSequence].join('/')")
+            point=qa.js("return [Math.floor(innerWidth*.52), Math.floor(innerHeight*.48)]")
+            qa.mouse_at(*point)
+            qa.wheel(point=point)
+            try:qa.wait('wheel took effect',f"return [r.dataset.homepageStage,r.dataset.activeSequence].join('/')!=='{before}'",5)
+            except TimeoutError:
+                traces=qa.js("return r._wheelTrace")
+                qa.emit('ignored_wheel',[label,traces,qa.state()])
+                if any(e.get('dy') and not e.get('blocked') for e in traces):wheel_errors.append(label)
+                key()
+            qa.wait(label,predicate,65);qa.emit('arrival',[label,qa.state()])
         films=metrics().get('flights',{})
         qa.emit('instrumented_videos',films)
         if reduced:
@@ -213,5 +232,6 @@ def run():
             assert qa.js("""const b=r.querySelector('[data-orbit-detail-bar]'),box=b.getBoundingClientRect();
             return [...b.querySelectorAll('[data-orbit-apartment-metric]')].every(e=>{const z=e.getBoundingClientRect();return z.left>=box.left-1&&z.right<=box.right+1&&z.bottom<=box.bottom+1})""")
         if screen_error:raise screen_error
+        assert not wheel_errors,('No chapter advance from a delivered wheel event',wheel_errors)
     finally:qa.call('DELETE','/session/'+qa.session)
 if __name__=='__main__':run()
