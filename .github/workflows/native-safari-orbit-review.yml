@@ -2,16 +2,6 @@ name: Native Safari orbit review
 on:
   push:
     branches: [qa/native-safari-orbit-20261125]
-    paths:
-      - .github/workflows/native-safari-orbit-review.yml
-      - qa/native-safari-orbit.py
-      - qa/safari-followup.py
-      - qa/safari-normal-motion.py
-      - qa/safari-display-check.py
-      - qa/verify-orbit-candidate.py
-      - qa/build-orbit-candidate.cjs
-      - qa/orbit-candidate-props.json
-      - src/framer/homepage-draft-3/HERO_video_no_fullscreen.tsx
 permissions:
   contents: read
 jobs:
