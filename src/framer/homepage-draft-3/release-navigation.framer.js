@@ -207,4 +207,126 @@
     const attrs = { pageIds, placement: "bodyEnd", loadMode: "once", code }
     if (existing) tree.patch(existing.id, attrs)
     else tree.insert("CustomCodeNode", "admiral-keyboard-navigation", { parent: tree.root, name, ...attrs })
+
+    // @shared-navbar-start
+    {
+        const { tree } = api
+        const template = "p4cXKp6DX"
+        const mobileClosed = "RBw5RGsxX"
+        const mobileOpen = "otenexeuQ"
+        const desktop = "x5whu27Ce"
+        const pages = ["Phxhru9uu", "kbkbxs570", "ZmD0CLV3Z", "A8W8FsOjk", "XLriEYHai"]
+        const privacy = "kepPPkXui"
+        if (tree.get(privacy)?.$layoutTemplateId === template) pages.push(privacy)
+        const homePath = tree.get(pages[0])?.path
+        if (!homePath || pages.some(id => tree.get(id)?.$layoutTemplateId !== template)) {
+            throw new Error("The new Admiral Park pages must share the home new template")
+        }
+        for (const id of pages) {
+            tree.patch(id, { "$control__oK6lVDB1A": mobileClosed, "$control__A8J3tyLkJ": desktop })
+        }
+        // The template only contains the shared header and page slot. Make
+        // its compact header available on landscape phones up to 959px.
+        tree.patch("P_fKFHMTO", { width: "960px" })
+
+        for (const variant of [mobileClosed, mobileOpen, desktop]) {
+            tree.patch(`${variant}e4LTwxaux`, {
+                link: { href: homePath, openInNewTab: false },
+                onTap: null,
+                ariaLabel: "Admiral Park – kezdőlap",
+            })
+            tree.patch(`${variant}xTlmQkqh9`, { "$control__h5DL13tDk": homePath })
+            tree.patch(`${variant}eBheKMp04`, { "$control__h5DL13tDk": `${homePath}#orbit` })
+        }
+        for (const variant of [mobileClosed, mobileOpen]) {
+            const isOpen = variant === mobileOpen
+            tree.patch(`${variant}BL5MI0ckm`, { height: "44px", padding: "0px" })
+            tree.patch(`${variant}Ddw6Oriwu`, { height: "44px" })
+            tree.patch(`${variant}cpKq9Al9R`, {
+                fill: null, border: null, boxShadows: [], radius: "0px",
+                width: "44px", height: "44px", maxHeight: "44px",
+            })
+            tree.patch(`${variant}kYSDnMgz5`, { visible: false })
+            for (const [index, id] of ["P1ZidUzqV", "JG7KK45jO"].entries()) {
+                tree.patch(`${variant}${id}`, {
+                    visible: true, width: "23px", height: "2px", left: "10.5px",
+                    top: isOpen ? "21px" : index === 0 ? "17px" : "25px",
+                    rotateZ: isOpen ? (index === 0 ? "45deg" : "-45deg") : "0deg",
+                })
+            }
+        }
+
+        tree.patch(`${mobileOpen}XtrBtHXVP`, { height: "650px", fill: "rgba(246,250,253,0.9)" })
+        tree.patch(`${mobileOpen}DMLPudZKb`, {
+            name: "Mobile menu links", height: "1fr", padding: "16px 16px 20px 16px",
+        })
+        const rows = ["x1mql4Mlb", "cWsK61b6y", "M_z0lrfjF", "pNa_QpaUi", "cQpRz3kTQ"]
+        const links = ["xTlmQkqh9", "eBheKMp04", "pcmzJu43c", "kIogLLRNb", "ntlI0fK2B"]
+        for (const [index, row] of rows.entries()) {
+            tree.patch(`${mobileOpen}${row}`, { height: "64px" })
+            tree.patch(`${mobileOpen}${links[index]}`, {
+                height: "1fr", "$control__XSbTnrhXC": 28, "$control__fxVoGXxWM": "#123c59",
+            })
+        }
+
+        // Retain the previous typography for unused legacy variants without
+        // letting its important declarations override the new shared menu.
+        const legacy = tree.getNodesOfTypes("CustomCodeNode").find(node => node.name === "Admiral Park mobile typography")
+        const legacyBoth = ':is([data-framer-name="AP - MOBILE HEADER - open"], [data-framer-name="MOBILE_LG_OPEN"])'
+        if (legacy?.code.includes(legacyBoth)) {
+            tree.patch(legacy.id, { code: legacy.code.replace(legacyBoth, '[data-framer-name="AP - MOBILE HEADER - open"]') })
+        }
+
+        const name = "Admiral Park phone menu viewport"
+        const snippet = tree.getNodesOfTypes("CustomCodeNode").find(node => node.name === name)
+        const code = `<style>
+[data-framer-name="MOBILE_LG_OPEN"] > [data-framer-name="Navbar"] {
+  height: 82vh !important;
+  height: 82svh !important;
+  height: 82dvh !important;
+  max-height: calc(100dvh - 16px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)) !important;
+  grid-template-rows: 44px minmax(0, 1fr) !important;
+}
+[data-framer-name="MOBILE_LG_OPEN"] [data-framer-name="Mobile menu links"] {
+  box-sizing: border-box !important;
+  align-self: stretch !important;
+  min-height: 0 !important;
+  height: 100% !important;
+  overflow: auto !important;
+  overscroll-behavior: contain;
+  padding: clamp(12px, 4dvh, 32px) clamp(12px, 4vw, 26px) 16px !important;
+}
+[data-framer-name="MOBILE_LG_OPEN"] [data-framer-name="Mobile menu links"] > [data-framer-name="Link"] {
+  box-sizing: border-box !important;
+  flex: 1 0 52px !important;
+  min-height: 52px;
+  max-height: 104px;
+  border-bottom: 1px solid rgba(18, 60, 89, .12);
+}
+[data-framer-name="MOBILE_LG_OPEN"] [data-framer-name="Mobile menu links"] [data-framer-name="Link"] a {
+  justify-content: flex-start !important;
+  padding-inline: 10px !important;
+}
+[data-framer-name="MOBILE_LG_OPEN"] [data-framer-name="Mobile menu links"] [data-framer-name="Link"] p {
+  --framer-font-size: clamp(24px, 7.2vw, 36px) !important;
+  --framer-font-weight: 600 !important;
+  --framer-text-color: #123c59 !important;
+  font-size: var(--framer-font-size) !important;
+  font-weight: var(--framer-font-weight) !important;
+  color: var(--framer-text-color) !important;
+  line-height: 1.15 !important;
+  text-transform: none !important;
+}
+[data-framer-name="MOBILE_LG_OPEN"] [data-framer-name="Mobile menu links"] :is(a[data-framer-page-link-current="true"], a[aria-current="page"]) p {
+  --framer-font-weight: 800 !important;
+}
+[data-framer-name="MOBILE_LG_OPEN"] [data-framer-name="Mobile menu links"] [data-framer-name="Link"] a:focus-visible {
+  outline-offset: -3px !important;
+}
+</style>`
+        const attrs = { pageIds: pages, placement: "headEnd", loadMode: "once", code }
+        if (snippet) tree.patch(snippet.id, attrs)
+        else tree.insert("CustomCodeNode", "admiral-phone-menu-viewport", { parent: tree.root, name, ...attrs })
+    }
+    // @shared-navbar-end
 }

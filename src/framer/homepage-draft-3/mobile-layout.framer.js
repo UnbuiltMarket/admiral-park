@@ -149,13 +149,13 @@ addOnce("CustomCodeNode", tree.root.id, "Admiral Park phone menu viewport", {
 const replacedSnippet = tree.getNodesOfTypes("CustomCodeNode").find(node => node.name === "Admiral Park inquiry name fields")
 if (replacedSnippet) tree.remove(replacedSnippet.id)
 
-// Both phone drawers reuse the same labels, with a separate treatment for the CTA.
+// The two phone drafts reuse the same Hungarian labels.
 const mobileMenuLabels = ["Kezdőlap", "3D kereső", "Lakáslista", "Bemutatkozás", "Aktuális"]
 for (const menuVariant of [open, "otenexeuQ"]) {
     for (const [index, instance] of linkInstances.entries()) {
         tree.patch(`${menuVariant}${instance}`, {
             "$control__lb6Os26Xe": mobileMenuLabels[index],
-            "$control__XSbTnrhXC": 15,
+            "$control__XSbTnrhXC": menuVariant === open ? 15 : 28,
             "$control__fxVoGXxWM": blue,
         })
     }
@@ -187,7 +187,7 @@ tree.patch(`${privacyPhoneId}a9wxflcMb`, { name: "Adatkezelési tájékoztató s
 
 const mobileTypography = `<style>
 @media (max-width: 809px), (pointer: coarse) and (max-width: 1000px) and (max-height: 550px) {
-  :is([data-framer-name="AP - MOBILE HEADER - open"], [data-framer-name="MOBILE_LG_OPEN"]) [data-framer-name="Link"] p {
+  [data-framer-name="AP - MOBILE HEADER - open"] [data-framer-name="Link"] p {
     --framer-font-size: 15px !important;
     --framer-text-color: #123c59 !important;
     font-size: 15px !important;
