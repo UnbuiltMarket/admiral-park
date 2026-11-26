@@ -753,7 +753,8 @@ const homepageMobileOrbitStyles = `
     --studio-phone-left: max(var(--studio-phone-gutter), env(safe-area-inset-left, 0px));
     --studio-phone-right: max(var(--studio-phone-gutter), env(safe-area-inset-right, 0px));
     --studio-bleed-height: calc((100cqw + var(--studio-phone-left) + var(--studio-phone-right)) * 1010 / 1920);
-    top: max(58px, calc(env(safe-area-inset-top, 0px) + 48px));
+    --studio-scene-gap: 12px;
+    top: max(62px, calc(env(safe-area-inset-top, 0px) + 52px));
     padding-inline: var(--studio-phone-left) var(--studio-phone-right);
 }
 [data-admiral-homepage] [data-orbit-studio][data-mobile="true"] > :is([data-orbit-filters], [data-orbit-group]) { max-width: 100%; }
@@ -767,37 +768,46 @@ const homepageMobileOrbitStyles = `
     font-family: Arial, Helvetica, sans-serif !important;
 }
 [data-admiral-homepage] [data-orbit-studio][data-mobile="true"][data-orbit-glass-tone="paper"] > [data-orbit-filters][data-presentation][data-active] {
-    border-radius: 16px; padding: 6px; margin-block-end: 8px;
+    --studio-filter-pill-height: 30px;
+    --studio-filter-pill-radius: calc(var(--studio-filter-pill-height) / 2);
+    --studio-filter-inset: 8px;
+    border-radius: calc(var(--studio-filter-pill-radius) + var(--studio-filter-inset) + 1px);
+    padding: var(--studio-filter-inset); margin-block-end: 10px;
 }
 [data-admiral-homepage] [data-orbit-studio][data-mobile="true"][data-orbit-glass-tone="paper"] > [data-orbit-filters][data-presentation][data-active]
     :is([data-orbit-filter-status], [data-orbit-range-toggle], [data-orbit-filter-reset]) {
-        height: 30px; min-height: 30px; border-radius: 999px;
+        height: var(--studio-filter-pill-height); min-height: var(--studio-filter-pill-height);
+        border-radius: var(--studio-filter-pill-radius);
     }
 [data-admiral-homepage] [data-orbit-studio][data-mobile="true"][data-orbit-glass-tone="paper"] > [data-orbit-filters][data-presentation][data-active]
-    :is([data-orbit-filter-status], [data-orbit-range-toggle]) { padding-inline: 8px; gap: 4px; font-size: 11px; font-weight: 600; }
+    :is([data-orbit-filter-status], [data-orbit-range-toggle]) { padding-inline: 7px; gap: 4px; font-size: 11px; font-weight: 600; }
 [data-admiral-homepage] [data-orbit-studio][data-mobile="true"][data-orbit-glass-tone="paper"] > [data-orbit-filters][data-presentation]
-    .orbit-filter-statuses { grid-template-columns: minmax(max-content,1fr) minmax(max-content,1.5fr) minmax(max-content,.9fr); gap: 5px; }
+    .orbit-filter-statuses { grid-template-columns: minmax(max-content,1fr) minmax(max-content,1.5fr) minmax(max-content,.9fr); gap: 6px; }
 [data-admiral-homepage] [data-orbit-studio][data-mobile="true"][data-orbit-glass-tone="paper"] > [data-orbit-filters][data-presentation]
     [data-orbit-filter-row] { padding: 0; border-bottom: 0; }
 [data-admiral-homepage] [data-orbit-studio][data-mobile="true"][data-orbit-glass-tone="paper"] > [data-orbit-filters][data-presentation]
-    [data-orbit-filter-ranges] { margin: 5px 0 0; gap: 5px; }
+    [data-orbit-filter-ranges] { margin: 6px 0 0; gap: 6px; }
 [data-admiral-homepage] [data-orbit-studio][data-mobile="true"][data-orbit-glass-tone="paper"] > [data-orbit-filters][data-presentation]
     .orbit-filter-dot { width: 5px; height: 5px; }
 [data-admiral-homepage] [data-orbit-studio][data-mobile="true"][data-orbit-glass-tone="paper"] > [data-orbit-filters][data-presentation][data-active]
-    [data-orbit-filter-reset] { flex-basis: 30px; width: 30px; padding: 0; }
-[data-admiral-homepage] [data-orbit-studio][data-mobile="true"][data-orbit-glass-tone="paper"] [data-orbit-housing] { gap: 8px; }
+    [data-orbit-filter-reset] { flex-basis: var(--studio-filter-pill-height); width: var(--studio-filter-pill-height); padding: 0; }
+[data-admiral-homepage] [data-orbit-studio][data-mobile="true"][data-orbit-glass-tone="paper"] [data-orbit-housing] { gap: var(--studio-scene-gap); }
 [data-admiral-homepage] [data-orbit-studio][data-mobile="true"][data-orbit-glass-tone="paper"] [data-orbit-housing]::before,
 [data-admiral-homepage] [data-orbit-studio][data-mobile="true"][data-orbit-glass-tone="paper"] [data-orbit-housing]::after { content: none; }
 [data-admiral-homepage] [data-orbit-studio][data-mobile="true"][data-orbit-glass-tone="paper"] [data-orbit-housing]
     :is(.orbit-studio-status, .orbit-studio-mobile-metrics dt) { font-size: 11px; line-height: 1.35; }
 [data-admiral-homepage] [data-orbit-studio][data-mobile="true"][data-orbit-glass-tone="paper"] [data-orbit-housing] .orbit-studio-mobile-panel {
-    grid-template-rows: minmax(0,1fr) auto;
-    border: 1px solid ${admiralPalette.lightGlassRim}; border-radius: 18px;
+    --studio-action-height: 34px;
+    --studio-action-radius: calc(var(--studio-action-height) / 2);
+    --studio-card-inset: 8px;
+    grid-template-rows: minmax(0,1fr);
+    border: 1px solid ${admiralPalette.lightGlassRim};
+    border-radius: calc(var(--studio-action-radius) + var(--studio-card-inset) + 1px);
     background: var(--orbit-light-glass); box-shadow: ${admiralPalette.lightGlassShadow};
 }
 [data-admiral-homepage] [data-orbit-studio][data-mobile="true"][data-orbit-glass-tone="paper"] [data-orbit-housing] .orbit-studio-mobile-summary {
-    display: grid; grid-template-columns: minmax(0,1fr); grid-template-rows: auto auto;
-    align-content: start; min-height: 0; gap: 6px;
+    display: grid; grid-template-columns: minmax(0,1fr); grid-template-rows: auto auto minmax(0,1fr);
+    min-height: 0; padding: var(--studio-card-inset); gap: 6px;
 }
 [data-admiral-homepage] [data-orbit-studio][data-mobile="true"][data-orbit-glass-tone="paper"] [data-orbit-housing] .orbit-studio-mobile-metrics {
     min-height: 0; align-content: start; gap: 4px;
@@ -813,24 +823,28 @@ const homepageMobileOrbitStyles = `
 }
 [data-admiral-homepage] [data-orbit-studio][data-mobile="true"][data-orbit-glass-tone="paper"] [data-orbit-housing] .orbit-studio-mobile-plan-button {
     width: 100%; height: 100%; max-height: 100%;
-    padding: clamp(8px,2.5cqw,12px);
+    padding: clamp(var(--studio-card-inset),3cqw,14px);
 }
 [data-admiral-homepage] [data-orbit-studio][data-mobile="true"][data-orbit-glass-tone="paper"] [data-orbit-housing] .orbit-studio-mobile-actions {
-    grid-column: 1 / -1; grid-row: 2; padding: 6px 8px 8px;
-    border-top: 1px solid var(--studio-line);
+    align-self: end; padding: 0; border: 0;
 }
 [data-admiral-homepage] [data-orbit-studio][data-mobile="true"][data-orbit-glass-tone="paper"] [data-orbit-housing] .orbit-studio-mobile-actions .orbit-studio-bottom {
-    display: grid; grid-template-columns: repeat(auto-fit,minmax(100px,1fr)); gap: 8px;
+    display: flex; flex-direction: row; gap: 4px;
 }
 [data-admiral-homepage] [data-orbit-studio][data-mobile="true"][data-orbit-glass-tone="paper"] [data-orbit-housing] .orbit-studio-primary {
-    min-height: 44px; font-size: 12px; font-weight: 600;
+    box-sizing: border-box; flex: 1 1 auto; min-width: 0; width: auto;
+    min-height: var(--studio-action-height); border-radius: var(--studio-action-radius);
+    padding: 4px; gap: 3px; font-size: 11px; font-weight: 600;
+}
+[data-admiral-homepage] [data-orbit-studio][data-mobile="true"][data-orbit-glass-tone="paper"] [data-orbit-housing] .orbit-studio-primary svg {
+    width: 10px; height: 10px;
 }
 [data-admiral-homepage] [data-orbit-studio][data-mobile="true"][data-orbit-glass-tone="paper"] [data-orbit-housing] .orbit-studio-primary[data-orbit-inquiry],
 [data-admiral-homepage] [data-orbit-fullscreen-details][data-mobile="true"] .orbit-fullscreen-detail[data-orbit-inquiry] {
-    min-height: 44px; color: #fff; border-color: ${admiralPalette.inquiryRim};
+    color: #fff; border-color: ${admiralPalette.inquiryRim};
     background: ${admiralPalette.inquiryGradient}; box-shadow: ${admiralPalette.inquiryShadow};
 }
-[data-admiral-homepage] [data-orbit-fullscreen-details][data-mobile="true"] .orbit-fullscreen-detail[data-orbit-inquiry] { text-decoration: none; }
+[data-admiral-homepage] [data-orbit-fullscreen-details][data-mobile="true"] .orbit-fullscreen-detail[data-orbit-inquiry] { min-height: 44px; text-decoration: none; }
 [data-admiral-homepage] [data-orbit-fullscreen-details][data-mobile="true"] .orbit-fullscreen-detail[data-orbit-inquiry][aria-disabled="true"] {
     opacity: .45; pointer-events: none;
 }
@@ -842,7 +856,7 @@ const homepageMobileOrbitStyles = `
     border: 0; background: transparent; box-shadow: none;
 }
 [data-admiral-homepage] :is(.orbit-studio-mobile-identity,[data-orbit-fullscreen-details][data-mobile="true"]) > [data-orbit-favorite] svg {
-    width: 27px; height: 27px;
+    width: 27px; height: 27px; stroke-width: 1.2;
 }
 [data-admiral-homepage] [data-orbit-fullscreen-details][data-mobile="true"] > [data-orbit-favorite] svg {
     color: #fff; filter: drop-shadow(0 1px 2px rgb(0 0 0 / 55%));
@@ -861,7 +875,7 @@ const homepageMobileOrbitStyles = `
     }
     [data-admiral-homepage] [data-orbit-studio][data-mobile="true"][data-orbit-glass-tone="paper"] [data-orbit-housing] {
         align-self: start; height: 100%;
-        max-height: calc(var(--studio-bleed-height) + 8px + clamp(226px, 35svh, 330px));
+        max-height: calc(var(--studio-bleed-height) + var(--studio-scene-gap) + clamp(226px, 37svh, 345px));
         grid-template-rows: var(--studio-bleed-height) minmax(0, 1fr);
     }
     [data-admiral-homepage] [data-orbit-studio][data-mobile="true"][data-orbit-glass-tone="paper"] [data-orbit-housing] .orbit-studio-image-slot {
@@ -873,7 +887,7 @@ const homepageMobileOrbitStyles = `
         border-radius: 0; box-shadow: none;
     }
     [data-admiral-homepage] [data-orbit-studio][data-mobile="true"][data-orbit-glass-tone="paper"] [data-orbit-housing] .orbit-studio-mobile-panel {
-        grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
+        grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
     }
     [data-admiral-homepage] [data-orbit-studio][data-mobile="true"][data-orbit-glass-tone="paper"] [data-orbit-housing] .orbit-studio-mobile-summary {
         justify-content: flex-start; gap: 8px;
@@ -882,12 +896,39 @@ const homepageMobileOrbitStyles = `
         flex: 0 0 auto; min-height: 44px; gap: 4px; padding-bottom: 6px;
     }
 }
+@media (orientation: portrait) and (min-height: 620px) {
+    [data-admiral-homepage] [data-orbit-studio][data-mobile="true"][data-orbit-glass-tone="paper"] [data-orbit-housing] .orbit-studio-mobile-actions .orbit-studio-bottom {
+        flex-direction: column; gap: 6px;
+    }
+}
+@media (orientation: portrait) and (max-height: 550px) {
+    [data-admiral-homepage] [data-orbit-studio][data-mobile="true"][data-orbit-glass-tone="paper"] [data-orbit-housing] .orbit-studio-mobile-summary {
+        gap: 4px;
+    }
+    [data-admiral-homepage] [data-orbit-studio][data-mobile="true"][data-orbit-glass-tone="paper"] [data-orbit-housing] .orbit-studio-mobile-identity {
+        gap: 2px; padding-bottom: 3px;
+    }
+    [data-admiral-homepage] [data-orbit-studio][data-mobile="true"][data-orbit-glass-tone="paper"] [data-orbit-housing] .orbit-studio-status {
+        font-size: 10px; line-height: 1.2;
+    }
+    [data-admiral-homepage] [data-orbit-studio][data-mobile="true"][data-orbit-glass-tone="paper"] [data-orbit-housing] .orbit-studio-mobile-metrics {
+        gap: 2px;
+    }
+    [data-admiral-homepage] [data-orbit-studio][data-mobile="true"][data-orbit-glass-tone="paper"] [data-orbit-housing] .orbit-studio-mobile-metrics :is(dd, div:first-child dd) {
+        line-height: 1.1;
+    }
+}
+@media (orientation: portrait) and (max-width: 350px), (orientation: landscape) and (max-width: 620px) and (max-height: 480px) {
+    [data-admiral-homepage] [data-orbit-studio][data-mobile="true"][data-orbit-glass-tone="paper"] [data-orbit-housing] .orbit-studio-primary {
+        padding-inline: 3px; font-size: 10px;
+    }
+}
 @media (orientation: landscape) and (max-height: 480px) {
     [data-admiral-homepage] [data-orbit-studio][data-mobile="true"][data-orbit-glass-tone="paper"] {
         padding-bottom: max(8px, env(safe-area-inset-bottom, 0px));
     }
     [data-admiral-homepage] [data-orbit-studio][data-mobile="true"][data-orbit-glass-tone="paper"] > [data-orbit-filters][data-presentation] {
-        display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); align-items: center; gap: 5px;
+        display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); align-items: center; gap: 6px;
     }
     [data-admiral-homepage] [data-orbit-studio][data-mobile="true"][data-orbit-glass-tone="paper"] > [data-orbit-filters][data-presentation] [data-orbit-filter-row] {
         padding: 0; border-bottom: 0;
@@ -6675,10 +6716,9 @@ function OrbitApartmentStudio(
                                             ))}
                                             <OrbitBedroomMetric apartment={apartment} hu={hu} number={number} />
                                         </dl>
-
-                                    </div>
-                                    <div className="orbit-studio-mobile-actions">
-                                        {conversion()}
+                                        <div className="orbit-studio-mobile-actions">
+                                            {conversion()}
+                                        </div>
                                     </div>
                                 </>
                             )}
