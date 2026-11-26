@@ -228,6 +228,10 @@
         // The template only contains the shared header and page slot. Make
         // its compact header available on landscape phones up to 959px.
         tree.patch("P_fKFHMTO", { width: "960px" })
+        // Pin the existing header per breakpoint and keep its authored inset.
+        for (const header of ["DPrAHUgg2", "P_fKFHMTODPrAHUgg2", "BYxCw_4kwDPrAHUgg2"]) {
+            tree.patch(header, { position: "fixed" })
+        }
 
         for (const variant of [mobileClosed, mobileOpen, desktop]) {
             tree.patch(`${variant}e4LTwxaux`, {
