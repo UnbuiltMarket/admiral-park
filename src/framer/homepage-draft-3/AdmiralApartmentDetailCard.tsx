@@ -6,6 +6,13 @@ export const ADMIRAL_FAVORITES_LIMIT = 10
 export const ADMIRAL_FAVORITES_LIMIT_MESSAGE =
     `Legfeljebb ${ADMIRAL_FAVORITES_LIMIT} lakást menthet a kedvencekhez.`
 
+export function admiralOrbitHref(params: URLSearchParams): string {
+    const path = typeof document === "undefined" ? undefined
+        : document.querySelector<HTMLMetaElement>('meta[name="admiral-orbit-path"]')?.content
+    const orbitPath = path && /^\/(?:[a-z0-9-]+\/?)*$/i.test(path) ? path : "/"
+    return `${orbitPath}?${params}#orbit`
+}
+
 // Ordered oldest to newest. Existing storage and event payloads share this shape.
 export function normalizeAdmiralFavorites(
     values: unknown,
@@ -1215,7 +1222,7 @@ function mountOrbitApartmentCardRuntime(root: any = (document as any), config: a
     }
 
     function apartmentOrbitHref(id: string) {
-        return `/?orbitApartment=${encodeURIComponent(id)}#orbit`;
+        return admiralOrbitHref(new URLSearchParams({ orbitApartment: id }));
     }
     function showInOrbitLink(id: string) {
         return `<a class="detail-orbit-link" data-orbit-show="${esc(id)}" href="${esc(apartmentOrbitHref(id))}"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2.8 20.5 7.6v8.8L12 21.2l-8.5-4.8V7.6L12 2.8Z M3.5 7.6 12 12.4l8.5-4.8 M12 12.4v8.8"/></svg><span>Megtekintés 3D-ben</span></a>`;

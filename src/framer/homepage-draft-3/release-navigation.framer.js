@@ -1,41 +1,55 @@
-// Promote the active Admiral Park page and repair shared navigation on the review build.
+// Repair navigation for the review homepage or the experiment on the live domain.
 {
     const { tree } = api
     const home = "Phxhru9uu"
     const holding = "augiA20Il"
-    const active = tree.get(home)
-    if (active?.path === "/homepage-draft-3" && tree.get(holding)?.path === "/") {
-        tree.changeHomePage({ newPage: home, oldHomePagePath: "/elozetes" })
-    }
-    if (tree.get(home)?.path !== "/") throw new Error("Active homepage route was not promoted")
-    tree.patch(holding, { draft: true, "metadata.noIndex": true })
-    for (const id of ["s88nk7y5V", "TkpIndvEQ"]) {
-        tree.patch(id, { draft: true, "metadata.noIndex": true })
-    }
-
-    for (const from of ["/homepage-draft-3", "/homepage-draft"]) {
-        const existing = tree.getNodesOfTypes("RedirectNode").find(node => node.from === from)
-        if (existing) tree.patch(existing.id, { to: "/" })
-        else tree.insert("RedirectNode", `admiral-redirect-${from.slice(1)}`, { parent: tree.root, from, to: "/" })
-    }
-
+    const keepInquiryHome = typeof admiralReleaseMode !== "undefined" && admiralReleaseMode === "live-draft"
     const description = "Fedezze fel az Admiral Park balatonfüredi lakásait az Aranyhíd sétányon, a 3D lakáskeresőben és a lakáslistában."
-    tree.patch(tree.root.id, { "metadata.description": description })
-    const pages = [
-        [home, "Kezdőlap", "Admiral Park Balatonfüred – Lakások az Aranyhíd sétányon", description],
-        ["kbkbxs570", "Lakáslista", "Lakáslista | Admiral Park Balatonfüred", "Böngéssze az Admiral Park balatonfüredi lakásait, hasonlítsa össze az alaprajzokat és mentse kedvenceit."],
-        ["A8W8FsOjk", "Aktuális", "Aktuális | Admiral Park Balatonfüred", "Friss hírek és újdonságok az Admiral Park balatonfüredi fejlesztéséről."],
-        ["kepPPkXui", "Adatkezelési tájékoztató", "Adatkezelési tájékoztató | Admiral Park", "Az Admiral Park weboldalához és kapcsolatfelvételi űrlapjához tartozó adatkezelési tájékoztató."],
-    ]
-    for (const [id, name, title, info] of pages) {
-        tree.patch(id, { name, "metadata.title": title, "metadata.description": info })
+    const homepageTitle = "Admiral Park Balatonfüred – Lakások az Aranyhíd sétányon"
+    if (keepInquiryHome) {
+        if (tree.get(home)?.path !== "/homepage-draft-3" || tree.get(holding)?.path !== "/") {
+            throw new Error("The experiment is not separate from the live inquiry page")
+        }
+        tree.patch(home, { "metadata.title": homepageTitle, "metadata.description": description, "metadata.noIndex": true })
+        const listPath = tree.get("kbkbxs570")?.path
+        if (!listPath) throw new Error("Apartment list route is missing")
+        for (const instance of ["Pcq4F2KgH", "RnA329eK1Pcq4F2KgH"]) {
+            tree.patch(instance, { "$control__detailPageUrl": listPath })
+        }
+    } else {
+        if (tree.get(home)?.path === "/homepage-draft-3" && tree.get(holding)?.path === "/") {
+            tree.changeHomePage({ newPage: home, oldHomePagePath: "/elozetes" })
+        }
+        if (tree.get(home)?.path !== "/") throw new Error("Active homepage route was not promoted")
+        tree.patch(holding, { draft: true, "metadata.noIndex": true })
+        for (const id of ["s88nk7y5V", "TkpIndvEQ"]) {
+            tree.patch(id, { draft: true, "metadata.noIndex": true })
+        }
+
+        for (const from of ["/homepage-draft-3", "/homepage-draft"]) {
+            const existing = tree.getNodesOfTypes("RedirectNode").find(node => node.from === from)
+            if (existing) tree.patch(existing.id, { to: "/" })
+            else tree.insert("RedirectNode", `admiral-redirect-${from.slice(1)}`, { parent: tree.root, from, to: "/" })
+        }
+
+        tree.patch(tree.root.id, { "metadata.description": description })
+        const pages = [
+            [home, "Kezdőlap", homepageTitle, description],
+            ["kbkbxs570", "Lakáslista", "Lakáslista | Admiral Park Balatonfüred", "Böngéssze az Admiral Park balatonfüredi lakásait, hasonlítsa össze az alaprajzokat és mentse kedvenceit."],
+            ["A8W8FsOjk", "Aktuális", "Aktuális | Admiral Park Balatonfüred", "Friss hírek és újdonságok az Admiral Park balatonfüredi fejlesztéséről."],
+            ["kepPPkXui", "Adatkezelési tájékoztató", "Adatkezelési tájékoztató | Admiral Park", "Az Admiral Park weboldalához és kapcsolatfelvételi űrlapjához tartozó adatkezelési tájékoztató."],
+        ]
+        for (const [id, name, title, info] of pages) {
+            tree.patch(id, { name, "metadata.title": title, "metadata.description": info })
+        }
+
+        // The review copy omits the broken cookie link while the notice is pending.
+        const cookieLink = [...tree.walk("a9wxflcMb")].find(node =>
+            node.type === "TextRun" && node.link?.href === "https://claude.ai/sutikezelesi-tajekoztato")
+        if (cookieLink) tree.patch(cookieLink.id, { link: null, linkStylePreset: null })
     }
 
-    // The old Claude link led outside the project to a missing page. Preserve
-    // the policy wording while the owner prepares the approved destination.
-    const cookieLink = [...tree.walk("a9wxflcMb")].find(node =>
-        node.type === "TextRun" && node.link?.href === "https://claude.ai/sutikezelesi-tajekoztato")
-    if (cookieLink) tree.patch(cookieLink.id, { link: null, linkStylePreset: null })
+    const homepagePath = tree.get(home).path
 
     // Render the absolute-positioned shared header before the page slot so its
     // links are reached first without moving or restyling the visual header.
@@ -47,7 +61,7 @@
     for (const variant of variants) {
         tree.patch(variant, { tabIndex: -1, ariaLabel: "Fő navigáció" })
         tree.patch(`${variant}e4LTwxaux`, {
-            link: { href: "/", openInNewTab: false },
+            link: { href: homepagePath, openInNewTab: false },
             onTap: null,
             ariaLabel: "Admiral Park – kezdőlap",
         })
@@ -171,7 +185,16 @@
         schedule()
     }
 
-    const pageIds = [home, "kbkbxs570", "ZmD0CLV3Z", "A8W8FsOjk", "XLriEYHai", "kepPPkXui"]
+    const pageIds = [home, "kbkbxs570", "ZmD0CLV3Z", "A8W8FsOjk", "XLriEYHai"]
+    if (keepInquiryHome) {
+        const routeName = "Admiral Park experimental orbit route"
+        const route = tree.getNodesOfTypes("CustomCodeNode").find(node => node.name === routeName)
+        const attrs = { pageIds, placement: "headEnd", loadMode: "once", code: `<meta name="admiral-orbit-path" content="${homepagePath}">` }
+        if (route) tree.patch(route.id, attrs)
+        else tree.insert("CustomCodeNode", "admiral-experimental-orbit-route", { parent: tree.root, name: routeName, ...attrs })
+    } else {
+        pageIds.push("kepPPkXui")
+    }
     const name = "Admiral Park keyboard navigation"
     const code = `<style>
 [data-framer-name="Header || Appear"]:focus-within { opacity: 1 !important; transform: translateX(-50%) !important; }
