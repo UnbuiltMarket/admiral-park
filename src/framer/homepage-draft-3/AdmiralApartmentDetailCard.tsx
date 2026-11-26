@@ -132,14 +132,23 @@ const FLOOR_LAKE_STYLES = `
 `
 
 const MOBILE_DETAIL_STYLES = `
+#detail-dialog .detail-contact-actions { display: contents; }
 #detail-dialog[data-mobile-documents],
 #detail-dialog[data-mobile-documents] :is(.inquiry-button.admiral-frosted-button, .detail-floor-lake) {
   font-family: Arial, Helvetica, sans-serif;
 }
+#detail-dialog[data-mobile-documents] {
+  --detail-mobile-inset: 10px;
+  --detail-mobile-pill-height: 44px;
+  --detail-mobile-pill-radius: calc(var(--detail-mobile-pill-height) / 2);
+  --detail-mobile-footer-radius: calc(var(--detail-mobile-pill-radius) + var(--detail-mobile-inset) + 1px);
+  border-end-start-radius: var(--detail-mobile-footer-radius);
+  border-end-end-radius: var(--detail-mobile-footer-radius);
+}
 #detail-dialog[data-mobile-documents] .detail-layout {
   grid-template-columns: minmax(0, 1fr);
-  grid-template-rows: auto 1px auto minmax(0, 1fr) auto;
-  gap: 6px; padding: 51px 10px 48px;
+  grid-template-rows: auto auto minmax(0, 1fr) auto auto;
+  gap: 6px; padding: 54px var(--detail-mobile-inset) var(--detail-mobile-inset);
 }
 #detail-dialog[data-mobile-documents] .detail-sidebar { display: contents; }
 #detail-dialog[data-mobile-documents] .detail-topbar { top: 5px; left: 8px; right: 8px; }
@@ -154,15 +163,20 @@ const MOBILE_DETAIL_STYLES = `
 }
 #detail-dialog[data-mobile-documents] .detail-topbar .dialog-close:focus-visible { outline-offset: -3px; }
 #detail-dialog[data-mobile-documents] .detail-core { grid-area: 1 / 1; padding: 0; }
-#detail-dialog[data-mobile-documents] .detail-core .detail-area-row { top: auto; padding: 0; border: 0; }
+#detail-dialog[data-mobile-documents] .detail-core .detail-area-row {
+  top: auto;
+  width: calc(100% + 2 * var(--detail-mobile-inset));
+  padding: 7px var(--detail-mobile-inset); border: 0;
+  background: var(--admiral-inquiry-fill, linear-gradient(145deg, #2477b6, #145083 53%, #0d3a63));
+}
 #detail-dialog[data-mobile-documents] .detail-metrics dt,
-#detail-dialog[data-mobile-documents] .detail-metrics dd small { color: var(--detail-control-blue); }
+#detail-dialog[data-mobile-documents] .detail-metrics dd small { color: #f5faff; }
 #detail-dialog[data-mobile-documents] .detail-metrics dd,
-#detail-dialog[data-mobile-documents] .detail-id-metric .detail-apartment-number { color: #181818; }
+#detail-dialog[data-mobile-documents] .detail-id-metric .detail-apartment-number { color: #fff; }
 #detail-dialog[data-mobile-documents] .detail-apartment-number:focus { outline: none; }
-#detail-dialog[data-mobile-documents] .detail-divider { grid-area: 2 / 1; }
+#detail-dialog[data-mobile-documents] .detail-divider { display: none; }
 #detail-dialog[data-mobile-documents] .detail-sidebar .detail-unit-meta {
-  grid-area: 3 / 1; display: flex; flex-wrap: wrap; justify-content: center; align-items: center;
+  grid-area: 2 / 1; display: flex; flex-wrap: wrap; justify-content: center; align-items: center;
   justify-self: stretch; width: 100%; gap: 1px 4px; margin: 0; padding: 0; text-align: center;
   --detail-meta-label-size: clamp(9px, 2.6vw, 11px);
   --detail-meta-value-size: var(--detail-meta-label-size);
@@ -172,13 +186,22 @@ const MOBILE_DETAIL_STYLES = `
 #detail-dialog[data-mobile-documents] .detail-unit-meta .detail-meta-separator { display: inline; margin: 0; }
 #detail-dialog[data-mobile-documents] .detail-shell :is(.detail-panel-nav, .detail-drawing-toolbar, .detail-price,
   .detail-illustration-note, .detail-floor-plan > .detail-section-label, .detail-floor-plan > .detail-plan-note) { display: none; }
-#detail-dialog[data-mobile-documents] .detail-conversion {
-  grid-area: 5 / 1; grid-template-rows: auto auto; row-gap: 4px;
+#detail-dialog[data-mobile-documents] .detail-conversion { display: contents; }
+#detail-dialog[data-mobile-documents] .detail-contact-actions {
+  grid-area: 4 / 1; display: grid; gap: 2px; min-width: 0;
+}
+#detail-dialog[data-mobile-documents] .detail-bottom-actions { position: static; justify-self: start; }
+#detail-dialog[data-mobile-documents]:not([data-document-view="plan"]) .detail-bottom-actions { display: none; }
+#detail-dialog[data-mobile-documents] .detail-orbit-link { min-height: 32px; padding: 0 4px; }
+#detail-dialog[data-mobile-documents] .detail-footer { grid-area: 5 / 1; }
+#detail-dialog[data-mobile-documents] .detail-footer .footer-pill {
+  height: var(--detail-mobile-pill-height); min-height: var(--detail-mobile-pill-height);
+  max-height: var(--detail-mobile-pill-height); border-radius: var(--detail-mobile-pill-radius);
 }
 #detail-dialog[data-mobile-documents] .detail-inquiry,
 #detail-dialog[data-mobile-documents] .detail-inquiry > .inquiry-button { min-height: 44px; height: 44px; }
 #detail-dialog[data-mobile-documents] .detail-layout > .detail-drawing {
-  grid-area: 4 / 1; display: flex; gap: 0;
+  grid-area: 3 / 1; display: flex; gap: 0;
 }
 #detail-dialog[data-mobile-documents] .detail-shell .detail-plan-switcher {
   display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr);
@@ -213,19 +236,32 @@ const MOBILE_DETAIL_STYLES = `
   #detail-dialog[data-mobile-documents] .detail-floor-legend tbody th { display: block; width: auto; }
 }
 @media (orientation: landscape) and (max-height: 520px) {
+  #detail-dialog[data-mobile-documents] {
+    height: 94dvh;
+    max-height: calc(100dvh - max(6px, env(safe-area-inset-top, 0px)) - max(6px, env(safe-area-inset-bottom, 0px)));
+  }
   #detail-dialog[data-mobile-documents] .detail-layout {
     grid-template-columns: minmax(184px, 39%) minmax(0, 1fr);
-    grid-template-rows: minmax(0, 1fr); column-gap: 12px;
+    grid-template-rows: auto minmax(0, 1fr) auto;
+    gap: 4px 12px; padding-top: 46px;
   }
-  #detail-dialog[data-mobile-documents] .detail-sidebar {
-    grid-area: 1 / 1; display: grid; grid-template-rows: auto 1px auto minmax(0, 1fr); row-gap: 4px;
+  #detail-dialog[data-mobile-documents] .detail-identity { width: 88px; }
+  #detail-dialog[data-mobile-documents] .detail-core { grid-area: 1 / 1 / 2 / -1; }
+  #detail-dialog[data-mobile-documents] .detail-core .detail-area-row { padding-block: 4px; }
+  #detail-dialog[data-mobile-documents] .detail-layout > .detail-drawing { grid-area: 2 / 2; }
+  #detail-dialog[data-mobile-documents] .detail-contact-actions { grid-area: 2 / 1; align-self: end; }
+  #detail-dialog[data-mobile-documents] .detail-footer { grid-area: 3 / 1 / 4 / -1; }
+  #detail-dialog[data-mobile-documents][data-document-view="floor"] .detail-floor-viewport { overflow: visible; }
+  #detail-dialog[data-mobile-documents] .detail-floor-legend[data-placement="side"] {
+    top: 50%; bottom: auto; left: var(--floor-legend-x);
+    width: var(--floor-legend-side-width); max-width: var(--floor-legend-side-width);
+    transform: translate(-50%, -50%);
   }
-  #detail-dialog[data-mobile-documents] .detail-layout > .detail-drawing { grid-area: 1 / 2; margin-bottom: -32px; }
-  #detail-dialog[data-mobile-documents] .detail-bottom-actions { left: 12px; right: auto; }
-  #detail-dialog[data-mobile-documents] .detail-conversion { grid-area: 4 / 1; align-self: end; }
-  #detail-dialog[data-mobile-documents] .detail-sidebar .detail-unit-meta { gap: 1px 2px; --detail-meta-label-size: 9px; }
+  #detail-dialog[data-mobile-documents] .detail-sidebar .detail-unit-meta { align-self: start; gap: 1px 2px; --detail-meta-label-size: 9px; }
   #detail-dialog[data-mobile-documents] .detail-unit-meta .detail-meta-item { margin-inline: 0; }
   #detail-dialog[data-mobile-documents] .detail-unit-meta .detail-meta-separator { margin: 0; }
+  #detail-dialog[data-mobile-documents] .detail-metrics > div { display: flex; justify-content: center; align-items: baseline; gap: 4px; }
+  #detail-dialog[data-mobile-documents] .detail-metrics dt { margin: 0; font-size: 10px; }
   #detail-dialog[data-mobile-documents] .detail-metrics.has-garden dd { font-size: clamp(13px, 2.4vw, 17px); }
   #detail-dialog[data-mobile-documents] .detail-metrics dd small { font-size: 9px; }
   #detail-dialog[data-mobile-documents] .room-marker { width: 24px; height: 24px; }
@@ -233,6 +269,8 @@ const MOBILE_DETAIL_STYLES = `
 }
 @media (forced-colors: active) {
   #detail-dialog[data-mobile-documents] .detail-topbar .dialog-close { color: ButtonText; }
+  #detail-dialog[data-mobile-documents] .detail-core .detail-area-row { background: Canvas; }
+  #detail-dialog[data-mobile-documents] .detail-area-row :is(dt, dd, small, .detail-apartment-number) { color: CanvasText; }
 }
 `
 
@@ -1174,6 +1212,7 @@ function mountOrbitApartmentCardRuntime(root: any = (document as any), config: a
         plan: 'Alaprajz', rooms: 'Helyiséglista', floor: 'Szintrajz', building: 'Épület közelről',
     };
     const mobileDetailLayout = window.matchMedia('(max-width: 600px), (pointer: coarse) and (orientation: landscape) and (max-height: 520px)');
+    const shortLandscape = window.matchMedia('(orientation: landscape) and (max-height: 520px)');
     const floorLocations: Record<string, {
         overview: PlanBounds;
         buildings: Record<PlanBuilding, PlanBounds>;
@@ -1273,8 +1312,15 @@ function mountOrbitApartmentCardRuntime(root: any = (document as any), config: a
             const fullLegendHeight = legend.scrollHeight + 2;
             const fitsGap = !mobile && legend.offsetWidth + 8 <= (gapRight - gapLeft) * overviewFit.scale &&
                 fullLegendHeight + 8 <= (gapBottom - gapTop) * overviewFit.scale;
-            legend.dataset.placement = fitsGap ? 'center' : 'dock';
-            if (fitsGap) {
+            const rail = mobile && shortLandscape.matches
+                ? viewport.closest('.detail-layout')?.querySelector('.detail-contact-actions')?.getBoundingClientRect()
+                : undefined;
+            legend.dataset.placement = rail ? 'side' : fitsGap ? 'center' : 'dock';
+            if (rail) {
+                const x = rail.left + rail.width / 2 - viewport.getBoundingClientRect().left;
+                legend.style.setProperty('--floor-legend-x', `${x}px`);
+                legend.style.setProperty('--floor-legend-side-width', `${rail.width}px`);
+            } else if (fitsGap) {
                 const x = width / 2 + overviewFit.x + (gapLeft + gapRight) * overviewFit.scale / 2;
                 const y = height / 2 + overviewFit.y + (gapTop + gapBottom) * overviewFit.scale / 2;
                 legend.style.setProperty('--floor-legend-x', `${x}px`);
@@ -1333,12 +1379,16 @@ function mountOrbitApartmentCardRuntime(root: any = (document as any), config: a
         const meta = dialog.querySelector('.detail-unit-meta');
         const documents = dialog.querySelector('.detail-plan-documents');
         const switcher = dialog.querySelector('.detail-plan-switcher');
-        if (!rooms || !sidebar || !toolbar || !divider || !meta || !documents || !switcher) return;
+        const orbitAction = dialog.querySelector('.detail-bottom-actions');
+        const contactActions = dialog.querySelector('.detail-contact-actions');
+        const layout = dialog.querySelector('.detail-layout');
+        if (!rooms || !sidebar || !toolbar || !divider || !meta || !documents || !switcher || !orbitAction || !contactActions || !layout) return;
         const mobile = mobileDetailLayout.matches;
         dialog.toggleAttribute('data-mobile-documents', mobile);
         if (mobile) {
             divider.after(meta);
             documents.append(rooms);
+            contactActions.prepend(orbitAction);
             rooms.dataset.documentPanel = 'rooms';
             rooms.setAttribute('aria-label', documentNames.rooms);
             rooms.removeAttribute('aria-labelledby');
@@ -1347,6 +1397,7 @@ function mountOrbitApartmentCardRuntime(root: any = (document as any), config: a
         } else {
             toolbar.append(meta);
             sidebar.querySelector('.detail-conversion')?.before(rooms);
+            layout.after(orbitAction);
             delete rooms.dataset.documentPanel;
             rooms.hidden = false;
             rooms.removeAttribute('aria-label');
@@ -1415,7 +1466,7 @@ function mountOrbitApartmentCardRuntime(root: any = (document as any), config: a
         </div>
         <hr class="detail-divider">
         ${detailRooms(a)}
-        <div class="detail-conversion"><div class="detail-price"><p>${detailPrice(a)}</p></div><div class="detail-inquiry">${inquiry(a)}</div><div class="detail-downloads detail-footer">${downloadLink(a, true)}<div class="detail-status"><span class="status-pill status-${esc(a.status)}">${esc(statusText(a))}</span></div>${shareControl(a)}</div></div>
+        <div class="detail-conversion"><div class="detail-price"><p>${detailPrice(a)}</p></div><div class="detail-contact-actions"><div class="detail-inquiry">${inquiry(a)}</div></div><div class="detail-downloads detail-footer">${downloadLink(a, true)}<div class="detail-status"><span class="status-pill status-${esc(a.status)}">${esc(statusText(a))}</span></div>${shareControl(a)}</div></div>
       </aside>
       <nav class="detail-panel-nav" role="tablist" aria-orientation="vertical" aria-label="Rajzok és helyiséglista"><button type="button" role="tab" id="detail-tab-plan" data-detail-tab="plan" aria-controls="detail-panel-plan" aria-selected="true" tabindex="0">Rajzok</button><button type="button" role="tab" id="detail-tab-rooms" data-detail-tab="rooms" aria-controls="detail-panel-rooms" aria-selected="false" tabindex="-1">Helyiség<wbr>lista</button></nav>
       <section class="detail-drawing" data-detail-panel="plan">
@@ -1606,6 +1657,22 @@ function mountOrbitApartmentCardRuntime(root: any = (document as any), config: a
     function paintPlanRoom(value: any): any {
         const dialog: any = $('detail-dialog'), number: any = value == null ? null : String(value);
         dialog.querySelectorAll('[data-plan-room]').forEach((button: any): any => { button.classList.toggle('is-active', button.dataset.planRoom === number); button.setAttribute('aria-pressed', String(button.dataset.planRoom === selectedPlanRoom)); });
+    }
+    function tappedPlanMarker(button: HTMLButtonElement, event: MouseEvent): HTMLButtonElement {
+        if (!event.detail || !shortLandscape.matches || !button.matches('.room-marker') ||
+            !button.closest('[data-mobile-documents]')) return button;
+        // Overlapping touch targets should select the nearest visible number.
+        let nearest = button, distance = Infinity;
+        for (const marker of button.parentElement!.querySelectorAll<HTMLButtonElement>('.room-marker')) {
+            const {left, right, top, bottom} = marker.getBoundingClientRect();
+            if (event.clientX < left || event.clientX > right || event.clientY < top || event.clientY > bottom) continue;
+            const candidate = (event.clientX - (left + right) / 2) ** 2 + (event.clientY - (top + bottom) / 2) ** 2;
+            if (candidate < distance) {
+                nearest = marker;
+                distance = candidate;
+            }
+        }
+        return nearest;
     }
     function selectPlanRoom(value: any, origin: any): any {
         selectedPlanRoom = String(value);
@@ -2007,8 +2074,10 @@ function mountOrbitApartmentCardRuntime(root: any = (document as any), config: a
                     panel.querySelector('.room-pagination button:not(:disabled)')?.focus(({ preventScroll: true } as any));
             }
         }
-        if (t.hasAttribute('data-plan-room'))
-            selectPlanRoom(t.dataset.planRoom, t);
+        if (t.hasAttribute('data-plan-room')) {
+            const marker = tappedPlanMarker(t, event);
+            selectPlanRoom(marker.dataset.planRoom, marker);
+        }
         if (t.hasAttribute('data-inquiry-placeholder')) {
             const dialog: any = $('detail-dialog'), note: any = dialog.querySelector('.inquiry-pending');
             if (note) {
