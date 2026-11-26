@@ -114,8 +114,9 @@ ${handover} .framer-text {
     background: ${admiralPalette.panelGradient}; pointer-events: none;
     opacity: 0; transition: opacity .42s ease-in-out;
 }
-[data-admiral-nav-surface="blue"]::after, ${landed} [data-admiral-nav-surface="glass"]:not(${mobileBar} [data-admiral-nav-surface])::after { opacity: 1; }
+[data-admiral-nav-surface="blue"]::after, ${landed} [data-admiral-nav-surface="glass"]::after { opacity: 1; }
 ${landed} [data-admiral-nav-surface="glass"]::after { transition: none; }
+${mobileBar} [data-admiral-nav-surface="glass"]::after { display: none; }
 ${landed} ${closedMobile} > ${glassBar} { background-color: rgb(246 250 253 / 65%) !important; }
 ${blueBar} [data-framer-name="Logo"] { filter: brightness(0) invert(1); }
 ${blueBar} [data-framer-name="Link"] .framer-text,
