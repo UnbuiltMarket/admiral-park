@@ -131,6 +131,106 @@ const FLOOR_LAKE_STYLES = `
 }
 `
 
+const MOBILE_DETAIL_STYLES = `
+#detail-dialog[data-mobile-documents] .detail-layout {
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: auto 1px auto minmax(0, 1fr) auto;
+  gap: 6px; padding: 51px 10px 48px;
+}
+#detail-dialog[data-mobile-documents] .detail-sidebar { display: contents; }
+#detail-dialog[data-mobile-documents] .detail-topbar { top: 5px; left: 8px; right: 8px; }
+#detail-dialog[data-mobile-documents] .detail-identity {
+  position: absolute; top: 7px; left: 50%; width: 100px; transform: translateX(-50%);
+}
+#detail-dialog[data-mobile-documents] .detail-identity .detail-logo { width: 100%; }
+#detail-dialog[data-mobile-documents] .detail-topbar .dialog-close {
+  width: 44px; height: 44px; padding: 0; border: 0; border-radius: 0;
+  background: none; box-shadow: none; color: var(--detail-control-blue);
+  font: 400 34px/1 Arial, sans-serif;
+}
+#detail-dialog[data-mobile-documents] .detail-topbar .dialog-close:focus-visible { outline-offset: -3px; }
+#detail-dialog[data-mobile-documents] .detail-core { grid-area: 1 / 1; padding: 0; }
+#detail-dialog[data-mobile-documents] .detail-core .detail-area-row { top: auto; padding: 0; border: 0; }
+#detail-dialog[data-mobile-documents] .detail-metrics dt,
+#detail-dialog[data-mobile-documents] .detail-metrics dd small { color: var(--detail-control-blue); }
+#detail-dialog[data-mobile-documents] .detail-metrics dd,
+#detail-dialog[data-mobile-documents] .detail-id-metric .detail-apartment-number { color: #181818; }
+#detail-dialog[data-mobile-documents] .detail-divider { grid-area: 2 / 1; }
+#detail-dialog[data-mobile-documents] .detail-sidebar .detail-unit-meta {
+  grid-area: 3 / 1; display: flex; flex-wrap: wrap; justify-content: center; align-items: center;
+  justify-self: stretch; width: 100%; gap: 1px 4px; margin: 0; padding: 0; text-align: center;
+  --detail-meta-label-size: clamp(9px, 2.6vw, 11px);
+  --detail-meta-value-size: var(--detail-meta-label-size);
+}
+#detail-dialog[data-mobile-documents] .detail-unit-meta .detail-meta-item { white-space: nowrap; }
+#detail-dialog[data-mobile-documents] .detail-unit-meta .detail-meta-item strong { display: inline; }
+#detail-dialog[data-mobile-documents] .detail-unit-meta .detail-meta-separator { display: inline; margin: 0; }
+#detail-dialog[data-mobile-documents] .detail-shell :is(.detail-panel-nav, .detail-drawing-toolbar, .detail-price,
+  .detail-illustration-note, .detail-floor-plan > .detail-section-label, .detail-floor-plan > .detail-plan-note) { display: none; }
+#detail-dialog[data-mobile-documents] .detail-conversion {
+  grid-area: 5 / 1; grid-template-rows: auto auto; row-gap: 4px;
+}
+#detail-dialog[data-mobile-documents] .detail-inquiry,
+#detail-dialog[data-mobile-documents] .detail-inquiry > .inquiry-button { min-height: 44px; height: 44px; }
+#detail-dialog[data-mobile-documents] .detail-layout > .detail-drawing {
+  grid-area: 4 / 1; display: flex; gap: 0;
+}
+#detail-dialog[data-mobile-documents] .detail-shell .detail-plan-switcher {
+  display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr);
+  gap: 0; padding: 0;
+}
+#detail-dialog[data-mobile-documents] .detail-plan-switcher .detail-plan-documents { grid-area: 1 / 1; }
+#detail-dialog[data-mobile-documents] .detail-plan-switcher .detail-plan-arrow[data-plan-step] {
+  grid-area: 1 / 1; z-index: 2; margin-inline: -7px;
+}
+#detail-dialog[data-mobile-documents] .detail-plan-arrow[data-plan-step="-1"] { justify-self: start; }
+#detail-dialog[data-mobile-documents] .detail-plan-arrow[data-plan-step="1"] { justify-self: end; }
+#detail-dialog[data-mobile-documents] .detail-plan-arrow > span { width: 26px; height: 26px; }
+#detail-dialog[data-mobile-documents] .detail-plan-arrow svg { width: 15px; height: 15px; }
+#detail-dialog[data-mobile-documents] .detail-plan-switcher[data-switchable] :is(.detail-plan, .detail-room-panel) { margin-inline: 32px; }
+#detail-dialog[data-mobile-documents] .detail-plan-documents .detail-room-panel {
+  position: relative; inset: auto; display: flex; flex: 1; width: auto; padding: 0;
+}
+#detail-dialog[data-mobile-documents] .detail-rooms > h3 { text-align: center; }
+#detail-dialog[data-mobile-documents] .room-marker { font-size: 9px; }
+#detail-dialog[data-mobile-documents] .room-marker::before { inset: 6px; }
+#detail-dialog[data-mobile-documents] .detail-rooms .room-legend-button { grid-template-columns: 14px minmax(0, 1fr) auto; }
+#detail-dialog[data-mobile-documents] .detail-rooms .room-number { width: 14px; height: 14px; font-size: 9px; }
+#detail-dialog[data-mobile-documents] .detail-floor-legend { padding: 5px 8px; font-size: 10px; }
+#detail-dialog[data-mobile-documents] .detail-floor-legend[data-placement="dock"] { top: var(--floor-legend-mobile-top); bottom: auto; }
+#detail-dialog[data-mobile-documents] .detail-floor-legend h3 { margin-bottom: 3px; text-align: center; font-size: 11px; }
+#detail-dialog[data-mobile-documents] .detail-floor-legend :is(th, td) { padding-block: 2px; }
+#detail-dialog[data-mobile-documents] .detail-floor-legend-note { display: none; }
+@media (max-height: 560px) {
+  #detail-dialog[data-mobile-documents] .detail-floor-legend :is(thead, td) { display: none; }
+  #detail-dialog[data-mobile-documents] .detail-floor-legend tbody { display: flex; flex-wrap: wrap; justify-content: center; gap: 2px 9px; }
+  #detail-dialog[data-mobile-documents] .detail-floor-legend tbody tr { display: block; border: 0; }
+  #detail-dialog[data-mobile-documents] .detail-floor-legend tbody th { display: block; width: auto; }
+}
+@media (orientation: landscape) and (max-height: 520px) {
+  #detail-dialog[data-mobile-documents] .detail-layout {
+    grid-template-columns: minmax(184px, 39%) minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr); column-gap: 12px;
+  }
+  #detail-dialog[data-mobile-documents] .detail-sidebar {
+    grid-area: 1 / 1; display: grid; grid-template-rows: auto 1px auto minmax(0, 1fr); row-gap: 4px;
+  }
+  #detail-dialog[data-mobile-documents] .detail-layout > .detail-drawing { grid-area: 1 / 2; margin-bottom: -32px; }
+  #detail-dialog[data-mobile-documents] .detail-bottom-actions { left: 12px; right: auto; }
+  #detail-dialog[data-mobile-documents] .detail-conversion { grid-area: 4 / 1; align-self: end; }
+  #detail-dialog[data-mobile-documents] .detail-sidebar .detail-unit-meta { gap: 1px 2px; --detail-meta-label-size: 9px; }
+  #detail-dialog[data-mobile-documents] .detail-unit-meta .detail-meta-item { margin-inline: 0; }
+  #detail-dialog[data-mobile-documents] .detail-unit-meta .detail-meta-separator { margin: 0; }
+  #detail-dialog[data-mobile-documents] .detail-metrics.has-garden dd { font-size: clamp(13px, 2.4vw, 17px); }
+  #detail-dialog[data-mobile-documents] .detail-metrics dd small { font-size: 9px; }
+  #detail-dialog[data-mobile-documents] .room-marker { width: 24px; height: 24px; }
+  #detail-dialog[data-mobile-documents] .room-marker::before { inset: 5px; }
+}
+@media (forced-colors: active) {
+  #detail-dialog[data-mobile-documents] .detail-topbar .dialog-close { color: ButtonText; }
+}
+`
+
 // One shared source for imperative apartment actions and the standalone Framer button.
 const FROSTED_BUTTON_DEFAULTS: any = (Object as any).freeze(({ tint: "#7395a0", text: "#183b43", fontSize: 14, letterSpacing: "-.015em" } as any));
 const FROSTED_BUTTON_CSS: any = `
@@ -1061,12 +1161,13 @@ function mountOrbitApartmentCardRuntime(root: any = (document as any), config: a
         requestAnimationFrame(fitDetailRooms);
         return true;
     }
-    type DetailDocument = 'plan' | 'floor' | 'building';
+    type DetailDocument = 'plan' | 'rooms' | 'floor' | 'building';
     type PlanBounds = readonly [number, number, number, number];
     type PlanBuilding = 'A' | 'B' | 'C';
     const documentNames: Record<DetailDocument, string> = {
-        plan: 'Alaprajz', floor: 'Szintrajz', building: 'Épület közelről',
+        plan: 'Alaprajz', rooms: 'Helyiséglista', floor: 'Szintrajz', building: 'Épület közelről',
     };
+    const mobileDetailLayout = window.matchMedia('(max-width: 600px), (pointer: coarse) and (orientation: landscape) and (max-height: 520px)');
     const floorLocations: Record<string, {
         overview: PlanBounds;
         buildings: Record<PlanBuilding, PlanBounds>;
@@ -1144,8 +1245,10 @@ function mountOrbitApartmentCardRuntime(root: any = (document as any), config: a
     function fitFloorDrawing(viewport: HTMLElement) {
         const { clientWidth: width, clientHeight: height } = viewport;
         if (width < 1 || height < 1) return;
+        const mobile = !!viewport.closest('[data-mobile-documents]');
+        const drawingInset = mobile ? 12 : 16;
         const fit = ([left, top, right, bottom]: number[], availableHeight = height) => {
-            const scale = Math.min(Math.max(1, width - 16) / (right - left), Math.max(1, availableHeight - 16) / (bottom - top));
+            const scale = Math.min(Math.max(1, width - drawingInset) / (right - left), Math.max(1, availableHeight - drawingInset) / (bottom - top));
             const x = -(left + right) * scale / 2;
             const y = (availableHeight - height) / 2 - (top + bottom) * scale / 2;
             return { scale, x, y, transform: `translate(${x}px,${y}px) scale(${scale})` };
@@ -1162,7 +1265,7 @@ function mountOrbitApartmentCardRuntime(root: any = (document as any), config: a
             // four source drawings. Keep the legend in its own space at smaller sizes.
             const [gapLeft, gapTop, gapRight, gapBottom] = [760, 715, 1765, 1310];
             const fullLegendHeight = legend.scrollHeight + 2;
-            const fitsGap = legend.offsetWidth + 8 <= (gapRight - gapLeft) * overviewFit.scale &&
+            const fitsGap = !mobile && legend.offsetWidth + 8 <= (gapRight - gapLeft) * overviewFit.scale &&
                 fullLegendHeight + 8 <= (gapBottom - gapTop) * overviewFit.scale;
             legend.dataset.placement = fitsGap ? 'center' : 'dock';
             if (fitsGap) {
@@ -1171,9 +1274,9 @@ function mountOrbitApartmentCardRuntime(root: any = (document as any), config: a
                 legend.style.setProperty('--floor-legend-x', `${x}px`);
                 legend.style.setProperty('--floor-legend-y', `${y}px`);
             } else {
-                // On very short screens, let the legend scroll independently and
-                // retain at least part of the available height for the overview.
-                const planSpace = Math.min(110, Math.max(48, height * .24));
+                // Reserve enough height for a useful overview before capping the legend.
+                const planSpace = mobile ? Math.min(height * .72, width * .55 + lakeSpace)
+                    : Math.min(110, Math.max(48, height * .24));
                 const limit = Math.max(18, height - planSpace);
                 legend.style.setProperty('--floor-legend-max-height', `${limit}px`);
                 overviewFit = fit(overview, Math.max(1, height - Math.min(fullLegendHeight, limit) - 7 - lakeSpace));
@@ -1183,7 +1286,9 @@ function mountOrbitApartmentCardRuntime(root: any = (document as any), config: a
             else legend.removeAttribute('tabindex');
         }
         const buildingFit = fit(building);
-        viewport.style.setProperty('--floor-lake-y', `${height / 2 + overviewFit.y + overview[3] * overviewFit.scale + 3}px`);
+        const overviewBottom = height / 2 + overviewFit.y + overview[3] * overviewFit.scale;
+        viewport.style.setProperty('--floor-lake-y', `${overviewBottom + 3}px`);
+        if (mobile && legend) legend.style.setProperty('--floor-legend-mobile-top', `${overviewBottom + lakeSpace + 3}px`);
         viewport.style.setProperty('--floor-lake-width', `${(overview[2] - overview[0]) * overviewFit.scale}px`);
         viewport.style.setProperty('--floor-overview-transform', overviewFit.transform);
         viewport.style.setProperty('--floor-building-transform', buildingFit.transform);
@@ -1198,15 +1303,64 @@ function mountOrbitApartmentCardRuntime(root: any = (document as any), config: a
         }
     }
 
-    function planArrowLabel(step: number, target: DetailDocument) {
-        return `${step < 0 ? 'Előző rajz' : 'Következő rajz'}: ${documentNames[target]}`;
+    function planArrowLabel(step: number, target: DetailDocument, mobile = false) {
+        const direction = step < 0 ? 'Előző' : 'Következő';
+        return `${direction} ${mobile ? 'nézet' : 'rajz'}: ${documentNames[target]}`;
     }
     function planArrow(step: -1 | 1) {
         const label = planArrowLabel(step, 'floor');
         return `<button type="button" class="detail-plan-arrow" data-plan-step="${step}" aria-controls="detail-plan-documents" aria-label="${label}" title="${label}"><span aria-hidden="true"><svg viewBox="0 0 20 20" width="18" height="18" fill="none"><path d="m7 4 6 6-6 6" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg></span></button>`;
     }
+    function mobileDocumentOrder(dialog: HTMLElement): DetailDocument[] {
+        const views: DetailDocument[] = [];
+        if (dialog.querySelector('[data-document-panel="plan"]')) views.push('plan');
+        views.push('rooms');
+        if (dialog.querySelector('[data-document-panel="floor"]')) views.push('floor');
+        if (dialog.querySelector('[data-floor-viewport]')) views.push('building');
+        return views;
+    }
+    function syncDetailLayout(dialog: HTMLElement) {
+        const rooms = dialog.querySelector<HTMLElement>('.detail-room-panel');
+        const sidebar = dialog.querySelector('.detail-sidebar');
+        const toolbar = dialog.querySelector('.detail-drawing-toolbar');
+        const divider = sidebar?.querySelector('.detail-divider');
+        const meta = dialog.querySelector('.detail-unit-meta');
+        const documents = dialog.querySelector('.detail-plan-documents');
+        const switcher = dialog.querySelector('.detail-plan-switcher');
+        if (!rooms || !sidebar || !toolbar || !divider || !meta || !documents || !switcher) return;
+        const mobile = mobileDetailLayout.matches;
+        dialog.toggleAttribute('data-mobile-documents', mobile);
+        if (mobile) {
+            divider.after(meta);
+            documents.append(rooms);
+            rooms.dataset.documentPanel = 'rooms';
+            rooms.setAttribute('aria-label', documentNames.rooms);
+            rooms.removeAttribute('aria-labelledby');
+            switcher.setAttribute('aria-label', 'Lakásrajzok és helyiséglista');
+            switcher.removeAttribute('aria-labelledby');
+        } else {
+            toolbar.append(meta);
+            sidebar.querySelector('.detail-conversion')?.before(rooms);
+            delete rooms.dataset.documentPanel;
+            rooms.hidden = false;
+            rooms.removeAttribute('aria-label');
+            rooms.setAttribute('aria-labelledby', 'detail-tab-rooms');
+            switcher.removeAttribute('aria-label');
+            switcher.setAttribute('aria-labelledby', 'detail-tab-plan');
+        }
+        rooms.setAttribute('role', mobile ? 'region' : 'tabpanel');
+        switcher.setAttribute('role', mobile ? 'region' : 'tabpanel');
+        const canSwitch = mobile ? mobileDocumentOrder(dialog).length > 1 : switcher.hasAttribute('data-desktop-switchable');
+        switcher.toggleAttribute('data-switchable', canSwitch);
+        switcher.querySelectorAll<HTMLButtonElement>('[data-plan-step]').forEach(button => button.hidden = !canSwitch);
+    }
     function drawingAfter(dialog: HTMLElement, step: number): DetailDocument {
         const current = dialog.dataset.documentView;
+        if (dialog.hasAttribute('data-mobile-documents')) {
+            const views = mobileDocumentOrder(dialog);
+            const index = Math.max(0, views.indexOf(current as DetailDocument));
+            return views[(index + step + views.length) % views.length];
+        }
         if (current === 'plan') return 'floor';
         const hasApartmentPlan = !!dialog.querySelector('[data-document-panel="plan"]');
         const hasBuildingView = !!dialog.querySelector('[data-floor-viewport]');
@@ -1217,7 +1371,7 @@ function mountOrbitApartmentCardRuntime(root: any = (document as any), config: a
     }
     function stepDetailDocument(step: number) {
         const dialog = $('detail-dialog');
-        if (dialog.dataset.documentView === 'plan') dialog.dataset.planDirection = String(step);
+        if (dialog.dataset.documentView === 'plan' && !dialog.hasAttribute('data-mobile-documents')) dialog.dataset.planDirection = String(step);
         selectDetailDocument(drawingAfter(dialog, step));
     }
 
@@ -1260,13 +1414,13 @@ function mountOrbitApartmentCardRuntime(root: any = (document as any), config: a
       <nav class="detail-panel-nav" role="tablist" aria-orientation="vertical" aria-label="Rajzok és helyiséglista"><button type="button" role="tab" id="detail-tab-plan" data-detail-tab="plan" aria-controls="detail-panel-plan" aria-selected="true" tabindex="0">Rajzok</button><button type="button" role="tab" id="detail-tab-rooms" data-detail-tab="rooms" aria-controls="detail-panel-rooms" aria-selected="false" tabindex="-1">Helyiség<wbr>lista</button></nav>
       <section class="detail-drawing" data-detail-panel="plan">
         <div class="detail-drawing-toolbar"><p class="detail-unit-meta">${detailUnitMeta(a)}</p></div>
-        <div class="detail-plan-switcher" id="detail-panel-plan" role="tabpanel" aria-labelledby="detail-tab-plan"${switchable ? ' data-switchable' : ''}>
-          ${switchable ? planArrow(-1) + planArrow(1) : ''}
+        <div class="detail-plan-switcher" id="detail-panel-plan" role="tabpanel" aria-labelledby="detail-tab-plan"${switchable ? ' data-desktop-switchable' : ''}>
+          ${planArrow(-1) + planArrow(1)}
           <div class="detail-plan-documents" id="detail-plan-documents">
             ${initialDocument === 'plan' || plan ? detailPlan(a, plan, initialDocument !== 'plan') : ''}
             ${floor ? floorDrawing(a, floor, initialDocument === 'plan') : ''}
           </div>
-          ${switchable ? '<span class="sr-only" data-plan-announcement role="status">Alaprajz</span>' : ''}
+          <span class="sr-only" data-plan-announcement role="status">Alaprajz</span>
           <p class="detail-illustration-note">Az alaprajz illusztráció. Bútorozatlan átadás. Bruttó vételár.</p>
         </div>
       </section>
@@ -1276,10 +1430,12 @@ function mountOrbitApartmentCardRuntime(root: any = (document as any), config: a
             shell.style.setProperty('--detail-monogram-image', `url("${monogram.replace(/"/g, '%22')}")`);
         if (logo)
             shell.style.setProperty('--detail-logo-image', `url("${logo.replace(/"/g, '%22')}")`);
+        syncDetailLayout(dialog);
         openDialog(dialog);
         dialog.scrollTop = 0;
         initializeDetailImages(dialog);
-        selectDetailDocument(initialDocument);
+        const views = mobileDocumentOrder(dialog);
+        selectDetailDocument(mobileDetailLayout.matches && !views.includes(initialDocument) ? views[0] : initialDocument);
         const floorViewport = dialog.querySelector('[data-floor-viewport]') as HTMLElement | null;
         const rooms = dialog.querySelector('.detail-room-panel');
         detailResize = new ResizeObserver(entries => {
@@ -1342,29 +1498,43 @@ function mountOrbitApartmentCardRuntime(root: any = (document as any), config: a
     function selectDetailDocument(value: DetailDocument) {
         const dialog = $('detail-dialog') as HTMLElement;
         dialog.dataset.documentView = value;
-        const showFloor = value !== 'plan';
+        const mobile = dialog.hasAttribute('data-mobile-documents');
+        const showFloor = value === 'floor' || value === 'building';
         for (const panel of dialog.querySelectorAll<HTMLElement>('[data-document-panel]'))
-            panel.hidden = panel.dataset.documentPanel !== (showFloor ? 'floor' : 'plan');
+            panel.hidden = panel.dataset.documentPanel !== (showFloor ? 'floor' : value);
         const caption = dialog.querySelector<HTMLElement>('[data-floor-caption]');
         if (caption && showFloor)
             caption.textContent = (value === 'building' ? caption.dataset.buildingCaption : caption.dataset.overviewCaption) || '';
         for (const button of dialog.querySelectorAll<HTMLButtonElement>('[data-plan-step]')) {
             const step = Number(button.dataset.planStep);
-            const label = planArrowLabel(step, drawingAfter(dialog, step));
+            const label = planArrowLabel(step, drawingAfter(dialog, step), mobile);
             button.setAttribute('aria-label', label);
             button.title = label;
         }
         const announcement = dialog.querySelector('[data-plan-announcement]');
         if (announcement) announcement.textContent = documentNames[value];
+        if (mobile) selectDetailPanel(value === 'rooms' ? 'rooms' : 'plan');
         if (showFloor) {
             const viewport = dialog.querySelector<HTMLElement>('[data-floor-viewport]');
             if (viewport) fitFloorDrawing(viewport);
             if (!dialog.querySelector('img[data-detail-image="floor"]')?.hasAttribute('src'))
                 startDetailImage('floor');
-        } else if (!dialog.querySelector('img[data-detail-image="plan"]')?.hasAttribute('src')) {
+        } else if (value === 'plan' && !dialog.querySelector('img[data-detail-image="plan"]')?.hasAttribute('src')) {
             startDetailImage('plan');
         }
     }
+    mobileDetailLayout.addEventListener('change', () => {
+        const dialog = $('detail-dialog') as HTMLDialogElement;
+        if (!dialog.open) return;
+        const showingRooms = dialog.querySelector('.detail-shell')?.getAttribute('data-panel') === 'rooms';
+        const view = dialog.dataset.documentView as DetailDocument;
+        syncDetailLayout(dialog);
+        if (mobileDetailLayout.matches && showingRooms) selectDetailDocument('rooms');
+        else if (view === 'rooms') {
+            selectDetailDocument(dialog.querySelector('[data-document-panel="plan"]') ? 'plan' : 'floor');
+            selectDetailPanel('rooms');
+        } else selectDetailDocument(view);
+    }, events);
     function fitDetailRooms(): any {
         const dialog: any = $('detail-dialog');
         if (signal.aborted || !dialog.open)
@@ -1434,11 +1604,24 @@ function mountOrbitApartmentCardRuntime(root: any = (document as any), config: a
     function selectPlanRoom(value: any, origin: any): any {
         selectedPlanRoom = String(value);
         paintPlanRoom(selectedPlanRoom);
-        const frame: any = visibleRoomFrame($('detail-dialog').querySelector('.detail-room-panel')), rows: any = frame?.querySelectorAll('li'), row: any = origin?.classList.contains('room-marker') ? ([...rows || ([] as any)] as any).findIndex((item: any): any => item.querySelector(`[data-plan-room="${selectedPlanRoom}"]`)) : -1;
+        const dialog = $('detail-dialog') as HTMLElement;
+        const mobile = dialog.hasAttribute('data-mobile-documents');
+        const fromMarker = origin?.classList.contains('room-marker');
+        if (mobile && fromMarker) {
+            selectDetailDocument('rooms');
+            fitDetailRooms();
+        }
+        const frame: any = visibleRoomFrame(dialog.querySelector('.detail-room-panel')), rows: any = frame?.querySelectorAll('li'), row: any = fromMarker ? ([...rows || ([] as any)] as any).findIndex((item: any): any => item.querySelector(`[data-plan-room="${selectedPlanRoom}"]`)) : -1;
         if (frame && row >= 0 && Number(frame.dataset.pageSize) > 0) {
             frame.dataset.page = String(Math.floor(row / Number(frame.dataset.pageSize)));
         }
-        if (origin?.classList.contains('room-marker'))
+        if (mobile) {
+            if (fromMarker) fitDetailRooms();
+            else selectDetailDocument('plan');
+            const panel = dialog.querySelector(`[data-document-panel="${fromMarker ? 'rooms' : 'plan'}"]`);
+            const matchingRoom = panel?.querySelector<HTMLElement>(`[data-plan-room="${selectedPlanRoom}"]`);
+            (matchingRoom || dialog.querySelector<HTMLElement>('[data-plan-step="1"]'))?.focus({ preventScroll: true });
+        } else if (fromMarker)
             selectDetailPanel('rooms', true);
         else {
             selectDetailDocument('plan');
@@ -2233,6 +2416,7 @@ export default function AdmiralApartmentDetailCard(
             ORBIT_APARTMENT_CARD_STYLES +
             FLOOR_LAKE_STYLES +
             DETAIL_ACTION_STYLES +
+            MOBILE_DETAIL_STYLES +
             "\n:host{position:fixed!important;inset:0 auto auto 0!important;width:0!important;height:0!important;min-height:0!important;background:transparent!important;pointer-events:none!important;overflow:visible!important}dialog,.toast.visible{pointer-events:auto}dialog{font-size:14px}</style>" +
             ORBIT_APARTMENT_CARD_SHELL
         setState("loading")

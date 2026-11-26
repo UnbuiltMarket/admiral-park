@@ -831,7 +831,7 @@ const homepageMobileOrbitStyles = `
 }
 [data-admiral-homepage] .orbit-studio-mobile-plan-button:not(:disabled) { cursor: pointer; }
 [data-admiral-homepage] .orbit-studio-mobile-plan-cue {
-    display: inline-flex; align-items: center; justify-self: end; gap: 4px;
+    display: inline-flex; align-items: center; justify-self: start; gap: 4px;
     color: #155b91; font-size: 12px; font-weight: 600; line-height: 1.2;
 }
 [data-admiral-homepage] .orbit-studio-mobile-plan-cue svg { width: 12px; height: 12px; }
