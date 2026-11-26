@@ -132,6 +132,10 @@ const FLOOR_LAKE_STYLES = `
 `
 
 const MOBILE_DETAIL_STYLES = `
+#detail-dialog[data-mobile-documents],
+#detail-dialog[data-mobile-documents] :is(.inquiry-button.admiral-frosted-button, .detail-floor-lake) {
+  font-family: Arial, Helvetica, sans-serif;
+}
 #detail-dialog[data-mobile-documents] .detail-layout {
   grid-template-columns: minmax(0, 1fr);
   grid-template-rows: auto 1px auto minmax(0, 1fr) auto;
@@ -155,6 +159,7 @@ const MOBILE_DETAIL_STYLES = `
 #detail-dialog[data-mobile-documents] .detail-metrics dd small { color: var(--detail-control-blue); }
 #detail-dialog[data-mobile-documents] .detail-metrics dd,
 #detail-dialog[data-mobile-documents] .detail-id-metric .detail-apartment-number { color: #181818; }
+#detail-dialog[data-mobile-documents] .detail-apartment-number:focus { outline: none; }
 #detail-dialog[data-mobile-documents] .detail-divider { grid-area: 2 / 1; }
 #detail-dialog[data-mobile-documents] .detail-sidebar .detail-unit-meta {
   grid-area: 3 / 1; display: flex; flex-wrap: wrap; justify-content: center; align-items: center;
@@ -926,7 +931,8 @@ function mountOrbitApartmentCardRuntime(root: any = (document as any), config: a
             modalRegistry.add(dialog);
         }
         syncModalState();
-        dialog.querySelector('[data-close]')?.focus();
+        const initialFocus = dialog.hasAttribute('data-mobile-documents') ? '.detail-apartment-number' : '[data-close]';
+        dialog.querySelector(initialFocus)?.focus({ preventScroll: true });
     }
     function finishDialogClose(dialog: any): any {
         if (dialog.open || (!modalRegistry.has(dialog) && !dialogStack.includes(dialog)))
@@ -1125,7 +1131,7 @@ function mountOrbitApartmentCardRuntime(root: any = (document as any), config: a
         return `<section class="detail-room-panel" data-detail-panel="rooms" id="detail-panel-rooms" role="tabpanel" aria-labelledby="detail-tab-rooms">${rooms}</section>`;
     }
     function detailMetrics(a: any): any {
-        return `<dl class="detail-metrics${a.areaGarden > 0 ? ' has-garden' : ''}"><div class="detail-id-metric"><dt>Lakás<wbr>szám</dt><dd><h2 class="detail-apartment-number">${esc(a.id)}</h2></dd></div>${detailMetric('Beltér', a.areaInterior)}${detailMetric('Erkély', a.areaTerrace)}${hasNumber(a.areaGarden) && a.areaGarden > 0 ? detailMetric('Kert', a.areaGarden) : ''}</dl>`;
+        return `<dl class="detail-metrics${a.areaGarden > 0 ? ' has-garden' : ''}"><div class="detail-id-metric"><dt>Lakás<wbr>szám</dt><dd><h2 class="detail-apartment-number" tabindex="-1">${esc(a.id)}</h2></dd></div>${detailMetric('Beltér', a.areaInterior)}${detailMetric('Erkély', a.areaTerrace)}${hasNumber(a.areaGarden) && a.areaGarden > 0 ? detailMetric('Kert', a.areaGarden) : ''}</dl>`;
     }
     function detailPrice(a: any): any {
         return hasNumber(a.price) ? `<span class="price-value">${priceNumber.format(a.price)}</span> <small class="price-unit">Ft</small>` : `<span class="price-unavailable">${esc(apartmentPrice(a))}</span>`;
