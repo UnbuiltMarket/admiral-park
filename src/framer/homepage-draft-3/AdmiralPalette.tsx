@@ -59,10 +59,11 @@ const landing = `${aboveArticle}:has(${activeHero}[data-homepage-stage="orbitApp
 const parkedStages = ':is([data-homepage-stage="handoff"],[data-homepage-stage="orbit"])'
 const landed = `${aboveArticle}:is(:has(${activeHero}:is([data-orbit-arriving],${parkedStages})), :not(:has([data-homepage-nav-active])):has([data-admiral-homepage]${parkedStages}))`
 const mobileLanded = `${aboveArticle}:has(${activeHero}[data-homepage-nav-in-view]:is([data-orbit-arriving],${parkedStages}))`
+const apartmentListPage = ':root:has([data-admiral-apartment-list="shared"])'
 const header = '[data-framer-name="Header || Appear"]'
 const navHost = header + ' > nav'
-const mobileOrbitBar = `${mobileLanded} ${mobileBar} > ${glassBar}`
-const blueBar = `:is(${navbar}:has([data-admiral-nav-surface="blue"]), ${landed} ${glassBar}:not(${mobileBar} > ${navbar}), ${mobileOrbitBar})`
+const blueMobileBar = `:is(${mobileLanded}, ${apartmentListPage}) ${mobileBar} > ${glassBar}`
+const blueBar = `:is(${navbar}:has([data-admiral-nav-surface="blue"]), ${landed} ${glassBar}:not(${mobileBar} > ${navbar}), ${blueMobileBar}, ${apartmentListPage} ${glassBar})`
 const lightInquiry = `${blueBar} .admiral-frosted-button[data-appearance="blue"]`
 const handover = '[data-framer-name="Handover date glass"]'
 
@@ -123,9 +124,9 @@ ${blueBar} [data-framer-name="Logo"] { filter: brightness(0) invert(1); }
 ${blueBar} [data-framer-name="Link"] .framer-text,
 ${blueBar} [data-framer-name="Links"] .framer-text,
 ${blueBar} [data-desktop-tour-menu-button] button { color: #fff !important; --framer-text-color: #fff; }
-${mobileOrbitBar} :is([data-framer-name="Menu line 1"], [data-framer-name="Menu line 2"]) { background-color: #fff !important; }
-${mobileOrbitBar} [data-framer-name="Mobile menu links"] > [data-framer-name="Link"] { border-bottom-color: rgb(255 255 255 / 20%); }
-${mobileOrbitBar} [data-framer-name="Mobile menu links"] [data-framer-name="Link"] p { color: #fff !important; }
+${blueMobileBar} :is([data-framer-name="Menu line 1"], [data-framer-name="Menu line 2"]) { background-color: #fff !important; }
+${blueMobileBar} [data-framer-name="Mobile menu links"] > [data-framer-name="Link"] { border-bottom-color: rgb(255 255 255 / 20%); }
+${blueMobileBar} [data-framer-name="Mobile menu links"] [data-framer-name="Link"] p { color: #fff !important; }
 
 /* The blue navbar uses a white inquiry button. Glass navbars inherit the button’s blue appearance. */
 ${lightInquiry} {
@@ -158,9 +159,10 @@ ${lightInquiry}:focus-visible { outline: 2px solid white; outline-offset: 2px; }
     ${handover} { background: Canvas !important; box-shadow: none !important; --border-color: CanvasText !important; }
     ${handover} .framer-text { color: CanvasText !important; --framer-text-color: CanvasText !important; }
     [data-admiral-nav-surface]::after { display: none; }
-    ${mobileOrbitBar} [data-framer-name="Logo"] { filter: none; }
-    ${mobileOrbitBar} :is([data-framer-name="Menu line 1"], [data-framer-name="Menu line 2"]) { background-color: CanvasText !important; }
-    ${mobileOrbitBar} [data-framer-name="Mobile menu links"] [data-framer-name="Link"] p { color: LinkText !important; }
+    ${blueMobileBar}, ${apartmentListPage} ${glassBar} { color: CanvasText; }
+    :is(${blueMobileBar}, ${apartmentListPage} ${glassBar}) [data-framer-name="Logo"] { filter: none; }
+    ${blueMobileBar} :is([data-framer-name="Menu line 1"], [data-framer-name="Menu line 2"]) { background-color: CanvasText !important; }
+    ${blueMobileBar} [data-framer-name="Mobile menu links"] [data-framer-name="Link"] p { color: LinkText !important; }
     ${lightInquiry}, ${lightInquiry}:not(:disabled):not([aria-disabled="true"]):is(:hover, :active) {
         background: ButtonFace; color: ButtonText; border-color: ButtonText; box-shadow: none;
     }
