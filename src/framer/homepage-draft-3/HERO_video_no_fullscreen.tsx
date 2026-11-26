@@ -750,8 +750,11 @@ const homepageMobileOrbitStyles = `
 }
 [data-admiral-homepage] [data-orbit-studio][data-mobile="true"][data-orbit-glass-tone="paper"] {
     --studio-orbit-scale: 1;
+    --studio-phone-left: max(var(--studio-phone-gutter), env(safe-area-inset-left, 0px));
+    --studio-phone-right: max(var(--studio-phone-gutter), env(safe-area-inset-right, 0px));
+    --studio-bleed-height: calc((100cqw + var(--studio-phone-left) + var(--studio-phone-right)) * 1010 / 1920);
     top: max(58px, calc(env(safe-area-inset-top, 0px) + 48px));
-    padding-inline: max(var(--studio-phone-gutter), env(safe-area-inset-left, 0px)) max(var(--studio-phone-gutter), env(safe-area-inset-right, 0px));
+    padding-inline: var(--studio-phone-left) var(--studio-phone-right);
 }
 [data-admiral-homepage] [data-orbit-studio][data-mobile="true"] > :is([data-orbit-filters], [data-orbit-group]) { max-width: 100%; }
 /* Keep compact controls legible in WebKit over the orbit's composited layers. */
@@ -763,22 +766,34 @@ const homepageMobileOrbitStyles = `
 [data-admiral-homepage] :is([data-orbit-studio],[data-orbit-fullscreen-details])[data-mobile="true"] [data-orbit-inquiry] {
     font-family: Arial, Helvetica, sans-serif !important;
 }
+[data-admiral-homepage] [data-orbit-studio][data-mobile="true"][data-orbit-glass-tone="paper"] > [data-orbit-filters][data-presentation][data-active] {
+    border-radius: 16px; padding: 6px; margin-block-end: 8px;
+}
 [data-admiral-homepage] [data-orbit-studio][data-mobile="true"][data-orbit-glass-tone="paper"] > [data-orbit-filters][data-presentation][data-active]
     :is([data-orbit-filter-status], [data-orbit-range-toggle], [data-orbit-filter-reset]) {
-        height: 36px; min-height: 36px; border-radius: 999px;
+        height: 30px; min-height: 30px; border-radius: 999px;
     }
 [data-admiral-homepage] [data-orbit-studio][data-mobile="true"][data-orbit-glass-tone="paper"] > [data-orbit-filters][data-presentation][data-active]
-    :is([data-orbit-filter-status], [data-orbit-range-toggle]) { padding-inline: 10px; font-size: 11px; font-weight: 600; }
+    :is([data-orbit-filter-status], [data-orbit-range-toggle]) { padding-inline: 8px; gap: 4px; font-size: 11px; font-weight: 600; }
 [data-admiral-homepage] [data-orbit-studio][data-mobile="true"][data-orbit-glass-tone="paper"] > [data-orbit-filters][data-presentation]
-    .orbit-filter-statuses { grid-template-columns: minmax(max-content,1fr) minmax(max-content,1.5fr) minmax(max-content,.9fr); }
+    .orbit-filter-statuses { grid-template-columns: minmax(max-content,1fr) minmax(max-content,1.5fr) minmax(max-content,.9fr); gap: 5px; }
+[data-admiral-homepage] [data-orbit-studio][data-mobile="true"][data-orbit-glass-tone="paper"] > [data-orbit-filters][data-presentation]
+    [data-orbit-filter-row] { padding: 0; border-bottom: 0; }
+[data-admiral-homepage] [data-orbit-studio][data-mobile="true"][data-orbit-glass-tone="paper"] > [data-orbit-filters][data-presentation]
+    [data-orbit-filter-ranges] { margin: 5px 0 0; gap: 5px; }
 [data-admiral-homepage] [data-orbit-studio][data-mobile="true"][data-orbit-glass-tone="paper"] > [data-orbit-filters][data-presentation]
     .orbit-filter-dot { width: 5px; height: 5px; }
 [data-admiral-homepage] [data-orbit-studio][data-mobile="true"][data-orbit-glass-tone="paper"] > [data-orbit-filters][data-presentation][data-active]
-    [data-orbit-filter-reset] { flex-basis: 36px; width: 36px; padding: 0; }
+    [data-orbit-filter-reset] { flex-basis: 30px; width: 30px; padding: 0; }
+[data-admiral-homepage] [data-orbit-studio][data-mobile="true"][data-orbit-glass-tone="paper"] [data-orbit-housing] { gap: 8px; }
+[data-admiral-homepage] [data-orbit-studio][data-mobile="true"][data-orbit-glass-tone="paper"] [data-orbit-housing]::before,
+[data-admiral-homepage] [data-orbit-studio][data-mobile="true"][data-orbit-glass-tone="paper"] [data-orbit-housing]::after { content: none; }
 [data-admiral-homepage] [data-orbit-studio][data-mobile="true"][data-orbit-glass-tone="paper"] [data-orbit-housing]
     :is(.orbit-studio-status, .orbit-studio-mobile-metrics dt) { font-size: 11px; line-height: 1.35; }
 [data-admiral-homepage] [data-orbit-studio][data-mobile="true"][data-orbit-glass-tone="paper"] [data-orbit-housing] .orbit-studio-mobile-panel {
     grid-template-rows: minmax(0,1fr) auto;
+    border: 1px solid ${admiralPalette.lightGlassRim}; border-radius: 18px;
+    background: var(--orbit-light-glass); box-shadow: ${admiralPalette.lightGlassShadow};
 }
 [data-admiral-homepage] [data-orbit-studio][data-mobile="true"][data-orbit-glass-tone="paper"] [data-orbit-housing] .orbit-studio-mobile-summary {
     display: grid; grid-template-columns: minmax(0,1fr); grid-template-rows: auto auto;
@@ -798,6 +813,7 @@ const homepageMobileOrbitStyles = `
 }
 [data-admiral-homepage] [data-orbit-studio][data-mobile="true"][data-orbit-glass-tone="paper"] [data-orbit-housing] .orbit-studio-mobile-plan-button {
     width: 100%; height: 100%; max-height: 100%;
+    padding: clamp(8px,2.5cqw,12px);
 }
 [data-admiral-homepage] [data-orbit-studio][data-mobile="true"][data-orbit-glass-tone="paper"] [data-orbit-housing] .orbit-studio-mobile-actions {
     grid-column: 1 / -1; grid-row: 2; padding: 6px 8px 8px;
@@ -840,8 +856,21 @@ const homepageMobileOrbitStyles = `
     font-size: 11px; font-weight: 600;
 }
 @media (orientation: portrait) {
+    [data-admiral-homepage] [data-orbit-studio][data-mobile="true"][data-orbit-glass-tone="paper"] {
+        padding-bottom: max(8px, env(safe-area-inset-bottom, 0px));
+    }
     [data-admiral-homepage] [data-orbit-studio][data-mobile="true"][data-orbit-glass-tone="paper"] [data-orbit-housing] {
-        align-self: start; height: 100%; max-height: calc((100cqw + 2 * var(--studio-phone-gutter)) * 1010 / 1920 + 252px);
+        align-self: start; height: 100%;
+        max-height: calc(var(--studio-bleed-height) + 8px + clamp(226px, 35svh, 330px));
+        grid-template-rows: var(--studio-bleed-height) minmax(0, 1fr);
+    }
+    [data-admiral-homepage] [data-orbit-studio][data-mobile="true"][data-orbit-glass-tone="paper"] [data-orbit-housing] .orbit-studio-image-slot {
+        width: calc(100% + var(--studio-phone-left) + var(--studio-phone-right));
+        height: 100%; justify-self: start;
+        margin-inline: calc(-1 * var(--studio-phone-left)) calc(-1 * var(--studio-phone-right));
+    }
+    [data-admiral-homepage] [data-orbit-studio][data-mobile="true"] [data-orbit-housing] [data-orbit-viewport] {
+        border-radius: 0; box-shadow: none;
     }
     [data-admiral-homepage] [data-orbit-studio][data-mobile="true"][data-orbit-glass-tone="paper"] [data-orbit-housing] .orbit-studio-mobile-panel {
         grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
@@ -883,6 +912,14 @@ const homepageMobileOrbitStyles = `
     }
     [data-admiral-homepage] [data-orbit-studio][data-mobile="true"] [data-orbit-housing] .orbit-studio-mobile-metrics dt {
         margin-left: 0; text-align: left;
+    }
+}
+@media (orientation: landscape) and (max-width: 620px) and (max-height: 480px) {
+    [data-admiral-homepage] [data-orbit-studio][data-mobile="true"][data-orbit-glass-tone="paper"] [data-orbit-housing] .orbit-studio-mobile-panel {
+        grid-template-columns: minmax(0,1fr) minmax(0,1fr);
+    }
+    [data-admiral-homepage] [data-orbit-studio][data-mobile="true"][data-orbit-glass-tone="paper"] [data-orbit-housing] .orbit-studio-mobile-metrics :is(dd, div:first-child dd) {
+        font-size: 14px;
     }
 }
 @media (pointer: coarse) and (min-width: 810px) and (max-height: 480px) and (orientation: landscape) {
@@ -9014,7 +9051,7 @@ export default function AdmiralHomepageStudio(
             const scale = Math.max(w / 1920, h / 1010)
             const tx = x + (w - 1920 * scale) * focalX / 100, ty = y + (h - 1010 * scale) * focalY / 100
             flightMedia.style.transform = `translate3d(${tx}px,${ty}px,0) scale(${scale})`
-            const radius = orbitWindowRadius * a
+            const radius = g.x <= 1 && g.x + g.w >= g.width - 1 ? 0 : orbitWindowRadius * a
             const clip = `inset(${y}px ${Math.max(0,g.width - x - w)}px ${Math.max(0,g.height - y - h)}px ${x}px round 0 0 ${radius}px ${radius}px)`
             heroRoot!.style.clipPath = clip
             if (flightShade) flightShade.style.clipPath = clip
@@ -9068,7 +9105,8 @@ export default function AdmiralHomepageStudio(
                 Math.max(0, bounds.height - rect.y - rect.height) * cssScaleY +
                     "px"
             )
-            const frameRadius = studioEnabled.current
+            const fullWidth = rect.x <= 1 && rect.x + rect.width >= bounds.width - 1
+            const frameRadius = studioEnabled.current && !fullWidth
                 ? orbitWindowRadius * sequenceEase(sequenceClamp(presentationProgress))
                 : 0
             setStyle("--admiral-studio-corners", `0 0 ${frameRadius}px ${frameRadius}px`)
