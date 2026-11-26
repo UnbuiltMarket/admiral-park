@@ -58,9 +58,11 @@ const journey = `:root:has(${activeHero})`
 const landing = `${aboveArticle}:has(${activeHero}[data-homepage-stage="orbitApproach"]:not([data-orbit-arriving]))`
 const parkedStages = ':is([data-homepage-stage="handoff"],[data-homepage-stage="orbit"])'
 const landed = `${aboveArticle}:is(:has(${activeHero}:is([data-orbit-arriving],${parkedStages})), :not(:has([data-homepage-nav-active])):has([data-admiral-homepage]${parkedStages}))`
+const mobileLanded = `${aboveArticle}:has(${activeHero}[data-homepage-nav-in-view]:is([data-orbit-arriving],${parkedStages}))`
 const header = '[data-framer-name="Header || Appear"]'
 const navHost = header + ' > nav'
-const blueBar = `:is(${navbar}:has([data-admiral-nav-surface="blue"]), ${landed} ${glassBar}:not(${mobileBar} > ${navbar}))`
+const mobileOrbitBar = `${mobileLanded} ${mobileBar} > ${glassBar}`
+const blueBar = `:is(${navbar}:has([data-admiral-nav-surface="blue"]), ${landed} ${glassBar}:not(${mobileBar} > ${navbar}), ${mobileOrbitBar})`
 const lightInquiry = `${blueBar} .admiral-frosted-button[data-appearance="blue"]`
 const handover = '[data-framer-name="Handover date glass"]'
 
@@ -114,14 +116,16 @@ ${handover} .framer-text {
     background: ${admiralPalette.panelGradient}; pointer-events: none;
     opacity: 0; transition: opacity .42s ease-in-out;
 }
-[data-admiral-nav-surface="blue"]::after, ${landed} [data-admiral-nav-surface="glass"]::after { opacity: 1; }
-${landed} [data-admiral-nav-surface="glass"]::after { transition: none; }
-${mobileBar} [data-admiral-nav-surface="glass"]::after { display: none; }
-${landed} ${closedMobile} > ${glassBar} { background-color: rgb(246 250 253 / 65%) !important; }
+[data-admiral-nav-surface="blue"]::after, ${blueBar} [data-admiral-nav-surface="glass"]::after { opacity: 1; }
+${blueBar} [data-admiral-nav-surface="glass"]::after, ${mobileBar} [data-admiral-nav-surface="glass"]::after { transition: none; }
+${landed}:not(${mobileLanded}) ${closedMobile} > ${glassBar} { background-color: rgb(246 250 253 / 65%) !important; }
 ${blueBar} [data-framer-name="Logo"] { filter: brightness(0) invert(1); }
 ${blueBar} [data-framer-name="Link"] .framer-text,
 ${blueBar} [data-framer-name="Links"] .framer-text,
 ${blueBar} [data-desktop-tour-menu-button] button { color: #fff !important; --framer-text-color: #fff; }
+${mobileOrbitBar} :is([data-framer-name="Menu line 1"], [data-framer-name="Menu line 2"]) { background-color: #fff !important; }
+${mobileOrbitBar} [data-framer-name="Mobile menu links"] > [data-framer-name="Link"] { border-bottom-color: rgb(255 255 255 / 20%); }
+${mobileOrbitBar} [data-framer-name="Mobile menu links"] [data-framer-name="Link"] p { color: #fff !important; }
 
 /* The blue navbar uses a white inquiry button. Glass navbars inherit the button’s blue appearance. */
 ${lightInquiry} {
@@ -154,6 +158,9 @@ ${lightInquiry}:focus-visible { outline: 2px solid white; outline-offset: 2px; }
     ${handover} { background: Canvas !important; box-shadow: none !important; --border-color: CanvasText !important; }
     ${handover} .framer-text { color: CanvasText !important; --framer-text-color: CanvasText !important; }
     [data-admiral-nav-surface]::after { display: none; }
+    ${mobileOrbitBar} [data-framer-name="Logo"] { filter: none; }
+    ${mobileOrbitBar} :is([data-framer-name="Menu line 1"], [data-framer-name="Menu line 2"]) { background-color: CanvasText !important; }
+    ${mobileOrbitBar} [data-framer-name="Mobile menu links"] [data-framer-name="Link"] p { color: LinkText !important; }
     ${lightInquiry}, ${lightInquiry}:not(:disabled):not([aria-disabled="true"]):is(:hover, :active) {
         background: ButtonFace; color: ButtonText; border-color: ButtonText; box-shadow: none;
     }

@@ -824,20 +824,30 @@ const homepageMobileOrbitStyles = `
 [data-admiral-homepage] [data-orbit-studio][data-mobile="true"][data-orbit-glass-tone="paper"] [data-orbit-housing] .orbit-studio-mobile-plan-button {
     width: 100%; height: 100%; max-height: 100%;
     padding: clamp(var(--studio-card-inset),3cqw,14px);
+    grid-template-rows: minmax(0,1fr) auto; row-gap: 4px;
+}
+[data-admiral-homepage] .orbit-studio-mobile-plan-button:focus-visible {
+    outline: 2px solid #2166a0; outline-offset: -3px;
+}
+[data-admiral-homepage] .orbit-studio-mobile-plan-button:not(:disabled) { cursor: pointer; }
+[data-admiral-homepage] .orbit-studio-mobile-plan-cue {
+    display: inline-flex; align-items: center; justify-self: end; gap: 4px;
+    color: #155b91; font-size: 12px; font-weight: 600; line-height: 1.2;
+}
+[data-admiral-homepage] .orbit-studio-mobile-plan-cue svg { width: 12px; height: 12px; }
+[data-admiral-homepage] .orbit-studio-mobile-plan-button:not(:disabled):is(:hover, :focus-visible) .orbit-studio-mobile-plan-cue {
+    color: #0b4170; text-decoration: underline;
 }
 [data-admiral-homepage] [data-orbit-studio][data-mobile="true"][data-orbit-glass-tone="paper"] [data-orbit-housing] .orbit-studio-mobile-actions {
     align-self: end; padding: 0; border: 0;
 }
 [data-admiral-homepage] [data-orbit-studio][data-mobile="true"][data-orbit-glass-tone="paper"] [data-orbit-housing] .orbit-studio-mobile-actions .orbit-studio-bottom {
-    display: flex; flex-direction: row; gap: 4px;
+    display: block;
 }
 [data-admiral-homepage] [data-orbit-studio][data-mobile="true"][data-orbit-glass-tone="paper"] [data-orbit-housing] .orbit-studio-primary {
-    box-sizing: border-box; flex: 1 1 auto; min-width: 0; width: auto;
+    box-sizing: border-box; min-width: 0; width: 100%;
     min-height: var(--studio-action-height); border-radius: var(--studio-action-radius);
-    padding: 4px; gap: 3px; font-size: 11px; font-weight: 600;
-}
-[data-admiral-homepage] [data-orbit-studio][data-mobile="true"][data-orbit-glass-tone="paper"] [data-orbit-housing] .orbit-studio-primary svg {
-    width: 10px; height: 10px;
+    padding: 4px; font-size: 11px; font-weight: 600;
 }
 [data-admiral-homepage] [data-orbit-studio][data-mobile="true"][data-orbit-glass-tone="paper"] [data-orbit-housing] .orbit-studio-primary[data-orbit-inquiry],
 [data-admiral-homepage] [data-orbit-fullscreen-details][data-mobile="true"] .orbit-fullscreen-detail[data-orbit-inquiry] {
@@ -896,11 +906,6 @@ const homepageMobileOrbitStyles = `
         flex: 0 0 auto; min-height: 44px; gap: 4px; padding-bottom: 6px;
     }
 }
-@media (orientation: portrait) and (min-height: 620px) {
-    [data-admiral-homepage] [data-orbit-studio][data-mobile="true"][data-orbit-glass-tone="paper"] [data-orbit-housing] .orbit-studio-mobile-actions .orbit-studio-bottom {
-        flex-direction: column; gap: 6px;
-    }
-}
 @media (orientation: portrait) and (max-height: 550px) {
     [data-admiral-homepage] [data-orbit-studio][data-mobile="true"][data-orbit-glass-tone="paper"] [data-orbit-housing] .orbit-studio-mobile-summary {
         gap: 4px;
@@ -916,11 +921,6 @@ const homepageMobileOrbitStyles = `
     }
     [data-admiral-homepage] [data-orbit-studio][data-mobile="true"][data-orbit-glass-tone="paper"] [data-orbit-housing] .orbit-studio-mobile-metrics :is(dd, div:first-child dd) {
         line-height: 1.1;
-    }
-}
-@media (orientation: portrait) and (max-width: 350px), (orientation: landscape) and (max-width: 620px) and (max-height: 480px) {
-    [data-admiral-homepage] [data-orbit-studio][data-mobile="true"][data-orbit-glass-tone="paper"] [data-orbit-housing] .orbit-studio-primary {
-        padding-inline: 3px; font-size: 10px;
     }
 }
 @media (orientation: landscape) and (max-height: 480px) {
@@ -6247,12 +6247,8 @@ function OrbitApartmentStudio(
     }
     const detailActionContent = (
         <>
-            <span>{mobile ? (hu ? "Adatlap" : "Details") : labels.details}</span>
-            {mobile ? (
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true">
-                    <path d="M5 12h14m-6-6 6 6-6 6" />
-                </svg>
-            ) : <span aria-hidden="true">↗</span>}
+            <span>{labels.details}</span>
+            <span aria-hidden="true">↗</span>
         </>
     )
     const detailsAction = onOpenDetails ? (
@@ -6309,7 +6305,6 @@ function OrbitApartmentStudio(
                     </p>
                 </div>
             )}
-            {mobile && detailsAction}
             {inquiryLink && (
                 <a
                     className="orbit-studio-primary admiral-frosted-button"
@@ -6568,20 +6563,14 @@ function OrbitApartmentStudio(
                                             type="button"
                                             className="orbit-studio-mobile-plan-button"
                                             data-orbit-detail-link=""
-                                            aria-haspopup="dialog"
+                                            aria-haspopup={onOpenDetails ? "dialog" : undefined}
                                             aria-label={
                                                 hu
                                                     ? `${apartment.id} adatlap megnyitása`
                                                     : `Open apartment ${apartment.id} details`
                                             }
-                                            disabled={
-                                                !transition.interactive ||
-                                                !onOpenDetails
-                                            }
-                                            onClick={() => {
-                                                if (transition.interactive)
-                                                    onOpenDetails?.()
-                                            }}
+                                            disabled={!canOpenPlan}
+                                            onClick={openPlanDetails}
                                         >
                                             <span
                                                 className="orbit-studio-plan-stage"
@@ -6619,6 +6608,14 @@ function OrbitApartmentStudio(
                                                     </span>
                                                 )}
                                             </span>
+                                            {(onOpenDetails || detailLink) && (
+                                                <span className="orbit-studio-mobile-plan-cue" aria-hidden="true">
+                                                    <span>{hu ? "Adatlap" : "Details"}</span>
+                                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                                                        <path d="M5 12h14m-6-6 6 6-6 6" />
+                                                    </svg>
+                                                </span>
+                                            )}
                                         </button>
                                     </figure>
                                     <div
@@ -10606,6 +10603,7 @@ export default function AdmiralHomepageStudio(
             data-orbit-shared-backdrop={useStudio && blueStudio && pageBackdrop ? "" : undefined}
             data-homepage-stage={stage}
             data-homepage-nav-active={String(hostActive)}
+            data-homepage-nav-in-view={hostVisible ? "" : undefined}
             data-orbit-image-format={useGitHubAssets ? imageFormat ?? undefined : undefined}
             data-homepage-booted={String(homepageBooted)}
             data-direct-orbit-entry={String(!!directOrbitEntry)}
