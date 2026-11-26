@@ -48,8 +48,8 @@ interface SurfaceProps {
 const navbar = '[data-framer-name="Navbar"]'
 const materialBar = navbar + ':has([data-admiral-nav-surface])'
 const glassBar = navbar + ':has([data-admiral-nav-surface="glass"])'
-const openMobile = '[data-framer-name="MOBILE_LG_OPEN"]'
 const closedMobile = '[data-framer-name="MOBILE_LG"]'
+const mobileBar = ':is([data-framer-name="MOBILE_LG"], [data-framer-name="MOBILE_LG_OPEN"])'
 // Framer can mount hidden breakpoint copies. Follow the hero that owns the
 // camera and use its actual panel reveal, including direct entry or Skip.
 const activeHero = '[data-admiral-homepage][data-homepage-nav-active="true"]'
@@ -60,7 +60,7 @@ const parkedStages = ':is([data-homepage-stage="handoff"],[data-homepage-stage="
 const landed = `${aboveArticle}:is(:has(${activeHero}:is([data-orbit-arriving],${parkedStages})), :not(:has([data-homepage-nav-active])):has([data-admiral-homepage]${parkedStages}))`
 const header = '[data-framer-name="Header || Appear"]'
 const navHost = header + ' > nav'
-const blueBar = `:is(${navbar}:has([data-admiral-nav-surface="blue"]), ${landed} ${glassBar}:not(${openMobile} > ${navbar}))`
+const blueBar = `:is(${navbar}:has([data-admiral-nav-surface="blue"]), ${landed} ${glassBar}:not(${mobileBar} > ${navbar}))`
 const lightInquiry = `${blueBar} .admiral-frosted-button[data-appearance="blue"]`
 const handover = '[data-framer-name="Handover date glass"]'
 
@@ -114,13 +114,13 @@ ${handover} .framer-text {
     background: ${admiralPalette.panelGradient}; pointer-events: none;
     opacity: 0; transition: opacity .42s ease-in-out;
 }
-[data-admiral-nav-surface="blue"]::after, ${landed} [data-admiral-nav-surface="glass"]:not(${openMobile} [data-admiral-nav-surface])::after { opacity: 1; }
+[data-admiral-nav-surface="blue"]::after, ${landed} [data-admiral-nav-surface="glass"]:not(${mobileBar} [data-admiral-nav-surface])::after { opacity: 1; }
 ${landed} [data-admiral-nav-surface="glass"]::after { transition: none; }
+${landed} ${closedMobile} > ${glassBar} { background-color: rgb(246 250 253 / 65%) !important; }
 ${blueBar} [data-framer-name="Logo"] { filter: brightness(0) invert(1); }
 ${blueBar} [data-framer-name="Link"] .framer-text,
 ${blueBar} [data-framer-name="Links"] .framer-text,
 ${blueBar} [data-desktop-tour-menu-button] button { color: #fff !important; --framer-text-color: #fff; }
-${closedMobile} > ${blueBar} [data-framer-name^="Menu line "] { background: white !important; }
 
 /* The blue navbar uses a white inquiry button. Glass navbars inherit the button’s blue appearance. */
 ${lightInquiry} {

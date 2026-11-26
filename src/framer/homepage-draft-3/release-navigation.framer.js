@@ -215,6 +215,7 @@
         const mobileClosed = "RBw5RGsxX"
         const mobileOpen = "otenexeuQ"
         const desktop = "x5whu27Ce"
+        const navigationNavy = tree.token("oFWpnXGiK")
         const pages = ["Phxhru9uu", "kbkbxs570", "ZmD0CLV3Z", "A8W8FsOjk", "XLriEYHai"]
         const privacy = "kepPPkXui"
         if (tree.get(privacy)?.$layoutTemplateId === template) pages.push(privacy)
@@ -244,7 +245,13 @@
         }
         for (const variant of [mobileClosed, mobileOpen]) {
             const isOpen = variant === mobileOpen
+            // Use the bottom gutter for more space around the 44px controls.
+            tree.patch(variant, { padding: "8px 10px 0px 10px" })
+            tree.patch(`${variant}XtrBtHXVP`, { padding: "4px 8px", radius: "26px" })
+            tree.patch(`${variant}xb3fgxYOT`, { "$control__radius": 26 })
+            tree.patch(`${variant}U_NhgbaxW`, { height: "44px", top: "4px" })
             tree.patch(`${variant}BL5MI0ckm`, { height: "44px", padding: "0px" })
+            tree.patch(`${variant}aRgWhLeCB`, { width: "124px", "$control__width": 124 })
             tree.patch(`${variant}Ddw6Oriwu`, { height: "44px" })
             tree.patch(`${variant}cpKq9Al9R`, {
                 fill: null, border: null, boxShadows: [], radius: "0px",
@@ -253,7 +260,7 @@
             tree.patch(`${variant}kYSDnMgz5`, { visible: false })
             for (const [index, id] of ["P1ZidUzqV", "JG7KK45jO"].entries()) {
                 tree.patch(`${variant}${id}`, {
-                    visible: true, width: "23px", height: "2px", left: "10.5px",
+                    visible: true, fill: navigationNavy, width: "23px", height: "2px", left: "10.5px",
                     top: isOpen ? "21px" : index === 0 ? "17px" : "25px",
                     rotateZ: isOpen ? (index === 0 ? "45deg" : "-45deg") : "0deg",
                 })
@@ -269,7 +276,7 @@
         for (const [index, row] of rows.entries()) {
             tree.patch(`${mobileOpen}${row}`, { height: "64px" })
             tree.patch(`${mobileOpen}${links[index]}`, {
-                height: "1fr", "$control__XSbTnrhXC": 28, "$control__fxVoGXxWM": "#123c59",
+                height: "1fr", "$control__XSbTnrhXC": 28, "$control__fxVoGXxWM": navigationNavy,
             })
         }
 
@@ -284,6 +291,9 @@
         const name = "Admiral Park phone menu viewport"
         const snippet = tree.getNodesOfTypes("CustomCodeNode").find(node => node.name === name)
         const code = `<style>
+:is([data-framer-name="MOBILE_LG"], [data-framer-name="MOBILE_LG_OPEN"]) > [data-framer-name="Navbar"] .admiral-frosted-button[data-appearance="blue"] {
+  padding-inline: 16px !important;
+}
 /* Keep the inquiry label legible in WebKit over the homepage video. */
 :is([data-framer-name="MOBILE_LG"], [data-framer-name="MOBILE_LG_OPEN"]) > [data-framer-name="Navbar"] .admiral-frosted-button[data-appearance="blue"] > span {
   font-family: Arial, sans-serif !important;
@@ -330,7 +340,7 @@
 [data-framer-name="MOBILE_LG_OPEN"] [data-framer-name="Mobile menu links"] [data-framer-name="Link"] p {
   --framer-font-size: clamp(24px, 7.2vw, 36px) !important;
   --framer-font-weight: 600 !important;
-  --framer-text-color: #123c59 !important;
+  --framer-text-color: var(--token-oFWpnXGiK, #113655) !important;
   font-size: var(--framer-font-size) !important;
   font-weight: var(--framer-font-weight) !important;
   color: var(--framer-text-color) !important;

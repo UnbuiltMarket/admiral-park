@@ -156,7 +156,7 @@ for (const menuVariant of [open, "otenexeuQ"]) {
         tree.patch(`${menuVariant}${instance}`, {
             "$control__lb6Os26Xe": mobileMenuLabels[index],
             "$control__XSbTnrhXC": menuVariant === open ? 15 : 28,
-            "$control__fxVoGXxWM": blue,
+            "$control__fxVoGXxWM": menuVariant === open ? blue : tree.token("oFWpnXGiK"),
         })
     }
 }
