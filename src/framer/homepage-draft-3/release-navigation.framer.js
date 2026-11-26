@@ -280,6 +280,11 @@
         const name = "Admiral Park phone menu viewport"
         const snippet = tree.getNodesOfTypes("CustomCodeNode").find(node => node.name === name)
         const code = `<style>
+/* Keep the inquiry label legible in WebKit over the homepage video. */
+:is([data-framer-name="MOBILE_LG"], [data-framer-name="MOBILE_LG_OPEN"]) > [data-framer-name="Navbar"] .admiral-frosted-button[data-appearance="blue"] > span {
+  font-family: Arial, sans-serif !important;
+  font-weight: 700 !important;
+}
 [data-framer-name="MOBILE_LG_OPEN"] > [data-framer-name="Navbar"] {
   height: 82vh !important;
   height: 82svh !important;
@@ -304,8 +309,19 @@
   border-bottom: 1px solid rgba(18, 60, 89, .12);
 }
 [data-framer-name="MOBILE_LG_OPEN"] [data-framer-name="Mobile menu links"] [data-framer-name="Link"] a {
+  flex-direction: row !important;
+  align-items: center !important;
   justify-content: flex-start !important;
   padding-inline: 10px !important;
+}
+[data-framer-name="MOBILE_LG_OPEN"] [data-framer-name="Mobile menu links"] a > [data-framer-component-type="RichTextContainer"] {
+  position: relative !important;
+  inset: auto !important;
+  transform: none !important;
+  align-self: auto !important;
+}
+[data-framer-name="MOBILE_LG_OPEN"] [data-framer-name="Mobile menu links"] a > [data-framer-component-type="RichTextContainer"] + [data-framer-component-type="RichTextContainer"] {
+  display: none !important;
 }
 [data-framer-name="MOBILE_LG_OPEN"] [data-framer-name="Mobile menu links"] [data-framer-name="Link"] p {
   --framer-font-size: clamp(24px, 7.2vw, 36px) !important;
