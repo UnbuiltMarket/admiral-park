@@ -754,23 +754,82 @@ const homepageMobileOrbitStyles = `
     padding-inline: max(var(--studio-phone-gutter), env(safe-area-inset-left, 0px)) max(var(--studio-phone-gutter), env(safe-area-inset-right, 0px));
 }
 [data-admiral-homepage] [data-orbit-studio][data-mobile="true"] > :is([data-orbit-filters], [data-orbit-group]) { max-width: 100%; }
+/* Keep compact controls legible in WebKit over the orbit's composited layers. */
+[data-admiral-homepage] :is([data-orbit-studio],[data-orbit-fullscreen-details])[data-mobile="true"] {
+    font-family: Arial, Helvetica, sans-serif;
+}
+[data-admiral-homepage] :is([data-orbit-studio],[data-orbit-fullscreen-details])[data-mobile="true"]
+    :is(button,[data-orbit-range-popover]) { font-family: inherit; }
+[data-admiral-homepage] :is([data-orbit-studio],[data-orbit-fullscreen-details])[data-mobile="true"] [data-orbit-inquiry] {
+    font-family: Arial, Helvetica, sans-serif !important;
+}
+[data-admiral-homepage] [data-orbit-studio][data-mobile="true"][data-orbit-glass-tone="paper"] > [data-orbit-filters][data-presentation][data-active]
+    :is([data-orbit-filter-status], [data-orbit-range-toggle], [data-orbit-filter-reset]) {
+        height: 36px; min-height: 36px; border-radius: 999px;
+    }
+[data-admiral-homepage] [data-orbit-studio][data-mobile="true"][data-orbit-glass-tone="paper"] > [data-orbit-filters][data-presentation][data-active]
+    :is([data-orbit-filter-status], [data-orbit-range-toggle]) { padding-inline: 10px; font-size: 11px; font-weight: 600; }
 [data-admiral-homepage] [data-orbit-studio][data-mobile="true"][data-orbit-glass-tone="paper"] > [data-orbit-filters][data-presentation]
-    :is([data-orbit-filter-status], [data-orbit-range-toggle], [data-orbit-filter-reset]) { min-height: 44px; }
+    .orbit-filter-statuses { grid-template-columns: minmax(max-content,1fr) minmax(max-content,1.5fr) minmax(max-content,.9fr); }
 [data-admiral-homepage] [data-orbit-studio][data-mobile="true"][data-orbit-glass-tone="paper"] > [data-orbit-filters][data-presentation]
-    :is([data-orbit-filter-status], [data-orbit-range-toggle]) { font-size: 11px; font-weight: 600; }
+    .orbit-filter-dot { width: 5px; height: 5px; }
+[data-admiral-homepage] [data-orbit-studio][data-mobile="true"][data-orbit-glass-tone="paper"] > [data-orbit-filters][data-presentation][data-active]
+    [data-orbit-filter-reset] { flex-basis: 36px; width: 36px; padding: 0; }
 [data-admiral-homepage] [data-orbit-studio][data-mobile="true"][data-orbit-glass-tone="paper"] [data-orbit-housing]
     :is(.orbit-studio-status, .orbit-studio-mobile-metrics dt) { font-size: 11px; line-height: 1.35; }
+[data-admiral-homepage] [data-orbit-studio][data-mobile="true"][data-orbit-glass-tone="paper"] [data-orbit-housing] .orbit-studio-mobile-panel {
+    grid-template-rows: minmax(0,1fr) auto;
+}
 [data-admiral-homepage] [data-orbit-studio][data-mobile="true"][data-orbit-glass-tone="paper"] [data-orbit-housing] .orbit-studio-mobile-summary {
-    display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr) auto; min-height: 0;
+    display: grid; grid-template-columns: minmax(0,1fr); grid-template-rows: auto auto;
+    align-content: start; min-height: 0; gap: 6px;
 }
 [data-admiral-homepage] [data-orbit-studio][data-mobile="true"][data-orbit-glass-tone="paper"] [data-orbit-housing] .orbit-studio-mobile-metrics {
-    min-height: 0; align-content: start; overflow-y: auto; overscroll-behavior-y: auto; touch-action: pan-y;
+    min-height: 0; align-content: start; gap: 4px;
+}
+[data-admiral-homepage] [data-orbit-studio][data-mobile="true"][data-orbit-glass-tone="paper"] [data-orbit-housing] .orbit-studio-mobile-metrics > div {
+    flex-wrap: nowrap;
+}
+[data-admiral-homepage] [data-orbit-studio][data-mobile="true"][data-orbit-glass-tone="paper"] [data-orbit-housing] .orbit-studio-mobile-metrics dt {
+    font-size: 10px; line-height: 1.2;
+}
+[data-admiral-homepage] [data-orbit-studio][data-mobile="true"][data-orbit-glass-tone="paper"] [data-orbit-housing] .orbit-studio-mobile-metrics :is(dd, div:first-child dd) {
+    font-size: clamp(13px,4cqw,16px); line-height: 1.2; font-variant-numeric: tabular-nums;
 }
 [data-admiral-homepage] [data-orbit-studio][data-mobile="true"][data-orbit-glass-tone="paper"] [data-orbit-housing] .orbit-studio-mobile-plan-button {
     width: 100%; height: 100%; max-height: 100%;
 }
+[data-admiral-homepage] [data-orbit-studio][data-mobile="true"][data-orbit-glass-tone="paper"] [data-orbit-housing] .orbit-studio-mobile-actions {
+    grid-column: 1 / -1; grid-row: 2; padding: 6px 8px 8px;
+    border-top: 1px solid var(--studio-line);
+}
+[data-admiral-homepage] [data-orbit-studio][data-mobile="true"][data-orbit-glass-tone="paper"] [data-orbit-housing] .orbit-studio-mobile-actions .orbit-studio-bottom {
+    display: grid; grid-template-columns: repeat(auto-fit,minmax(100px,1fr)); gap: 8px;
+}
 [data-admiral-homepage] [data-orbit-studio][data-mobile="true"][data-orbit-glass-tone="paper"] [data-orbit-housing] .orbit-studio-primary {
     min-height: 44px; font-size: 12px; font-weight: 600;
+}
+[data-admiral-homepage] [data-orbit-studio][data-mobile="true"][data-orbit-glass-tone="paper"] [data-orbit-housing] .orbit-studio-primary[data-orbit-inquiry],
+[data-admiral-homepage] [data-orbit-fullscreen-details][data-mobile="true"] .orbit-fullscreen-detail[data-orbit-inquiry] {
+    min-height: 44px; color: #fff; border-color: ${admiralPalette.inquiryRim};
+    background: ${admiralPalette.inquiryGradient}; box-shadow: ${admiralPalette.inquiryShadow};
+}
+[data-admiral-homepage] [data-orbit-fullscreen-details][data-mobile="true"] .orbit-fullscreen-detail[data-orbit-inquiry] { text-decoration: none; }
+[data-admiral-homepage] [data-orbit-fullscreen-details][data-mobile="true"] .orbit-fullscreen-detail[data-orbit-inquiry][aria-disabled="true"] {
+    opacity: .45; pointer-events: none;
+}
+[data-admiral-homepage] [data-orbit-fullscreen-details][data-mobile="true"] .orbit-fullscreen-detail[data-orbit-inquiry]:focus-visible {
+    outline: 2px solid #2166a0; outline-offset: 2px;
+}
+[data-admiral-homepage] :is(.orbit-studio-mobile-identity,[data-orbit-fullscreen-details][data-mobile="true"]) > [data-orbit-favorite],
+[data-admiral-homepage] :is(.orbit-studio-mobile-identity,[data-orbit-fullscreen-details][data-mobile="true"]) > [data-orbit-favorite]:hover {
+    border: 0; background: transparent; box-shadow: none;
+}
+[data-admiral-homepage] :is(.orbit-studio-mobile-identity,[data-orbit-fullscreen-details][data-mobile="true"]) > [data-orbit-favorite] svg {
+    width: 27px; height: 27px;
+}
+[data-admiral-homepage] [data-orbit-fullscreen-details][data-mobile="true"] > [data-orbit-favorite] svg {
+    color: #fff; filter: drop-shadow(0 1px 2px rgb(0 0 0 / 55%));
 }
 [data-admiral-homepage] [data-orbit-fullscreen-details][data-compact="true"][data-orbit-glass-tone] .orbit-fullscreen-stats dt {
     font-size: 10px; line-height: 1.3;
@@ -793,9 +852,6 @@ const homepageMobileOrbitStyles = `
     [data-admiral-homepage] [data-orbit-studio][data-mobile="true"][data-orbit-glass-tone="paper"] [data-orbit-housing] .orbit-studio-mobile-identity {
         flex: 0 0 auto; min-height: 44px; gap: 4px; padding-bottom: 6px;
     }
-    [data-admiral-homepage] [data-orbit-studio][data-mobile="true"][data-orbit-glass-tone="paper"] [data-orbit-housing] .orbit-studio-mobile-metrics { gap: 6px; }
-    [data-admiral-homepage] [data-orbit-studio][data-mobile="true"][data-orbit-glass-tone="paper"] [data-orbit-housing] .orbit-studio-price { padding-block: 6px; }
-    [data-admiral-homepage] [data-orbit-studio][data-mobile="true"][data-orbit-glass-tone="paper"] [data-orbit-housing] .orbit-studio-mobile-actions .orbit-studio-bottom { gap: 5px; }
 }
 @media (orientation: landscape) and (max-height: 480px) {
     [data-admiral-homepage] [data-orbit-studio][data-mobile="true"][data-orbit-glass-tone="paper"] {
@@ -828,23 +884,32 @@ const homepageMobileOrbitStyles = `
     [data-admiral-homepage] [data-orbit-studio][data-mobile="true"] [data-orbit-housing] .orbit-studio-mobile-metrics dt {
         margin-left: 0; text-align: left;
     }
-    [data-admiral-homepage] [data-orbit-studio][data-mobile="true"][data-orbit-glass-tone="paper"] [data-orbit-housing] .orbit-studio-price { padding-block: 4px; }
-    [data-admiral-homepage] [data-orbit-studio][data-mobile="true"][data-orbit-glass-tone="paper"] [data-orbit-housing] .orbit-studio-mobile-actions .orbit-studio-bottom { gap: 4px; }
 }
 @media (pointer: coarse) and (min-width: 810px) and (max-height: 480px) and (orientation: landscape) {
     [data-admiral-homepage] [data-orbit-studio][data-mobile="true"][data-orbit-glass-tone="paper"] {
         top: max(84px, calc(env(safe-area-inset-top, 0px) + 48px));
     }
 }
-[data-admiral-homepage] button[data-orbit-fullscreen-open] { position:absolute; z-index:4; left:calc(var(--admiral-image-x, 0px) + var(--admiral-image-width, 100%) - 6px); top:calc(var(--admiral-image-y, 0px) + var(--admiral-image-height, 100%) - 6px); transform:translate(-100%,-100%); display:grid; place-items:center; width:44px; height:44px; min-height:44px; padding:0; appearance:none; border:0; border-radius:50%; background:transparent; color:#242824; cursor:pointer; touch-action:manipulation; -webkit-tap-highlight-color:transparent; }
-[data-admiral-homepage] button[data-orbit-fullscreen-open]::before { content:""; position:absolute; inset:6px; border:1px solid rgba(255,255,255,.72); border-radius:50%; background:linear-gradient(145deg,rgba(255,255,255,.94),rgba(222,239,244,.83)); -webkit-backdrop-filter:blur(12px) saturate(145%); backdrop-filter:blur(12px) saturate(145%); box-shadow:inset 0 1px 1px rgba(255,255,255,.18),inset 0 -1px 0 rgba(24,59,67,.08),0 3px 10px rgba(20,32,24,.22); transition:background .18s,box-shadow .18s; }
-[data-admiral-homepage] button[data-orbit-fullscreen-open] svg { position:relative; width:15px; height:15px; }
-[data-admiral-homepage] button[data-orbit-fullscreen-open]:focus-visible { outline:2px solid #242824; outline-offset:3px; }
-[data-admiral-homepage] button[data-orbit-fullscreen-open]:active::before { background:rgba(255,255,255,.30); box-shadow:inset 0 1px 3px rgba(24,59,67,.14),0 1px 4px rgba(20,32,24,.12); }
-@media (hover:hover) and (pointer:fine) { [data-admiral-homepage] button[data-orbit-fullscreen-open]:hover::before { background:rgba(255,255,255,.42); box-shadow:inset 0 1px 1px rgba(255,255,255,.22),0 3px 12px rgba(20,32,24,.14); } }
-@supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))) { [data-admiral-homepage] button[data-orbit-fullscreen-open]::before { background:rgba(255,255,255,.82); } }
-@media (prefers-reduced-transparency:reduce) { [data-admiral-homepage] button[data-orbit-fullscreen-open]::before { background:#edf3f3; -webkit-backdrop-filter:none; backdrop-filter:none; } }
-@media (prefers-reduced-motion:reduce) { [data-admiral-homepage] button[data-orbit-fullscreen-open]::before { transition:none; } }
+[data-admiral-homepage] button[data-orbit-fullscreen-open] {
+    position:absolute; z-index:4;
+    left:calc(var(--admiral-image-x, 0px) + var(--admiral-image-width, 100%) - 6px);
+    top:calc(var(--admiral-image-y, 0px) + var(--admiral-image-height, 100%) - 6px);
+    transform:translate(-100%,-100%);
+    display:grid; place-items:center;
+    width:44px; height:44px; min-height:44px; padding:0;
+    appearance:none; border:0; border-radius:8px; background:transparent; color:white;
+    cursor:pointer; touch-action:manipulation; -webkit-tap-highlight-color:transparent;
+}
+:is([data-admiral-homepage] button[data-orbit-fullscreen-open], [data-orbit-side-controls][data-mobile="true"] [data-orbit-side-arrow])::before {
+    content:""; position:absolute; inset:8px; border:1px solid rgba(255,255,255,.35); border-radius:8px;
+    background:rgba(17,54,85,.9); box-shadow:0 1px 5px rgba(7,22,36,.2); pointer-events:none;
+}
+[data-admiral-homepage] button[data-orbit-fullscreen-open] svg { position:relative; width:14px; height:14px; }
+[data-admiral-homepage] button[data-orbit-fullscreen-open]:focus-visible { outline:2px solid #113655; outline-offset:3px; }
+:is([data-admiral-homepage] button[data-orbit-fullscreen-open], [data-orbit-side-controls][data-mobile="true"] [data-orbit-side-arrow]):active::before { background:#113655; }
+@media (prefers-reduced-transparency:reduce) {
+    :is([data-admiral-homepage] button[data-orbit-fullscreen-open], [data-orbit-side-controls][data-mobile="true"] [data-orbit-side-arrow])::before { background:#113655; }
+}
 `
 function homepageBlocked(target: EventTarget | null) {
     return (
@@ -3265,6 +3330,7 @@ interface OrbitFilterBarProps {
     bounds: OrbitPriceBounds | null
     areaBounds?: OrbitAreaBounds | null
     bedroomBounds?: OrbitRangeBounds | null
+    hidePrice?: boolean
     matchCount: number
     total: number
     onChange: (filters: OrbitApartmentFilters) => void
@@ -3586,6 +3652,17 @@ const orbitApartmentFilterStyles = `
     [data-orbit-filters][data-orbit-ignore][data-presentation][data-active] button:focus-visible { outline: 2px solid Highlight; outline-offset: 3px; }
 }
 /* @ORBIT_PILL_MATCH_END */
+[data-orbit-filters][data-orbit-mobile-filter][data-presentation][data-active] [data-orbit-range-popover] {
+    color: #113655; background: #f8fafb; border: 1px solid #c5d7e3;
+    box-shadow: 0 8px 24px rgba(17,54,85,.2);
+}
+[data-orbit-filters][data-orbit-mobile-filter] [data-orbit-range-popover]::before,
+[data-orbit-filters][data-orbit-mobile-filter] [data-orbit-range-popover]::after { display: none; }
+@media (forced-colors: active) {
+    [data-orbit-filters][data-orbit-mobile-filter][data-presentation][data-active] [data-orbit-range-popover] {
+        color: CanvasText; background: Canvas; border-color: CanvasText;
+    }
+}
 `
 
 function orbitPricePointerValue(
@@ -3862,14 +3939,17 @@ function OrbitFilterBar({
     bounds,
     areaBounds = null,
     bedroomBounds = null,
+    hidePrice = false,
     matchCount,
     total,
     onChange,
     presentation = "compact",
 }: OrbitFilterBarProps): React.JSX.Element {
     const hu = language === "hu"
-    const [priceOpen, setPriceOpen] = React.useState(false)
-    const [rangeKind, setRangeKind] = React.useState<OrbitRangeKind>("price")
+    const [rangeOpen, setPriceOpen] = React.useState(false)
+    const [activeRange, setRangeKind] = React.useState<OrbitRangeKind>(hidePrice ? "area" : "price")
+    const rangeKind = hidePrice && activeRange === "price" ? "area" : activeRange
+    const priceOpen = rangeOpen && rangeKind === activeRange
     const root = React.useRef<HTMLDivElement>(null)
     const priceToggle = React.useRef<HTMLButtonElement>(null)
     const areaToggle = React.useRef<HTMLButtonElement>(null)
@@ -3921,7 +4001,7 @@ function OrbitFilterBar({
     const fields = orbitRangeFields[rangeKind]
     const low = Math.min(maximum, Math.max(minimum, filters[fields.minimum] ?? minimum))
     const high = Math.max(low, Math.min(maximum, filters[fields.maximum] ?? maximum))
-    const kinds = Object.keys(ranges) as OrbitRangeKind[]
+    const kinds: OrbitRangeKind[] = hidePrice ? ["area", "bedrooms"] : ["price", "area", "bedrooms"]
     const hasRangeFilter = (kind: OrbitRangeKind) => {
         const { minimum, maximum } = orbitRangeFields[kind]
         return filters[minimum] != null || filters[maximum] != null
@@ -3979,8 +4059,8 @@ function OrbitFilterBar({
         current.onChange(updated)
     }
     React.useEffect(() => {
-        if (!active || !hasBounds) setPriceOpen(false)
-    }, [active, hasBounds])
+        if (!active || !hasBounds || rangeKind !== activeRange) setPriceOpen(false)
+    }, [active, hasBounds, rangeKind, activeRange])
     React.useEffect(() => {
         if (!priceOpen) return
         const element = root.current
@@ -3991,10 +4071,10 @@ function OrbitFilterBar({
             "[data-orbit-range-popover]"
         )
         if (!element || !studio || !popup) return
-        // The section must rise as a whole: a popover's z-index cannot escape
-        // its parent's stacking context beneath the separately rendered orbit.
+        // The scene's mask and camera controls are siblings of the studio.
+        // Lift the studio above those layers while its range editor is open.
         const previousZIndex = studio.style.zIndex
-        studio.style.zIndex = "3"
+        studio.style.zIndex = "5"
         // Keep the panel inside the mobile Studio's clipped viewport and above
         // the photo canvas, whose stacking context sits over the filter wrapper.
         const place = () => {
@@ -4046,7 +4126,7 @@ function OrbitFilterBar({
             )
                 return
             // Native Framer decoration can be the event target over our controls.
-            // Keep the price panel open when that passive target is inside it.
+            // Keep the range panel open when that passive target is inside it.
             const genuineControl =
                 event.target instanceof Element &&
                 event.target.closest(
@@ -4327,6 +4407,7 @@ function OrbitFilterBar({
             ref={root}
             data-orbit-filters=""
             data-orbit-filter-visible={String(visible)}
+            data-orbit-mobile-filter={hidePrice ? "" : undefined}
             data-orbit-glass-tone={presentation === "overlay" ? "overlay" : "paper"}
             data-orbit-ignore=""
             data-active={String(active)}
@@ -4380,7 +4461,9 @@ function OrbitFilterBar({
                 data-orbit-filter-ranges=""
                 data-orbit-glass-pod="filter"
                 role="group"
-                aria-label={hu ? "Ár, lakótér és hálószobák szerinti szűrés" : "Filter by price, interior area and bedrooms"}
+                aria-label={hidePrice
+                    ? hu ? "Szűrés lakótér és hálószobák szerint" : "Filter by interior area and bedrooms"
+                    : hu ? "Ár, lakótér és hálószobák szerinti szűrés" : "Filter by price, interior area and bedrooms"}
             >
                 {kinds.map((kind) => {
                     const range = ranges[kind]
@@ -4401,7 +4484,7 @@ function OrbitFilterBar({
                             disabled={!active || !rangeUsable}
                             onClick={() => {
                                 setRangeKind(kind)
-                                setPriceOpen((open) => rangeKind === kind ? !open : true)
+                                setPriceOpen((open) => activeRange === kind ? !open : true)
                             }}
                         >
                             <span>{range.label}</span>
@@ -5791,13 +5874,18 @@ const orbitWorkspaceStyles = `
 }
 [data-orbit-side-controls] [data-orbit-side-arrow="previous"] { left: max(-15px,calc(4px - var(--admiral-image-x,0px))); }
 [data-orbit-side-controls] [data-orbit-side-arrow="next"] { right: -10px; }
+[data-orbit-side-controls][data-mobile="true"] [data-orbit-side-arrow] {
+    background: transparent; border: 0; border-radius: 8px; color: white; box-shadow: none;
+    -webkit-backdrop-filter: none; backdrop-filter: none;
+}
 [data-orbit-side-controls][data-mobile="true"] [data-orbit-side-arrow="previous"] { left: 7px; }
 [data-orbit-side-controls][data-mobile="true"] [data-orbit-side-arrow="next"] { right: 7px; }
 [data-orbit-side-controls] [data-orbit-side-arrow] svg { width: 47%; height: 47%; }
+[data-orbit-side-controls][data-mobile="true"] [data-orbit-side-arrow] svg { position: relative; width: 17px; height: 17px; }
 [data-orbit-side-controls] [data-orbit-side-arrow]:disabled { opacity: .53; cursor: default; }
 [data-orbit-side-controls] [data-orbit-side-arrow]:focus-visible { outline: 2px solid #163f51; outline-offset: 3px; }
 @media (hover:hover) and (pointer:fine) {
-    [data-orbit-side-controls] [data-orbit-side-arrow]:not(:disabled):hover {
+    [data-orbit-side-controls]:not([data-mobile="true"]) [data-orbit-side-arrow]:not(:disabled):hover {
         background: #f7fbfd;
         box-shadow: inset 0 1px 1px #fff,0 6px 20px rgba(36,70,83,.25);
     }
@@ -5806,7 +5894,7 @@ const orbitWorkspaceStyles = `
     [data-orbit-side-controls] [data-orbit-side-arrow] { transition: none; }
 }
 @media (prefers-reduced-transparency:reduce) {
-    [data-orbit-side-controls] [data-orbit-side-arrow] {
+    [data-orbit-side-controls]:not([data-mobile="true"]) [data-orbit-side-arrow] {
         background: #f3f8fa;
         -webkit-backdrop-filter: none;
         backdrop-filter: none;
@@ -5908,6 +5996,21 @@ function OrbitBedroomMetric({ apartment, hu, number }: {
             <dd>{count === null ? "—" : number.format(count)}</dd>
         </div>
     )
+}
+
+function orbitApartmentLink(source: string, apartmentId?: string): string {
+    if (!source || !apartmentId) return ""
+    try {
+        const url = new URL(
+            source,
+            typeof window !== "undefined" ? window.location.href : "https://admiralpark.hu/"
+        )
+        if (url.protocol !== "https:" && url.protocol !== "http:") return ""
+        url.searchParams.set("apartment", apartmentId)
+        return url.href
+    } catch {
+        return ""
+    }
 }
 
 function OrbitApartmentStudio(
@@ -6033,24 +6136,8 @@ function OrbitApartmentStudio(
     }, [active, apartment?.id, dataStatus, mobile, workspaceSize, onLayout])
     const positive = (value: unknown): value is number =>
         typeof value === "number" && Number.isFinite(value) && value >= 0
-    const linkFor = (source: string) => {
-        if (!source || !apartment) return ""
-        try {
-            const url = new URL(
-                source,
-                typeof window !== "undefined"
-                    ? window.location.href
-                    : "https://admiralpark.hu/"
-            )
-            if (url.protocol !== "https:" && url.protocol !== "http:") return ""
-            url.searchParams.set("apartment", apartment.id)
-            return url.href
-        } catch {
-            return ""
-        }
-    }
-    const detailLink = linkFor(detailsUrl),
-        inquiryLink = linkFor(inquiryUrl)
+    const detailLink = orbitApartmentLink(detailsUrl, apartment?.id)
+    const inquiryLink = orbitApartmentLink(inquiryUrl, apartment?.id)
     const availability = apartment?.status || ""
     const statusText =
         availability === "available"
@@ -6117,8 +6204,8 @@ function OrbitApartmentStudio(
     ) : null
     const conversion = () => (
         <div className="orbit-studio-bottom">
-            <div className="orbit-studio-price">
-                {!mobile && (
+            {!mobile && (
+                <div className="orbit-studio-price">
                     <p className="orbit-studio-label">
                         {apartment?.priceIncludesVat === false
                             ? hu
@@ -6126,34 +6213,31 @@ function OrbitApartmentStudio(
                                 : "Net purchase price"
                             : labels.gross}
                     </p>
-                )}
-                <p
-                    className={`orbit-studio-price-value${!positive(apartment?.price) ? " orbit-studio-price-empty" : ""}`}
-                    data-orbit-apartment-price=""
-                    data-orbit-field="price"
-                >
-                    {positive(apartment?.price) ? (
-                        <>
-                            {number.format(apartment!.price!)}{" "}
-                            <small>{apartment!.currency === "HUF" || !apartment!.currency ? "Ft" : apartment!.currency}</small>
-                        </>
-                    ) : availability === "sold" ? (
-                        hu ? (
-                            "Nincs megadva"
+                    <p
+                        className={`orbit-studio-price-value${!positive(apartment?.price) ? " orbit-studio-price-empty" : ""}`}
+                        data-orbit-apartment-price=""
+                        data-orbit-field="price"
+                    >
+                        {positive(apartment?.price) ? (
+                            <>
+                                {number.format(apartment!.price!)}{" "}
+                                <small>{apartment!.currency === "HUF" || !apartment!.currency ? "Ft" : apartment!.currency}</small>
+                            </>
+                        ) : availability === "sold" ? (
+                            hu ? "Nincs megadva" : "Not provided"
                         ) : (
-                            "Not provided"
-                        )
-                    ) : hu ? (
-                        "Ár kérésre"
-                    ) : (
-                        "Price on request"
-                    )}
-                </p>
-            </div>
-            {mobile ? detailsAction : inquiryLink && (
+                            hu ? "Ár kérésre" : "Price on request"
+                        )}
+                    </p>
+                </div>
+            )}
+            {mobile && detailsAction}
+            {inquiryLink && (
                 <a
                     className="orbit-studio-primary admiral-frosted-button"
-                    href={inquiryLink}
+                    href={!mobile || transition.interactive ? inquiryLink : undefined}
+                    aria-disabled={mobile && !transition.interactive ? true : undefined}
+                    data-appearance={mobile ? "blue" : undefined}
                     data-orbit-apartment-action=""
                     data-orbit-inquiry=""
                 >
@@ -6326,6 +6410,7 @@ function OrbitApartmentStudio(
                         active={active && !moving}
                         visible={active || arriving}
                         language={language}
+                        hidePrice
                         filters={filters}
                         bounds={filterBounds}
                         areaBounds={filterAreaBounds}
@@ -6554,9 +6639,9 @@ function OrbitApartmentStudio(
                                             <OrbitBedroomMetric apartment={apartment} hu={hu} number={number} />
                                         </dl>
 
-                                        <div className="orbit-studio-mobile-actions">
-                                            {conversion()}
-                                        </div>
+                                    </div>
+                                    <div className="orbit-studio-mobile-actions">
+                                        {conversion()}
                                     </div>
                                 </>
                             )}
@@ -7143,12 +7228,14 @@ function useOrbitFullscreen(
 
 interface OrbitFullscreenDetailsProps {
     favorites: OrbitFavoriteActions
+    hidePrice?: boolean
     groupControls?: React.ReactNode
     apartment: OrbitApartmentRecord | null
     dataset?: OrbitApartmentDataset | null
     assetBase: string
     preferWebpPlan: boolean
     language: "hu" | "en"
+    inquiryUrl: string
     onOpenDetails: () => void
     moving: boolean
     onPrevious: () => void
@@ -7229,6 +7316,7 @@ function OrbitFullscreenDetails({
     assetBase,
     preferWebpPlan,
     language,
+    inquiryUrl,
     onOpenDetails,
     moving,
     onPrevious,
@@ -7238,6 +7326,7 @@ function OrbitFullscreenDetails({
     count,
     emptyMessage,
     favorites,
+    hidePrice = false,
     groupControls,
     filters,
     filterBounds,
@@ -7253,6 +7342,7 @@ function OrbitFullscreenDetails({
         { moving }
     )
     const apartment = transition.displayed
+    const inquiryLink = orbitApartmentLink(inquiryUrl, apartment?.id)
     const hu = language !== "en"
     const rootRef = React.useRef<HTMLDivElement>(null)
     const barRef = React.useRef<HTMLDivElement>(null)
@@ -7353,6 +7443,7 @@ function OrbitFullscreenDetails({
         <div
             ref={rootRef}
             data-orbit-fullscreen-details=""
+            data-mobile={hidePrice ? "true" : undefined}
             data-orbit-glass-tone="overlay"
             data-compact={compact ? "true" : "false"}
             data-apartment-id={currentApartment?.id || ""}
@@ -7533,6 +7624,7 @@ function OrbitFullscreenDetails({
                             total={total}
                             onChange={onFiltersChange}
                             presentation="overlay"
+                            hidePrice={hidePrice}
                         />
                     </div>
                     {apartment && (
@@ -7542,27 +7634,22 @@ function OrbitFullscreenDetails({
                             data-orbit-glass-pod="conversion"
                                 {...recordFade}
                             >
-                                <p
-                                    className="orbit-fullscreen-price"
-                                    data-orbit-fullscreen-field="price"
-                                >
-                                    {known(apartment.price) ? (
-                                        apartment.currency === "HUF" ? (
-                                            <>
-                                                {number.format(apartment.price!)}
-                                                <small>Ft</small>
-                                            </>
+                                {!hidePrice && (
+                                    <p className="orbit-fullscreen-price" data-orbit-fullscreen-field="price">
+                                        {known(apartment.price) ? (
+                                            apartment.currency === "HUF" ? (
+                                                <>
+                                                    {number.format(apartment.price!)}
+                                                    <small>Ft</small>
+                                                </>
+                                            ) : (
+                                                number.format(apartment.price!) + " " + apartment.currency
+                                            )
                                         ) : (
-                                            number.format(apartment.price!) +
-                                            " " +
-                                            apartment.currency
-                                        )
-                                    ) : hu ? (
-                                        "Ár kérésre"
-                                    ) : (
-                                        "Price on request"
-                                    )}
-                                </p>
+                                            hu ? "Ár kérésre" : "Price on request"
+                                        )}
+                                    </p>
+                                )}
                                 <button
                                     type="button"
                                     className="orbit-fullscreen-detail"
@@ -7587,6 +7674,17 @@ function OrbitFullscreenDetails({
                                         <path d="M5 12h14m-6-6 6 6-6 6" />
                                     </svg>
                                 </button>
+                                {hidePrice && inquiryLink && (
+                                    <a
+                                        className="orbit-fullscreen-detail admiral-frosted-button"
+                                        data-appearance="blue"
+                                        data-orbit-inquiry=""
+                                        href={transition.interactive ? inquiryLink : undefined}
+                                        aria-disabled={transition.interactive ? undefined : true}
+                                    >
+                                        {hu ? "Érdeklődöm" : "Enquire"}
+                                    </a>
+                                )}
                             </div>
                         </>
                     )}
@@ -7941,8 +8039,8 @@ export default function AdmiralHomepageStudio(
         return { ...dataset, apartments: dataset.apartments.filter(apartment => orbitGroup.ids.includes(apartment.id)) }
     }, [apartmentData.dataset, orbitGroup])
     const filterBounds = React.useMemo(
-        () => getOrbitPriceBounds(apartmentData.dataset?.apartments || []),
-        [apartmentData.dataset]
+        () => mobilePresentation ? null : getOrbitPriceBounds(apartmentData.dataset?.apartments || []),
+        [apartmentData.dataset, mobilePresentation]
     )
     const filterAreaBounds = React.useMemo(
         () => getOrbitAreaBounds(apartmentData.dataset?.apartments || []),
@@ -10718,12 +10816,14 @@ export default function AdmiralHomepageStudio(
                     {fullscreen.active && (
                         <OrbitFullscreenDetails
                             favorites={favorites}
+                            hidePrice={mobilePresentation}
                             groupControls={groupControls}
                             apartment={selectedApartment}
                             dataset={apartmentData.dataset}
                             assetBase={apartmentAssetBase}
                             preferWebpPlan={useWebp}
                             language={detailsLanguage}
+                            inquiryUrl={inquiryUrl}
                             filters={filterResult.filters}
                             filterBounds={filterBounds}
                             filterAreaBounds={filterAreaBounds}
@@ -11138,6 +11238,7 @@ export default function AdmiralHomepageStudio(
                                     active={orbitPanelVisible && !orbitDataMoving}
                                     visible={classicOrbitPanel}
                                     language={detailsLanguage}
+                                    hidePrice={mobilePresentation}
                                     filters={filterResult.filters}
                                     bounds={filterBounds}
                                     areaBounds={filterAreaBounds}
