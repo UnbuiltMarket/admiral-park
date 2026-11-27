@@ -162,9 +162,9 @@ const MOBILE_LIST_CARD_STYLES = `
   white-space: nowrap;
 }
 .apartment-row .unit-primary .unit-status::before { display: none; }
-.apartment-row .unit-primary .status-available { color: color-mix(in srgb, var(--available) 6%, #e7fff1); }
+.apartment-row .unit-primary .status-available { color: color-mix(in srgb, var(--available) 3%, #eafff0); }
 .apartment-row .unit-primary :is(.status-under_negotiation,.status-reserved) { color: color-mix(in srgb, var(--negotiating) 6%, #fffcd7); }
-.apartment-row .unit-primary .status-sold { color: color-mix(in srgb, var(--sold) 6%, #fff6f6); }
+.apartment-row .unit-primary .status-sold { color: color-mix(in srgb, var(--sold) 3%, #fff7f8); }
 .apartment-row .unit-header-fact::before { content: '·'; margin-inline-end: clamp(2px, .75cqw, 5px); opacity: .72; }
 .apartment-row .unit-primary .save-button { color: inherit; }
 .apartment-row .unit-primary .save-button:is(:hover,:focus-visible) { background: rgb(0 0 0 / 13%); }
