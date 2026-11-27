@@ -117,7 +117,9 @@ const MOBILE_LIST_CARD_STYLES = `
   --list-card-action-height: 44px;
   --list-card-secondary-height: 32px;
   --list-card-pill-radius: calc(var(--list-card-action-height) / 2);
-  --list-card-inner-radius: calc(var(--list-card-pill-radius) + var(--list-card-padding));
+  --list-card-secondary-radius: calc(var(--list-card-secondary-height) / 2);
+  --list-card-touch-inset: calc((var(--list-card-action-height) - var(--list-card-secondary-height)) / 2);
+  --list-card-inner-radius: calc(var(--list-card-secondary-radius) + var(--list-card-padding));
   --list-card-radius: calc(var(--list-card-inner-radius) + var(--list-card-border));
   --list-card-outline: color-mix(in srgb, var(--list-blue) 27%, transparent);
   display: grid;
@@ -125,7 +127,7 @@ const MOBILE_LIST_CARD_STYLES = `
   grid-template-rows: auto 1fr repeat(4, auto) 1fr auto;
   grid-template-areas: 'header header' 'plan .' 'plan interior' 'plan terrace' 'plan garden' 'plan inquiry' 'plan .' 'actions actions';
   gap: 4px 10px;
-  padding: 4px var(--list-card-padding) var(--list-card-padding);
+  padding: 4px var(--list-card-padding) calc(var(--list-card-padding) - var(--list-card-touch-inset));
   border: var(--list-card-border) solid var(--list-card-outline);
   border-radius: var(--list-card-radius);
   background: linear-gradient(156deg, color-mix(in srgb, var(--paper) 28%, white), color-mix(in srgb, var(--paper) 88%, #d9e6ef)), var(--paper);
@@ -151,11 +153,12 @@ const MOBILE_LIST_CARD_STYLES = `
   grid-area: header; display: grid; min-width: 0;
 }
 .apartment-row .unit-primary {
-  display: flex; align-items: center; gap: 8px; min-height: 44px;
+  display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center; gap: 8px; min-height: 44px;
   padding-inline: clamp(2px, .85cqw, 6px);
 }
-.apartment-row .unit-identity-copy { display: flex; align-items: center; gap: clamp(10px, 3cqw, 16px); }
-.apartment-row .unit-id { color: var(--list-blue-strong); font-size: clamp(19px, 5.3cqw, 24px); font-weight: 650; min-height: 44px; }
+.apartment-row .unit-identity-copy { display: contents; }
+.apartment-row .unit-id { color: var(--list-blue-strong); font-size: clamp(24px, 6.65cqw, 30px); font-weight: 650; min-height: 44px; }
 .apartment-row .unit-status-line { margin: 0; }
 .apartment-row .unit-primary .unit-status {
   font-size: clamp(12px, 3cqw, 14px); font-weight: 600; line-height: 1.3; white-space: nowrap;
@@ -164,7 +167,7 @@ const MOBILE_LIST_CARD_STYLES = `
 .apartment-row .unit-primary .status-available { color: color-mix(in srgb, #216442 85%, var(--available)); }
 .apartment-row .unit-primary :is(.status-under_negotiation,.status-reserved) { color: color-mix(in srgb, #795415 85%, var(--negotiating)); }
 .apartment-row .unit-primary .status-sold { color: color-mix(in srgb, #a1353e 85%, var(--sold)); }
-.apartment-row .unit-primary .save-button { margin-inline-start: auto; }
+.apartment-row .unit-primary .save-button { justify-self: end; }
 .apartment-row .unit-primary .save-button svg { width: 23px; height: 23px; }
 .apartment-row .unit-primary :is(.unit-id,.save-button):focus-visible { outline-color: var(--list-blue-strong); outline-offset: -2px; }
 .apartment-row .unit-mobile-meta {
@@ -207,8 +210,8 @@ const MOBILE_LIST_CARD_STYLES = `
 .apartment-table .cell-actions :is(.row-actions,.action-pills) { display: contents; }
 .apartment-table .cell-actions .action-pills > :is(.inquiry-link,.row-inquiry-wrap) { grid-area: inquiry; }
 .apartment-table .cell-actions .row-secondary-actions {
-  grid-area: actions; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px;
-  justify-self: center; align-items: center; width: min(100%, 336px); min-height: var(--list-card-action-height);
+  grid-area: actions; display: grid; grid-template-columns: repeat(3, minmax(0, 108px)); gap: 6px;
+  justify-content: space-between; align-items: center; min-height: var(--list-card-action-height);
 }
 .apartment-table .cell-actions :is(.download-wrap,.row-inquiry-wrap,.action-pill) { width: 100%; min-width: 0; max-width: none; }
 .apartment-table .cell-actions .action-pill {
@@ -218,11 +221,11 @@ const MOBILE_LIST_CARD_STYLES = `
 .apartment-table .cell-actions .row-secondary-actions .action-pill {
   position: relative;
   height: var(--list-card-secondary-height); min-height: var(--list-card-secondary-height); max-height: var(--list-card-secondary-height);
-  border-radius: calc(var(--list-card-secondary-height) / 2); padding-inline: 2px;
+  border-radius: var(--list-card-secondary-radius); padding-inline: 2px;
 }
 /* Keep the touch area full height around the compact pills. */
 .apartment-table .cell-actions .row-secondary-actions .action-pill::after {
-  content: ''; position: absolute; inset-block: calc((var(--list-card-secondary-height) - var(--list-card-action-height)) / 2 - 1px); inset-inline: 0;
+  content: ''; position: absolute; inset-block: calc(-1 * var(--list-card-touch-inset) - 1px); inset-inline: 0;
 }
 .apartment-table .cell-actions .inquiry-link { font-size: 14px; }
 @media (forced-colors: active) {
