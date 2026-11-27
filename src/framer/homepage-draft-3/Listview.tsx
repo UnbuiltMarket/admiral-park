@@ -115,14 +115,15 @@ const MOBILE_LIST_CARD_STYLES = `
   --list-card-padding: 10px;
   --list-card-border: 1px;
   --list-card-pill-radius: 22px;
-  --list-card-radius: calc(var(--list-card-pill-radius) + var(--list-card-padding) + var(--list-card-border));
+  --list-card-inner-radius: calc(var(--list-card-pill-radius) + var(--list-card-padding));
+  --list-card-radius: calc(var(--list-card-inner-radius) + var(--list-card-border));
   --list-card-outline: color-mix(in srgb, var(--list-blue) 27%, transparent);
   display: grid;
   grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
   grid-template-rows: auto 1fr repeat(3, auto) 1fr auto;
   grid-template-areas: 'header header' 'plan .' 'plan interior' 'plan terrace' 'plan garden' 'plan .' 'actions actions';
   gap: 4px 12px;
-  padding: var(--list-card-padding);
+  padding: 0 var(--list-card-padding) var(--list-card-padding);
   border: var(--list-card-border) solid var(--list-card-outline);
   border-radius: var(--list-card-radius);
 }
@@ -134,7 +135,7 @@ const MOBILE_LIST_CARD_STYLES = `
 .apartment-row > .cell-unit::after { content: none; }
 .apartment-row::before {
   content: ''; position: absolute; z-index: -1; inset: 0;
-  border-radius: calc(var(--list-card-radius) - var(--list-card-border));
+  border-radius: var(--list-card-inner-radius);
   pointer-events: none; background: var(--list-row-highlight);
   opacity: 0; transition: opacity .15s ease;
 }
@@ -144,8 +145,11 @@ const MOBILE_LIST_CARD_STYLES = `
 .apartment-table .apartment-row .cell-unit, .apartment-row .unit-summary, .apartment-row .unit-identification { display: contents; }
 .apartment-row .unit-primary {
   grid-area: header; display: flex; align-items: center; justify-content: space-between;
-  gap: clamp(2px, .7cqw, 5px); padding-inline: clamp(8px, 2.6cqw, 16px) 2px;
-  min-height: 44px; border-radius: var(--list-card-pill-radius) var(--list-card-pill-radius) 10px 10px;
+  gap: clamp(2px, .7cqw, 5px);
+  margin-inline: calc(-1 * var(--list-card-padding));
+  padding-inline: calc(var(--list-card-padding) + clamp(8px, 2.6cqw, 16px)) calc(var(--list-card-padding) + 2px);
+  min-height: 44px;
+  border-radius: var(--list-card-inner-radius) var(--list-card-inner-radius) 0 0;
   background: var(--list-filter-gradient);
   color: white;
 }
@@ -158,6 +162,9 @@ const MOBILE_LIST_CARD_STYLES = `
   white-space: nowrap;
 }
 .apartment-row .unit-primary .unit-status::before { display: none; }
+.apartment-row .unit-primary .status-available { color: color-mix(in srgb, var(--available) 6%, #e7fff1); }
+.apartment-row .unit-primary :is(.status-under_negotiation,.status-reserved) { color: color-mix(in srgb, var(--negotiating) 6%, #fffcd7); }
+.apartment-row .unit-primary .status-sold { color: color-mix(in srgb, var(--sold) 6%, #fff6f6); }
 .apartment-row .unit-header-fact::before { content: '·'; margin-inline-end: clamp(2px, .75cqw, 5px); opacity: .72; }
 .apartment-row .unit-primary .save-button { color: inherit; }
 .apartment-row .unit-primary .save-button:is(:hover,:focus-visible) { background: rgb(0 0 0 / 13%); }
