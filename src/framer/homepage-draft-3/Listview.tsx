@@ -119,17 +119,17 @@ const MOBILE_LIST_CARD_STYLES = `
   --list-card-radius: calc(var(--list-card-inner-radius) + var(--list-card-border));
   --list-card-outline: color-mix(in srgb, var(--list-blue) 27%, transparent);
   display: grid;
-  grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
-  grid-template-rows: auto 1fr repeat(3, auto) 1fr auto;
-  grid-template-areas: 'header header' 'plan .' 'plan interior' 'plan terrace' 'plan garden' 'plan .' 'actions actions';
-  gap: 4px 12px;
+  grid-template-columns: minmax(0, 1.3fr) minmax(110px, 1fr);
+  grid-template-rows: auto 1fr repeat(4, auto) 1fr auto;
+  grid-template-areas: 'header header' 'plan .' 'plan interior' 'plan terrace' 'plan garden' 'plan inquiry' 'plan .' 'actions actions';
+  gap: 4px 10px;
   padding: 4px var(--list-card-padding) var(--list-card-padding);
   border: var(--list-card-border) solid var(--list-card-outline);
   border-radius: var(--list-card-radius);
 }
 .apartment-table .apartment-row:has(.empty-garden) {
-  grid-template-rows: auto 1fr repeat(2, auto) 1fr auto;
-  grid-template-areas: 'header header' 'plan .' 'plan interior' 'plan terrace' 'plan .' 'actions actions';
+  grid-template-rows: auto 1fr repeat(3, auto) 1fr auto;
+  grid-template-areas: 'header header' 'plan .' 'plan interior' 'plan terrace' 'plan inquiry' 'plan .' 'actions actions';
 }
 .apartment-table .apartment-row + .apartment-row { margin-block-start: 12px; }
 .apartment-row > .cell-unit::after { content: none; }
@@ -145,10 +145,10 @@ const MOBILE_LIST_CARD_STYLES = `
 .apartment-table .apartment-row .cell-unit, .apartment-row .unit-summary { display: contents; }
 .apartment-row .unit-identification {
   grid-area: header; display: grid; min-width: 0;
-  padding-inline: clamp(2px, .85cqw, 6px);
 }
 .apartment-row .unit-primary {
   display: flex; align-items: center; gap: 8px; min-height: 44px;
+  padding-inline: clamp(2px, .85cqw, 6px);
 }
 .apartment-row .unit-identity-copy { display: flex; align-items: center; gap: clamp(10px, 3cqw, 16px); }
 .apartment-row .unit-id { color: var(--list-blue-strong); font-size: clamp(19px, 5.3cqw, 24px); font-weight: 650; min-height: 44px; }
@@ -165,13 +165,13 @@ const MOBILE_LIST_CARD_STYLES = `
 .apartment-row .unit-primary :is(.unit-id,.save-button):focus-visible { outline-color: var(--list-blue-strong); outline-offset: -2px; }
 .apartment-row .unit-mobile-meta {
   display: flex; flex-flow: row nowrap; align-items: baseline; gap: clamp(3px, 1cqw, 8px);
-  margin: 0; padding-block-end: 6px;
+  margin: 0 0 4px; padding: 6px clamp(7px, 1.9cqw, 14px); border-radius: 10px;
   font-size: clamp(11.5px, 2.95cqw, 13px); line-height: 1.3;
-  color: var(--muted);
+  background: var(--list-filter-gradient); color: white;
 }
 .apartment-row .unit-header-fact { white-space: nowrap; }
 .apartment-row .unit-header-fact + .unit-header-fact::before { content: '·'; margin-inline-end: clamp(3px, 1cqw, 8px); }
-.apartment-row .unit-header-fact strong { color: var(--list-blue-strong); font-weight: 650; }
+.apartment-row .unit-header-fact strong { font-weight: 650; }
 @container apartment-list (width < 440px) {
   .apartment-row .unit-header-compact { display: inline; }
   .apartment-row .unit-header-full {
@@ -179,8 +179,8 @@ const MOBILE_LIST_CARD_STYLES = `
   }
 }
 .apartment-row .unit-media { grid-area: plan; align-self: center; }
-.apartment-row .unit-media .media-preview { width: 100%; max-width: 225px; }
-.apartment-row .unit-media .preview-visual { height: clamp(158px, 45cqw, 198px); }
+.apartment-row .unit-media .media-preview { width: 100%; max-width: 250px; margin-inline: auto; }
+.apartment-row .unit-media .preview-visual { height: clamp(172px, 50cqw, 226px); }
 .apartment-table .apartment-row > :is(.cell-interior,.cell-outdoor,.cell-garden) {
   flex-flow: row nowrap; justify-content: space-between; align-items: baseline; gap: 4px;
   align-self: center; padding: 7px 0; min-width: 0;
@@ -198,20 +198,26 @@ const MOBILE_LIST_CARD_STYLES = `
 .apartment-row :is(.interior-value,.outdoor-value) { white-space: nowrap; font-variant-numeric: tabular-nums; }
 .apartment-table .apartment-row > :is(.cell-interior,.cell-outdoor,.cell-garden) .area-number { font-size: clamp(18px, 4.8cqw, 22px); font-weight: 650; }
 .apartment-table .apartment-row > :is(.cell-interior,.cell-outdoor,.cell-garden) .area-unit { font-size: 11px; }
-.apartment-table .apartment-row > .cell-actions { grid-area: actions; padding: 2px 0 0; }
-.apartment-table .cell-actions .action-pills { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); width: 100%; gap: 6px; }
-.apartment-table .cell-actions .action-pills > :is(.inquiry-link,.row-inquiry-wrap) { grid-column: 1 / -1; }
+.apartment-table .apartment-row .cell-actions,
+.apartment-table .cell-actions :is(.row-actions,.action-pills) { display: contents; }
+.apartment-table .cell-actions .action-pills > :is(.inquiry-link,.row-inquiry-wrap) { grid-area: inquiry; }
+.apartment-table .cell-actions .row-secondary-actions {
+  grid-area: actions; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px;
+  padding-block-start: 2px;
+}
 .apartment-table .cell-actions :is(.download-wrap,.row-inquiry-wrap,.action-pill) { width: 100%; min-width: 0; max-width: none; }
 .apartment-table .cell-actions .action-pill { height: 44px; min-height: 44px; max-height: 44px; border-radius: var(--list-card-pill-radius); padding-inline: 4px; font-size: 11px; }
 .apartment-table .cell-actions .inquiry-link { font-size: 14px; }
 @media (forced-colors: active) {
   .apartment-table .apartment-row { border-color: CanvasText; --list-row-highlight: Canvas; }
+  .apartment-row .unit-mobile-meta { border: 1px solid CanvasText; background: Canvas; color: CanvasText; }
   .apartment-row .unit-primary :is(.unit-id,.save-button):focus-visible { outline-color: Highlight; }
 }
 `
 
 const LIST_CARD_STYLES = `
 .unit-mobile-meta, .unit-header-compact { display: none; }
+.row-secondary-actions { display: contents; }
 .list-content.page-width {
   --list-row-gutter: var(--component-padding, 32px);
   --list-row-highlight: color-mix(in srgb, var(--paper) 91%, #347eaf);
@@ -801,7 +807,7 @@ function mountApartmentList(root: any = (document as any), config: any = ({} as 
     <td class="cell-area cell-interior" data-label="Beltér"><span class="interior-value">${rowArea(a.areaInterior)}</span></td>
     <td class="cell-outdoor" data-label="Terasz"><div class="outdoor-area cell-balcony"><span class="outdoor-label">Terasz</span><span class="outdoor-value">${rowArea(a.areaTerrace)}</span></div></td>
     <td class="cell-garden${hasNumber(a.areaGarden) && a.areaGarden > 0 ? '' : ' empty-garden'}" data-label="Kert">${hasNumber(a.areaGarden) && a.areaGarden > 0 ? `<span class="outdoor-value garden-value">${rowArea(a.areaGarden)}</span>` : ''}</td>
-    <td class="cell-actions"><div class="row-actions"><div class="action-pills">${rowInquiry(a)}${downloadLink(a)}${rowOrbitLink(a.id)}${compareToggle(a)}</div></div></td>
+    <td class="cell-actions"><div class="row-actions"><div class="action-pills">${rowInquiry(a)}<div class="row-secondary-actions">${downloadLink(a)}${rowOrbitLink(a.id)}${compareToggle(a)}</div></div></div></td>
   </tr>`;
     }
     function renderChips(): any {
