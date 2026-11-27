@@ -498,6 +498,9 @@ const HOMEPAGE_HERO_INFOGRAPHIC = "https://framerusercontent.com/images/vRuUWre5
 const HOMEPAGE_CONNECTION_VIDEO = "https://framerusercontent.com/assets/BfO7rinv7Ci9Naw3GW01EFAvHi0.mp4"
 const HOMEPAGE_CONNECTION_END = "https://framerusercontent.com/images/uYMWXjUcDBc351olR2N5bRso.avif"
 const HOMEPAGE_ORBIT_APPROACH_VIDEO = "https://framerusercontent.com/assets/N02rcgZxOCN9LfVxWZtmoNOx2ws.mp4"
+const PORTRAIT_MEDIA = "https://cdn.jsdelivr.net/gh/UnbuiltMarket/admiral-park@34ce30bcb82596f113aea7185896669095425d12/assets/videos/homepage"
+const PORTRAIT_PHONE = "(max-width: 767px) and (orientation: portrait)"
+const PORTRAIT_OPENING = `${PORTRAIT_MEDIA}/seq-01/portrait/lake.webp`
 const HOMEPAGE_MOBILE_VIDEO_BASE = "https://raw.githubusercontent.com/UnbuiltMarket/admiral-park/9732c7ca8b8f9d8080af85619b6881c0d19ffadd/assets/videos/homepage"
 const ORBIT_CHECKPOINT_ASSETS = "https://raw.githubusercontent.com/UnbuiltMarket/admiral-park/bfb2349cf8af7e6ae3f1c665ca67c984b82cf024/assets"
 const HOMEPAGE_CONNECTION_VERSION = "426c29f22325"
@@ -5054,12 +5057,16 @@ const orbitApartmentStudioStyles = `
 [data-admiral-fullscreen-fades][data-orbit-arriving] [data-orbit-studio][data-active="false"] {
     --orbit-light-glass-blur: none;
 }
+@media ${PORTRAIT_PHONE} {
+    [data-admiral-homepage] { --admiral-responsive-preview: url("${PORTRAIT_OPENING}"); }
+}
 [data-flight-media] { position: absolute; inset: 0; }
 [data-native-flight] > [data-flight-media] {
     inset: 0 auto auto 0; width: 1920px; height: 1010px; transform-origin: 0 0;
     will-change: transform;
 }
-[data-native-flight] > [data-flight-media] > :is(img, video) {
+[data-native-flight] > [data-flight-media] > :is(img, video),
+[data-native-flight] > [data-flight-media] > picture > img {
     left: 0 !important; top: 0 !important; width: 100% !important; height: 100% !important;
     border-radius: 0 !important;
 }
@@ -7934,11 +7941,13 @@ export default function AdmiralHomepageStudio(
             ),
         [useGitHubAssets, connectionBaseUrl]
     )
+    const [portraitPhone, setPortraitPhone] = React.useState<boolean | null>(null)
+    const portraitMedia = useGitHubAssets && portraitPhone === true
     const heroVideoUrl = useGitHubAssets ? HOMEPAGE_HERO_VIDEO : ""
     const connectionVideoUrl = useGitHubAssets ? HOMEPAGE_CONNECTION_VIDEO : ""
-    const heroStartPoster = useWebp ? ORBIT_WEBP_BASE + "/stills/seq01-start.webp" : heroVideoUrl ? HOMEPAGE_HERO_VIDEO_START : heroUrls[0]
-    const heroEndPoster = useWebp ? ORBIT_WEBP_BASE + "/stills/seq01-end.webp" : heroVideoUrl ? HOMEPAGE_HERO_VIDEO_END : heroUrls[heroUrls.length - 1]
-    const connectionEndPoster = useWebp ? ORBIT_WEBP_BASE + "/stills/seq02-end.webp" : HOMEPAGE_CONNECTION_END
+    const heroStartPoster = portraitMedia ? PORTRAIT_OPENING : useWebp ? ORBIT_WEBP_BASE + "/stills/seq01-start.webp" : heroVideoUrl ? HOMEPAGE_HERO_VIDEO_START : heroUrls[0]
+    const heroEndPoster = portraitMedia ? `${PORTRAIT_MEDIA}/seq-01/portrait/buildings.webp` : useWebp ? ORBIT_WEBP_BASE + "/stills/seq01-end.webp" : heroVideoUrl ? HOMEPAGE_HERO_VIDEO_END : heroUrls[heroUrls.length - 1]
+    const connectionEndPoster = portraitMedia ? `${PORTRAIT_MEDIA}/seq-02/portrait/pool.webp` : useWebp ? ORBIT_WEBP_BASE + "/stills/seq02-end.webp" : HOMEPAGE_CONNECTION_END
     // Use the actual SEQ_01 endpoint for the existing SEQ_02 dissolve.
     const connectionPlaybackUrls = React.useMemo(
         () => [heroEndPoster, ...connectionUrls],
@@ -8235,6 +8244,17 @@ export default function AdmiralHomepageStudio(
     }, [])
     const rootRef = React.useRef<HTMLDivElement>(null),
         heroRootRef = React.useRef<HTMLDivElement>(null)
+    useHomepageLayoutEffect(() => {
+        const media = window.matchMedia(PORTRAIT_PHONE)
+        const select = () => {
+            // Rotation during a flight must preserve the current chapter and playhead.
+            setPortraitPhone(previous => previous === null || rootRef.current?.dataset.homepageStage === "opening"
+                ? media.matches : previous)
+        }
+        select()
+        media.addEventListener("change", select)
+        return () => media.removeEventListener("change", select)
+    }, [])
     const heroVideoRef = React.useRef<HTMLVideoElement>(null)
     const connectionVideoRef = React.useRef<HTMLVideoElement>(null)
     const heroEndLayerRef = React.useRef<HTMLImageElement>(null)
@@ -8950,8 +8970,8 @@ export default function AdmiralHomepageStudio(
                 Math.min(root.clientWidth, root.clientHeight) <= 767)
         const flightSource = (sequence: "01" | "02" | "03", desktop: string) =>
             phone && desktop ? `${HOMEPAGE_MOBILE_VIDEO_BASE}/seq-${sequence}/flight-mobile-v1.mp4` : desktop
-        const openingFlight = flightSource("01", heroVideoUrl)
-        const connectionFlight = flightSource("02", connectionVideoUrl)
+        const openingFlight = portraitMedia ? `${PORTRAIT_MEDIA}/seq-01/portrait/seq01_mobile-v2.mp4` : flightSource("01", heroVideoUrl)
+        const connectionFlight = portraitMedia ? `${PORTRAIT_MEDIA}/seq-02/portrait/pool.mp4` : flightSource("02", connectionVideoUrl)
         const approachFlight = flightSource("03", HOMEPAGE_ORBIT_APPROACH_VIDEO)
         let portraitFlight = phone && root.clientWidth < root.clientHeight
         let appliedFlightFocal: number | undefined
@@ -9038,7 +9058,7 @@ export default function AdmiralHomepageStudio(
                 : null
         }
         function publish() {
-            const flightFocal = portraitFlight && heroVideoUrl
+            const flightFocal = portraitMedia && activeSequence !== "SEQ_03" ? 50 : portraitFlight && heroVideoUrl
                 ? Math.max(0, Math.min(100, focalX + homepagePortraitFocalOffset(activeSequence, heroSnapshot.progress)))
                 : focalX
             if (appliedFlightFocal !== flightFocal) {
@@ -9468,8 +9488,8 @@ export default function AdmiralHomepageStudio(
                 poster!.style.opacity = "1"
                 hero = createHomepageHeroVideo({
                     video, poster: poster!, endLayer, graphic,
-                    url: openingFlight, fallbackUrl: heroVideoUrl,
-                    endPoster: heroEndPoster, graphicUrl: HOMEPAGE_HERO_INFOGRAPHIC,
+                    url: openingFlight, fallbackUrl: portraitMedia ? openingFlight : heroVideoUrl,
+                    endPoster: heroEndPoster, graphicUrl: portraitMedia ? undefined : HOMEPAGE_HERO_INFOGRAPHIC,
                     startAtEnd: atEnd, lastFrame: heroUrls.length - 1,
                     resumeWhenVisible: phone,
                     fadeExtension: () => fadeExtensionRef.current,
@@ -9585,7 +9605,7 @@ export default function AdmiralHomepageStudio(
                 poster!.style.opacity = "1"
                 hero = createHomepageHeroVideo({
                     video: connectionVideo, poster: poster!, endLayer: heroEndLayerRef.current,
-                    url: connectionFlight, fallbackUrl: connectionVideoUrl, endPoster: connectionEndPoster,
+                    url: connectionFlight, fallbackUrl: portraitMedia ? connectionFlight : connectionVideoUrl, endPoster: connectionEndPoster,
                     preparedVideo: takeNextFilm(connectionFlight),
                     startAtEnd: false, lastFrame: connectionPlaybackUrls.length - 1,
                     resumeWhenVisible: phone,
@@ -10310,6 +10330,7 @@ export default function AdmiralHomepageStudio(
             notifyHomepage()
         }
     }, [
+        portraitMedia,
         heroUrls,
         heroVideoUrl,
         heroStartPoster,
@@ -10692,7 +10713,7 @@ export default function AdmiralHomepageStudio(
                     zIndex: 2,
                     touchAction: "pinch-zoom",
                     backgroundImage: heroVideoUrl && !directOrbitEntry && posterUrl === heroStartPoster &&
-                        (stage === "opening" || stage === "approach") ? `url("${HOMEPAGE_HERO_PREVIEW}")` : undefined,
+                        (stage === "opening" || stage === "approach") ? (portraitPhone === true ? `url("${PORTRAIT_OPENING}")` : `var(--admiral-responsive-preview, url("${HOMEPAGE_HERO_PREVIEW}"))`) : undefined,
                     backgroundSize: "cover",
                     backgroundPosition: flightFocal,
                     pointerEvents:
@@ -10703,6 +10724,10 @@ export default function AdmiralHomepageStudio(
                 }}
             >
                 <div data-flight-media="">
+                <picture style={{ display: "contents" }}>
+                {portraitPhone === null && useGitHubAssets && startView === "opening" && !directOrbitEntry && posterUrl === heroStartPoster && (
+                    <source media={PORTRAIT_PHONE} srcSet={PORTRAIT_OPENING} />
+                )}
                 <img
                     ref={posterRef}
                     src={directOrbitEntry || (startView === "orbit" && waitingForFormat) ? undefined : posterUrl}
@@ -10714,6 +10739,7 @@ export default function AdmiralHomepageStudio(
                     draggable={false}
                     style={flightPosterStyle}
                 />
+                </picture>
                 {heroVideoUrl && !staticRenderer && (
                     <video
                         ref={heroVideoRef}
@@ -10737,7 +10763,7 @@ export default function AdmiralHomepageStudio(
                 )}
                 {heroVideoUrl && (!staticRenderer || editorView === "building") && (
                     <img ref={heroInfographicRef}
-                        src={staticRenderer ? HOMEPAGE_HERO_INFOGRAPHIC : undefined}
+                        src={staticRenderer && !portraitMedia ? HOMEPAGE_HERO_INFOGRAPHIC : undefined}
                         alt="Az A, B és C épület elhelyezkedése az Aranyhíd sétány mentén."
                         aria-hidden={staticRenderer ? undefined : true} draggable={false}
                         decoding="async" style={{ ...flightPosterStyle, opacity: staticRenderer ? 1 : 0 }} />
