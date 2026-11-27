@@ -5061,8 +5061,8 @@ const orbitApartmentStudioStyles = `
     [data-portrait-flight-layout],
     [data-framer-name="Hero Orbit Stage"]:has([data-portrait-flight-layout]),
     :has(> [data-framer-name="Hero Orbit Stage"] [data-portrait-flight-layout]) {
-        max-height: 93vh !important;
-        max-height: 93dvh !important;
+        height: 100vh !important;
+        height: 100dvh !important;
     }
     [data-portrait-flight-layout] [data-admiral-sequence] { background-image: none !important; }
     [data-portrait-flight-layout] [data-flight-media] > :is(canvas, video) { object-position: center bottom !important; }
