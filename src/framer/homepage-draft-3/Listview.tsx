@@ -187,6 +187,7 @@ const MOBILE_LIST_CARD_STYLES = `
 .apartment-row .cell-balcony .outdoor-label {
   min-width: 0; padding: 0; font-size: 12px; font-weight: 600; color: var(--list-blue-strong);
 }
+.apartment-row .cell-balcony .outdoor-label { display: block; }
 .apartment-table .apartment-row > .cell-interior { grid-area: interior; }
 .apartment-table .apartment-row > .cell-outdoor { grid-area: terrace; display: flex; }
 .apartment-table .apartment-row > .cell-outdoor::before { display: none; }
