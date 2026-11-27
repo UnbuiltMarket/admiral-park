@@ -123,7 +123,7 @@ const MOBILE_LIST_CARD_STYLES = `
   grid-template-rows: auto 1fr repeat(3, auto) 1fr auto;
   grid-template-areas: 'header header' 'plan .' 'plan interior' 'plan terrace' 'plan garden' 'plan .' 'actions actions';
   gap: 4px 12px;
-  padding: 0 var(--list-card-padding) var(--list-card-padding);
+  padding: 4px var(--list-card-padding) var(--list-card-padding);
   border: var(--list-card-border) solid var(--list-card-outline);
   border-radius: var(--list-card-radius);
 }
@@ -142,35 +142,37 @@ const MOBILE_LIST_CARD_STYLES = `
 .apartment-row:focus-within::before { opacity: 1; }
 @media (hover: hover) { .apartment-row:hover::before { opacity: 1; } }
 .apartment-table .apartment-row > :is(.cell-location,.cell-rooms,.empty-garden) { display: none; }
-.apartment-table .apartment-row .cell-unit, .apartment-row .unit-summary, .apartment-row .unit-identification { display: contents; }
-.apartment-row .unit-primary {
-  grid-area: header; display: flex; align-items: center; justify-content: space-between;
-  gap: clamp(2px, .7cqw, 5px);
-  margin-inline: calc(-1 * var(--list-card-padding));
-  padding-inline: calc(var(--list-card-padding) + clamp(8px, 2.6cqw, 16px)) calc(var(--list-card-padding) + 2px);
-  min-height: 44px;
-  border-radius: var(--list-card-inner-radius) var(--list-card-inner-radius) 0 0;
-  background: var(--list-filter-gradient);
-  color: white;
+.apartment-table .apartment-row .cell-unit, .apartment-row .unit-summary { display: contents; }
+.apartment-row .unit-identification {
+  grid-area: header; display: grid; min-width: 0;
+  padding-inline: clamp(2px, .85cqw, 6px);
 }
-.apartment-row :is(.unit-identity-copy,.unit-mobile-meta) { display: contents; }
-.apartment-row .unit-mobile-meta { color: inherit; }
-.apartment-row .unit-id { color: inherit; font-size: clamp(17px, 4.5cqw, 22px); font-weight: 650; min-height: 44px; }
+.apartment-row .unit-primary {
+  display: flex; align-items: center; gap: 8px; min-height: 44px;
+}
+.apartment-row .unit-identity-copy { display: flex; align-items: center; gap: clamp(10px, 3cqw, 16px); }
+.apartment-row .unit-id { color: var(--list-blue-strong); font-size: clamp(19px, 5.3cqw, 24px); font-weight: 650; min-height: 44px; }
 .apartment-row .unit-status-line { margin: 0; }
-.apartment-row .unit-primary :is(.unit-status,.unit-header-fact) {
-  color: inherit; font-size: clamp(10px, 3.25cqw, 13px); font-weight: 600; line-height: 1.3;
-  white-space: nowrap;
+.apartment-row .unit-primary .unit-status {
+  font-size: clamp(12px, 3cqw, 14px); font-weight: 600; line-height: 1.3; white-space: nowrap;
 }
 .apartment-row .unit-primary .unit-status::before { display: none; }
-.apartment-row .unit-primary .status-available { color: color-mix(in srgb, var(--available) 3%, #eafff0); }
-.apartment-row .unit-primary :is(.status-under_negotiation,.status-reserved) { color: color-mix(in srgb, var(--negotiating) 6%, #fffcd7); }
-.apartment-row .unit-primary .status-sold { color: color-mix(in srgb, var(--sold) 3%, #fff7f8); }
-.apartment-row .unit-header-fact::before { content: '·'; margin-inline-end: clamp(2px, .75cqw, 5px); opacity: .72; }
-.apartment-row .unit-primary .save-button { color: inherit; }
-.apartment-row .unit-primary .save-button:is(:hover,:focus-visible) { background: rgb(0 0 0 / 13%); }
+.apartment-row .unit-primary .status-available { color: color-mix(in srgb, #216442 85%, var(--available)); }
+.apartment-row .unit-primary :is(.status-under_negotiation,.status-reserved) { color: color-mix(in srgb, #795415 85%, var(--negotiating)); }
+.apartment-row .unit-primary .status-sold { color: color-mix(in srgb, #a1353e 85%, var(--sold)); }
+.apartment-row .unit-primary .save-button { margin-inline-start: auto; }
 .apartment-row .unit-primary .save-button svg { width: 23px; height: 23px; }
-.apartment-row .unit-primary :is(.unit-id,.save-button):focus-visible { outline-color: white; outline-offset: -2px; }
-@container apartment-list (width < 510px) {
+.apartment-row .unit-primary :is(.unit-id,.save-button):focus-visible { outline-color: var(--list-blue-strong); outline-offset: -2px; }
+.apartment-row .unit-mobile-meta {
+  display: flex; flex-flow: row nowrap; align-items: baseline; gap: clamp(3px, 1cqw, 8px);
+  margin: 0; padding-block-end: 6px;
+  font-size: clamp(11.5px, 2.95cqw, 13px); line-height: 1.3;
+  color: var(--muted);
+}
+.apartment-row .unit-header-fact { white-space: nowrap; }
+.apartment-row .unit-header-fact + .unit-header-fact::before { content: '·'; margin-inline-end: clamp(3px, 1cqw, 8px); }
+.apartment-row .unit-header-fact strong { color: var(--list-blue-strong); font-weight: 650; }
+@container apartment-list (width < 440px) {
   .apartment-row .unit-header-compact { display: inline; }
   .apartment-row .unit-header-full {
     position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%);
@@ -203,9 +205,7 @@ const MOBILE_LIST_CARD_STYLES = `
 .apartment-table .cell-actions .action-pill { height: 44px; min-height: 44px; max-height: 44px; border-radius: var(--list-card-pill-radius); padding-inline: 4px; font-size: 11px; }
 .apartment-table .cell-actions .inquiry-link { font-size: 14px; }
 @media (forced-colors: active) {
-  .apartment-table .apartment-row { border-color: CanvasText; }
-  .apartment-row .unit-primary { background: Canvas; color: CanvasText; border-block: 1px solid CanvasText; }
-  .apartment-row .unit-primary :is(.unit-status,.save-button) { color: CanvasText; }
+  .apartment-table .apartment-row { border-color: CanvasText; --list-row-highlight: Canvas; }
   .apartment-row .unit-primary :is(.unit-id,.save-button):focus-visible { outline-color: Highlight; }
 }
 `
@@ -768,17 +768,34 @@ function mountApartmentList(root: any = (document as any), config: any = ({} as 
     }
     function row(a: any): any {
         const orientation = String(a.orientation ?? '').trim();
-        const status = statusText(a);
-        const floor = floorText(a);
+        const floor = floorText(a).replace(/\s*emelet\s*$/i, ' emelet');
+        const shortFloor = a.floor === 0 ? 'Fsz.' : a.floor == null ? '—' : floor.replace(/ emelet$/, '');
         const facts = [
-            [`${a.building} épület`, a.building],
-            [floor, a.floor === 0 ? 'Fsz.' : a.floor == null ? '—' : floor.replace(/\s*emelet\s*$/i, '')],
-            [bedroomCount(a.bedrooms, ' hálószoba'), hasNumber(a.bedrooms) ? bedroomCount(a.bedrooms, ' háló') : '— háló'],
-            [orientation || 'Nincs adat', orientation || '—'],
+            ['Épület', a.building, a.building],
+            ['Szint', floor, shortFloor],
+            ['', bedroomCount(a.bedrooms, ' hálószoba'), hasNumber(a.bedrooms) ? bedroomCount(a.bedrooms, ' háló') : '— háló'],
+            ['Tájolás', orientation || 'Nincs adat', orientation || '—'],
         ];
-        const meta = facts.map(([full, compact]) => `<span class="unit-header-fact" title="${esc(full)}">${headerLabel(full, compact)}</span>`).join('');
+        const meta = facts.map(([label, full, compact]) => {
+            const prefix = label ? `<span class="unit-fact-label">${esc(label)}</span> ` : '';
+            return `<span class="unit-header-fact">${prefix}<strong>${headerLabel(full, compact)}</strong></span>`;
+        }).join('');
         return `<tr class="apartment-row" data-unit="${esc(a.id)}">
-    <td class="cell-unit" data-label="Lakás"><div class="unit-summary"><div class="unit-media">${floorplanButton(a)}</div><div class="unit-identification"><div class="unit-primary"><div class="unit-identity-copy"><div class="unit-id-line"><button type="button" class="unit-id unit-open" data-detail="${esc(a.id)}" aria-label="${esc(a.id)} lakás részleteinek megnyitása" aria-haspopup="dialog">${esc(a.id)}</button></div><div class="unit-status-line"><span class="unit-status status-pill status-${esc(a.status)}" title="${esc(status)}">${headerLabel(status, status.replace(/ alatt$/, ''))}</span></div></div><span class="unit-mobile-meta">${meta}</span>${saveButton(a)}</div></div></div></td>
+    <td class="cell-unit" data-label="Lakás">
+      <div class="unit-summary">
+        <div class="unit-media">${floorplanButton(a)}</div>
+        <div class="unit-identification">
+          <div class="unit-primary">
+            <div class="unit-identity-copy">
+              <div class="unit-id-line"><button type="button" class="unit-id unit-open" data-detail="${esc(a.id)}" aria-label="${esc(a.id)} lakás részleteinek megnyitása" aria-haspopup="dialog">${esc(a.id)}</button></div>
+              <div class="unit-status-line"><span class="unit-status status-pill status-${esc(a.status)}">${esc(statusText(a))}</span></div>
+            </div>
+            ${saveButton(a)}
+          </div>
+          <div class="unit-mobile-meta">${meta}</div>
+        </div>
+      </div>
+    </td>
     <td class="cell-location" data-label="Épület, emelet és tájolás"><span class="unit-location"><span class="unit-building"><strong>${esc(a.building)}</strong> épület</span><span class="unit-floor">${esc(floorText(a))}</span>${orientation ? `<span>${esc(orientation)}</span>` : ''}</span></td>
     <td class="cell-rooms" data-label="Hálószoba">${bedroomCount(a.bedrooms)}</td>
     <td class="cell-area cell-interior" data-label="Beltér"><span class="interior-value">${rowArea(a.areaInterior)}</span></td>
