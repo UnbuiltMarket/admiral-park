@@ -498,9 +498,9 @@ const HOMEPAGE_HERO_INFOGRAPHIC = "https://framerusercontent.com/images/vRuUWre5
 const HOMEPAGE_CONNECTION_VIDEO = "https://framerusercontent.com/assets/BfO7rinv7Ci9Naw3GW01EFAvHi0.mp4"
 const HOMEPAGE_CONNECTION_END = "https://framerusercontent.com/images/uYMWXjUcDBc351olR2N5bRso.avif"
 const HOMEPAGE_ORBIT_APPROACH_VIDEO = "https://framerusercontent.com/assets/N02rcgZxOCN9LfVxWZtmoNOx2ws.mp4"
-const PORTRAIT_MEDIA = "https://cdn.jsdelivr.net/gh/UnbuiltMarket/admiral-park@34ce30bcb82596f113aea7185896669095425d12/assets/videos/homepage"
+const PORTRAIT_MEDIA = "https://cdn.jsdelivr.net/gh/UnbuiltMarket/admiral-park@d1378960808e1163e9abb27c8d5cd74c30ed461d/assets/videos/homepage"
 const PORTRAIT_PHONE = "(max-width: 767px) and (orientation: portrait)"
-const PORTRAIT_OPENING = `${PORTRAIT_MEDIA}/seq-01/portrait/lake.webp`
+const PORTRAIT_OPENING_VIDEO = `${PORTRAIT_MEDIA}/seq-01/portrait/lake-approach-take-2.mp4`
 const HOMEPAGE_MOBILE_VIDEO_BASE = "https://raw.githubusercontent.com/UnbuiltMarket/admiral-park/9732c7ca8b8f9d8080af85619b6881c0d19ffadd/assets/videos/homepage"
 const ORBIT_CHECKPOINT_ASSETS = "https://raw.githubusercontent.com/UnbuiltMarket/admiral-park/bfb2349cf8af7e6ae3f1c665ca67c984b82cf024/assets"
 const HOMEPAGE_CONNECTION_VERSION = "426c29f22325"
@@ -5058,7 +5058,16 @@ const orbitApartmentStudioStyles = `
     --orbit-light-glass-blur: none;
 }
 @media ${PORTRAIT_PHONE} {
-    [data-admiral-homepage] { --admiral-responsive-preview: url("${PORTRAIT_OPENING}"); }
+    [data-portrait-flight-layout],
+    [data-framer-name="Hero Orbit Stage"]:has([data-portrait-flight-layout]),
+    :has(> [data-framer-name="Hero Orbit Stage"] [data-portrait-flight-layout]) {
+        max-height: 93vh !important;
+        max-height: 93dvh !important;
+    }
+    [data-portrait-flight-layout] [data-admiral-sequence] { background-image: none !important; }
+    [data-portrait-flight-layout] [data-flight-media] > :is(canvas, video) { object-position: center bottom !important; }
+    [data-portrait-flight-layout][data-homepage-stage="opening"] [data-admiral-hero-video] { opacity: 1 !important; }
+    [data-portrait-flight-layout] [data-flight-media] picture img:not([src]) { visibility: hidden; }
 }
 [data-flight-media] { position: absolute; inset: 0; }
 [data-native-flight] > [data-flight-media] {
@@ -7945,9 +7954,9 @@ export default function AdmiralHomepageStudio(
     const portraitMedia = useGitHubAssets && portraitPhone === true
     const heroVideoUrl = useGitHubAssets ? HOMEPAGE_HERO_VIDEO : ""
     const connectionVideoUrl = useGitHubAssets ? HOMEPAGE_CONNECTION_VIDEO : ""
-    const heroStartPoster = portraitMedia ? PORTRAIT_OPENING : useWebp ? ORBIT_WEBP_BASE + "/stills/seq01-start.webp" : heroVideoUrl ? HOMEPAGE_HERO_VIDEO_START : heroUrls[0]
-    const heroEndPoster = portraitMedia ? `${PORTRAIT_MEDIA}/seq-01/portrait/buildings.webp` : useWebp ? ORBIT_WEBP_BASE + "/stills/seq01-end.webp" : heroVideoUrl ? HOMEPAGE_HERO_VIDEO_END : heroUrls[heroUrls.length - 1]
-    const connectionEndPoster = portraitMedia ? `${PORTRAIT_MEDIA}/seq-02/portrait/pool.webp` : useWebp ? ORBIT_WEBP_BASE + "/stills/seq02-end.webp" : HOMEPAGE_CONNECTION_END
+    const heroStartPoster = portraitMedia ? "" : useWebp ? ORBIT_WEBP_BASE + "/stills/seq01-start.webp" : heroVideoUrl ? HOMEPAGE_HERO_VIDEO_START : heroUrls[0]
+    const heroEndPoster = portraitMedia ? "" : useWebp ? ORBIT_WEBP_BASE + "/stills/seq01-end.webp" : heroVideoUrl ? HOMEPAGE_HERO_VIDEO_END : heroUrls[heroUrls.length - 1]
+    const connectionEndPoster = portraitMedia ? "" : useWebp ? ORBIT_WEBP_BASE + "/stills/seq02-end.webp" : HOMEPAGE_CONNECTION_END
     // Use the actual SEQ_01 endpoint for the existing SEQ_02 dissolve.
     const connectionPlaybackUrls = React.useMemo(
         () => [heroEndPoster, ...connectionUrls],
@@ -8255,6 +8264,7 @@ export default function AdmiralHomepageStudio(
         media.addEventListener("change", select)
         return () => media.removeEventListener("change", select)
     }, [])
+    const portraitFrameRef = React.useRef<HTMLCanvasElement>(null)
     const heroVideoRef = React.useRef<HTMLVideoElement>(null)
     const connectionVideoRef = React.useRef<HTMLVideoElement>(null)
     const heroEndLayerRef = React.useRef<HTMLImageElement>(null)
@@ -8970,7 +8980,7 @@ export default function AdmiralHomepageStudio(
                 Math.min(root.clientWidth, root.clientHeight) <= 767)
         const flightSource = (sequence: "01" | "02" | "03", desktop: string) =>
             phone && desktop ? `${HOMEPAGE_MOBILE_VIDEO_BASE}/seq-${sequence}/flight-mobile-v1.mp4` : desktop
-        const openingFlight = portraitMedia ? `${PORTRAIT_MEDIA}/seq-01/portrait/seq01_mobile-v2.mp4` : flightSource("01", heroVideoUrl)
+        const openingFlight = portraitMedia ? PORTRAIT_OPENING_VIDEO : flightSource("01", heroVideoUrl)
         const connectionFlight = portraitMedia ? `${PORTRAIT_MEDIA}/seq-02/portrait/pool.mp4` : flightSource("02", connectionVideoUrl)
         const approachFlight = flightSource("03", HOMEPAGE_ORBIT_APPROACH_VIDEO)
         let portraitFlight = phone && root.clientWidth < root.clientHeight
@@ -9261,7 +9271,8 @@ export default function AdmiralHomepageStudio(
         }
         function changePoster(url: string) {
             setDirectOrbitEntry(null)
-            if (poster!.getAttribute("src") !== url) poster!.src = url
+            if (!url) poster!.removeAttribute("src")
+            else if (poster!.getAttribute("src") !== url) poster!.src = url
             setPosterUrl(url)
         }
         function destroyHero() {
@@ -9396,7 +9407,14 @@ export default function AdmiralHomepageStudio(
         // The visitor's next gesture adopts this download, even if it is still in progress.
         function warmConnection() {
             if (connectionVideoUrl) {
-                if (heroSnapshot.state === "arrival") warmNextFilm(connectionFlight)
+                if (heroSnapshot.state === "arrival") {
+                    if (portraitMedia && connectionVideo) {
+                        if (!connectionVideo.getAttribute("src")) {
+                            connectionVideo.preload = "auto"
+                            connectionVideo.src = connectionFlight + "#t=0.001"
+                        }
+                    } else warmNextFilm(connectionFlight)
+                }
                 return
             }
             if (connectionWarmed || !canWarmNextFilm()) return
@@ -9487,7 +9505,8 @@ export default function AdmiralHomepageStudio(
                 heroCanvas!.style.opacity = "0"
                 poster!.style.opacity = "1"
                 hero = createHomepageHeroVideo({
-                    video, poster: poster!, endLayer, graphic,
+                    video, poster: poster!, endLayer, graphic: portraitMedia ? undefined : graphic,
+                    frameCanvas: portraitMedia ? portraitFrameRef.current : null,
                     url: openingFlight, fallbackUrl: portraitMedia ? openingFlight : heroVideoUrl,
                     endPoster: heroEndPoster, graphicUrl: portraitMedia ? undefined : HOMEPAGE_HERO_INFOGRAPHIC,
                     startAtEnd: atEnd, lastFrame: heroUrls.length - 1,
@@ -9605,6 +9624,7 @@ export default function AdmiralHomepageStudio(
                 poster!.style.opacity = "1"
                 hero = createHomepageHeroVideo({
                     video: connectionVideo, poster: poster!, endLayer: heroEndLayerRef.current,
+                    frameCanvas: portraitMedia ? portraitFrameRef.current : null,
                     url: connectionFlight, fallbackUrl: portraitMedia ? connectionFlight : connectionVideoUrl, endPoster: connectionEndPoster,
                     preparedVideo: takeNextFilm(connectionFlight),
                     startAtEnd: false, lastFrame: connectionPlaybackUrls.length - 1,
@@ -10622,6 +10642,7 @@ export default function AdmiralHomepageStudio(
             data-admiral-orbit=""
             data-orbit-blue={useStudio && blueStudio ? "" : undefined}
             data-orbit-shared-backdrop={useStudio && blueStudio && pageBackdrop ? "" : undefined}
+            data-portrait-flight-layout={useGitHubAssets && !directOrbitEntry && (stage === "opening" || stage === "approach" || stage === "building" || stage === "connection") ? "" : undefined}
             data-homepage-stage={stage}
             data-homepage-nav-active={String(hostActive)}
             data-homepage-nav-in-view={hostVisible ? "" : undefined}
@@ -10713,7 +10734,7 @@ export default function AdmiralHomepageStudio(
                     zIndex: 2,
                     touchAction: "pinch-zoom",
                     backgroundImage: heroVideoUrl && !directOrbitEntry && posterUrl === heroStartPoster &&
-                        (stage === "opening" || stage === "approach") ? (portraitPhone === true ? `url("${PORTRAIT_OPENING}")` : `var(--admiral-responsive-preview, url("${HOMEPAGE_HERO_PREVIEW}"))`) : undefined,
+                        (stage === "opening" || stage === "approach") && !portraitMedia ? `url("${HOMEPAGE_HERO_PREVIEW}")` : undefined,
                     backgroundSize: "cover",
                     backgroundPosition: flightFocal,
                     pointerEvents:
@@ -10724,13 +10745,17 @@ export default function AdmiralHomepageStudio(
                 }}
             >
                 <div data-flight-media="">
+                {portraitMedia && !staticRenderer && (
+                    <canvas ref={portraitFrameRef} data-portrait-frame="" aria-hidden="true" width={1} height={1}
+                        style={{ ...flightPosterStyle, visibility: stage === "orbit" ? "hidden" : "visible" }} />
+                )}
                 <picture style={{ display: "contents" }}>
                 {portraitPhone === null && useGitHubAssets && startView === "opening" && !directOrbitEntry && posterUrl === heroStartPoster && (
-                    <source media={PORTRAIT_PHONE} srcSet={PORTRAIT_OPENING} />
+                    <source media={`not all and ${PORTRAIT_PHONE}`} srcSet={heroStartPoster} />
                 )}
                 <img
                     ref={posterRef}
-                    src={directOrbitEntry || (startView === "orbit" && waitingForFormat) ? undefined : posterUrl}
+                    src={directOrbitEntry || (startView === "orbit" && waitingForFormat) || (portraitPhone === null && useGitHubAssets && startView === "opening" && posterUrl === heroStartPoster) ? undefined : posterUrl || undefined}
                     alt={alt}
                     loading="eager"
                     decoding="async"
@@ -10740,19 +10765,24 @@ export default function AdmiralHomepageStudio(
                     style={flightPosterStyle}
                 />
                 </picture>
-                {heroVideoUrl && !staticRenderer && (
+                {heroVideoUrl && (!staticRenderer || startView === "opening") && (
                     <video
                         ref={heroVideoRef}
                         data-admiral-hero-video=""
+                        crossOrigin={portraitPhone === false ? undefined : "anonymous"}
                         aria-hidden="true"
                         muted
                         playsInline
-                        preload="none"
+                        preload={portraitPhone === false ? "none" : "metadata"}
                         style={{ ...flightPosterStyle, opacity: 0 }}
-                    />
+                    >
+                        {(portraitPhone === null || staticRenderer) && startView === "opening" && !directOrbitEntry && (
+                            <source media={PORTRAIT_PHONE} src={PORTRAIT_OPENING_VIDEO + "#t=0.001"} type="video/mp4" />
+                        )}
+                    </video>
                 )}
                 {connectionVideoUrl && !staticRenderer && (
-                    <video ref={connectionVideoRef} data-admiral-connection-video=""
+                    <video ref={connectionVideoRef} data-admiral-connection-video="" crossOrigin={portraitMedia ? "anonymous" : undefined}
                         data-admiral-orbit-approach-video={stage === "orbitApproach" ? "" : undefined}
                         aria-hidden="true" muted playsInline preload="none"
                         style={{ ...flightPosterStyle, opacity: 0 }} />
@@ -13584,6 +13614,7 @@ function createHomepageHeroVideo(options: {
     video: HTMLVideoElement
     poster: HTMLImageElement
     endLayer: HTMLImageElement
+    frameCanvas?: HTMLCanvasElement | null
     graphic?: HTMLImageElement
     url: string
     fallbackUrl?: string
@@ -13652,6 +13683,7 @@ function createHomepageHeroVideo(options: {
         if (animations.get(layer) === animation) animations.delete(layer)
     }
     function prepareEndPoster() {
+        if (options.frameCanvas) return Promise.resolve(true)
         if (!endReady) {
             endLayer.src = options.endPoster
             endReady = new Promise<boolean>((resolve) => {
@@ -13756,6 +13788,15 @@ function createHomepageHeroVideo(options: {
         })
     }
     function prepareVideo() {
+        if (options.frameCanvas) {
+            // Native range requests serve both the paused first frame and normal playback.
+            nativeDelivery = true
+            video.preload = "auto"
+            ownedSource = url + "#t=0.001"
+            if (video.getAttribute("src") !== ownedSource) video.src = ownedSource
+            mediaStatus = "ready"
+            return Promise.resolve(true)
+        }
         if (!attached) {
             if (preferNativeFlightVideo && options.fallbackUrl && options.fallbackUrl !== mediaUrl) {
                 media?.release()
@@ -13828,7 +13869,7 @@ function createHomepageHeroVideo(options: {
     function revealPlayback() {
         if (entered) return
         entered = true
-        if (nativeDelivery) preferNativeFlightVideo = true
+        if (nativeDelivery && !options.frameCanvas) preferNativeFlightVideo = true
         void fade(video, 1, 300)
         waitForPlayback()
     }
@@ -13892,6 +13933,43 @@ function createHomepageHeroVideo(options: {
             } else mediaFailed(error)
         })
     }
+    // Retain a decoded video frame while the next chapter acquires its decoder.
+    // Skip and reduced-motion entry seek straight to the same final frame.
+    function holdFinalFrame(canvas: HTMLCanvasElement): Promise<boolean> {
+        void prepareVideo()
+        return new Promise(resolve => {
+            const events = ["loadedmetadata", "loadeddata", "seeked", "canplay"]
+            const done = (ok: boolean) => {
+                clearTimeout(timer)
+                for (const event of events) video.removeEventListener(event, capture)
+                video.removeEventListener("error", fail)
+                signal.removeEventListener("abort", fail)
+                resolve(ok)
+            }
+            const fail = () => done(false)
+            const capture = () => {
+                if (!Number.isFinite(video.duration) || !video.duration || video.seeking) return
+                const last = Math.max(0, video.duration - 0.001)
+                if (!video.ended && Math.abs(video.currentTime - last) > 0.015) {
+                    video.currentTime = last
+                    return
+                }
+                if (video.readyState < 2 || !video.videoWidth) return
+                const ctx = canvas.getContext("2d")
+                if (!ctx) return fail()
+                canvas.width = video.videoWidth
+                canvas.height = video.videoHeight
+                ctx.drawImage(video, 0, 0)
+                done(true)
+            }
+            const timer = window.setTimeout(fail, loadLimitMs)
+            for (const event of events) video.addEventListener(event, capture)
+            video.addEventListener("error", fail)
+            signal.addEventListener("abort", fail, { once: true })
+            if (video.error || signal.aborted) fail()
+            else capture()
+        })
+    }
     async function finish(next: "arrival" | "reduced", instant = false) {
         if (finished || finishing || signal.aborted) return
         finishing = true
@@ -13901,7 +13979,7 @@ function createHomepageHeroVideo(options: {
         video.pause()
         // A failed or hung image must not turn a partial video frame into an arrival.
         // Keep retry/skip available if neither endpoint is presentable.
-        const ready = await prepareEndPoster()
+        const ready = options.frameCanvas ? await holdFinalFrame(options.frameCanvas) : await prepareEndPoster()
         if (signal.aborted) return
         if (!ready && !hasVideoEndpoint) {
             endReady = undefined
@@ -13911,9 +13989,12 @@ function createHomepageHeroVideo(options: {
             publish()
             return
         }
-        if (ready) await fade(endLayer, 1, instant ? 0 : 300)
+        if (ready && !options.frameCanvas) await fade(endLayer, 1, instant ? 0 : 300)
         if (signal.aborted) return
-        if (ready) detachVideo()
+        if (ready) {
+            if (options.frameCanvas) video.style.opacity = "0"
+            detachVideo()
+        }
         finished = true
         finishing = false
         state = motion.matches ? "reduced" : next
@@ -14019,7 +14100,12 @@ function createHomepageHeroVideo(options: {
     // already reveals the decoded landing still without playing in reduced motion.
     if (options.startAtEnd)
         void finish(motion.matches ? "reduced" : "arrival", true)
-    else {
+    else if (options.frameCanvas) {
+        video.addEventListener("loadeddata", () => {
+            if (!started && !finishing && !finished) video.style.opacity = "1"
+        }, { signal })
+        void prepareVideo()
+    } else {
         poster.addEventListener("load", prepare, { signal })
         if (poster.complete) prepare()
     }
