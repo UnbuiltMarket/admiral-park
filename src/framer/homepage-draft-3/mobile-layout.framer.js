@@ -211,40 +211,6 @@ const mobileTypography = `<style>
     line-height: 1.35 !important;
   }
 
-  [data-framer-name="SEQ02"] {
-    box-sizing: border-box !important;
-    inset-inline: 0 !important;
-    width: 100% !important;
-    padding: 50px clamp(18px, 5.2vw, 26px) clamp(78px, 18svh, 155px) !important;
-  }
-  [data-framer-name="SEQ02 copy"] {
-    width: min(100%, 435px) !important;
-    max-width: 100% !important;
-    min-width: 0 !important;
-    gap: 12px !important;
-  }
-  [data-framer-name="SEQ02"] :is([data-framer-name="SEQ02 title"], [data-framer-name="SEQ02 introduction"]) {
-    width: 100% !important;
-    min-width: 0 !important;
-    height: auto !important;
-  }
-  [data-framer-name="SEQ02 title"] :is(h3, h3 span) {
-    --framer-font-size: clamp(25px, 7vw, 32px) !important;
-    font-size: var(--framer-font-size) !important;
-    line-height: 1.13 !important;
-    letter-spacing: -.025em !important;
-    overflow-wrap: normal !important;
-  }
-  [data-framer-name="SEQ02 title"] h3 > span { display: block; }
-  [data-framer-name="SEQ02 title"] h3 > br { display: none; }
-  [data-framer-name="SEQ02 title"] h3 > br + span {
-    --framer-font-size: clamp(12px, 3.5vw, 15px) !important;
-    --framer-font-weight: 600 !important;
-    margin-top: 8px;
-    font-weight: 600 !important;
-    line-height: 1.3 !important;
-    letter-spacing: .04em !important;
-  }
   [data-framer-name="SEQ02 introduction"] :is(h3, h3 span) {
     --framer-font-size: 14px !important;
     --framer-font-weight: 400 !important;
@@ -310,9 +276,6 @@ const mobileTypography = `<style>
   }
 }
 @media (pointer: coarse) and (max-width: 1000px) and (max-height: 550px) and (orientation: landscape) {
-  [data-framer-name="SEQ02"] { padding-block: 45px 52px !important; }
-  [data-framer-name="SEQ02 copy"] { width: min(78%, 435px) !important; gap: 8px !important; }
-  [data-framer-name="SEQ02 title"] :is(h3, h3 span) { --framer-font-size: clamp(22px, 6.7svh, 28px) !important; }
   [data-framer-name="SEQ02 introduction"] :is(h3, h3 span) { font-size: 13px !important; line-height: 1.35 !important; }
 }
 </style>`
