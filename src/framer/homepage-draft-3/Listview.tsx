@@ -114,7 +114,9 @@ const MOBILE_LIST_CARD_STYLES = `
 .apartment-table .apartment-row {
   --list-card-padding: 10px;
   --list-card-border: 1px;
-  --list-card-pill-radius: 22px;
+  --list-card-action-height: 44px;
+  --list-card-secondary-height: 32px;
+  --list-card-pill-radius: calc(var(--list-card-action-height) / 2);
   --list-card-inner-radius: calc(var(--list-card-pill-radius) + var(--list-card-padding));
   --list-card-radius: calc(var(--list-card-inner-radius) + var(--list-card-border));
   --list-card-outline: color-mix(in srgb, var(--list-blue) 27%, transparent);
@@ -126,6 +128,8 @@ const MOBILE_LIST_CARD_STYLES = `
   padding: 4px var(--list-card-padding) var(--list-card-padding);
   border: var(--list-card-border) solid var(--list-card-outline);
   border-radius: var(--list-card-radius);
+  background: linear-gradient(156deg, color-mix(in srgb, var(--paper) 28%, white), color-mix(in srgb, var(--paper) 88%, #d9e6ef)), var(--paper);
+  background-clip: padding-box;
 }
 .apartment-table .apartment-row:has(.empty-garden) {
   grid-template-rows: auto 1fr repeat(3, auto) 1fr auto;
@@ -164,13 +168,14 @@ const MOBILE_LIST_CARD_STYLES = `
 .apartment-row .unit-primary .save-button svg { width: 23px; height: 23px; }
 .apartment-row .unit-primary :is(.unit-id,.save-button):focus-visible { outline-color: var(--list-blue-strong); outline-offset: -2px; }
 .apartment-row .unit-mobile-meta {
-  display: flex; flex-flow: row nowrap; align-items: baseline; gap: clamp(3px, 1cqw, 8px);
-  margin: 0 0 4px; padding: 6px clamp(7px, 1.9cqw, 14px); border-radius: 10px;
+  display: flex; flex-flow: row nowrap; align-items: baseline; justify-content: space-between; gap: 3px;
+  margin: 0 calc(-1 * var(--list-card-padding)) 4px; padding: 9px clamp(10px, 2.8cqw, 22px);
+  border-radius: 0;
   font-size: clamp(11.5px, 2.95cqw, 13px); line-height: 1.3;
   background: var(--list-filter-gradient); color: white;
 }
 .apartment-row .unit-header-fact { white-space: nowrap; }
-.apartment-row .unit-header-fact + .unit-header-fact::before { content: '·'; margin-inline-end: clamp(3px, 1cqw, 8px); }
+.apartment-row .unit-meta-divider { opacity: .7; }
 .apartment-row .unit-header-fact strong { font-weight: 650; }
 @container apartment-list (width < 440px) {
   .apartment-row .unit-header-compact { display: inline; }
@@ -203,13 +208,25 @@ const MOBILE_LIST_CARD_STYLES = `
 .apartment-table .cell-actions .action-pills > :is(.inquiry-link,.row-inquiry-wrap) { grid-area: inquiry; }
 .apartment-table .cell-actions .row-secondary-actions {
   grid-area: actions; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px;
-  padding-block-start: 2px;
+  justify-self: center; align-items: center; width: min(100%, 336px); min-height: var(--list-card-action-height);
 }
 .apartment-table .cell-actions :is(.download-wrap,.row-inquiry-wrap,.action-pill) { width: 100%; min-width: 0; max-width: none; }
-.apartment-table .cell-actions .action-pill { height: 44px; min-height: 44px; max-height: 44px; border-radius: var(--list-card-pill-radius); padding-inline: 4px; font-size: 11px; }
+.apartment-table .cell-actions .action-pill {
+  height: var(--list-card-action-height); min-height: var(--list-card-action-height); max-height: var(--list-card-action-height);
+  border-radius: var(--list-card-pill-radius); padding-inline: 4px; font-size: 11px;
+}
+.apartment-table .cell-actions .row-secondary-actions .action-pill {
+  position: relative;
+  height: var(--list-card-secondary-height); min-height: var(--list-card-secondary-height); max-height: var(--list-card-secondary-height);
+  border-radius: calc(var(--list-card-secondary-height) / 2); padding-inline: 2px;
+}
+/* Keep the touch area full height around the compact pills. */
+.apartment-table .cell-actions .row-secondary-actions .action-pill::after {
+  content: ''; position: absolute; inset-block: calc((var(--list-card-secondary-height) - var(--list-card-action-height)) / 2 - 1px); inset-inline: 0;
+}
 .apartment-table .cell-actions .inquiry-link { font-size: 14px; }
 @media (forced-colors: active) {
-  .apartment-table .apartment-row { border-color: CanvasText; --list-row-highlight: Canvas; }
+  .apartment-table .apartment-row { background: Canvas; border-color: CanvasText; --list-row-highlight: Canvas; }
   .apartment-row .unit-mobile-meta { border: 1px solid CanvasText; background: Canvas; color: CanvasText; }
   .apartment-row .unit-primary :is(.unit-id,.save-button):focus-visible { outline-color: Highlight; }
 }
@@ -785,7 +802,7 @@ function mountApartmentList(root: any = (document as any), config: any = ({} as 
         const meta = facts.map(([label, full, compact]) => {
             const prefix = label ? `<span class="unit-fact-label">${esc(label)}</span> ` : '';
             return `<span class="unit-header-fact">${prefix}<strong>${headerLabel(full, compact)}</strong></span>`;
-        }).join('');
+        }).join('<span class="unit-meta-divider" aria-hidden="true">·</span>');
         return `<tr class="apartment-row" data-unit="${esc(a.id)}">
     <td class="cell-unit" data-label="Lakás">
       <div class="unit-summary">
