@@ -683,6 +683,7 @@ interface AdmiralHomepageTrialProps {
     gardenTitle?: string
     gardenBody?: string
     phoneSequenceCopy?: Partial<typeof defaultPhoneSequenceCopy>
+    portraitApproachVideo?: string
     fadeExtension?: number
     useGitHubAssets?: boolean
     heroBaseUrl?: string
@@ -5221,7 +5222,9 @@ const orbitApartmentStudioStyles = `
     inset: 0 auto auto 0; width: 1920px; height: 1010px; transform-origin: 0 0;
     will-change: transform;
 }
+[data-native-flight="portrait"] > [data-flight-media] { width: 1080px; height: 1920px; }
 [data-native-flight] > [data-flight-media] > :is(img, video),
+[data-native-flight="portrait"] > [data-flight-media] > [data-portrait-frame],
 [data-native-flight] > [data-flight-media] > picture > img {
     left: 0 !important; top: 0 !important; width: 100% !important; height: 100% !important;
     border-radius: 0 !important;
@@ -7961,6 +7964,7 @@ export default function AdmiralHomepageStudio(
         gardenTitle = defaultGardenTitle,
         gardenBody = defaultGardenBody,
         phoneSequenceCopy,
+        portraitApproachVideo = "",
         heroBaseUrl = "",
         connectionBaseUrl = "",
         orbitBaseUrl = "",
@@ -8100,6 +8104,7 @@ export default function AdmiralHomepageStudio(
     )
     const [portraitPhone, setPortraitPhone] = React.useState<boolean | null>(null)
     const portraitMedia = useGitHubAssets && portraitPhone === true
+    const portraitApproach = portraitMedia ? portraitApproachVideo.trim() : ""
     const heroVideoUrl = useGitHubAssets ? HOMEPAGE_HERO_VIDEO : ""
     const connectionVideoUrl = useGitHubAssets ? HOMEPAGE_CONNECTION_VIDEO : ""
     const heroStartPoster = portraitMedia ? "" : useWebp ? ORBIT_WEBP_BASE + "/stills/seq01-start.webp" : heroVideoUrl ? HOMEPAGE_HERO_VIDEO_START : heroUrls[0]
@@ -9130,7 +9135,7 @@ export default function AdmiralHomepageStudio(
             phone && desktop ? `${HOMEPAGE_MOBILE_VIDEO_BASE}/seq-${sequence}/flight-mobile-v1.mp4` : desktop
         const openingFlight = portraitMedia ? PORTRAIT_OPENING_VIDEO : flightSource("01", heroVideoUrl)
         const connectionFlight = portraitMedia ? `${PORTRAIT_MEDIA}/seq-02/portrait/pool.mp4` : flightSource("02", connectionVideoUrl)
-        const approachFlight = flightSource("03", HOMEPAGE_ORBIT_APPROACH_VIDEO)
+        const approachFlight = portraitApproach || flightSource("03", HOMEPAGE_ORBIT_APPROACH_VIDEO)
         let portraitFlight = phone && root.clientWidth < root.clientHeight
         let appliedFlightFocal: number | undefined
         const reducedMedia = window.matchMedia(
@@ -9249,7 +9254,8 @@ export default function AdmiralHomepageStudio(
         let flightGeometry: { width: number; height: number; x: number; y: number; w: number; h: number } | null = null
         let landingResizeFrame = 0, skipLandingResize = false
         function paintFlight() {
-            if (!flightMedia || !studioEnabled.current || currentStage !== "orbitApproach") return false
+            const holdingPortrait = currentStage === "handoff" && heroRoot!.dataset.nativeFlight === "portrait"
+            if (!flightMedia || !studioEnabled.current || (currentStage !== "orbitApproach" && !holdingPortrait)) return false
             if (!flightGeometry) {
                 const bounds = root!.getBoundingClientRect(), target = viewportFor(1, bounds)
                 if (!target || !bounds.width || !bounds.height) return false
@@ -9257,14 +9263,29 @@ export default function AdmiralHomepageStudio(
                 const sx = width / bounds.width, sy = height / bounds.height
                 flightGeometry = { width, height, x: target.x * sx, y: target.y * sy,
                     w: target.width * sx, h: target.height * sy }
-                heroRoot!.dataset.nativeFlight = ""
+                heroRoot!.dataset.nativeFlight = portraitApproach ? "portrait" : ""
             }
             const g = flightGeometry, a = sequenceEase(sequenceClamp(presentationProgress))
             const x = g.x * a, y = g.y * a, w = g.width + (g.w - g.width) * a, h = g.height + (g.h - g.height) * a
             // The media plane keeps one intrinsic size. Compositor transform + clipping preserve object-fit:cover
             // without laying out every full-resolution still and video on every display refresh.
-            const scale = Math.max(w / 1920, h / 1010)
-            const tx = x + (w - 1920 * scale) * focalX / 100, ty = y + (h - 1010 * scale) * focalY / 100
+            let scale: number, tx: number, ty: number
+            if (portraitApproach) {
+                // The exact orbit picture spans the bottom of the 1080 × 1920 film.
+                // Keep it centered and bottom-aligned until the window starts moving.
+                const startScale = Math.max(g.width / 1080, g.height / 1920)
+                const endScale = g.w / 1080
+                const startX = (g.width - 1080 * startScale) / 2
+                const startY = g.height - 1920 * startScale
+                const endY = g.y + g.h - 1920 * endScale
+                scale = startScale + (endScale - startScale) * a
+                tx = startX + (g.x - startX) * a
+                ty = startY + (endY - startY) * a
+            } else {
+                scale = Math.max(w / 1920, h / 1010)
+                tx = x + (w - 1920 * scale) * focalX / 100
+                ty = y + (h - 1010 * scale) * focalY / 100
+            }
             flightMedia.style.transform = `translate3d(${tx}px,${ty}px,0) scale(${scale})`
             const radius = g.x <= 1 && g.x + g.w >= g.width - 1 ? 0 : orbitWindowRadius * a
             const clip = `inset(${y}px ${Math.max(0,g.width - x - w)}px ${Math.max(0,g.height - y - h)}px ${x}px round 0 0 ${radius}px ${radius}px)`
@@ -9285,7 +9306,7 @@ export default function AdmiralHomepageStudio(
             flightShade?.style.removeProperty("clip-path")
         }
         function applyPresentation() {
-            if (paintFlight()) return
+            if (paintFlight() && currentStage === "orbitApproach") return
             const bounds = root!.getBoundingClientRect()
             const requested = viewportFor(presentationProgress, bounds)
             const rect = requested || {
@@ -9407,7 +9428,11 @@ export default function AdmiralHomepageStudio(
             maskPickerRef.current?.refresh()
         }
         function changeStage(next: HomepageStage) {
-            if (currentStage === "orbitApproach" && next !== currentStage) clearFlight()
+            if (next !== currentStage) {
+                const portraitPlane = heroRoot!.dataset.nativeFlight === "portrait"
+                if ((currentStage === "orbitApproach" || portraitPlane) && !(portraitPlane && next === "handoff"))
+                    clearFlight()
+            }
             if (next !== "orbitApproach" && next !== "connection" && next !== "handoff") delete root!.dataset.orbitPrepaint
             if (next !== "orbitApproach" && next !== "handoff" && next !== "orbit") delete root!.dataset.orbitArriving
             currentStage = next
@@ -9839,7 +9864,7 @@ export default function AdmiralHomepageStudio(
             setHeroState("loading")
             changeStage("orbitApproach")
             const generation = ++heroGeneration
-            let lastPaintAt: number | undefined, landingScheduled = false
+            let lastPaintAt: number | undefined, landingScheduled = false, filmProgress = 0
             function present(progress: number) {
                 if (progress === presentationProgress) return
                 presentationProgress = progress
@@ -9848,7 +9873,7 @@ export default function AdmiralHomepageStudio(
             function land() {
                 if (landingScheduled) return
                 landingScheduled = true
-                changePoster(checkpointZeroPoster)
+                if (!portraitApproach) changePoster(checkpointZeroPoster)
                 const from = presentationProgress, startedAt = performance.now()
                 // A failed video can land on its still far from the final window size.
                 // Finish that visible movement before exchanging the still for the canvas.
@@ -9869,12 +9894,13 @@ export default function AdmiralHomepageStudio(
             void orbit.prepare(0).catch(() => {})
             hero = createHomepageHeroVideo({
                 video: connectionVideo, poster: poster!, endLayer: heroEndLayerRef.current,
-                url: approachFlight, fallbackUrl: HOMEPAGE_ORBIT_APPROACH_VIDEO, endPoster: checkpointZeroPoster,
+                url: approachFlight, fallbackUrl: portraitApproach || HOMEPAGE_ORBIT_APPROACH_VIDEO, endPoster: checkpointZeroPoster,
                 preparedVideo: takeNextFilm(approachFlight),
+                holdVideoForHandoff: !!portraitApproach,
                 startAtEnd: false, lastFrame: 1, fadeExtension: () => fadeExtensionRef.current,
                 resumeWhenVisible: phone,
                 onUpdate(snapshot) {
-                    if (disposed || generation !== heroGeneration) return
+                    if (disposed || generation !== heroGeneration || currentStage !== "orbitApproach") return
                     const stateChanged = heroSnapshot.state !== snapshot.state
                     heroSnapshot = snapshot
                     if (stateChanged) setHeroState(snapshot.state)
@@ -9885,8 +9911,11 @@ export default function AdmiralHomepageStudio(
                         const now = performance.now()
                         const elapsed = lastPaintAt === undefined ? 0 : (now - lastPaintAt) / 1000
                         lastPaintAt = now
-                        present(orbitApproachFraming(presentationProgress, snapshot.progress,
-                            elapsed * connectionVideo.playbackRate, connectionVideo.duration))
+                        filmProgress = orbitApproachFraming(filmProgress, snapshot.progress,
+                            elapsed * connectionVideo.playbackRate, connectionVideo.duration)
+                        // Finish the portrait crop as the branches clear, before the
+                        // expanded skyline in the upper part of the film is revealed.
+                        present(portraitApproach ? sequenceClamp((filmProgress - .18) / .47) : filmProgress)
                     } else lastPaintAt = undefined
                     // Opening overlays are inactive on this flight. Notify subscribers only on player edges.
                     if (stateChanged) publish()
@@ -10499,6 +10528,7 @@ export default function AdmiralHomepageStudio(
         }
     }, [
         portraitMedia,
+        portraitApproach,
         heroUrls,
         heroVideoUrl,
         heroStartPoster,
@@ -10795,7 +10825,7 @@ export default function AdmiralHomepageStudio(
             data-admiral-orbit=""
             data-orbit-blue={useStudio && blueStudio ? "" : undefined}
             data-orbit-shared-backdrop={useStudio && blueStudio && pageBackdrop ? "" : undefined}
-            data-portrait-flight-layout={useGitHubAssets && !directOrbitEntry && (stage === "opening" || stage === "approach" || stage === "building" || stage === "connection") ? "" : undefined}
+            data-portrait-flight-layout={useGitHubAssets && !directOrbitEntry && (portraitApproach || stage === "opening" || stage === "approach" || stage === "building" || stage === "connection") ? "" : undefined}
             data-homepage-stage={stage}
             data-homepage-nav-active={String(hostActive)}
             data-homepage-nav-in-view={hostVisible ? "" : undefined}
@@ -11980,6 +12010,10 @@ addPropertyControls(AdmiralHomepageStudio, {
             gardenTitle: { type: ControlType.String, title: "SEQ03 · Heading", defaultValue: defaultPhoneSequenceCopy.gardenTitle },
             gardenBody: { type: ControlType.String, title: "SEQ03 · Body", defaultValue: defaultPhoneSequenceCopy.gardenBody },
         },
+    },
+    portraitApproachVideo: {
+        type: ControlType.String, title: "SEQ03 · Portrait film", defaultValue: "",
+        description: "1080 × 1920 video with the first orbit frame aligned to the bottom.",
     },
     editorView: {
         type: ControlType.Enum,
@@ -13795,6 +13829,7 @@ function createHomepageHeroVideo(options: {
     url: string
     fallbackUrl?: string
     preparedVideo?: ReturnType<typeof prepareFlightVideo>
+    holdVideoForHandoff?: boolean
     endPoster: string
     graphicUrl?: string
     startAtEnd: boolean
@@ -14165,9 +14200,10 @@ function createHomepageHeroVideo(options: {
             publish()
             return
         }
-        if (ready && !options.frameCanvas) await fade(endLayer, 1, instant ? 0 : 300)
+        if (ready && !options.frameCanvas && !options.holdVideoForHandoff)
+            await fade(endLayer, 1, instant ? 0 : 300)
         if (signal.aborted) return
-        if (ready) {
+        if (ready && !options.holdVideoForHandoff) {
             if (options.frameCanvas) video.style.opacity = "0"
             detachVideo()
         }

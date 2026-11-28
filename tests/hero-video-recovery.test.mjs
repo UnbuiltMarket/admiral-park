@@ -82,6 +82,7 @@ function flight(t, options = {}) {
         video, poster: new Layer(), endLayer, url: 'flight.mp4', fallbackUrl: options.fallbackUrl, endPoster: 'landing.avif',
         lastFrame: 63, startAtEnd: false, fadeExtension: () => 0, preparedVideo: options.prepared,
         resumeWhenVisible: options.resumeWhenVisible,
+        holdVideoForHandoff: options.holdVideoForHandoff,
         onUpdate: snapshot => snapshots.push(snapshot),
     });
     t.after(() => controller.destroy());
@@ -135,6 +136,21 @@ test('one buffered seek resumes a stalled decoder and the film reaches its real 
     await setImmediate();
     assert.equal(f.state(), 'arrival');
     assert.equal(f.endLayer.style.opacity, '1');
+});
+
+test('the portrait approach holds the end frame until the orbit takes over', async t => {
+    const f = flight(t, { holdVideoForHandoff: true });
+    await f.start();
+    f.move(4);
+    f.video.ended = true;
+    f.event('ended');
+    await setImmediate();
+    assert.equal(f.state(), 'arrival');
+    assert.equal(f.video.style.opacity, '1');
+    assert.equal(f.endLayer.style.opacity, '0');
+    assert.deepEqual(f.releases, []);
+    f.controller.destroy();
+    assert.deepEqual(f.releases, ['flight.mp4']);
 });
 
 test('repeated waits and the seek itself do not postpone the 1.2-second landing', async t => {
