@@ -70,9 +70,20 @@ html[data-admiral-guest-locked] body > :not(#admiral-guest-gate) { visibility: h
     let gate = null;
 
     function reviewRoute() { return location.pathname.replace(/[/]+$/, "") === route; }
+    function rememberAccess() {
+        try { localStorage.setItem(key, "1"); }
+        catch {
+            try { sessionStorage.setItem(key, "1"); } catch {}
+        }
+    }
     function hasAccess() {
         if (unlocked) return true;
-        try { return sessionStorage.getItem(key) === "1"; }
+        try { if (localStorage.getItem(key) === "1") return true; } catch {}
+        try {
+            if (sessionStorage.getItem(key) !== "1") return false;
+            rememberAccess();
+            return true;
+        }
         catch { return false; }
     }
     function removeGate() {
@@ -125,7 +136,7 @@ html[data-admiral-guest-locked] body > :not(#admiral-guest-gate) { visibility: h
                     return;
                 }
                 unlocked = true;
-                try { sessionStorage.setItem(key, "1"); } catch {}
+                rememberAccess();
                 removeGate();
             } catch {
                 error.textContent = "A belépés most nem sikerült. Kérjük, próbálja újra.";
@@ -143,6 +154,7 @@ html[data-admiral-guest-locked] body > :not(#admiral-guest-gate) { visibility: h
     if (!document.body) document.addEventListener("DOMContentLoaded", mount, { once: true });
     window.addEventListener("pageshow", mount);
     window.addEventListener("popstate", mount);
+    window.addEventListener("storage", event => { if (event.key === key) mount(); });
     window.navigation?.addEventListener("navigatesuccess", mount);
 })();
 </script>`
