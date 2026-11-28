@@ -659,19 +659,20 @@ const phoneSequenceFacts = {
 
 type PhoneStoryScene = keyof typeof phoneSequenceFacts
 
-function PhoneSequenceStory({ scene, title, body, animate, departing, showSiteMap }: {
+function PhoneSequenceStory({ scene, title, body, animate, departing, showFacts, showSiteMap }: {
     scene: PhoneStoryScene
     title: string
     body: string
     animate: boolean
     departing: boolean
+    showFacts: boolean
     showSiteMap: boolean
 }) {
     return <section data-phone-sequence-story={scene} data-draw={animate}
         data-phone-story-leaving={departing ? "" : undefined} aria-hidden={departing || undefined} aria-label={title}>
         {title && <h2>{title}</h2>}
         {body && <p>{body}</p>}
-        <ul aria-label={scene === "garden" ? "A kert számokban" : "A környék fejlesztése"}>
+        {showFacts && <ul aria-label={scene === "garden" ? "A kert számokban" : "A környék fejlesztése"}>
             {phoneSequenceFacts[scene].map(({ value, label, drawing }) => (
                 <li key={value}>
                     <svg aria-hidden="true" width="25" height="21" viewBox="0 0 28 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
@@ -681,7 +682,7 @@ function PhoneSequenceStory({ scene, title, body, animate, departing, showSiteMa
                     <span>{label}</span>
                 </li>
             ))}
-        </ul>
+        </ul>}
         {showSiteMap && <img
             data-phone-story-map=""
             src={HOMEPAGE_HERO_INFOGRAPHIC}
@@ -1340,6 +1341,9 @@ const homepageOrbitEntryStyles = `
         [data-phone-sequence-story][data-draw="true"] p {
             animation: admiral-phone-story-reveal .5s cubic-bezier(.22,.68,.26,1) .11s both;
         }
+        [data-phone-story-tuned] [data-phone-sequence-story="garden"][data-draw="true"] :is(h2, p) {
+            animation-name: admiral-phone-garden-glide-in;
+        }
         [data-phone-sequence-story][data-draw="true"] ul {
             animation: admiral-phone-story-reveal .4s cubic-bezier(.22,.68,.26,1) .66s both;
         }
@@ -1353,6 +1357,10 @@ const homepageOrbitEntryStyles = `
 }
 @keyframes admiral-phone-story-reveal {
     from { opacity: 0; transform: translateY(7px); }
+    to { opacity: 1; transform: none; }
+}
+@keyframes admiral-phone-garden-glide-in {
+    from { opacity: 0; transform: translate(-42px, 10px); }
     to { opacity: 1; transform: none; }
 }
 @keyframes admiral-phone-story-draw { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
@@ -8202,6 +8210,7 @@ export default function AdmiralHomepageStudio(
                   : heroStartPoster
     const [stage, setStage] = React.useState<HomepageStage>(previewStage)
     const [departingPhoneStory, setDepartingPhoneStory] = React.useState<PhoneStoryScene | null>(null)
+    const [gardenIntroStarted, setGardenIntroStarted] = React.useState(false)
     const [enteredOrbit, setEnteredOrbit] = React.useState(false)
     const [requestedPoster, setPosterUrl] = React.useState<string | null>(null)
     const posterUrl = requestedPoster ?? initialPoster
@@ -9672,6 +9681,7 @@ export default function AdmiralHomepageStudio(
         }
         function mountHero(atEnd = false) {
             if (disposed) return
+            setGardenIntroStarted(false)
             setEnteredOrbit(false)
             enterToken++
             orbit?.deactivate(true)
@@ -9806,6 +9816,7 @@ export default function AdmiralHomepageStudio(
         }
         function startConnection() {
             if (disposed || currentStage !== "building") return
+            setGardenIntroStarted(false)
             beginStoryDeparture("neighborhood")
             enterToken++
             destroyHero()
@@ -9819,10 +9830,22 @@ export default function AdmiralHomepageStudio(
             changeStage("connection")
             const generation = ++heroGeneration
             let completed = false,
-                orbitPreparing = false
+                orbitPreparing = false,
+                gardenIntroShown = false
             const onConnectionUpdate = (snapshot: SequenceSnapshot) => {
                 if (disposed || generation !== heroGeneration) return
                 updateStoryDeparture(snapshot)
+                const duration = connectionVideo?.duration
+                if (gardenIntroShown && snapshot.state === "error") {
+                    gardenIntroShown = false
+                    setGardenIntroStarted(false)
+                } else if (!gardenIntroShown && portraitStoryActive && !reducedMedia.matches &&
+                    snapshot.state === "moving" && duration && Number.isFinite(duration) &&
+                    (snapshot.time ?? 0) >= duration - .5) {
+                    // Start the title and body from the video clock. The facts and cue still wait for arrival.
+                    gardenIntroShown = true
+                    setGardenIntroStarted(true)
+                }
                 heroSnapshot = snapshot
                 setHeroState((previous) =>
                     previous === snapshot.state ? previous : snapshot.state
@@ -10812,7 +10835,9 @@ export default function AdmiralHomepageStudio(
     const leavingPhoneStory = portraitStoryActive && !directOrbitEntry && !fullscreen.active && !reduced
         ? departingPhoneStory
         : null
-    const renderedPhoneStory = phoneStoryScene ?? leavingPhoneStory
+    const earlyGardenStory = portraitStoryActive && gardenIntroStarted && stage === "connection" &&
+        !gardenVisible && !directOrbitEntry && !fullscreen.active && !reduced
+    const renderedPhoneStory = phoneStoryScene ?? (earlyGardenStory ? "garden" : leavingPhoneStory)
     const phoneCuePhase = portraitStoryActive && !staticRenderer && !directOrbitEntry && !fullscreen.active
         ? stage === "opening" ? "opening" : phoneStoryScene
         : null
@@ -11331,6 +11356,7 @@ export default function AdmiralHomepageStudio(
                         : phoneSequenceCopy?.gardenBody ?? defaultPhoneSequenceCopy.gardenBody}
                     animate={!staticRenderer && !reduced}
                     departing={!phoneStoryScene && leavingPhoneStory === renderedPhoneStory}
+                    showFacts={!earlyGardenStory}
                     showSiteMap={portraitStoryActive && renderedPhoneStory === "neighborhood"}
                 />
             )}
@@ -11795,10 +11821,12 @@ function createHomepageOverlay(Component: React.ComponentType<any>, kind: "openi
             function paint(opacity: number, t: HomepageTiming, interactive: boolean, leaving = openingKind) {
                 element!.style.opacity = String(opacity)
                 const distance = kind === "opening" ? (t.openingMotion?.logo.distance ?? 20) : kind === "openingText" ? (t.openingMotion?.text.distance ?? 20) : kind === "openingScroll" ? (t.openingMotion?.scroll.distance ?? 20) : t.rise
-                const travelDistance = portraitOpening && leaving ? Math.max(34, distance) : distance
+                const travelDistance = portraitOpening && leaving ? Math.max(48, distance) : distance
                 const travel = reducedMotion.matches ? 0 : (1 - opacity) * travelDistance * (leaving ? -1 : 1)
+                const sideways = portraitOpening && leaving && !reducedMotion.matches ? -12 * (1 - opacity) : 0
+                const x = sideways === 0 ? baseTranslate[0] : "calc(" + baseTranslate[0] + " + " + sideways + "px)"
                 element!.style.translate = travel === 0 ? original.translate : 
-                    baseTranslate[0] + " calc(" + (baseTranslate[1] || "0px") + " + " + travel + "px) " + (baseTranslate[2] || "0px")
+                    x + " calc(" + (baseTranslate[1] || "0px") + " + " + travel + "px) " + (baseTranslate[2] || "0px")
                 element!.style.scale = original.scale
                 element!.style.visibility = opacity < .001 ? "hidden" : original.visibility
                 element!.style.pointerEvents = interactive ? (original.pointerEvents || "auto") : "none"; element!.inert = interactive ? original.inert : true
@@ -11836,7 +11864,7 @@ function createHomepageOverlay(Component: React.ComponentType<any>, kind: "openi
                 const fromStage = previousStage
                 previousStage = channel.stage
                 const t = channel.timing
-                portraitOpening = openingKind && channel.portraitStoryOverlays === true
+                portraitOpening = (kind === "opening" || kind === "openingText") && channel.portraitStoryOverlays === true
                 const motionEnabled = !channel.static && !reducedMotion.matches
                 const openingDelay = kind === "opening" ? (t.openingMotion?.logo.delay ?? .2) : kind === "openingText" ? (t.openingMotion?.text.delay ?? 0) : kind === "openingScroll" ? (t.openingMotion?.scroll.delay ?? 0) : 0
                 const continuous = motionEnabled ? channel.openingProgress?.(openingDelay) : undefined
