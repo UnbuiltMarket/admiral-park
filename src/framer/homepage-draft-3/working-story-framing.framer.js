@@ -16,6 +16,7 @@ if (desktopCopy.some(node => node?.$scopeId !== workingPageId || !node.text?.tri
     throw new Error("Expected the authored desktop SEQ_02 title and body")
 }
 const [gardenTitle, gardenBody] = desktopCopy.map(node => node.text.replace(/\s+/g, " ").trim())
+const neighborhoodBody = "Vízparti otthonok Balatonfüreden. Élvezze a Balaton közelségét és az Aranyhíd sétány hangulatát."
 
 const status = await api.publishing.status()
 if (status.status !== "ready" || status.target !== "production" ||
@@ -25,6 +26,45 @@ if (status.status !== "ready" || status.target !== "production" ||
 
 const code = `<style id="admiral-working-story-framing">
 @media (max-width: 767px) and (orientation: portrait) {
+    :root[data-admiral-working-story] [data-framer-name="Handover date glass"] {
+        background: var(--admiral-glass-fallback, #e6eef2) !important;
+        --border-color: var(--admiral-glass-rim, rgb(255 255 255 / 57%)) !important;
+        box-shadow: var(--admiral-glass-shadow) !important;
+    }
+
+    :root[data-admiral-working-story] [data-framer-name="Handover date glass"] .framer-text {
+        color: var(--admiral-glass-ink, #112e43) !important;
+        --framer-text-color: var(--admiral-glass-ink, #112e43) !important;
+    }
+
+    @supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+        :root[data-admiral-working-story] [data-framer-name="Handover date glass"] {
+            background: var(--admiral-glass-fill, rgb(247 251 253 / 54%)) !important;
+            -webkit-backdrop-filter: var(--admiral-glass-blur, blur(10px)) !important;
+            backdrop-filter: var(--admiral-glass-blur, blur(10px)) !important;
+        }
+    }
+
+    @media (prefers-reduced-transparency: reduce) {
+        :root[data-admiral-working-story] [data-framer-name="Handover date glass"] {
+            background: var(--admiral-glass-fallback, #e6eef2) !important;
+            -webkit-backdrop-filter: none !important;
+            backdrop-filter: none !important;
+        }
+    }
+
+    @media (forced-colors: active) {
+        :root[data-admiral-working-story] [data-framer-name="Handover date glass"] {
+            background: Canvas !important;
+            --border-color: CanvasText !important;
+            box-shadow: none !important;
+        }
+        :root[data-admiral-working-story] [data-framer-name="Handover date glass"] .framer-text {
+            color: CanvasText !important;
+            --framer-text-color: CanvasText !important;
+        }
+    }
+
     :root[data-admiral-working-story] [data-admiral-homepage]::after {
         content: none;
     }
@@ -55,7 +95,7 @@ const code = `<style id="admiral-working-story-framing">
 
     :root[data-admiral-working-story] [data-phone-sequence-story="neighborhood"] h2 {
         max-width: min(100%, 368px);
-        font-size: clamp(22px, 6.5vw, 29px);
+        font-size: clamp(23px, 7vw, 32px);
         line-height: 1.17;
         letter-spacing: .038em;
     }
@@ -66,6 +106,14 @@ const code = `<style id="admiral-working-story-framing">
 
     :root[data-admiral-working-story] [data-phone-sequence-story] p {
         font-weight: 300;
+    }
+
+    :root[data-admiral-working-story] [data-phone-sequence-story="neighborhood"] p {
+        max-width: min(100%, 350px);
+        font-size: clamp(14px, 3.9vw, 17px);
+        display: block;
+        overflow: visible;
+        -webkit-line-clamp: unset;
     }
 
     :root[data-admiral-working-story] [data-phone-sequence-story] ul {
@@ -91,10 +139,15 @@ const code = `<style id="admiral-working-story-framing">
         width: min(62vw, 212px);
         grid-template-columns: repeat(2, minmax(0, 1fr));
         gap: 8px 6px;
+        text-shadow: 0 1px 2px rgb(5 22 38 / 60%);
     }
 
-    :root[data-admiral-working-story] [data-phone-sequence-story="garden"] li:first-child {
+    :root[data-admiral-working-story] [data-phone-sequence-story="garden"] li:last-child {
         grid-column: 1 / -1;
+    }
+
+    :root[data-admiral-working-story] [data-phone-sequence-story="garden"] svg {
+        filter: drop-shadow(0 1px 1px rgb(5 22 38 / 38%));
     }
 
     :root[data-admiral-working-story] [data-phone-sequence-story="garden"] :is(h2, p) {
@@ -122,11 +175,27 @@ const code = `<style id="admiral-working-story-framing">
 
     @media (max-height: 550px) {
         :root[data-admiral-working-story] [data-phone-sequence-story="garden"] ul {
+            bottom: calc(100% + var(--admiral-story-top) - var(--admiral-story-roof) + 16px);
+            gap: 4px;
+        }
+
+        :root[data-admiral-working-story] [data-phone-sequence-story="garden"] li {
+            gap: 1px;
+        }
+
+        :root[data-admiral-working-story] [data-phone-sequence-story="garden"] svg {
+            width: 20px;
+            height: 16px;
+        }
+    }
+
+    @media (max-height: 480px), (max-height: 510px) and (min-aspect-ratio: 7/10) {
+        :root[data-admiral-working-story] [data-phone-sequence-story="garden"] ul {
             width: min(76vw, 240px);
             grid-template-columns: repeat(3, minmax(0, 1fr));
         }
 
-        :root[data-admiral-working-story] [data-phone-sequence-story="garden"] li:first-child {
+        :root[data-admiral-working-story] [data-phone-sequence-story="garden"] li:last-child {
             grid-column: auto;
         }
     }
@@ -191,6 +260,44 @@ const code = `<style id="admiral-working-story-framing">
     }
 
     @media (prefers-reduced-motion: no-preference) {
+        :root[data-admiral-working-intro="waiting"] :is(
+            [data-framer-name="SEQ01 logo · gentle fade up"], [data-framer-name="Handover date glass"],
+            [data-framer-name="Header || Appear"] > nav, [data-phone-journey-cue="opening"]
+        ) {
+            visibility: hidden !important;
+            pointer-events: none !important;
+        }
+
+        :root[data-admiral-working-intro="playing"] [data-framer-name="SEQ01 logo · gentle fade up"] {
+            animation: admiral-working-intro-logo .48s ease-out .34s both;
+        }
+
+        :root[data-admiral-working-intro="playing"] [data-framer-name="Handover date glass"] {
+            animation: admiral-working-intro-badge .42s ease-out .83s both;
+        }
+
+        :root[data-admiral-working-intro="playing"] :is(
+            [data-framer-name="Header || Appear"] > nav, [data-phone-journey-cue="opening"]
+        ) {
+            animation: admiral-working-intro-control .38s ease-out 1.27s both;
+        }
+
+        /* Filter opacity combines with the exit opacity written by the camera. */
+        @keyframes admiral-working-intro-logo {
+            from { filter: opacity(0) drop-shadow(0 2px 3px rgb(13 43 70 / 42%)); }
+            to { filter: opacity(1) drop-shadow(0 2px 3px rgb(13 43 70 / 42%)); }
+        }
+
+        @keyframes admiral-working-intro-badge {
+            from { filter: opacity(0); }
+            to { filter: opacity(1); }
+        }
+
+        @keyframes admiral-working-intro-control {
+            from { opacity: 0; visibility: hidden; }
+            to { opacity: 1; visibility: visible; }
+        }
+
         :root[data-admiral-working-story] [data-phone-story-tuned] [data-phone-story-leaving] {
             --admiral-exit-x: 0px;
             --admiral-exit-y: calc(36px * var(--admiral-phone-story-exit, 0));
@@ -260,20 +367,93 @@ const code = `<style id="admiral-working-story-framing">
 
     const root = document.documentElement;
     const observer = new MutationObserver(sync);
+    const intro = "data-admiral-working-intro";
+    const still = "[data-portrait-opening-still]";
+    const portraitMotion = matchMedia("(max-width: 767px) and (orientation: portrait) and (prefers-reduced-motion: no-preference)");
+    let introFinished = false;
+    let paintFrame = 0;
+    let introTimer = 0;
+    let decoding = null;
+
+    function stopIntro() {
+        cancelAnimationFrame(paintFrame);
+        clearTimeout(introTimer);
+        paintFrame = introTimer = 0;
+        decoding = null;
+        root.removeAttribute(intro);
+    }
+
+    function finishIntro() {
+        introFinished = true;
+        stopIntro();
+    }
+
+    function syncIntro() {
+        if (!portraitMotion.matches || location.hash.toLowerCase() === "#orbit") {
+            stopIntro();
+            return;
+        }
+        if (introFinished || root.getAttribute(intro) === "playing") return;
+        if (!root.hasAttribute(intro)) root.setAttribute(intro, "waiting");
+        if (root.hasAttribute("data-admiral-guest-locked") || document.hidden) return;
+
+        const hero = Array.from(root.querySelectorAll("[data-phone-opening-intro]")).find(el => el.clientWidth > 0);
+        if (hero && hero.dataset.homepageStage !== "opening") {
+            finishIntro();
+            return;
+        }
+        // Navigation must remain reachable if the opening still is unavailable.
+        if (!introTimer && document.body) introTimer = window.setTimeout(finishIntro, 5000);
+        const image = hero?.querySelector(still);
+        if (!image?.complete || !image.naturalWidth || decoding || paintFrame) return;
+
+        // Wait for a paint with the decoded first frame before revealing the layers.
+        decoding = image;
+        void image.decode().then(() => {
+            if (decoding !== image) return;
+            decoding = null;
+            paintFrame = requestAnimationFrame(() => {
+                paintFrame = requestAnimationFrame(() => {
+                    paintFrame = 0;
+                    if (!root.hasAttribute(marker) || root.hasAttribute("data-admiral-guest-locked") ||
+                        document.hidden || !portraitMotion.matches || hero.dataset.homepageStage !== "opening") return;
+                    root.setAttribute(intro, "playing");
+                    clearTimeout(introTimer);
+                    introTimer = window.setTimeout(finishIntro, 1750);
+                });
+            });
+        }, () => {
+            if (decoding === image) decoding = null;
+        });
+    }
 
     function sync() {
         const active = location.pathname.replace(/[/]+$/, "") === "${workingPath}";
         const wasActive = root.hasAttribute(marker);
         root.toggleAttribute(marker, active);
-        if (active === wasActive) return;
-
-        // Framer can retain custom styles during client navigation.
-        if (active) observer.observe(root, { childList: true, subtree: true });
-        else observer.disconnect();
+        if (active !== wasActive) {
+            introFinished = false;
+            // Framer can retain custom styles during client navigation.
+            if (active) observer.observe(root, {
+                childList: true, subtree: true, attributes: true,
+                attributeFilter: ["data-homepage-stage", "data-admiral-guest-locked"],
+            });
+            else {
+                observer.disconnect();
+                stopIntro();
+            }
+        }
+        if (active) syncIntro();
     }
 
     window[mount] = sync;
     sync();
+    document.addEventListener("load", event => {
+        if (event.target instanceof HTMLImageElement && event.target.matches(still)) sync();
+    }, true);
+    document.addEventListener("visibilitychange", sync);
+    portraitMotion.addEventListener("change", sync);
+    window.addEventListener("hashchange", sync);
     window.addEventListener("pageshow", sync);
     window.addEventListener("popstate", sync);
     window.navigation?.addEventListener("navigatesuccess", sync);
@@ -291,7 +471,7 @@ for (const id of heroIds) {
     const hero = api.tree.get(id)
     api.tree.patch(id, {
         $control__portraitStoryOverlays: true,
-        $control__phoneSequenceCopy: { ...hero.$control__phoneSequenceCopy, gardenTitle, gardenBody },
+        $control__phoneSequenceCopy: { ...hero.$control__phoneSequenceCopy, neighborhoodBody, gardenTitle, gardenBody },
     })
 }
 

@@ -17,16 +17,17 @@ if (source?.pageIds?.length !== 1 || source.pageIds[0] !== working.id || !source
 
 const heroSettings = working.heroIds.map((id, index) => {
     const hero = api.tree.get(id)
-    const { gardenTitle, gardenBody } = hero.$control__phoneSequenceCopy ?? {}
+    const { neighborhoodBody, gardenTitle, gardenBody } = hero.$control__phoneSequenceCopy ?? {}
     const guestHero = api.tree.get(guest.heroIds[index])
     return {
         $control__portraitApproachVideo: hero.$control__portraitApproachVideo,
         $control__portraitStoryOverlays: hero.$control__portraitStoryOverlays,
-        $control__phoneSequenceCopy: { ...guestHero.$control__phoneSequenceCopy, gardenTitle, gardenBody },
+        $control__phoneSequenceCopy: { ...guestHero.$control__phoneSequenceCopy, neighborhoodBody, gardenTitle, gardenBody },
     }
 })
 if (heroSettings.some(settings => !settings.$control__portraitApproachVideo || !settings.$control__portraitStoryOverlays ||
-    !settings.$control__phoneSequenceCopy.gardenTitle || !settings.$control__phoneSequenceCopy.gardenBody)) {
+    !settings.$control__phoneSequenceCopy.neighborhoodBody || !settings.$control__phoneSequenceCopy.gardenTitle ||
+    !settings.$control__phoneSequenceCopy.gardenBody)) {
     throw new Error("Expected the portrait video and story controls on the working draft")
 }
 
@@ -34,9 +35,10 @@ const code = source.code
     .replaceAll("data-admiral-working-story", "data-admiral-guest-story")
     .replaceAll("admiral-working-story-framing", "admiral-guest-story-framing")
     .replaceAll("admiralpark:working-story-framing", "admiralpark:guest-story-framing")
+    .replaceAll("admiral-working-intro", "admiral-guest-intro")
     .replaceAll("admiral-phone-site-map-in", "admiral-guest-phone-site-map-in")
     .replace(JSON.stringify(working.path), JSON.stringify(guest.path))
-if (!code.includes('=== "/homepage-draft-3"') || code.includes("admiral-working-story")) {
+if (!code.includes('=== "/homepage-draft-3"') || code.includes("admiral-working-story") || code.includes("admiral-working-intro")) {
     throw new Error("Expected a separate route and style marker for the guest copy")
 }
 
