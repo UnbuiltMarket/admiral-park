@@ -13,34 +13,37 @@ html[data-admiral-guest-locked] body > :not(#admiral-guest-gate) { visibility: h
     --review-photo: url("https://cdn.jsdelivr.net/gh/UnbuiltMarket/admiral-park@a3ff5a346f501a0d2af5b4466c2d2f95b30a3fb0/assets/orbit-compat-v06/stills/seq02-end.webp");
     position: fixed; inset: 0; z-index: 100000; isolation: isolate; box-sizing: border-box;
     margin: 0; width: 100%; height: 100%; height: 100dvh; max-width: none; max-height: none;
-    overflow: auto; border: 0; clip-path: inset(0); color: #143451; background: #254962;
+    overflow-x: hidden; overflow-y: auto; border: 0; clip-path: inset(0); color: #143451; background: #254962;
     padding: max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(16px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
     font-family: Montserrat, Arial, sans-serif;
 }
 #admiral-guest-gate[open] { display: grid; grid-template-columns: minmax(0, 1fr); place-items: center; }
 #admiral-guest-gate::backdrop { background: #254962; }
-#admiral-guest-gate::before {
-    content: ""; position: fixed; inset: 0; z-index: -1; pointer-events: none;
+#admiral-guest-gate [data-guest-photo] {
+    position: fixed; inset: 0; z-index: -1; pointer-events: none; overflow: hidden; contain: paint;
+}
+#admiral-guest-gate [data-guest-photo]::before {
+    content: ""; position: absolute; inset: -24px;
     background: linear-gradient(160deg, rgb(8 33 54 / 26%), rgb(10 32 50 / 50%)), var(--review-photo) center / cover no-repeat;
-    filter: blur(18px); transform: scale(1.12);
+    filter: blur(18px);
 }
 #admiral-guest-gate form {
     box-sizing: border-box; width: min(100%, 396px); min-width: 0; padding: clamp(18px, 5vw, 26px); margin: 0;
-    display: grid; gap: 12px; border: 1px solid rgb(255 255 255 / 82%); border-radius: 28px;
+    display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; border: 1px solid rgb(255 255 255 / 82%); border-radius: 28px;
     background: linear-gradient(145deg, rgb(250 253 255 / 94%), rgb(223 237 248 / 89%));
     box-shadow: 0 12px 46px rgb(5 23 40 / 28%);
 }
 #admiral-guest-gate label { font-size: 17px; font-weight: 650; line-height: 1.35; }
-#admiral-guest-gate [data-guest-fields] { display: flex; gap: 8px; }
+#admiral-guest-gate [data-guest-fields] { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; min-width: 0; }
 #admiral-guest-gate :is(input,button) {
     box-sizing: border-box; min-height: 48px; margin: 0; border-radius: 24px; font-family: inherit;
 }
 #admiral-guest-gate input {
-    flex: 1 1 0; min-width: 0; border: 1px solid #7899b1; padding: 0 14px; outline-offset: 2px;
+    width: 100%; min-width: 0; border: 1px solid #7899b1; padding: 0 14px; outline-offset: 2px;
     background: rgb(255 255 255 / 95%); color: #143451; font-size: 16px;
 }
 #admiral-guest-gate button {
-    flex: 0 0 auto; border: 1px solid #184b77; padding: 0 16px; color: white;
+    border: 1px solid #184b77; padding: 0 16px; color: white;
     background: linear-gradient(145deg, #256ba0, #154876 67%, #123c61);
     font-size: 14px; font-weight: 650; cursor: pointer;
 }
@@ -49,7 +52,7 @@ html[data-admiral-guest-locked] body > :not(#admiral-guest-gate) { visibility: h
 #admiral-guest-gate [data-guest-error]:empty { display: none; }
 @media (orientation: portrait) {
     #admiral-guest-gate { --review-photo: url("https://cdn.jsdelivr.net/gh/UnbuiltMarket/admiral-park@d1378960808e1163e9abb27c8d5cd74c30ed461d/assets/videos/homepage/seq-02/portrait/pool.webp"); }
-    #admiral-guest-gate::before { background-position: 50% 65%; }
+    #admiral-guest-gate [data-guest-photo]::before { background-position: 50% 65%; }
 }
 </style>
 <script>
@@ -87,6 +90,7 @@ html[data-admiral-guest-locked] body > :not(#admiral-guest-gate) { visibility: h
         gate.lang = "hu";
         gate.setAttribute("aria-labelledby", "admiral-guest-label");
         gate.innerHTML = [
+            '<div data-guest-photo aria-hidden="true"></div>',
             '<form method="post">',
             '<label id="admiral-guest-label" for="admiral-guest-password" tabindex="-1" autofocus>Jelszó</label>',
             '<div data-guest-fields>',
