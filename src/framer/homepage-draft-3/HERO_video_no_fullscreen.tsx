@@ -636,9 +636,53 @@ const notifyHomepage = () => homepageSubscribers.forEach((update) => update())
 const HOMEPAGE_EMPTY_CHECKPOINT_URLS: readonly string[] = []
 const defaultGardenTitle = "Üdvözöljük az új otthonában!"
 const defaultGardenBody = "Az Admiral Park kertjében 46 különböző fafaj kap helyet, így a kilátás évszakról évszakra változik."
+const defaultPhoneSequenceCopy = {
+    neighborhoodTitle: "Otthon az Aranyhíd sétányon",
+    neighborhoodBody: "Vízparti otthonok Balatonfüreden.",
+    gardenTitle: "Három épület, egy közös kert",
+    gardenBody: "A kert arca évszakról évszakra változik.",
+}
+
+const phoneSequenceFacts = {
+    neighborhood: [
+        { value: "110 millió Ft", label: "környék fejlesztésére", drawing: "M5 8c0-2 4-4 9-4s9 2 9 4-4 4-9 4-9-2-9-4v8c0 2 4 4 9 4s9-2 9-4V8M5 12c0 2 4 4 9 4s9-2 9-4" },
+        { value: "3 → 10–15 m", label: "strandbejárat", drawing: "M3 8h22M7 4 3 8l4 4m14-8 4 4-4 4M3 17c2 0 2-2 4-2s2 2 4 2 2-2 4-2 2 2 4 2 2-2 4-2l2 1M3 21c2 0 2-2 4-2s2 2 4 2 2-2 4-2 2 2 4 2 2-2 4-2l2 1" },
+        { value: "+5 m", label: "Aranyhíd sétány", drawing: "M10 3 3 21m15-18 7 18M14 3v3m0 3v3m0 3v3m0 3v1" },
+    ],
+    garden: [
+        { value: "268", label: "új fa", drawing: "M14 21v-7m0 4-3-4m3 3 4-4M7 16h14a4 4 0 0 0 1-8A4 4 0 0 0 18 5a4 4 0 0 0-8 0A4 4 0 0 0 6 8a4 4 0 0 0 1 8zM9 21h10" },
+        { value: "46", label: "fafajta", drawing: "M6 20 19 7M9 17C3 10 13 3 24 3c0 11-7 21-15 14zm4-4v-4m0 4h5" },
+        { value: "55%", label: "zöldfelület", drawing: "M4 19c3-4 6-5 10-5s7 1 10 5M4 22h20M14 14V7m0 4c-4 0-6-2-6-6 4 0 6 2 6 6zm0-3c0-4 2-6 6-6 0 4-2 6-6 6z" },
+    ],
+}
+
+function PhoneSequenceStory({ scene, title, body, animate }: {
+    scene: keyof typeof phoneSequenceFacts
+    title: string
+    body: string
+    animate: boolean
+}) {
+    return <section data-phone-sequence-story={scene} data-draw={animate} aria-label={title}>
+        {title && <h2>{title}</h2>}
+        {body && <p>{body}</p>}
+        <ul aria-label={scene === "garden" ? "A kert számokban" : "A környék fejlesztése"}>
+            {phoneSequenceFacts[scene].map(({ value, label, drawing }) => (
+                <li key={value}>
+                    <svg aria-hidden="true" width="25" height="21" viewBox="0 0 28 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                        <path d={drawing} pathLength={1} />
+                    </svg>
+                    <strong>{value}</strong>
+                    <span>{label}</span>
+                </li>
+            ))}
+        </ul>
+    </section>
+}
+
 interface AdmiralHomepageTrialProps {
     gardenTitle?: string
     gardenBody?: string
+    phoneSequenceCopy?: Partial<typeof defaultPhoneSequenceCopy>
     fadeExtension?: number
     useGitHubAssets?: boolean
     heroBaseUrl?: string
@@ -1192,6 +1236,86 @@ const homepageOrbitEntryStyles = `
         transform: none;
     }
 }
+[data-admiral-homepage] [data-phone-sequence-story] { display: none; }
+@media ${PORTRAIT_PHONE} {
+    [data-framer-name="Hero Orbit Stage"]:has([data-admiral-homepage] [data-phone-sequence-story="neighborhood"])
+        > [data-framer-name="SEQ02"] [data-framer-name="SEQ02 copy"],
+    [data-admiral-homepage]:has([data-phone-sequence-story="garden"]) [data-seq3-garden] { display: none !important; }
+
+    [data-admiral-homepage] [data-phone-sequence-story] {
+        position: absolute;
+        top: max(calc(env(safe-area-inset-top) + 64px), min(18%, 155px));
+        inset-inline: max(16px, env(safe-area-inset-left)) max(16px, env(safe-area-inset-right));
+        z-index: 3;
+        display: grid;
+        justify-items: center;
+        gap: 7px;
+        color: white;
+        text-align: center;
+        font-family: Montserrat, Arial, sans-serif;
+        pointer-events: none;
+    }
+    [data-phone-sequence-story] :is(h2, p) {
+        display: -webkit-box;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        overflow-wrap: anywhere;
+        text-wrap: balance;
+        margin: 0;
+        color: inherit;
+        text-shadow: 0 1px 3px rgb(5 22 38 / 90%), 0 2px 10px rgb(5 22 38 / 60%);
+    }
+    [data-phone-sequence-story] h2 {
+        max-width: 19ch;
+        -webkit-line-clamp: 2;
+        font-size: clamp(21px, 5.6vw, 27px);
+        font-weight: 700;
+        line-height: 1.14;
+        letter-spacing: -.025em;
+    }
+    [data-phone-sequence-story] p {
+        max-width: 34ch;
+        -webkit-line-clamp: 3;
+        font-size: clamp(13px, 3.4vw, 15px);
+        font-weight: 500;
+        line-height: 1.36;
+    }
+    [data-phone-sequence-story] ul {
+        box-sizing: border-box;
+        width: min(100%, 276px);
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        list-style: none;
+        padding: 7px 5px;
+        margin: 3px 0 0;
+        border: 1px solid rgb(237 247 255 / 42%);
+        border-radius: 15px;
+        background: rgb(11 40 63 / 79%);
+    }
+    [data-phone-sequence-story] li {
+        min-width: 0;
+        display: grid;
+        justify-items: center;
+        align-content: start;
+        gap: 2px;
+        padding-inline: 2px;
+    }
+    [data-phone-sequence-story] li + li { border-inline-start: 1px solid rgb(237 247 255 / 23%); }
+    [data-phone-sequence-story] svg { color: #b8e2ff; margin-bottom: 1px; }
+    [data-phone-sequence-story="garden"] svg { color: #c9edc8; }
+    [data-phone-sequence-story] strong { font-size: 12px; font-weight: 700; line-height: 1.22; white-space: nowrap; }
+    [data-phone-sequence-story] li span { font-size: 10px; font-weight: 550; line-height: 1.2; color: #eaf5ff; }
+
+    @media (prefers-reduced-motion: no-preference) {
+        [data-phone-sequence-story][data-draw="true"] path {
+            stroke-dasharray: 1;
+            animation: admiral-phone-story-draw .65s ease-out both;
+        }
+        [data-phone-sequence-story][data-draw="true"] li:nth-child(2) path { animation-delay: 80ms; }
+        [data-phone-sequence-story][data-draw="true"] li:nth-child(3) path { animation-delay: 160ms; }
+    }
+}
+@keyframes admiral-phone-story-draw { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
 [data-framer-name="SEQ01"] [data-framer-name="SEQ01 logo · gentle fade up"] {
     filter: drop-shadow(0 2px 3px rgb(13 43 70 / 42%));
 }
@@ -7813,6 +7937,7 @@ export default function AdmiralHomepageStudio(
         useGitHubAssets = true,
         gardenTitle = defaultGardenTitle,
         gardenBody = defaultGardenBody,
+        phoneSequenceCopy,
         heroBaseUrl = "",
         connectionBaseUrl = "",
         orbitBaseUrl = "",
@@ -10567,6 +10692,11 @@ export default function AdmiralHomepageStudio(
     // The last SEQ_02 poster is also the held first frame of SEQ_03.
     const gardenVisible = !!connectionVideoUrl && stage === "connection" && posterUrl === connectionEndPoster &&
         (staticRenderer || heroState === "arrival" || heroState === "reduced")
+    const phoneStoryScene = useGitHubAssets && !directOrbitEntry && !fullscreen.active
+        ? stage === "building" && (staticRenderer || heroState === "arrival" || heroState === "reduced")
+            ? "neighborhood"
+            : gardenVisible ? "garden" : null
+        : null
     const orbitStatic = staticRenderer && editorView === "orbit"
     const checkpoints = Math.round(Math.max(2, Math.min(16, checkpointCount)))
     const paused = orbitInfo.state === "paused"
@@ -11068,6 +11198,19 @@ export default function AdmiralHomepageStudio(
                     {gardenTitle && <h2>{gardenTitle}</h2>}
                     {gardenBody && <p>{gardenBody}</p>}
                 </div>
+            )}
+            {phoneStoryScene && (
+                <PhoneSequenceStory
+                    key={phoneStoryScene}
+                    scene={phoneStoryScene}
+                    title={phoneStoryScene === "neighborhood"
+                        ? phoneSequenceCopy?.neighborhoodTitle ?? defaultPhoneSequenceCopy.neighborhoodTitle
+                        : phoneSequenceCopy?.gardenTitle ?? defaultPhoneSequenceCopy.gardenTitle}
+                    body={phoneStoryScene === "neighborhood"
+                        ? phoneSequenceCopy?.neighborhoodBody ?? defaultPhoneSequenceCopy.neighborhoodBody
+                        : phoneSequenceCopy?.gardenBody ?? defaultPhoneSequenceCopy.gardenBody}
+                    animate={!staticRenderer && !reduced}
+                />
             )}
             <div data-seq3-garden-cue="" data-visible={gardenVisible} aria-hidden={!gardenVisible}>
                 <div aria-hidden="true">
@@ -11804,6 +11947,16 @@ addPropertyControls(AdmiralHomepageStudio, {
     gardenBody: {
         type: ControlType.String, title: "SEQ03 · Body", defaultValue: defaultGardenBody, displayTextArea: true,
         description: "One sentence beneath the heading. Choose SEQ_02 end / SEQ_03 start in Editor view to preview it.",
+    },
+    phoneSequenceCopy: {
+        type: ControlType.Object, title: "Phone · Sequence copy", defaultValue: defaultPhoneSequenceCopy,
+        description: "Portrait phone captions. Keep headings to two lines and body copy to three.",
+        controls: {
+            neighborhoodTitle: { type: ControlType.String, title: "SEQ02 · Heading", defaultValue: defaultPhoneSequenceCopy.neighborhoodTitle },
+            neighborhoodBody: { type: ControlType.String, title: "SEQ02 · Body", defaultValue: defaultPhoneSequenceCopy.neighborhoodBody },
+            gardenTitle: { type: ControlType.String, title: "SEQ03 · Heading", defaultValue: defaultPhoneSequenceCopy.gardenTitle },
+            gardenBody: { type: ControlType.String, title: "SEQ03 · Body", defaultValue: defaultPhoneSequenceCopy.gardenBody },
+        },
     },
     editorView: {
         type: ControlType.Enum,
