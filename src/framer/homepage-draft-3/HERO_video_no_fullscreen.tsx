@@ -1242,6 +1242,17 @@ const homepageOrbitEntryStyles = `
         > [data-framer-name="SEQ02"] [data-framer-name="SEQ02 copy"],
     [data-admiral-homepage]:has([data-phone-sequence-story="garden"]) [data-seq3-garden] { display: none !important; }
 
+    [data-admiral-homepage]::after {
+        content: "";
+        position: absolute;
+        inset: 0 0 auto;
+        height: min(70%, 450px);
+        z-index: 2;
+        pointer-events: none;
+        opacity: 0;
+        background: linear-gradient(to bottom, rgb(5 22 38 / 29%), rgb(5 22 38 / 46%) 68%, transparent);
+    }
+    [data-admiral-homepage]:has([data-phone-sequence-story])::after { opacity: 1; }
     [data-admiral-homepage] [data-phone-sequence-story] {
         position: absolute;
         top: max(calc(env(safe-area-inset-top) + 64px), min(18%, 155px));
@@ -1263,15 +1274,16 @@ const homepageOrbitEntryStyles = `
         text-wrap: balance;
         margin: 0;
         color: inherit;
-        text-shadow: 0 1px 3px rgb(5 22 38 / 90%), 0 2px 10px rgb(5 22 38 / 60%);
+        text-shadow: 0 1px 3px rgb(5 22 38 / 38%);
     }
     [data-phone-sequence-story] h2 {
-        max-width: 19ch;
+        max-width: min(100%, 345px);
         -webkit-line-clamp: 2;
-        font-size: clamp(21px, 5.6vw, 27px);
+        font-size: clamp(20px, 5.4vw, 26px);
         font-weight: 700;
         line-height: 1.14;
-        letter-spacing: -.025em;
+        letter-spacing: .02em;
+        text-transform: uppercase;
     }
     [data-phone-sequence-story] p {
         max-width: 34ch;
@@ -1282,15 +1294,14 @@ const homepageOrbitEntryStyles = `
     }
     [data-phone-sequence-story] ul {
         box-sizing: border-box;
-        width: min(100%, 276px);
+        width: min(100%, 272px);
         display: grid;
         grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 6px;
         list-style: none;
-        padding: 7px 5px;
-        margin: 3px 0 0;
-        border: 1px solid rgb(237 247 255 / 42%);
-        border-radius: 15px;
-        background: rgb(11 40 63 / 79%);
+        padding: 0;
+        margin: 8px 0 0;
+        text-shadow: 0 1px 3px rgb(5 22 38 / 45%);
     }
     [data-phone-sequence-story] li {
         min-width: 0;
@@ -1300,20 +1311,32 @@ const homepageOrbitEntryStyles = `
         gap: 2px;
         padding-inline: 2px;
     }
-    [data-phone-sequence-story] li + li { border-inline-start: 1px solid rgb(237 247 255 / 23%); }
-    [data-phone-sequence-story] svg { color: #b8e2ff; margin-bottom: 1px; }
-    [data-phone-sequence-story="garden"] svg { color: #c9edc8; }
+    [data-phone-sequence-story] svg { margin-bottom: 1px; }
     [data-phone-sequence-story] strong { font-size: 12px; font-weight: 700; line-height: 1.22; white-space: nowrap; }
-    [data-phone-sequence-story] li span { font-size: 10px; font-weight: 550; line-height: 1.2; color: #eaf5ff; }
+    [data-phone-sequence-story] li span { font-size: 10px; font-weight: 550; line-height: 1.2; }
 
     @media (prefers-reduced-motion: no-preference) {
+        [data-admiral-homepage]::after { transition: opacity .42s ease-out; }
+        [data-phone-sequence-story][data-draw="true"] h2 {
+            animation: admiral-phone-story-reveal .54s cubic-bezier(.22,.68,.26,1) both;
+        }
+        [data-phone-sequence-story][data-draw="true"] p {
+            animation: admiral-phone-story-reveal .5s cubic-bezier(.22,.68,.26,1) .11s both;
+        }
+        [data-phone-sequence-story][data-draw="true"] ul {
+            animation: admiral-phone-story-reveal .4s cubic-bezier(.22,.68,.26,1) .66s both;
+        }
         [data-phone-sequence-story][data-draw="true"] path {
             stroke-dasharray: 1;
-            animation: admiral-phone-story-draw .65s ease-out both;
+            animation: admiral-phone-story-draw 1.35s ease-in-out 1.1s both;
         }
-        [data-phone-sequence-story][data-draw="true"] li:nth-child(2) path { animation-delay: 80ms; }
-        [data-phone-sequence-story][data-draw="true"] li:nth-child(3) path { animation-delay: 160ms; }
+        [data-phone-sequence-story][data-draw="true"] li:nth-child(2) path { animation-delay: 1.21s; }
+        [data-phone-sequence-story][data-draw="true"] li:nth-child(3) path { animation-delay: 1.32s; }
     }
+}
+@keyframes admiral-phone-story-reveal {
+    from { opacity: 0; transform: translateY(7px); }
+    to { opacity: 1; transform: none; }
 }
 @keyframes admiral-phone-story-draw { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
 [data-framer-name="SEQ01"] [data-framer-name="SEQ01 logo · gentle fade up"] {
