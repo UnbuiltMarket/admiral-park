@@ -212,9 +212,7 @@ const mobileTypography = `<style>
   }
 
   [data-framer-name="SEQ02 introduction"] :is(h3, h3 span) {
-    --framer-font-size: 14px !important;
     --framer-font-weight: 400 !important;
-    font-size: 14px !important;
     font-weight: 400 !important;
     line-height: 1.5 !important;
     overflow-wrap: normal !important;
@@ -276,7 +274,7 @@ const mobileTypography = `<style>
   }
 }
 @media (pointer: coarse) and (max-width: 1000px) and (max-height: 550px) and (orientation: landscape) {
-  [data-framer-name="SEQ02 introduction"] :is(h3, h3 span) { font-size: 13px !important; line-height: 1.35 !important; }
+  [data-framer-name="SEQ02 introduction"] :is(h3, h3 span) { line-height: 1.35 !important; }
 }
 </style>`
 const typographyPageIds = ["Phxhru9uu", "kbkbxs570", "ZmD0CLV3Z", "A8W8FsOjk", "XLriEYHai", "kepPPkXui"]
