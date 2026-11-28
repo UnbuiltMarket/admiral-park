@@ -629,6 +629,7 @@ interface HomepageChannel {
     story: OrbitStorySettings
     static: boolean
     mobile: HomepageMobileLayout | null
+    portraitStoryOverlays?: boolean
 }
 const homepageChannels = new Map<HTMLElement, HomepageChannel>()
 const homepageSubscribers = new Set<() => void>()
@@ -656,13 +657,18 @@ const phoneSequenceFacts = {
     ],
 }
 
-function PhoneSequenceStory({ scene, title, body, animate }: {
-    scene: keyof typeof phoneSequenceFacts
+type PhoneStoryScene = keyof typeof phoneSequenceFacts
+
+function PhoneSequenceStory({ scene, title, body, animate, departing, showSiteMap }: {
+    scene: PhoneStoryScene
     title: string
     body: string
     animate: boolean
+    departing: boolean
+    showSiteMap: boolean
 }) {
-    return <section data-phone-sequence-story={scene} data-draw={animate} aria-label={title}>
+    return <section data-phone-sequence-story={scene} data-draw={animate}
+        data-phone-story-leaving={departing ? "" : undefined} aria-hidden={departing || undefined} aria-label={title}>
         {title && <h2>{title}</h2>}
         {body && <p>{body}</p>}
         <ul aria-label={scene === "garden" ? "A kert számokban" : "A környék fejlesztése"}>
@@ -676,6 +682,14 @@ function PhoneSequenceStory({ scene, title, body, animate }: {
                 </li>
             ))}
         </ul>
+        {showSiteMap && <img
+            data-phone-story-map=""
+            src={HOMEPAGE_HERO_INFOGRAPHIC}
+            alt="Az A, B és C épület elhelyezkedése az Aranyhíd sétány mentén."
+            decoding="async"
+            draggable={false}
+            onLoad={event => { event.currentTarget.dataset.ready = "" }}
+        />}
     </section>
 }
 
@@ -684,6 +698,7 @@ interface AdmiralHomepageTrialProps {
     gardenBody?: string
     phoneSequenceCopy?: Partial<typeof defaultPhoneSequenceCopy>
     portraitApproachVideo?: string
+    portraitStoryOverlays?: boolean
     fadeExtension?: number
     useGitHubAssets?: boolean
     heroBaseUrl?: string
@@ -1238,6 +1253,7 @@ const homepageOrbitEntryStyles = `
     }
 }
 [data-admiral-homepage] [data-phone-sequence-story] { display: none; }
+[data-admiral-homepage] :is([data-phone-story-map], [data-phone-journey-cue]) { display: none; }
 @media ${PORTRAIT_PHONE} {
     [data-framer-name="Hero Orbit Stage"]:has([data-admiral-homepage] [data-phone-sequence-story="neighborhood"])
         > [data-framer-name="SEQ02"] [data-framer-name="SEQ02 copy"],
@@ -7965,6 +7981,7 @@ export default function AdmiralHomepageStudio(
         gardenBody = defaultGardenBody,
         phoneSequenceCopy,
         portraitApproachVideo = "",
+        portraitStoryOverlays = false,
         heroBaseUrl = "",
         connectionBaseUrl = "",
         orbitBaseUrl = "",
@@ -8105,6 +8122,7 @@ export default function AdmiralHomepageStudio(
     const [portraitPhone, setPortraitPhone] = React.useState<boolean | null>(null)
     const portraitMedia = useGitHubAssets && portraitPhone === true
     const portraitApproach = portraitMedia ? portraitApproachVideo.trim() : ""
+    const portraitStoryActive = portraitMedia && portraitStoryOverlays
     const heroVideoUrl = useGitHubAssets ? HOMEPAGE_HERO_VIDEO : ""
     const connectionVideoUrl = useGitHubAssets ? HOMEPAGE_CONNECTION_VIDEO : ""
     const heroStartPoster = portraitMedia ? "" : useWebp ? ORBIT_WEBP_BASE + "/stills/seq01-start.webp" : heroVideoUrl ? HOMEPAGE_HERO_VIDEO_START : heroUrls[0]
@@ -8183,6 +8201,7 @@ export default function AdmiralHomepageStudio(
                   ? orbitPoster
                   : heroStartPoster
     const [stage, setStage] = React.useState<HomepageStage>(previewStage)
+    const [departingPhoneStory, setDepartingPhoneStory] = React.useState<PhoneStoryScene | null>(null)
     const [enteredOrbit, setEnteredOrbit] = React.useState(false)
     const [requestedPoster, setPosterUrl] = React.useState<string | null>(null)
     const posterUrl = requestedPoster ?? initialPoster
@@ -9141,6 +9160,36 @@ export default function AdmiralHomepageStudio(
         const reducedMedia = window.matchMedia(
             "(prefers-reduced-motion: reduce)"
         )
+        let departingStory: PhoneStoryScene | null = null
+        let storyExitProgress = 0
+        function clearStoryDeparture() {
+            if (!departingStory) return
+            departingStory = null
+            root!.style.setProperty("--admiral-phone-story-exit", "1")
+            setDepartingPhoneStory(null)
+        }
+        function beginStoryDeparture(scene: PhoneStoryScene) {
+            if (!portraitStoryActive || reducedMedia.matches) return
+            departingStory = scene
+            storyExitProgress = 0
+            root!.style.setProperty("--admiral-phone-story-exit", "0")
+            setDepartingPhoneStory(scene)
+        }
+        function updateStoryDeparture(snapshot: SequenceSnapshot) {
+            if (!departingStory) return
+            if (reducedMedia.matches || snapshot.state === "arrival" ||
+                snapshot.state === "reduced" || snapshot.state === "error") {
+                clearStoryDeparture()
+                return
+            }
+            if (snapshot.state !== "moving") return
+            // Time this against the presented frames, so buffering does not move the copy.
+            const progress = sequenceEase(sequenceClamp(((snapshot.time ?? 0) - .10) / 1.45))
+            if (progress <= storyExitProgress) return
+            storyExitProgress = progress
+            root!.style.setProperty("--admiral-phone-story-exit", String(progress))
+            if (progress === 1) clearStoryDeparture()
+        }
         setReduced(reducedMedia.matches)
         reducedMedia.addEventListener(
             "change",
@@ -9241,6 +9290,7 @@ export default function AdmiralHomepageStudio(
                 story: story.current,
                 static: staticRenderer,
                 mobile: mobileLayout,
+                portraitStoryOverlays: portraitStoryActive,
                 enabled:
                     currentStage === "opening" ||
                     currentStage === "approach" ||
@@ -9428,6 +9478,8 @@ export default function AdmiralHomepageStudio(
             maskPickerRef.current?.refresh()
         }
         function changeStage(next: HomepageStage) {
+            if (departingStory && next !== (departingStory === "neighborhood" ? "connection" : "orbitApproach"))
+                clearStoryDeparture()
             if (next !== currentStage) {
                 const portraitPlane = heroRoot!.dataset.nativeFlight === "portrait"
                 if ((currentStage === "orbitApproach" || portraitPlane) && !(portraitPlane && next === "handoff"))
@@ -9754,6 +9806,7 @@ export default function AdmiralHomepageStudio(
         }
         function startConnection() {
             if (disposed || currentStage !== "building") return
+            beginStoryDeparture("neighborhood")
             enterToken++
             destroyHero()
             clearApartmentDetails()
@@ -9769,6 +9822,7 @@ export default function AdmiralHomepageStudio(
                 orbitPreparing = false
             const onConnectionUpdate = (snapshot: SequenceSnapshot) => {
                 if (disposed || generation !== heroGeneration) return
+                updateStoryDeparture(snapshot)
                 heroSnapshot = snapshot
                 setHeroState((previous) =>
                     previous === snapshot.state ? previous : snapshot.state
@@ -9856,6 +9910,7 @@ export default function AdmiralHomepageStudio(
                 void activateOrbit(0)
                 return
             }
+            beginStoryDeparture("garden")
             destroyHero()
             activeSequence = "SEQ_03"
             root!.dataset.activeSequence = activeSequence
@@ -9901,6 +9956,7 @@ export default function AdmiralHomepageStudio(
                 resumeWhenVisible: phone,
                 onUpdate(snapshot) {
                     if (disposed || generation !== heroGeneration || currentStage !== "orbitApproach") return
+                    updateStoryDeparture(snapshot)
                     const stateChanged = heroSnapshot.state !== snapshot.state
                     heroSnapshot = snapshot
                     if (stateChanged) setHeroState(snapshot.state)
@@ -10515,6 +10571,8 @@ export default function AdmiralHomepageStudio(
             orbit?.destroy()
             abort.abort()
             presentationResize.disconnect()
+            clearStoryDeparture()
+            root.style.removeProperty("--admiral-phone-story-exit")
             clearFlight()
             heroRoot.style.removeProperty("--admiral-flight-focal-x")
             delete root.dataset.orbitPrepaint
@@ -10529,6 +10587,7 @@ export default function AdmiralHomepageStudio(
     }, [
         portraitMedia,
         portraitApproach,
+        portraitStoryActive,
         heroUrls,
         heroVideoUrl,
         heroStartPoster,
@@ -10750,6 +10809,13 @@ export default function AdmiralHomepageStudio(
             ? "neighborhood"
             : gardenVisible ? "garden" : null
         : null
+    const leavingPhoneStory = portraitStoryActive && !directOrbitEntry && !fullscreen.active && !reduced
+        ? departingPhoneStory
+        : null
+    const renderedPhoneStory = phoneStoryScene ?? leavingPhoneStory
+    const phoneCuePhase = portraitStoryActive && !staticRenderer && !directOrbitEntry && !fullscreen.active
+        ? stage === "opening" ? "opening" : phoneStoryScene
+        : null
     const orbitStatic = staticRenderer && editorView === "orbit"
     const checkpoints = Math.round(Math.max(2, Math.min(16, checkpointCount)))
     const paused = orbitInfo.state === "paused"
@@ -10821,6 +10887,7 @@ export default function AdmiralHomepageStudio(
         <div
             ref={rootRef}
             data-admiral-homepage=""
+            data-phone-story-tuned={portraitStoryActive ? "" : undefined}
             data-admiral-fullscreen-fades=""
             data-admiral-orbit=""
             data-orbit-blue={useStudio && blueStudio ? "" : undefined}
@@ -11252,26 +11319,39 @@ export default function AdmiralHomepageStudio(
                     {gardenBody && <p>{gardenBody}</p>}
                 </div>
             )}
-            {phoneStoryScene && (
+            {renderedPhoneStory && (
                 <PhoneSequenceStory
-                    key={phoneStoryScene}
-                    scene={phoneStoryScene}
-                    title={phoneStoryScene === "neighborhood"
+                    key={renderedPhoneStory}
+                    scene={renderedPhoneStory}
+                    title={renderedPhoneStory === "neighborhood"
                         ? phoneSequenceCopy?.neighborhoodTitle ?? defaultPhoneSequenceCopy.neighborhoodTitle
                         : phoneSequenceCopy?.gardenTitle ?? defaultPhoneSequenceCopy.gardenTitle}
-                    body={phoneStoryScene === "neighborhood"
+                    body={renderedPhoneStory === "neighborhood"
                         ? phoneSequenceCopy?.neighborhoodBody ?? defaultPhoneSequenceCopy.neighborhoodBody
                         : phoneSequenceCopy?.gardenBody ?? defaultPhoneSequenceCopy.gardenBody}
                     animate={!staticRenderer && !reduced}
+                    departing={!phoneStoryScene && leavingPhoneStory === renderedPhoneStory}
+                    showSiteMap={portraitStoryActive && renderedPhoneStory === "neighborhood"}
                 />
             )}
-            <div data-seq3-garden-cue="" data-visible={gardenVisible} aria-hidden={!gardenVisible}>
+            {phoneCuePhase && (
+                <button type="button" key={`cue-${phoneCuePhase}`} data-phone-journey-cue={phoneCuePhase}
+                    aria-label={phoneCuePhase === "garden" ? "Tovább a 3D nézethez" : "Tovább a következő jelenetre"}
+                    onClick={() => {
+                        if (phoneCuePhase === "opening") actions.current?.resumeHero()
+                        else if (phoneCuePhase === "neighborhood") actions.current?.explore()
+                        else actions.current?.startOrbitApproach()
+                    }}>
+                    <AdmiralScrollCue />
+                </button>
+            )}
+            <div data-seq3-garden-cue="" data-visible={gardenVisible && !portraitStoryActive} aria-hidden={!gardenVisible || portraitStoryActive}>
                 <div aria-hidden="true">
                     <AdmiralScrollCue caption="A folytatáshoz görgessen lefelé" />
                 </div>
                 <button type="button" data-seq3-cue-action=""
                     aria-label="A folytatáshoz görgessen lefelé – továbblépés a 3D nézethez"
-                    disabled={!gardenVisible || staticRenderer}
+                    disabled={!gardenVisible || staticRenderer || portraitStoryActive}
                     onClick={() => actions.current?.startOrbitApproach()}
                 />
             </div>
@@ -11679,6 +11759,7 @@ function createHomepageOverlay(Component: React.ComponentType<any>, kind: "openi
             if (!element?.style) return
             const original = { opacity: element.style.opacity, translate: element.style.translate, scale: element.style.scale, pointerEvents: element.style.pointerEvents, visibility: element.style.visibility, hidden: element.getAttribute("aria-hidden"), inert: element.inert }
             let selected: HTMLElement | null = null
+            let portraitOpening = false
             let previousStage: HomepageStage | undefined, lastTiming: HomepageTiming | null = null
             let fadeFrame = 0, contentFrame = 0, disposed = false
             let departure: { from: number; started: number; timing: HomepageTiming } | null = null
@@ -11714,7 +11795,8 @@ function createHomepageOverlay(Component: React.ComponentType<any>, kind: "openi
             function paint(opacity: number, t: HomepageTiming, interactive: boolean, leaving = openingKind) {
                 element!.style.opacity = String(opacity)
                 const distance = kind === "opening" ? (t.openingMotion?.logo.distance ?? 20) : kind === "openingText" ? (t.openingMotion?.text.distance ?? 20) : kind === "openingScroll" ? (t.openingMotion?.scroll.distance ?? 20) : t.rise
-                const travel = reducedMotion.matches ? 0 : (1 - opacity) * distance * (leaving ? -1 : 1)
+                const travelDistance = portraitOpening && leaving ? Math.max(34, distance) : distance
+                const travel = reducedMotion.matches ? 0 : (1 - opacity) * travelDistance * (leaving ? -1 : 1)
                 element!.style.translate = travel === 0 ? original.translate : 
                     baseTranslate[0] + " calc(" + (baseTranslate[1] || "0px") + " + " + travel + "px) " + (baseTranslate[2] || "0px")
                 element!.style.scale = original.scale
@@ -11754,6 +11836,7 @@ function createHomepageOverlay(Component: React.ComponentType<any>, kind: "openi
                 const fromStage = previousStage
                 previousStage = channel.stage
                 const t = channel.timing
+                portraitOpening = openingKind && channel.portraitStoryOverlays === true
                 const motionEnabled = !channel.static && !reducedMotion.matches
                 const openingDelay = kind === "opening" ? (t.openingMotion?.logo.delay ?? .2) : kind === "openingText" ? (t.openingMotion?.text.delay ?? 0) : kind === "openingScroll" ? (t.openingMotion?.scroll.delay ?? 0) : 0
                 const continuous = motionEnabled ? channel.openingProgress?.(openingDelay) : undefined
@@ -11799,7 +11882,7 @@ function createHomepageOverlay(Component: React.ComponentType<any>, kind: "openi
                 // Both sequence departures use the same time-based ease and travel.
                 // The opening reads the camera clock so it also unwinds on reverse.
                 const departurePhase = motionEnabled
-                    ? channel.departureProgress?.(fadeDuration(t), openingDelay) ?? ramp(0, openingEnd, faded(0, openingEnd))
+                    ? channel.departureProgress?.(fadeDuration(t) + (portraitOpening ? .38 : 0), openingDelay) ?? ramp(0, openingEnd, faded(0, openingEnd))
                     : channel.static ? ramp(0, openingEnd) : progress === 0 ? 0 : 1
                 const openingOpacity = 1 - sequenceEase(sequenceClamp(departurePhase))
                 const opacity = !channel.enabled ? 0 : openingKind ? openingOpacity : kind === "building" ? ramp(t.buildingIn, t.buildingFull, faded(t.buildingIn, t.buildingFull)) : ramp(t.ctaIn, 100, faded(t.ctaIn, 100))
@@ -12014,6 +12097,9 @@ addPropertyControls(AdmiralHomepageStudio, {
     portraitApproachVideo: {
         type: ControlType.String, title: "SEQ03 · Portrait film", defaultValue: "",
         description: "1080 × 1920 video with the first orbit frame aligned to the bottom.",
+    },
+    portraitStoryOverlays: {
+        type: ControlType.Boolean, title: "Phone · Working story layout", defaultValue: false,
     },
     editorView: {
         type: ControlType.Enum,

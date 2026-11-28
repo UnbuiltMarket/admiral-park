@@ -2,6 +2,15 @@ const workingPageId = "Phxhru9uu"
 const workingPath = "/homepage-draft"
 const workingPage = api.tree.get(workingPageId)
 if (workingPage?.path !== workingPath) throw new Error("Expected the working homepage draft")
+const heroIds = ["Pcq4F2KgH", "RnA329eK1Pcq4F2KgH"]
+for (const id of heroIds) {
+    const hero = api.tree.get(id)
+    if (hero?.$scopeId !== workingPageId || hero.component !== "codeFile/tlTfkfX:default") {
+        throw new Error("Expected the working homepage hero")
+    }
+}
+const heroFile = await api.files.read("HERO_video_no_fullscreen.tsx")
+if (!heroFile.source.includes("portraitStoryOverlays: {")) throw new Error("Install the mobile story control first")
 
 const status = await api.publishing.status()
 if (status.status !== "ready" || status.target !== "production" ||
@@ -36,6 +45,14 @@ const code = `<style id="admiral-working-story-framing">
 
     :root[data-admiral-working-story] [data-admiral-homepage] [data-phone-sequence-story="neighborhood"] {
         --admiral-story-top: max(calc(env(safe-area-inset-top) + 70px), calc(.5 * var(--admiral-story-horizon) - 16px));
+        gap: clamp(14px, 2.2vh, 20px);
+    }
+
+    :root[data-admiral-working-story] [data-phone-sequence-story="neighborhood"] h2 {
+        max-width: min(100%, 368px);
+        font-size: clamp(22px, 6.5vw, 29px);
+        line-height: 1.17;
+        letter-spacing: .038em;
     }
 
     :root[data-admiral-working-story] [data-phone-sequence-story] :is(h2, p) {
@@ -75,7 +92,95 @@ const code = `<style id="admiral-working-story-framing">
         grid-column: 1 / -1;
     }
 
+    :root[data-admiral-working-story] [data-phone-story-tuned] [data-phone-story-map] {
+        /* Register the original landscape artwork to the wider, bottom-aligned land in the portrait frame. */
+        position: absolute;
+        display: block;
+        width: calc(1.1208 * var(--admiral-story-image-height));
+        max-width: none;
+        height: auto;
+        left: calc(50% - .56042 * var(--admiral-story-image-height));
+        bottom: calc(100% + var(--admiral-story-top) - var(--admiral-story-height));
+        /* The desktop street caption falls outside the mobile crop. Keep the path and pins. */
+        clip-path: polygon(32.8125% 0, 100% 0, 100% 100%, 0 100%, 0 87.9208%, 15.625% 87.9208%, 32.8125% 79.505%);
+        opacity: 0;
+    }
+
+    :root[data-admiral-working-story] [data-phone-story-tuned] [data-phone-story-map][data-ready] {
+        opacity: 1;
+    }
+
+    :root[data-admiral-working-story]:has([data-phone-story-tuned]) :is([data-hero-overlay="openingScroll"], [data-hero-overlay="building"]) .admiral-scroll-cue {
+        display: none;
+    }
+
+    :root[data-admiral-working-story]:has([data-phone-story-tuned]) [data-hero-overlay="building"] {
+        /* The legacy transparent wrapper overlaps the compact cue's tap area. */
+        pointer-events: none !important;
+    }
+
+    :root[data-admiral-working-story] [data-phone-story-tuned] [data-phone-journey-cue] {
+        position: absolute;
+        z-index: 5;
+        left: 50%;
+        bottom: max(8px, env(safe-area-inset-bottom));
+        translate: -50% 0;
+        display: grid;
+        place-items: center;
+        width: 48px;
+        height: 48px;
+        padding: 0;
+        border: 0;
+        border-radius: 50%;
+        background: transparent;
+        color: inherit;
+        cursor: pointer;
+        touch-action: manipulation;
+    }
+
+    :root[data-admiral-working-story] [data-phone-journey-cue] .admiral-scroll-cue-glass {
+        scale: .5;
+    }
+
+    :root[data-admiral-working-story] [data-phone-journey-cue]:not([data-phone-journey-cue="opening"]) .admiral-scroll-cue {
+        --admiral-cue-arrival: .18s;
+    }
+
+    :root[data-admiral-working-story] [data-phone-journey-cue]:focus-visible {
+        outline: 2px solid white;
+        outline-offset: 2px;
+    }
+
     @media (prefers-reduced-motion: no-preference) {
+        :root[data-admiral-working-story] [data-phone-story-tuned] [data-phone-story-leaving] {
+            --admiral-exit-x: 0px;
+            --admiral-exit-y: calc(36px * var(--admiral-phone-story-exit, 0));
+            translate: var(--admiral-exit-x) var(--admiral-exit-y);
+            opacity: calc(1 - var(--admiral-phone-story-exit, 0));
+            transition: translate 45ms linear, opacity 45ms linear;
+        }
+
+        :root[data-admiral-working-story] [data-phone-story-tuned] [data-phone-story-leaving][data-phone-sequence-story="neighborhood"] {
+            --admiral-exit-x: calc(56px * var(--admiral-phone-story-exit, 0));
+            --admiral-exit-y: calc(-18px * var(--admiral-phone-story-exit, 0));
+        }
+
+        :root[data-admiral-working-story] [data-phone-story-tuned] [data-phone-story-map][data-ready] {
+            animation: admiral-phone-site-map-in 1s ease 1.25s both;
+        }
+
+        :root[data-admiral-working-story] [data-phone-story-leaving] [data-phone-story-map] {
+            /* Keep the pins on the land as the copy moves away. */
+            translate: calc(-1 * var(--admiral-exit-x)) calc(-1 * var(--admiral-exit-y));
+            filter: opacity(calc(1 - min(1, 2 * var(--admiral-phone-story-exit, 0))));
+            transition: translate 45ms linear, filter 45ms linear;
+        }
+
+        @keyframes admiral-phone-site-map-in {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
         :root[data-admiral-working-story] [data-phone-sequence-story][data-draw="true"] h2 {
             animation-duration: .72s;
         }
@@ -143,4 +248,6 @@ if (existing) api.tree.patch(existing.id, attributes)
 else api.tree.insert("CustomCodeNode", "working-story-framing", { parent: api.tree.root.id, ...attributes })
 
 const saved = api.tree.getNodesOfTypes("CustomCodeNode").find(node => node.name === name)
-return { id: saved.id, pageIds: saved.pageIds, placement: saved.placement }
+for (const id of heroIds) api.tree.patch(id, { $control__portraitStoryOverlays: true })
+
+return { id: saved.id, pageIds: saved.pageIds, placement: saved.placement, heroIds }
