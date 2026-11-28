@@ -11,6 +11,11 @@ for (const id of heroIds) {
 }
 const heroFile = await api.files.read("HERO_video_no_fullscreen.tsx")
 if (!heroFile.source.includes("portraitStoryOverlays: {")) throw new Error("Install the mobile story control first")
+const desktopCopy = ["xowzGt9gR", "AWRuc5Wvg"].map(id => api.tree.get(id))
+if (desktopCopy.some(node => node?.$scopeId !== workingPageId || !node.text?.trim())) {
+    throw new Error("Expected the authored desktop SEQ_02 title and body")
+}
+const [gardenTitle, gardenBody] = desktopCopy.map(node => node.text.replace(/\s+/g, " ").trim())
 
 const status = await api.publishing.status()
 if (status.status !== "ready" || status.target !== "production" ||
@@ -90,6 +95,40 @@ const code = `<style id="admiral-working-story-framing">
 
     :root[data-admiral-working-story] [data-phone-sequence-story="garden"] li:first-child {
         grid-column: 1 / -1;
+    }
+
+    :root[data-admiral-working-story] [data-phone-sequence-story="garden"] :is(h2, p) {
+        /* Use the full desktop copy with natural phone line breaks. */
+        display: block;
+        overflow: visible;
+        -webkit-line-clamp: unset;
+    }
+
+    :root[data-admiral-working-story] [data-phone-sequence-story="garden"] h2 {
+        max-width: min(100%, 376px);
+        font-size: clamp(18px, 5.1vw, 23px);
+    }
+
+    :root[data-admiral-working-story] [data-phone-sequence-story="garden"] p {
+        max-width: min(100%, 390px);
+    }
+
+    @media (max-width: 360px), (max-height: 550px) {
+        :root[data-admiral-working-story] [data-admiral-homepage] [data-phone-sequence-story="garden"] {
+            --admiral-story-top: max(calc(env(safe-area-inset-top) + 64px), min(14.5vh, 104px));
+            gap: 10px;
+        }
+    }
+
+    @media (max-height: 550px) {
+        :root[data-admiral-working-story] [data-phone-sequence-story="garden"] ul {
+            width: min(76vw, 240px);
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
+
+        :root[data-admiral-working-story] [data-phone-sequence-story="garden"] li:first-child {
+            grid-column: auto;
+        }
     }
 
     :root[data-admiral-working-story] [data-phone-story-tuned] [data-phone-story-map] {
@@ -248,6 +287,12 @@ if (existing) api.tree.patch(existing.id, attributes)
 else api.tree.insert("CustomCodeNode", "working-story-framing", { parent: api.tree.root.id, ...attributes })
 
 const saved = api.tree.getNodesOfTypes("CustomCodeNode").find(node => node.name === name)
-for (const id of heroIds) api.tree.patch(id, { $control__portraitStoryOverlays: true })
+for (const id of heroIds) {
+    const hero = api.tree.get(id)
+    api.tree.patch(id, {
+        $control__portraitStoryOverlays: true,
+        $control__phoneSequenceCopy: { ...hero.$control__phoneSequenceCopy, gardenTitle, gardenBody },
+    })
+}
 
 return { id: saved.id, pageIds: saved.pageIds, placement: saved.placement, heroIds }

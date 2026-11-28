@@ -15,14 +15,18 @@ if (source?.pageIds?.length !== 1 || source.pageIds[0] !== working.id || !source
     throw new Error("Expected the working portrait styles")
 }
 
-const heroSettings = working.heroIds.map(id => {
+const heroSettings = working.heroIds.map((id, index) => {
     const hero = api.tree.get(id)
+    const { gardenTitle, gardenBody } = hero.$control__phoneSequenceCopy ?? {}
+    const guestHero = api.tree.get(guest.heroIds[index])
     return {
         $control__portraitApproachVideo: hero.$control__portraitApproachVideo,
         $control__portraitStoryOverlays: hero.$control__portraitStoryOverlays,
+        $control__phoneSequenceCopy: { ...guestHero.$control__phoneSequenceCopy, gardenTitle, gardenBody },
     }
 })
-if (heroSettings.some(settings => !settings.$control__portraitApproachVideo || !settings.$control__portraitStoryOverlays)) {
+if (heroSettings.some(settings => !settings.$control__portraitApproachVideo || !settings.$control__portraitStoryOverlays ||
+    !settings.$control__phoneSequenceCopy.gardenTitle || !settings.$control__phoneSequenceCopy.gardenBody)) {
     throw new Error("Expected the portrait video and story controls on the working draft")
 }
 
