@@ -20,6 +20,7 @@ const code = `<style id="admiral-working-story-framing">
         --admiral-story-height: 100vh;
         --admiral-story-image-height: max(var(--admiral-story-height), 177.7778vw);
         --admiral-story-horizon: calc(var(--admiral-story-height) - .473 * var(--admiral-story-image-height));
+        --admiral-story-lake-center: calc(var(--admiral-story-height) - .356 * var(--admiral-story-image-height));
         --admiral-story-roof: calc(var(--admiral-story-height) - .263 * var(--admiral-story-image-height));
         --admiral-story-top: max(calc(env(safe-area-inset-top) + 64px), min(18vh, 155px));
         top: var(--admiral-story-top);
@@ -57,7 +58,9 @@ const code = `<style id="admiral-working-story-framing">
     }
 
     :root[data-admiral-working-story] [data-phone-sequence-story="neighborhood"] ul {
-        top: calc(var(--admiral-story-horizon) + clamp(16px, 2.5vh, 25px) - var(--admiral-story-top));
+        /* Center the whole group in the open water between the two shores. */
+        top: calc(var(--admiral-story-lake-center) - var(--admiral-story-top));
+        translate: 0 -50%;
     }
 
     :root[data-admiral-working-story] [data-phone-sequence-story="garden"] ul {
