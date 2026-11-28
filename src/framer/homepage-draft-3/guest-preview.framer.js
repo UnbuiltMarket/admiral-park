@@ -15,7 +15,7 @@ html[data-admiral-guest-locked] body > :not(#admiral-guest-gate) { visibility: h
     margin: 0; width: 100%; height: 100%; height: 100dvh; max-width: none; max-height: none;
     overflow-x: hidden; overflow-y: auto; border: 0; clip-path: inset(0); color: #143451; background: #254962;
     padding: max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(16px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
-    font-family: Montserrat, Arial, sans-serif;
+    font-family: system-ui, Arial, sans-serif;
 }
 #admiral-guest-gate[open] { display: grid; grid-template-columns: minmax(0, 1fr); place-items: center; }
 #admiral-guest-gate::backdrop { background: #254962; }
@@ -34,6 +34,7 @@ html[data-admiral-guest-locked] body > :not(#admiral-guest-gate) { visibility: h
     box-shadow: 0 12px 46px rgb(5 23 40 / 28%);
 }
 #admiral-guest-gate label { font-size: 17px; font-weight: 650; line-height: 1.35; }
+#admiral-guest-gate label:focus { outline: none; }
 #admiral-guest-gate [data-guest-fields] { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; min-width: 0; }
 #admiral-guest-gate :is(input,button) {
     box-sizing: border-box; min-height: 48px; margin: 0; border-radius: 24px; font-family: inherit;
